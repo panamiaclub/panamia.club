@@ -8,7 +8,7 @@ type LayoutProps = {
     children: React.ReactNode,
   };
 
-  import { IconBrandTwitter, IconBrandYoutube, IconBrandInstagram } from '@tabler/icons';
+  import { IconBrandTwitter, IconBrandYoutube, IconBrandInstagram, IconBrandDiscord } from '@tabler/icons';
   import {
     ActionIcon,
     createStyles,
@@ -182,7 +182,12 @@ export default function Layout({ children }: LayoutProps) {
                   <Group spacing={0} className={classes.links} position="right" noWrap>
                     <Link target="_blank" href="https://instagram.com/panamiaclub">
                       <ActionIcon size="lg">
-                        <IconBrandInstagram size={18} stroke={1.5} />
+                        <IconBrandInstagram size={20} stroke={1.5} />
+                      </ActionIcon>
+                    </Link>
+                    <Link target="_blank" href="https://discord.gg/SnNV48XGu3">
+                    <ActionIcon size="lg">
+                        <IconBrandDiscord size={20} stroke={1.5} />
                       </ActionIcon>
                     </Link>
                 </Group>

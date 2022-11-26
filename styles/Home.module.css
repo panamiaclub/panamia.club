@@ -21,6 +21,12 @@
   letter-spacing: 0.4em;
 }
 
+.headings2{
+  color:#ffffff;
+  letter-spacing: 0.3em;
+  text-align:center;
+}
+
 .headingsAbout{
   letter-spacing: 0.4em;
   margin-top:15%;
@@ -34,6 +40,7 @@
 
 .aboutContainer{
   height:100vh;
+  background-color: #EB5867;
 }
 
 .textSection{
@@ -41,6 +48,7 @@
   font-family: "verdana";
   width:60%;
   margin: 0 auto;
+  margin-top:20%;
 }
 
 .navbar-pink, .dropdown-menu{
