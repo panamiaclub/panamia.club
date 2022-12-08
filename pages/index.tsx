@@ -70,15 +70,24 @@ const Home: NextPage = () => {
         <div className={styles.aboutContainer} id="About" ref={ref}>
           <motion.div animate={animation}>
             <Grid>
-                <Grid.Col span={1}></Grid.Col>
-                <Grid.Col span={10} xs={12}>
+                <Grid.Col md={2} xs={0}></Grid.Col>
+                <Grid.Col  md={8} xs={12}>
                 <div className={styles.textSection}>
                     <h4 className={styles.headings2}>Being a small business owner may be really overwhelming and isolating at times, but you aren’t alone. Miami is filled with small vendors, all with different strengths and skillsets. We started Pana Mia as a way to bring everyone together, to pool our resources, insights and strategies. As consumers start recognizing the benefits of shopping local, we want to create a centralized space where they can explore and fall in love with local brands.</h4>
-                    <Link href='https://instagram.com/panamiaclub' target="_blank"><Button style={{ marginLeft: "40%", backgroundColor:"#FFECC8", color:"#011D34"}}>Follow Us On Instagram <IconBrandInstagram style={{marginLeft: "10px"}}></IconBrandInstagram></Button></Link>
                 </div>
                 
                 </Grid.Col>
-                <Grid.Col span={1}></Grid.Col>
+                <Grid.Col md={2} xs={0}></Grid.Col>
+            </Grid>
+            <Grid>
+                <Grid.Col span={4} md={5} xs={4}></Grid.Col>
+                <Grid.Col span={4} md={2} xs={4}>
+                <div className={styles.textSection}>
+                  <Link href='https://instagram.com/panamiaclub' target="_blank"><Button style={{backgroundColor:"#FFECC8", color:"#011D34"}} >Follow Us<IconBrandInstagram style={{marginLeft: "10px"}}></IconBrandInstagram></Button></Link>
+                </div>
+                
+                </Grid.Col>
+                <Grid.Col span={4} md={5} xs={4}></Grid.Col>
             </Grid>
           </motion.div>
         </div>

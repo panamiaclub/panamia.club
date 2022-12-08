@@ -46,8 +46,8 @@
 .textSection{
   color:black;
   font-family: "verdana";
-  width:60%;
   margin: 0 auto;
+  padding:1em;
   margin-top:20%;
 }
 
@@ -86,7 +86,6 @@
 .about{
   color:black;
   background-color: #FFECC8;
-  padding:2%;
   margin-bottom:5%;
   text-align: left;
 }
@@ -217,10 +216,6 @@
 }
 
 
-.about{
-  min-height:100vh;
-  padding:10% 0;
-}
 
 .about h1{
   margin-bottom: 1em;
@@ -325,6 +320,12 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
   width:"50px"
 }
 
+.igButton{
+  margin: 0 auto;
+  background-color:"#FFECC8"!important;
+  color:"#011D34"!important;
+}
+
 @media (max-width: 600px) {
 
   .descriptionAbout{
@@ -350,8 +351,11 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
 
 
 
-@media only screen and (max-width: 700px) {
+@media only screen and (max-width: 800px) {
   .margintops{
     margin-top:55%;
+  }
+  .igButton{
+    margin-left:0!important;
   }
 }
