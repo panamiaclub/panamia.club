@@ -19,7 +19,7 @@ const newsletterSchema = new Schema(
             required: false,
             unique: false
         },
-        instagramURL: {
+        igUsername: {
             type: String,
             required: false,
             unique: false

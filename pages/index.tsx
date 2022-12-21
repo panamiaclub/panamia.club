@@ -65,6 +65,7 @@ const Home: NextPage = () => {
             }}>
               <Image src="/logo.png" height={200} width={300}></Image>
               <h2 className={styles.headings}>Your favorite directory for local creatives.</h2>
+              <Link href='/newsletter' target="_blank"><Button style={{backgroundColor:"#EE5967", color:"#FFECC8"}} >Sign Up For Our Newsletter</Button></Link>
             </motion.div>
         </div>
         <div className={styles.aboutContainer} id="About" ref={ref}>

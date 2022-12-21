@@ -37,12 +37,16 @@ import { IconMathIntegral } from '@tabler/icons';
 import { ReactSVG } from 'react-svg'
 import svg1 from '../public/CosaHecha/1.svg';
 
-const GiftGuide: NextPage = () => {
+const Newsletter: NextPage = () => {
   const {ref, inView} = useInView();
   const animation = useAnimation();
   const [alert, setAlert] = useState("");
   const [success, setSuccess] = useState("");
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [igUsername, setIgUsername] = useState("");
+  const [otherURL, setOtherURL] = useState("");
+  const [membership, setMembership] = useState("");
 
   const formSubmit = (actions: any) => {
     actions.setSubmitting(false);
@@ -58,8 +62,10 @@ const GiftGuide: NextPage = () => {
   };
 
   useEffect(() => {
-
-  }, []);
+    if(membership){
+     console.log(membership); 
+    }
+  }, [membership]);
 
   const createNewsletterEntry = async () => {
     if(email){
@@ -107,25 +113,12 @@ const GiftGuide: NextPage = () => {
 
   return (
     <div className={styles.App}>
-  
-        
-        <img src='/CosaHecha/1.svg' alt="svg1" width="100%"/>
-
         <div className={styles.mainContainer} ref={ref}>
           <motion.div animate={animation}>
-            <Grid>
-                <Grid.Col md={2} xs={0}></Grid.Col>
-                <Grid.Col  md={8} xs={12}>
-                <div className={styles.textSection}>
-               </div>
-                
-                </Grid.Col>
-                <Grid.Col md={2} xs={0}></Grid.Col>
-            </Grid>
-            <Grid>
-                <Grid.Col span={3} md={3} xs={0}></Grid.Col>
-                <Grid.Col span={6} md={6} xs={12}>
-                    <h2 style={{color:"#EE5967"}}>Sign Up For Our Newsletter!</h2>
+            <Grid  className={styles.formContainer}>
+                <Grid.Col span={4} md={4} xs={0}></Grid.Col>
+                <Grid.Col span={4} md={4} xs={12}>
+                <h2 style={{color:"#EE5967"}}>Sign Up For Our Newsletter!</h2>
                 <Formik
                     initialValues={{}}
                     validateOnChange={false}
@@ -136,27 +129,71 @@ const GiftGuide: NextPage = () => {
                 >
                     {(props) => (
                     <Form style={{ width: "100%" }}>
-                        <Box mb={4}>
-                        <Field name="email">
-                            {() => (
-                            <>
-                                <Input
-                                value={email}
-                                onChange={(e:any) => setEmail(e.target.value)}
-                                placeholder={"Email"}
-                                />
-                            </>
-                            )}
-                        </Field>
-                        <Button type="submit" style={{margin:"2% 40%",backgroundColor:"#EE5967"}}>Submit<FiEdit2 style={{marginLeft:"5px"}}/></Button>
-                        </Box>
-                    </Form>
+                      <Box mb={4}>
+                      <Field name="name">
+                          {() => (
+                          <>
+                          <Text className={styles.formText}>Name:</Text>
+                              <Input
+                              value={name}
+                              onChange={(e:any) => setName(e.target.value)}
+                              placeholder={"Name"}
+                              />
+                          </>
+                          )}
+                      </Field>
+                      <Field name="email">
+                          {() => (
+                          <>
+                          <Text className={styles.formText}>E-mail:</Text>
+                              <Input
+                              value={email}
+                              onChange={(e:any) => setEmail(e.target.value)}
+                              placeholder={"Email"}
+                              />
+                          </>
+                          )}
+                      </Field>
+                      <Field name="igUsername">
+                          {() => (
+                          <>
+                          <Text className={styles.formText}>Instagram Username:</Text>
+                              <Input
+                              value={igUsername}
+                              onChange={(e:any) => setIgUsername(e.target.value)}
+                              placeholder={"@username"}
+                              />
+                          </>
+                          )}
+                      </Field>
+                      <Field name="otherURL">
+                          {() => (
+                          <>
+                           <Text className={styles.formText}>Other URL:</Text>
+                              <Input
+                              value={otherURL}
+                              onChange={(e:any) => setOtherURL(e.target.value)}
+                              placeholder={"Other URL"}
+                              />
+                          </>
+                          )}
+                      </Field>
+
+                      <Text className={styles.formText}>Select Membership Type:</Text>
+                      <Field  value={membership} as="select" className={styles.selectField} name="membershipType" onChange={(e:any) => setMembership(e.target.value)}>
+                        <option value="Small Busienss">Small Business</option>
+                        <option value="Artist">Artist</option>
+                        <option value="Member">Member</option>
+                      </Field>
+                      <Button type="submit" style={{margin:"2% 40%",backgroundColor:"#EE5967"}}>Submit<FiEdit2 style={{marginLeft:"5px"}}/></Button>
+                      </Box>
+                  </Form>
                     )}
                 </Formik>
                  {alert && <Alert color={"red"} style={{marginTop:"5%"}}>{alert}</Alert>}
                  {success && <Alert color={"green"} style={{marginTop:"5%"}}>{success}</Alert>}
                 </Grid.Col>
-                <Grid.Col span={3} md={6} xs={0}></Grid.Col>
+                <Grid.Col span={4} md={4} xs={0}></Grid.Col>
             </Grid>
           </motion.div>
         </div>
@@ -164,4 +201,4 @@ const GiftGuide: NextPage = () => {
   )
 }
 
-export default GiftGuide
+export default Newsletter

@@ -41,7 +41,7 @@ export default async function handler(
   }
 
   // get and validate body variables
-  const { name, email, membershipType, instagramURL, otherURL } = req.body;
+  const { name, email, membershipType, igUsername, otherURL } = req.body;
 
   const errorMessage = await validateForm(email);
   if (errorMessage) {
@@ -53,7 +53,7 @@ const newNewsletter = new newsletter({
     name: name,
     email: email,
     membershipType: membershipType,
-    instagramURL: instagramURL,
+    igUsername: igUsername,
     otherURL: otherURL
 });
 
