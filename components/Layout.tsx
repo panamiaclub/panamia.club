@@ -166,7 +166,7 @@ export default function Layout({ children }: LayoutProps) {
                     {items}
                     </Group>
                     <Button radius="xl" sx={{ height: 30 }} style={{backgroundColor:"#4ab3ea"}}>
-                        Sign Up
+                      <Link href="/newsletter">Sign Up</Link>
                     </Button>
                 </Container>
             </Header>
