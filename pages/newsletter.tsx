@@ -68,11 +68,11 @@ const Newsletter: NextPage = () => {
   }, [membership]);
 
   const createNewsletterEntry = async () => {
-    if(email){
+    if(name && email && membership && igUsername && otherURL){
         const res = await axios
         .post(
             "/api/createNewsletterEntry",
-            { email },
+            { name, email, igUsername, otherURL, membership },
             {
             headers: {
                 Accept: "application/json",
