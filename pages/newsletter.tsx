@@ -65,9 +65,22 @@ const Newsletter: NextPage = () => {
     if(membership){
      console.log(membership); 
     }
-  }, [membership]);
+    if(name){
+      console.log(name);
+    }
+    if(email){
+      console.log(email);
+    }
+    if(igUsername){
+      console.log(igUsername);
+    }
+    if(otherURL){
+      console.log(otherURL);
+    }
+  }, [membership, name, email, igUsername, otherURL]);
 
   const createNewsletterEntry = async () => {
+    console.log('create newsletter fired')
     if(name && email && membership && igUsername && otherURL){
         const res = await axios
         .post(
