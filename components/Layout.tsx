@@ -148,6 +148,8 @@ export default function Layout({ children }: LayoutProps) {
                 <title>Panamia</title>
                 <meta name="description" content="Your favorite directory for local creatives." />
                 <link rel="icon" href="/favicon.ico" />
+         
+            <script type="text/javascript" id="hs-script-loader" async defer src="//js-na1.hs-scripts.com/23472319.js"></script>
             </Head>
 
              <Header height={HEADER_HEIGHT} sx={{ borderBottom: 0 }} mb={120} style={{marginBottom:"0"}}>
