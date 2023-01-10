@@ -118,15 +118,23 @@ export default function Layout({ children }: LayoutProps) {
   });
 
   useEffect(() => {
-    if(session && links){
-      console.log(session);
-      setLinks([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}, {link:"/profile", label:"Profile", links: null}, {link:"/directorio", label:"El Directorio", links: null}]);
-      // if(links.length == 2){
-      //   links.push({link:"/profile", label:"Profile", links: null});
-      //   links.push({link:"/directorio", label:"El Directorio", links: null});
-      // }
-      console.log(links);
-    }
+    (function loop() {
+      setTimeout(() => {
+        if(session){
+          //console.log(session);
+          setLinks([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}, {link:"/profile", label:"Profile", links: null}, {link:"/directorio", label:"El Directorio", links: null}]);
+          // if(links.length == 2){
+          //   links.push({link:"/profile", label:"Profile", links: null});
+          //   links.push({link:"/directorio", label:"El Directorio", links: null});
+          // }
+          //console.log(links);
+        }else{
+          setLinks([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}]);
+        }
+        loop();
+      }, 20000);
+    })();
+  
 }, [links]);
 
   const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});

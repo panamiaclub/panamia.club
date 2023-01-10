@@ -45,7 +45,7 @@ const usersSchema = new Schema(
             unique: false
         },
         category: {
-            type: Array,
+            type: String,
             required: false,
             unique: false
         },

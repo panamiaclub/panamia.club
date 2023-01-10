@@ -44,9 +44,10 @@ const Profile: NextPage = () => {
 
     const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});
     const handleEditPressed= () => {setEditProfile(true)};
+    const handleCancelPressed = () => {setEditProfile(false)}; 
 
     if(editProfile){
-        console.log(editProfile)
+        //console.log(editProfile)
     }
 
     const formSubmit = (actions: any) => {
@@ -56,15 +57,16 @@ const Profile: NextPage = () => {
 
       const redirectToHome = () => {
         const { pathname } = Router;
-        if (pathname === "/auth") {
+        if (pathname === "/profile") {
           // TODO: redirect to a success register page
-          Router.push("/");
+          Router.push("/profile");
+          setEditProfile(false);
         }
       };
 
       const getUser = async() => {
         if(session?.user?.email){
-            console.log(session);
+            console.log(session.user.email);
             const res = await axios
             .get(
                 "/api/getUser?userEmail="+session.user.email,
@@ -77,7 +79,13 @@ const Profile: NextPage = () => {
             )
             .then(async (response) => {
                 console.log(response.data.data);
-                setInvoices(response.data.data);
+                setUsername(response.data.data.username);
+                setBio(response.data.data.bio);
+                setCategory(response.data.data.category);
+                setInstagram(response.data.data.instagram);
+                setTwitter(response.data.data.twitter);
+                setLink1(response.data.data.link1);
+                setLink2(response.data.data.link2);
             })
             .catch((error) => {
                 console.log(error);
@@ -92,7 +100,7 @@ const Profile: NextPage = () => {
     const res = await axios
       .put(
         "/api/editProfile",
-        { username, email, bio ,category,instagram, twitter, link1, link2},
+        { username, email, bio ,instagram, twitter, link1, link2, category},
         {
           headers: {
             Accept: "application/json",
@@ -112,15 +120,14 @@ const Profile: NextPage = () => {
 
 
      useEffect(() => {
-        if(session?.user?.email){
-            setEmail(session.user.email)
-            getUser();
-        }
-        if(invoices){
-            console.log(invoices);
-        }
-    }, [invoices, email]);
+        getUser();
+    }, []);
 
+    useEffect(() => {
+        if(username){
+            console.log(username);
+        }
+    }, [invoices, email, username])
 
   return (
     <div className={styles.App}>
@@ -141,8 +148,8 @@ const Profile: NextPage = () => {
                     <table style={{width:"80%", marginBottom:"20px", margin:"0 auto", textAlign:"left"}}>
                         <thead>
                             <tr>
-                                <th>Name: </th>
-                                <td>{session.user.name}</td>
+                                <th>Username: </th>
+                                <td>{username}</td>
                             </tr>
                             <tr>
                                 <th>Email: </th>
@@ -150,28 +157,37 @@ const Profile: NextPage = () => {
                             </tr>
                             <tr>
                                 <th>Bio: </th>
-                                <td></td>
+                                <td>{bio}</td>
                             </tr>
                             <tr>
                                 <th>Category: </th>
-                                <td></td>
+                                <td>{category}</td>
                             </tr>
-                            <tr>
-                                <th>Instagram: </th>
-                                <td><Link href="https://instagram.com/@">IG</Link></td>
-                            </tr>
-                            <tr>
-                                <th>Twitter: </th>
-                                <td><Link href="https://twitter.com/@">Twitter</Link></td>
-                            </tr>
-                            <tr>
-                                <th>Link 1: </th>
-                                <td><Link href="https://twitter.com/@">Website</Link></td>
-                            </tr>
-                            <tr>
-                                <th>Link 2: </th>
-                                <td><Link href="https://twitter.com/@">Website</Link></td>
-                            </tr>
+                            {instagram && 
+                                <tr>
+                                    <th>Instagram: </th>
+                                    <td><Link href={"https://instagram.com/@"+instagram}>{instagram}</Link></td>
+                                </tr>
+                            }
+                             {twitter && 
+                                <tr>
+                                    <th>Twitter: </th>
+                                    <td><Link href={"https://twitter.com/@"+ twitter}>{twitter}</Link></td>
+                                </tr>
+                            }
+                             {link1 && 
+                                <tr>
+                                    <th>Link 1: </th>
+                                    <td><Link href={link1}>{link1}</Link></td>
+                                </tr>
+                            
+                            }
+                             {link2 && 
+                                <tr>
+                                    <th>Link 2: </th>
+                                    <td><Link href={link1}>{link2}</Link></td>
+                                </tr>
+                                }
                         </thead>
                     </table>
                     <Button onClick={handleEditPressed} style={{margin:"0 35%"}}>Edit Profile <FiEdit2 style={{marginLeft:"5px"}}/></Button>
@@ -236,7 +252,7 @@ const Profile: NextPage = () => {
                             <Field name="category">
                                 {() => (
                                 <>
-                                    <Text>category:</Text>
+                                    <Text>Category:</Text>
                                     <Input
                                     value={category}
                                     onChange={(e:any) => setCategory(e.target.value)}
@@ -294,14 +310,17 @@ const Profile: NextPage = () => {
                                 </>
                                 )}
                             </Field>
-                            <Button type="submit" style={{margin:"0 35%"}}>Save<FiEdit2 style={{marginLeft:"5px"}}/></Button>
+                            <div  style={{display:"inline", margin:"5% 0!important"}}>
+                                <Button type="submit" style={{margin:"0 20%"}}>Save<FiEdit2 style={{marginLeft:"5px", display:"inline"}}/></Button>
+                                <Button type="button" onClick={handleCancelPressed} style={{margin:"0 2%", display:"inline"}}>Cancel</Button>
+                            </div>
                             </Box>
                         </Form>
                         )}
                     </Formik>
                  {alert && <Alert color={"red"} style={{marginTop:"5%"}}>{alert}</Alert>}
                     
-                    <Button color="red" style={{margin:"15% 37%", marginTop:"300px"}} onClick={handleSignOut}>Log Out</Button>
+                    <Button color="red" style={{margin:"1% 37%", marginTop:"300px"}} onClick={handleSignOut}>Log Out</Button>
                 </Grid.Col>
             }
         </Grid>

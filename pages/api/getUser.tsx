@@ -13,8 +13,8 @@ interface ResponseData {
 }
 const getUser = async (email: string) =>{
     await dbConnect();
-    //console.log(email);
-    const User = await users.findById({email: email});
+    console.log(email);
+    const User = await users.findOne({email: email});
     return User;
 }
 
@@ -25,8 +25,8 @@ export default async function handler(
 ) {
 
   let Email = "";
-  if(req.query.email){
-    Email = req.query.email.toString();
+  if(req.query.userEmail){
+    Email = req.query.userEmail.toString();
   }
 
   // validate if it is a GET
@@ -39,10 +39,10 @@ export default async function handler(
     // get Invoice
     try{
       if(Email){
-        //console.log(id);
+        console.log(Email);
         var user = await getUser(Email.toString());
-        //console.log('email');
-        //console.log(email);
+        console.log('email');
+        console.log(user);
         return res.status(200).json({ success: true, data: user });
       }
        
