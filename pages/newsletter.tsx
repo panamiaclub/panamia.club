@@ -210,6 +210,7 @@ const Newsletter: NextPage = () => {
             </Grid>
           </motion.div>
         </div>
+        
   </div>
   )
 }

@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image'
 import styles from '../styles/Home.module.css'
 import Head from 'next/head';
@@ -23,7 +24,8 @@ type LayoutProps = {
   import { useDisclosure } from '@mantine/hooks';
   import { IconChevronDown } from '@tabler/icons';
   import { MantineLogo } from '@mantine/ds';
-  
+  import {useSession ,signIn, signOut} from 'next-auth/react';
+
   const HEADER_HEIGHT = 60;
   
   const useStyles = createStyles((theme) => ({
@@ -95,40 +97,14 @@ type LayoutProps = {
     links: { link: string; label: string; links: { link: string; label: string }[] }[];
   }
 
-  const links = [{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}];//{link:"/giftguide", label:"Gift Guide", links:null}
-
 export default function Layout({ children }: LayoutProps) {
-
+  const {data:session, status} = useSession();
     const { classes } = useStyles();
   const [opened, { toggle }] = useDisclosure(false);
+
+  const [links, setLinks] = useState([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}]);//{link:"/giftguide", label:"Gift Guide", links:null}
+
   const items = links.map((link) => {
-    
-    // const menuItems = link.links?.map((item) => (
-    //   <Menu.Item key={item.link}>{item.label}</Menu.Item>
-    // )
-    
-    // );
-
-    // if (menuItems) {
-    //   return (
-    //     <Menu key={link.label} trigger="hover" exitTransitionDuration={0}>
-    //       <Menu.Target>
-    //         <Link
-    //           href={link.link}
-    //           className={classes.link}
-    //           onClick={(event) => {}}
-    //         >
-    //           <Center>
-    //             <span className={classes.linkLabel}>{link.label}</span>
-    //             <IconChevronDown size={12} stroke={1.5} />
-    //           </Center>
-    //         </Link>
-    //       </Menu.Target>
-    //       <Menu.Dropdown>{menuItems}</Menu.Dropdown>
-    //     </Menu>
-    //   );
-    // }
-
     return (
       <a
         key={link.label}
@@ -141,6 +117,19 @@ export default function Layout({ children }: LayoutProps) {
     );
   });
 
+  useEffect(() => {
+    if(session && links){
+      console.log(session);
+      setLinks([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}, {link:"/profile", label:"Profile", links: null}, {link:"/directorio", label:"El Directorio", links: null}]);
+      // if(links.length == 2){
+      //   links.push({link:"/profile", label:"Profile", links: null});
+      //   links.push({link:"/directorio", label:"El Directorio", links: null});
+      // }
+      console.log(links);
+    }
+}, [links]);
+
+  const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});
 
     return (
         <div>
@@ -167,9 +156,19 @@ export default function Layout({ children }: LayoutProps) {
                     <Group spacing={5} className={classes.links}>
                     {items}
                     </Group>
-                    <Button radius="xl" sx={{ height: 30 }} style={{backgroundColor:"#4ab3ea"}}>
-                      <Link href="/newsletter">Sign Up</Link>
-                    </Button>
+                    {session && session.user &&
+                    <Group>
+                      <p style={{color:"#495057", fontFamily:"Helvetica Neue", marginRight: "0px"}}>Hi, {session.user.email}</p>
+                      <Button radius="xl" color={"red"} sx={{ height: 30 }} onClick={handleSignOut}>
+                        Log Out
+                     </Button>
+                    </Group>
+                    }
+                     {!session && 
+                      <Button radius="xl" sx={{ height: 30 }} style={{backgroundColor:"#4ab3ea"}}>
+                        <Link href="/signin">Sign Up</Link>
+                      </Button>
+                    }
                 </Container>
             </Header>
             <div>{children}</div>
