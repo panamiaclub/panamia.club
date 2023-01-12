@@ -109,7 +109,31 @@ const GiftGuide: NextPage = () => {
     <div className={styles.App}>
   
         
-        <img src='/CosaHecha/1.svg' alt="svg1" width="100%"/>
+       
+  <img src='/CosaHecha/1.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/2.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/3.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/4.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/5.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/6.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/7.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/8.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/9.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/10.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/11.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/12.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/13.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/14.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/15.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/16.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/17.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/18.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/19.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/20.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/21.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/22.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/23.svg' alt="svg1" width="100%"/>
+        <img src='/CosaHecha/24.svg' alt="svg1" width="100%"/>
 
         <div className={styles.mainContainer} ref={ref}>
           <motion.div animate={animation}>
