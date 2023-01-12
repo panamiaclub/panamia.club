@@ -54,8 +54,8 @@ const usersSchema = new Schema(
             required:false,
             unique:false
         },
-        images: {
-            type: Array,
+        avatar: {
+            type: String,
             required: false,
             unique: false
         },

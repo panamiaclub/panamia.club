@@ -37,7 +37,7 @@ const SignIn: NextPage = ({ providers }: any) => {
 
   const redirectToProfile = () => {
     const { pathname } = Router;
-    if (pathname === "/auth") {
+    if (pathname === "/signin") {
       // TODO: redirect to a success register page
       Router.push("/profile");
     }

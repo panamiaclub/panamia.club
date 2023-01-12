@@ -30,6 +30,11 @@ const validateForm = async (
   if (!validateEmail(email)) {
     return { error: "Email is invalid" };
   }
+  if(bio){
+    console.log(bio);
+  }
+
+  const emailUser = await users.findOne({ email: email });
 
   await dbConnect();
 
@@ -58,7 +63,7 @@ export default async function handler(
 
       // create new User on MongoDB
     const newUser = {
-        name: username,
+        username: username,
         email: email,
         bio: bio,
         instagramHandle: instagram,
@@ -67,14 +72,18 @@ export default async function handler(
         link2: link2,
         category: category
       };
+console.log(email);
 
-      await users.findOneAndUpdate({ email: email }, {set: newUser})
-      .then(() =>
-        res.status(200).json({ msg: "Successfuly edited profile " + newUser })
-        )
+      await users.findOneAndUpdate({ email: email }, {$set: newUser}, {returnNewDocument: true})
+      .then(() =>{
+          console.log('success');
+          res.status(200).json({ msg: "Successfuly edited profile " + newUser })
+      })
         .catch((err: string) =>
         res.status(400).json({ error: "Error on '/api/editProfile': " + err })
         );
+
+
     }
   
 

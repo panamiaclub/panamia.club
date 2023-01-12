@@ -121,23 +121,17 @@ export default function Layout({ children }: LayoutProps) {
     (function loop() {
       setTimeout(() => {
         if(session){
-          //console.log(session);
-          setLinks([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}, {link:"/profile", label:"Profile", links: null}, {link:"/directorio", label:"El Directorio", links: null}]);
-          // if(links.length == 2){
-          //   links.push({link:"/profile", label:"Profile", links: null});
-          //   links.push({link:"/directorio", label:"El Directorio", links: null});
-          // }
-          //console.log(links);
-        }else{
+          setLinks([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}, {link:"/directorio", label:"El Directorio", links: null}, {link:"/profile", label:"Profile", links: null}]);
+        }else if(!session){
           setLinks([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}]);
         }
         loop();
       }, 20000);
     })();
   
-}, [links]);
+}, [links, session]);
 
-  const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});
+  const handleSignOut = () => signOut({redirect: true, callbackUrl: '/'});
 
     return (
         <div>
@@ -174,7 +168,7 @@ export default function Layout({ children }: LayoutProps) {
                     }
                      {!session && 
                       <Button radius="xl" sx={{ height: 30 }} style={{backgroundColor:"#4ab3ea"}}>
-                        <Link href="/signin">Sign Up</Link>
+                        <Link href="/signin">Sign In</Link>
                       </Button>
                     }
                 </Container>
