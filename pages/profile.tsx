@@ -122,9 +122,6 @@ const Profile: NextPage = () => {
 
      useEffect(() => {
         getUser();
-    }, []);
-
-    useEffect(() => {
         if(session){
             if(session.user){
                 if(session.user.email){
@@ -132,6 +129,10 @@ const Profile: NextPage = () => {
                 }
             }
         }
+    }, []);
+
+    useEffect(() => {
+      
         if(username){
             console.log(username);
         }

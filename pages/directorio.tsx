@@ -71,21 +71,21 @@ const Profile: NextPage = () => {
 
   return (
     <div className={styles.App}>
-        {session && session.user && 
+        {
         <div className={styles.container} style={{minHeight:"85vh"}}>
             <Grid>
                 <Grid.Col sm={3}><h1 style={{marginLeft:"2%"}}>El Directorio</h1></Grid.Col>
             </Grid>
             <hr></hr>
             <Grid>
-                {session &&
+                {
                 <>
                     <Grid.Col sm={12}>
                       
                         <table style={{marginBottom:"20px",textAlign:"left"}}>
                             <thead>
                                 <tr>
-                                    <td>Name</td><td>Description</td><td>Category</td><td><FiGlobe></FiGlobe></td>
+                                    <td>Name</td><td>Description</td><td>Category</td><td><FiGlobe></FiGlobe> Website</td>
                                 </tr>
                             </thead>
                             <tbody>

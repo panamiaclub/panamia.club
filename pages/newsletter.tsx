@@ -174,7 +174,7 @@ const Newsletter: NextPage = () => {
                               <Input
                               value={igUsername}
                               onChange={(e:any) => setIgUsername(e.target.value)}
-                              placeholder={"@username"}
+                              placeholder={"username"}
                               />
                           </>
                           )}
