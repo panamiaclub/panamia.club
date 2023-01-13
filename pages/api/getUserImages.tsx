@@ -1,7 +1,7 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "./auth/lib/connectdb";
-import users from "./auth/lib/model/users";
+import image from "./auth/lib/model/images";
 import bcrypt from "bcrypt";
 import { ObjectId } from "mongodb";
 
@@ -11,11 +11,11 @@ interface ResponseData {
   msg?: string;
   data?: any[];
 }
-const getUser = async (email: string) =>{
+const getUserImages = async (id: string) =>{
     await dbConnect();
-    //console.log(email);
-    const User = await users.findOne({email: email});
-    return User;
+    //console.log(id);
+    const Images = await image.find({userId: id});
+    return Images;
 }
 
 
@@ -24,9 +24,10 @@ export default async function handler(
   res: NextApiResponse<ResponseData>
 ) {
 
-  let Email = "";
-  if(req.query.userEmail){
-    Email = req.query.userEmail.toString();
+  let userId = "";
+  if(req.query.userId){
+    userId = req.query.userId.toString();
+    console.log(userId);
   }
 
   // validate if it is a GET
@@ -38,15 +39,15 @@ export default async function handler(
 
     // get Invoice
     try{
-      if(Email){
-        //console.log(Email);
-        var user = await getUser(Email.toString());
+      if(userId){
+        //console.log(userId);
+        var images = await getUserImages(userId);
         //console.log('email');
-        //console.log(user);
-        return res.status(200).json({ success: true, data: user });
+        //console.log(images);
+        return res.status(200).json({ success: true, data: images });
       }
        
     }catch(err: any){
-      return res.status(400).json({ error: "Error on '/api/getUser': " + err })
+      return res.status(400).json({ error: "Error on '/api/getUserImages': " + err })
     }
 }

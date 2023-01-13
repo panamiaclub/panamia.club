@@ -45,7 +45,9 @@ const Profile: NextPage = () => {
     const [images, setImages] = useState<any[]>([]);
     const [uploadImages, setUploadImages] = useState<any[]>([]);
     const [alert, setAlert] = useState("");
+    const [message, setMessage] = useState("");
     const [admin, setAdmin] = useState(false);
+    const [userId, setUserId] = useState("");
 
     const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});
     const handleEditPressed= () => {
@@ -88,7 +90,7 @@ const Profile: NextPage = () => {
 
       const getUser = async() => {
         if(email){
-            console.log(email);
+            //console.log(email);
             const res = await axios
             .get(
                 "/api/getUser?userEmail="+email,
@@ -100,7 +102,7 @@ const Profile: NextPage = () => {
                 }
             )
             .then(async (response) => {
-                console.log(response.data.data);
+                //console.log(response.data.data);
                 setUsername(response.data.data.username);
                 setBio(response.data.data.bio);
                 setCategory(response.data.data.category);
@@ -110,21 +112,51 @@ const Profile: NextPage = () => {
                 setLink2(response.data.data.link2);
                 setAvatar(response.data.data.avatar);
                 setAdmin(response.data.data.admin);
-                setImages(response.data.data.images);
+                setUserId(response.data.data._id);
             })
             .catch((error) => {
                 console.log(error);
                 setAlert(error);
             });
-            console.log(res);
+            //console.log(res);
+        }
+      }
+
+      const getUserImages = async() => {
+        if(userId){
+            console.log(userId);
+            const res = await axios
+            .get(
+                "/api/getUserImages?userId="+userId,
+                {
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                }
+                }
+            )
+            .then(async (response) => {
+                let arr:any[] = [];
+                //console.log(response);
+                response.data.data.forEach((item:any)=>{
+                    arr.push(item.image);
+                    //console.log(item.image);
+                })
+                setImages(arr);
+                //console.log(images);
+            })
+            .catch((error) => {
+                console.log(error);
+                setAlert(error);
+            });
         }
       }
     
 
   const editUser = async () => {
         if(email && category && avatar && bio && instagram && twitter && link1 && link2 ){
-            console.log('category')
-            console.log(category)
+            //console.log('category')
+            //console.log(category)
             const res = await axios
                 .put(
                     "/api/editProfile",
@@ -150,8 +182,8 @@ const Profile: NextPage = () => {
 
   const convertAndSetUploadImages = (files:any) => {
     let arr:any[] = [];
-    console.log('files');
-    console.log(files)
+    //console.log('files');
+    //console.log(files)
     files.forEach((item:any)=>{
         getBase64(item, (result:string) => {
             console.log('base64image'+result);
@@ -175,11 +207,13 @@ const Profile: NextPage = () => {
     };
 }
     const addUserImages = async () => {
-        if(email && uploadImages){
-            const res = await axios
+        if(userId && uploadImages){
+            console.log(uploadImages);
+            uploadImages.forEach(async(item)=> {
+                const res = await axios
                 .put(
-                    "/api/uploadImages",
-                    { email, uploadImages},
+                    "/api/uploadImage",
+                    { userId, item},
                     {
                     headers: {
                         Accept: "application/json",
@@ -188,31 +222,32 @@ const Profile: NextPage = () => {
                     }
                 )
                 .then(async (res) => {
-                    //console.log(res);
-                    redirectToHome();
+                    setMessage("Uploading Images");
                 })
                 .catch((error) => {
                     //console.log(error);
                     setAlert(error);
                 });
+            })
+            
         }
-        handleCancelPressed();
     };
 
 
      useEffect(() => {
         getUser();
+        getUserImages();
         if(session?.user?.email){
             setEmail(session.user.email);
         }
     }, []);
-
+ 
     useEffect(() => {
         if(email){
             //console.log(email);
         }
-        if(username){
-            //console.log(username);
+        if(images){
+            console.log(images);
         }
 
         if(avatarFile){
@@ -222,18 +257,13 @@ const Profile: NextPage = () => {
             });
         }
 
-        if(avatar){
-            //console.log(avatar);
-        }
-
-        if(category){
-            //console.log('category');
-            //console.log(category);
-        }
         if(!username){
             getUser();
         }
-    }, [email, username, instagram, bio, link1, link2, twitter, session, avatar, avatarFile, category])
+        if(!images){
+            getUserImages();
+        }
+    }, [email, username, instagram, bio, link1, link2, twitter, session, avatar, avatarFile, category, userId, images])
 
   return (
     <div className={styles.App}>
@@ -286,9 +316,9 @@ const Profile: NextPage = () => {
                             <h3>Images</h3>
                             <Grid>
                             {images[0] && 
-                                images[0].map((item:any) => {
+                                images.map((item:any) => {
                                     return(
-                                    <Grid.Col sm={4}><img className={styles.galleryImages} src={item}></img></Grid.Col>
+                                        <Grid.Col sm={4}><img className={styles.galleryImages} src={item}></img></Grid.Col>
                                     );
                                 })
                             }
@@ -315,7 +345,7 @@ const Profile: NextPage = () => {
                                                  multiple
                                                  accept="image/*"
                                                  onChange={async(e:any) => {
-                                                    console.log(e.target.files);
+                                                    //console.log(e.target.files);
                                                      let files = Array.from(e.target.files);
                                                      convertAndSetUploadImages(files);
                                                  }}
@@ -424,7 +454,7 @@ const Profile: NextPage = () => {
                                                 })
                                             }
                                             arrayy.push(e.target.value.toString());
-                                            console.log(arrayy);
+                                            //console.log(arrayy);
                                             setCategory(arrayy);
                                         }
                                     }}>

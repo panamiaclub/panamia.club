@@ -54,11 +54,6 @@ const usersSchema = new Schema(
             required:false,
             unique:false
         },
-        images: {
-            type: [],
-            required: false,
-            unique: false
-        },
         hashedPassword: {
             type: String,
             required: true,
