@@ -15,9 +15,23 @@
 
 .socialLink{
   margin-right: 10px;
+  cursor: pointer;
+}
+.socialLink:hover{
+  color:#5FA0BF;
 }
 
 .form{
   font-size: 0.8em;
   
+}
+
+.cardStyle{
+  border-radius: 15px;
+}
+
+.galleryImages{
+  width:200px;
+  height:200px;
+  border-radius: 15px;
 }

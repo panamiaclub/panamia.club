@@ -63,7 +63,16 @@ const usersSchema = new Schema(
             type: String,
             required: true,
             minlength: 5,
-          }
+        },
+        admin: {
+            type: Boolean,
+            required: false
+        },
+        featured:{
+            type: Boolean,
+            required: false
+        }
+
     }
 )
 

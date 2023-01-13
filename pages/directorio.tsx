@@ -32,6 +32,7 @@ const Profile: NextPage = () => {
     const {data:session, status} = useSession();
     const [editProfile, setEditProfile] = useState(false);
     const [users, setUsers] = useState<any[]>([]);
+    const [category, setCategory] = useState<any[]>([]);
     const [alert, setAlert] = useState("");
 
     const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});
@@ -62,51 +63,137 @@ const Profile: NextPage = () => {
         getUsers();
     }, []);
 
+    function isCategory(element:any, index:any, array:any){
+        if(category){
+            category.map((item)=> {
+                console.log(element.category)
+                if(element.category.toString().contains(item)){
+                    //console.log(element.category)
+                    //console.log('true contains category')
+                    return true;
+                }
+            })
+        }
+    }
+
     useEffect(() => {
       
-        if(users){
-            console.log(users);
+        if(!users){
+            getUsers();
         }
-    }, [users])
+        if(users && category){
+            //console.log(category);
+            
+            let newUsers = users.filter(
+                user => user.category.toString().includes(category.toString()));
+
+            console.log('new users'+newUsers);
+            setUsers(newUsers);
+        }
+    }, [users, category]);
+
+    const formSubmit = (actions: any) => {
+        actions.setSubmitting(false);
+        //filterUsers();
+      };
 
   return (
     <div className={styles.App}>
         {
         <div className={styles.container} style={{minHeight:"85vh"}}>
             <Grid>
-                <Grid.Col sm={3}><h1 style={{marginLeft:"2%"}}>El Directorio</h1></Grid.Col>
+                <Grid.Col sm={3}><h2 style={{marginLeft:"2%"}}>El Directorio</h2></Grid.Col>
             </Grid>
             <hr></hr>
-            <Grid>
-                {
-                <>
-                    <Grid.Col sm={12}>
-                      
-                        <table style={{marginBottom:"20px",textAlign:"left"}}>
-                            <thead>
-                                <tr>
-                                    <td>Name</td><td>Description</td><td>Category</td><td><FiGlobe></FiGlobe> Website</td>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {users &&
-                                 users.map((item)=>{
-                                    return(
-                                    <tr key={item.id}>
-                                        <td>{item.username}</td>
-                                        <td>{item.bio}</td>
-                                        <td>{item.category}</td>
-                                        <td><Link href={item.link1}>{item.link1}</Link></td>
-                                    </tr>
-                                    )
-                                 })
-                                }
-                            </tbody>
-                        </table>
-                    </Grid.Col>
-                </>
-                }
+            <Grid style={{marginBottom:"2%"}}>
+                <Grid.Col sm={2}></Grid.Col>
+                <Grid.Col sm={8}>
+                    
+                    <Formik
+                        initialValues={{category: category}} 
+                        validateOnChange={false}
+                        validateOnBlur={false}
+                        onSubmit={(_, actions) => {
+                        formSubmit(actions);
+                        }}
+                    >
+                        {(props) => (
+                        <Form style={{ width: "100%" }} className={styles.form}>
+                            <>
+                            {/* 
+                                Multiple checkboxes with the same name attribute, but different
+                                value attributes will be considered a "checkbox group". Formik will automagically
+                                bind the checked values to a single array for your benefit. All the add and remove
+                                logic will be taken care of for you.
+                            */}
+                            <div id="checkbox-group"></div>
+                                <div role="group" aria-labelledby="checkbox-group"  
+                                onChange={async(e:any) => {
+                                    if(e.target.checked){
+                                        var arrayy = new Array();
+                                        if(category){
+                                            category.map((item)=>{
+                                                arrayy.push(item);
+                                            })
+                                        }
+                                        arrayy.push(e.target.value.toString());
+                                        console.log(arrayy);
+                                        setCategory(arrayy);
+                                    }
+                                }}>
+                                    <span style={{fontSize:"1.5em"}}>Filter:</span>
+                                    <label>
+                                    <Field type="checkbox" name="Category" value="Art" />
+                                    Art
+                                    </label>
+                                    <label>
+                                    <Field type="checkbox" name="Category" value="Food" />
+                                    Food
+                                    </label>
+                                    <label>
+                                    <Field type="checkbox" name="Category" value="Services" />
+                                    Services
+                                    </label>
+                                    <label>
+                                    <Field type="checkbox" name="Category" value="Apparel/Accessories" />
+                                    Apparel/Accessories
+                                    </label>
+                                    <label>
+                                    <Field type="checkbox" name="Category" value="Collectives/Platforms" />
+                                    Collectives/Platforms
+                                    </label>
+                                </div>
+                            </>
+                        </Form>
+                        )}
+                    </Formik>
+                {alert && <Alert color={"red"} style={{marginTop:"5%"}}>{alert}</Alert>}
+                </Grid.Col>
+                <Grid.Col sm={2}></Grid.Col>
             </Grid>
+            <Card className={styles.cardStyle}>
+                {users &&
+                    users.map((item)=>{
+                    return(
+                    <div key={item.id}>
+                        <Grid>
+                            <Grid.Col sm={6}>
+                                <img className={styles.avatar} src={item.avatar}></img>
+                                <p>{item.username}</p>
+                                <p>{item.bio}</p>
+                            </Grid.Col>
+                            <Grid.Col sm={6}>
+                                <p> <FiArchive></FiArchive> {item.category.toString()}</p>
+                                <span className={styles.socialLink}><Link href={"http://instagram.com/"+item.instagramHandle}><FiInstagram></FiInstagram></Link></span>
+                                <span className={styles.socialLink}><Link href={"http://twitter.com/"+item.twitterHandle}><FiTwitter></FiTwitter></Link></span>
+                                <span className={styles.socialLink}><Link href={item.link1}><FiGlobe></FiGlobe></Link></span>
+                            </Grid.Col>
+                        </Grid>
+                    </div>
+                    )
+                    })
+                }
+            </Card>
         </div>
     }
     </div>

@@ -21,7 +21,7 @@ import { TextInput, NumberInput, StylesApiProvider } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { CgProfile } from 'react-icons/cg';
 import {FiEdit2, FiInstagram, FiTwitter, FiGlobe, FiMail} from 'react-icons/fi'
-import {FiArchive} from 'react-icons/fi';
+import {FiArchive, FiUpload} from 'react-icons/fi';
 import {useSession ,signIn, signOut} from 'next-auth/react';
 import { userAgent } from 'next/server';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -42,18 +42,35 @@ const Profile: NextPage = () => {
     const [category, setCategory] = useState<any[]>([]);
     const [avatar, setAvatar] = useState("");
     const [avatarFile, setAvatarFile] = useState("");
+    const [images, setImages] = useState<any[]>([]);
+    const [uploadImages, setUploadImages] = useState<any[]>([]);
     const [alert, setAlert] = useState("");
+    const [admin, setAdmin] = useState(false);
 
     const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});
     const handleEditPressed= () => {
         getUser();
         setEditProfile(true)
     };
+
+    const handleManagementPressed = () => {
+        const { pathname } = Router;
+        if (pathname === "/profile") {
+          // TODO: redirect to a success register page
+          Router.push("/admin");
+        }
+      };
+
     const handleCancelPressed = () => {setEditProfile(false)}; 
 
     if(editProfile){
         //console.log(editProfile)
     }
+
+    const addPhotos = (actions: any) => {
+        actions.setSubmitting(false);
+        addUserImages();
+      };
 
     const formSubmit = (actions: any) => {
         actions.setSubmitting(false);
@@ -87,11 +104,13 @@ const Profile: NextPage = () => {
                 setUsername(response.data.data.username);
                 setBio(response.data.data.bio);
                 setCategory(response.data.data.category);
-                setInstagram(response.data.data.instagram);
-                setTwitter(response.data.data.twitter);
+                setInstagram(response.data.data.instagramHandle);
+                setTwitter(response.data.data.twitterHandle);
                 setLink1(response.data.data.link1);
                 setLink2(response.data.data.link2);
                 setAvatar(response.data.data.avatar);
+                setAdmin(response.data.data.admin);
+                setImages(response.data.data.images);
             })
             .catch((error) => {
                 console.log(error);
@@ -129,6 +148,22 @@ const Profile: NextPage = () => {
     handleCancelPressed();
   };
 
+  const convertAndSetUploadImages = (files:any) => {
+    let arr:any[] = [];
+    console.log('files');
+    console.log(files)
+    files.forEach((item:any)=>{
+        getBase64(item, (result:string) => {
+            console.log('base64image'+result);
+            arr.push(result);
+        });
+    });
+    
+    if(arr){
+        setUploadImages(arr);
+    }
+  }
+
   const getBase64= (file:any, cb:any) => {
     let reader = new FileReader();
     reader.readAsDataURL(file);
@@ -139,6 +174,30 @@ const Profile: NextPage = () => {
         console.log('Error: ', error);
     };
 }
+    const addUserImages = async () => {
+        if(email && uploadImages){
+            const res = await axios
+                .put(
+                    "/api/uploadImages",
+                    { email, uploadImages},
+                    {
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json",
+                    },
+                    }
+                )
+                .then(async (res) => {
+                    //console.log(res);
+                    redirectToHome();
+                })
+                .catch((error) => {
+                    //console.log(error);
+                    setAlert(error);
+                });
+        }
+        handleCancelPressed();
+    };
 
 
      useEffect(() => {
@@ -187,7 +246,7 @@ const Profile: NextPage = () => {
             <Grid>
                 {!editProfile &&
                 <>
-                    <Grid.Col sm={12}>
+                    <Grid.Col sm={4}>
                         <div style={{margin:"2% 0%"}}>
                             {!avatar && <CgProfile size="2em"/>}
                             {avatar && <img src={avatar}  className={styles.avatar}></img>}
@@ -219,7 +278,58 @@ const Profile: NextPage = () => {
                             <span className={styles.socialLink}><Link href={link2} target="_blank"><FiGlobe></FiGlobe></Link></span>
                         }
                         <br></br>
-                        <Button onClick={handleEditPressed} style={{margin:"0%"}}>Edit Profile <FiEdit2 style={{marginLeft:"5px"}}/></Button>
+                        <Button onClick={handleEditPressed} style={{margin:"0% 1%!important"}} size="xs">Edit Profile <FiEdit2 style={{marginLeft:"5px"}}/></Button>
+                        <Button onClick={handleManagementPressed} style={{margin:"0% 1%!important"}} size="xs">Management</Button>
+                    </Grid.Col>
+                    <Grid.Col sm={8} className={styles.gallery}>
+                        <>
+                            <h3>Images</h3>
+                            <Grid>
+                            {images[0] && 
+                                images[0].map((item:any) => {
+                                    return(
+                                    <Grid.Col sm={4}><img className={styles.galleryImages} src={item}></img></Grid.Col>
+                                    );
+                                })
+                            }
+                            </Grid>
+                            <Formik
+                            initialValues={{images: images}} 
+                            validateOnChange={false}
+                            validateOnBlur={false}
+                            onSubmit={(_, actions) => {
+                                addPhotos(actions);
+                            }}
+                            >
+                                {(props) => (
+                                <Form style={{ width: "100%" }} className={styles.form}>
+                                    <Box mb={4}>
+                                        {
+                                             <Field name="avatar">
+                                             {() => (
+                                             <div  style={{margin:"0% 1%", display:"inline-block"}}>
+                                                 <Text>Upload More Images:</Text>
+                                                 <Input size="xs" 
+                                                 value={undefined} 
+                                                 type="file" 
+                                                 multiple
+                                                 accept="image/*"
+                                                 onChange={async(e:any) => {
+                                                    console.log(e.target.files);
+                                                     let files = Array.from(e.target.files);
+                                                     convertAndSetUploadImages(files);
+                                                 }}
+                                                 />
+                                             </div>
+                                             )}
+                                         </Field>
+                                        }  
+                                        <Button type="submit" size="xs" style={{margin:"0%", display:"inline-block"}}>Upload<FiUpload style={{marginLeft:"5px", display:"inline"}}/></Button>
+                                    </Box>
+                                </Form>
+                                )}
+                            </Formik>  
+                        </>
                     </Grid.Col>
                 </>
                 }
@@ -395,10 +505,10 @@ const Profile: NextPage = () => {
                             </Form>
                             )}
                         </Formik>
+
                     {alert && <Alert color={"red"} style={{marginTop:"5%"}}>{alert}</Alert>}
                     </Grid.Col>
                     <Grid.Col sm={2}></Grid.Col>
-
                     </>
                 }
             </Grid>
