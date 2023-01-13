@@ -45,17 +45,17 @@ const usersSchema = new Schema(
             unique: false
         },
         category: {
-            type: String,
+            type: [],
             required: false,
             unique: false
         },
-        avatarIMG: {
+        avatar: {
             type: String,
             required:false,
             unique:false
         },
-        avatar: {
-            type: String,
+        images: {
+            type: [],
             required: false,
             unique: false
         },

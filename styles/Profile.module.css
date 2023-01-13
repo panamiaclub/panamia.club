@@ -7,3 +7,17 @@
     width:80%;
     margin: 0 auto;
 }
+
+.avatar{
+  width:100px;
+  border-radius: 50px;
+}
+
+.socialLink{
+  margin-right: 10px;
+}
+
+.form{
+  font-size: 0.8em;
+  
+}

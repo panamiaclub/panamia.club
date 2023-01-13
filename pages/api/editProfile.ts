@@ -22,7 +22,9 @@ const validateForm = async (
   twitter: string,
   link1: string,
   link2: string,
-  category: string
+  category: string,
+  avatar: string,
+  //images: []
 ) => {
   if (username.length < 3) {
     return { error: "Username must have 3 or more characters" };
@@ -31,9 +33,15 @@ const validateForm = async (
     return { error: "Email is invalid" };
   }
   if(bio){
-    console.log(bio);
+    //console.log(bio);
   }
 
+  if(avatar){
+    //console.log('avatar'+avatar);
+  }
+  if(category){
+    console.log(category);
+  }
   const emailUser = await users.findOne({ email: email });
 
   await dbConnect();
@@ -54,9 +62,9 @@ export default async function handler(
   }
 
   // get and validate body variables
-  const { username, email, bio, instagram, twitter, link1, link2, category } = req.body;
+  const { username, email, bio, instagram, twitter, link1, link2, category, avatar } = req.body;
 
-  const errorMessage = await validateForm(username, email, bio, instagram, twitter, link1, link2, category);
+  const errorMessage = await validateForm(username, email, bio, instagram, twitter, link1, link2, category, avatar);
   if (errorMessage) {
     return res.status(400).json(errorMessage as ResponseData);
   }
@@ -70,7 +78,9 @@ export default async function handler(
         twitterHandle: twitter,
         link1: link1,
         link2: link2,
-        category: category
+        category: category, 
+        avatar: avatar,
+        //images: images
       };
 console.log(email);
 

@@ -27,6 +27,7 @@ import { userAgent } from 'next/server';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from "axios";
 import AxiosResponse from "axios";
+import { link } from 'fs';
 
 const Profile: NextPage = () => {
     const {data:session, status} = useSession();
@@ -38,13 +39,16 @@ const Profile: NextPage = () => {
     const [twitter, setTwitter] = useState("");
     const [link1, setLink1] = useState("");
     const [link2, setLink2] = useState("");
-    const [category, setCategory] = useState("");
-
+    const [category, setCategory] = useState<any[]>([]);
+    const [avatar, setAvatar] = useState("");
+    const [avatarFile, setAvatarFile] = useState("");
     const [alert, setAlert] = useState("");
-    const [invoices, setInvoices] = useState<any[]>([]);
 
     const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});
-    const handleEditPressed= () => {setEditProfile(true)};
+    const handleEditPressed= () => {
+        getUser();
+        setEditProfile(true)
+    };
     const handleCancelPressed = () => {setEditProfile(false)}; 
 
     if(editProfile){
@@ -87,6 +91,7 @@ const Profile: NextPage = () => {
                 setTwitter(response.data.data.twitter);
                 setLink1(response.data.data.link1);
                 setLink2(response.data.data.link2);
+                setAvatar(response.data.data.avatar);
             })
             .catch((error) => {
                 console.log(error);
@@ -98,45 +103,78 @@ const Profile: NextPage = () => {
     
 
   const editUser = async () => {
-    const res = await axios
-      .put(
-        "/api/editProfile",
-        { username, email, bio ,instagram, twitter, link1, link2, category},
-        {
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
+        if(email && category && avatar && bio && instagram && twitter && link1 && link2 ){
+            console.log('category')
+            console.log(category)
+            const res = await axios
+                .put(
+                    "/api/editProfile",
+                    { username, email, bio ,instagram, twitter, link1, link2, category, avatar},
+                    {
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json",
+                    },
+                    }
+                )
+                .then(async (res) => {
+                    //console.log(res);
+                    redirectToHome();
+                })
+                .catch((error) => {
+                    //console.log(error);
+                    setAlert(error);
+                });
         }
-      )
-      .then(async (res) => {
-        console.log(res);
-        redirectToHome();
-      })
-      .catch((error) => {
-        console.log(error);
-        setAlert(error);
-      });
+    handleCancelPressed();
   };
+
+  const getBase64= (file:any, cb:any) => {
+    let reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = function () {
+        cb(reader.result)
+    };
+    reader.onerror = function (error) {
+        console.log('Error: ', error);
+    };
+}
 
 
      useEffect(() => {
         getUser();
-        if(session){
-            if(session.user){
-                if(session.user.email){
-                    setEmail(session.user.email);
-                }
-            }
+        if(session?.user?.email){
+            setEmail(session.user.email);
         }
     }, []);
 
     useEffect(() => {
-      
-        if(username){
-            console.log(username);
+        if(email){
+            //console.log(email);
         }
-    }, [invoices, email, username, instagram, bio, link1, link2, twitter, session])
+        if(username){
+            //console.log(username);
+        }
+
+        if(avatarFile){
+            let base64file= getBase64(avatarFile, (result:string) => {
+                //console.log('base64image'+result);
+                setAvatar(result);
+            });
+        }
+
+        if(avatar){
+            //console.log(avatar);
+        }
+
+        if(category){
+            //console.log('category');
+            //console.log(category);
+        }
+        if(!username){
+            getUser();
+        }
+    }, [email, username, instagram, bio, link1, link2, twitter, session, avatar, avatarFile, category])
 
   return (
     <div className={styles.App}>
@@ -151,53 +189,50 @@ const Profile: NextPage = () => {
                 <>
                     <Grid.Col sm={12}>
                         <div style={{margin:"2% 0%"}}>
-                            {!session.user.image && <CgProfile size="2em"/>}
-                            {session.user.image && <img src={session.user.image}></img>}
+                            {!avatar && <CgProfile size="2em"/>}
+                            {avatar && <img src={avatar}  className={styles.avatar}></img>}
                         </div>
-                        <table style={{marginBottom:"20px",textAlign:"left"}}>
-                            <thead>
-                                <tr>
-                                    <td>{username}</td>
-                                </tr>
-                                <tr>
-                                    <td>{bio}</td>
-                                </tr>
-                                {category && 
-                                    <tr>
-                                        <td><FiArchive></FiArchive>{category}</td>
-                                    </tr>
-                                }
-                                <tr>
-                                    {instagram && 
-                                        <td><Link href={"https://instagram.com/@"+instagram} target="_blank"><FiInstagram></FiInstagram></Link></td>
-                                    }
-                                     {twitter && 
-                                        <td><Link href={"https://twitter.com/"+ twitter} target="_blank"><FiTwitter></FiTwitter></Link></td>
-                                    }
-                                    {link1 && 
-                                        <td><Link href={link1} target="_blank"><FiGlobe></FiGlobe></Link></td>
-                                    }
-                                    {link2 && 
-                                        <td><Link href={link2} target="_blank"><FiGlobe></FiGlobe></Link></td>
-                                    }
-                                </tr>
-                               
-                            </thead>
-                        </table>
+                        <h4>{username}</h4>
+                        <p>{bio}</p>
+                        {category && 
+                            <div>
+                                <>
+                                    <FiArchive></FiArchive>
+                                    {category.map((str) => {
+                                        return(
+                                            <span key={str.id}> {str} </span>
+                                        );
+                                    })}
+                                </>
+                            </div>
+                        }
+                        {instagram && 
+                            <span className={styles.socialLink}><Link href={"https://instagram.com/"+instagram} target="_blank"><FiInstagram></FiInstagram></Link></span>
+                        }
+                            {twitter && 
+                            <span className={styles.socialLink}><Link href={"https://twitter.com/"+ twitter} target="_blank"><FiTwitter></FiTwitter></Link></span>
+                        }
+                        {link1 && 
+                            <span className={styles.socialLink}><Link href={link1} target="_blank"><FiGlobe></FiGlobe></Link></span>
+                        }
+                        {link2 && 
+                            <span className={styles.socialLink}><Link href={link2} target="_blank"><FiGlobe></FiGlobe></Link></span>
+                        }
+                        <br></br>
                         <Button onClick={handleEditPressed} style={{margin:"0%"}}>Edit Profile <FiEdit2 style={{marginLeft:"5px"}}/></Button>
                     </Grid.Col>
                 </>
                 }
-                {editProfile &&
+                {editProfile && session && session.user && 
                 <>
                     <Grid.Col sm={2}></Grid.Col>
                     <Grid.Col sm={8}>
-                        <div style={{margin:"2% 43%"}}>
-                            {!session.user.image && <CgProfile size="3em"/>}
-                            {session.user.image && <img src={session.user.image}></img>}
+                         <div style={{margin:"2% 43%"}}>
+                           {!avatar && <CgProfile size="2em"/>}
+                            {avatar && <img src={avatar} className={styles.avatar}></img>}
                         </div>
                         <Formik
-                            initialValues={{}} // { email: "", password: "" }
+                            initialValues={{avatar: avatar, username: username, bio: bio, category: category, instagram: instagram, twitter: twitter, link1: link1, link2: link2}} 
                             validateOnChange={false}
                             validateOnBlur={false}
                             onSubmit={(_, actions) => {
@@ -205,16 +240,34 @@ const Profile: NextPage = () => {
                             }}
                         >
                             {(props) => (
-                            <Form style={{ width: "100%" }}>
+                            <Form style={{ width: "100%" }} className={styles.form}>
                                 <Box mb={4}>
+                                    {
+                                        <Field name="avatar">
+                                        {() => (
+                                        <>
+                                            <Text>Avatar:</Text>
+                                            <Input size="xs"
+                                            value={undefined} 
+                                            type="file" 
+                                            accept="image/*"
+                                            onChange={async(e:any) => {
+                                                let file = (e.target.files[0])
+                                                setAvatarFile(file);
+                                            }}
+                                            />
+                                        </>
+                                        )}
+                                    </Field>
+                                    }
                                 <Field name="username">
                                     {() => (
                                     <>
                                         <Text>Username:</Text>
-                                        <Input
+                                        <Input size="xs"
                                         value={username}
                                         onChange={(e:any) => setUsername(e.target.value)}
-                                        placeholder={session?.user?.name || "username"}
+                                        placeholder={username || "username"}
                                         />
                                     </>
                                     )}
@@ -235,7 +288,7 @@ const Profile: NextPage = () => {
                                     {() => (
                                     <>
                                         <Text><FiEdit2></FiEdit2>Bio:</Text>
-                                        <Input
+                                        <Input size="xs"
                                         value={bio}
                                         onChange={(e:any) => setBio(e.target.value)}
                                         placeholder={bio}
@@ -243,24 +296,54 @@ const Profile: NextPage = () => {
                                     </>
                                     )}
                                 </Field>
-                                <Field name="category">
-                                    {() => (
-                                    <>
-                                        <Text><FiArchive></FiArchive>Category:</Text>
-                                        <Input
-                                        value={category}
-                                        onChange={(e:any) => setCategory(e.target.value)}
-                                        placeholder={"Category"}
-                                        />
-                                    </>
-                                    )}
-                                </Field>
 
+                                {/* 
+                                    Multiple checkboxes with the same name attribute, but different
+                                    value attributes will be considered a "checkbox group". Formik will automagically
+                                    bind the checked values to a single array for your benefit. All the add and remove
+                                    logic will be taken care of for you.
+                                */}
+                                <div id="checkbox-group">Category</div>
+                                    <div role="group" aria-labelledby="checkbox-group"  
+                                    onChange={async(e:any) => {
+                                        if(e.target.checked){
+                                            var arrayy = new Array();
+                                            if(category){
+                                                category.map((item)=>{
+                                                    arrayy.push(item);
+                                                })
+                                            }
+                                            arrayy.push(e.target.value.toString());
+                                            console.log(arrayy);
+                                            setCategory(arrayy);
+                                        }
+                                    }}>
+                                        <label>
+                                        <Field type="checkbox" name="Category" value="Art" />
+                                        Art
+                                        </label>
+                                        <label>
+                                        <Field type="checkbox" name="Category" value="Food" />
+                                        Food
+                                        </label>
+                                        <label>
+                                        <Field type="checkbox" name="Category" value="Services" />
+                                        Services
+                                        </label>
+                                        <label>
+                                        <Field type="checkbox" name="Category" value="Apparel/Accessories" />
+                                        Apparel/Accessories
+                                        </label>
+                                        <label>
+                                        <Field type="checkbox" name="Category" value="Collectives/Platforms" />
+                                        Collectives/Platforms
+                                        </label>
+                                    </div>
                                 <Field name="instagram">
                                     {() => (
                                     <>
                                         <Text><FiInstagram></FiInstagram></Text>
-                                        <Input
+                                        <Input size="xs"
                                         value={instagram}
                                         onChange={(e:any) => setInstagram(e.target.value)}
                                         placeholder={instagram}
@@ -272,7 +355,7 @@ const Profile: NextPage = () => {
                                     {() => (
                                     <>
                                         <Text><FiTwitter></FiTwitter></Text>
-                                        <Input
+                                        <Input size="xs"
                                         value={twitter}
                                         onChange={(e:any) => setTwitter(e.target.value)}
                                         placeholder={twitter}
@@ -284,7 +367,7 @@ const Profile: NextPage = () => {
                                     {() => (
                                     <>
                                         <Text><FiGlobe></FiGlobe></Text>
-                                        <Input
+                                        <Input size="xs"
                                         value={link1}
                                         onChange={(e:any) => setLink1(e.target.value)}
                                         placeholder={link1}
@@ -296,7 +379,7 @@ const Profile: NextPage = () => {
                                     {() => (
                                     <>
                                         <Text><FiGlobe></FiGlobe></Text>
-                                        <Input
+                                        <Input size="xs"
                                         value={link2}
                                         onChange={(e:any) => setLink2(e.target.value)}
                                         placeholder={link2}
