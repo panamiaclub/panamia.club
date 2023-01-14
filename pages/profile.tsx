@@ -318,7 +318,7 @@ const Profile: NextPage = () => {
                             {images[0] && 
                                 images.map((item:any) => {
                                     return(
-                                        <Grid.Col sm={4}><img className={styles.galleryImages} src={item}></img></Grid.Col>
+                                        <Grid.Col sm={4}  key={item._id}><img className={styles.galleryImages} src={item}></img></Grid.Col>
                                     );
                                 })
                             }

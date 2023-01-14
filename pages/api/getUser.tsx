@@ -11,23 +11,24 @@ interface ResponseData {
   msg?: string;
   data?: any[];
 }
-const getUser = async (email: string) =>{
+const getUserByEmail = async (email: string) =>{
     await dbConnect();
-    //console.log(email);
+    console.log(email);
     const User = await users.findOne({email: email});
     return User;
 }
 
+const getUserByUsername = async (username: string) =>{
+  await dbConnect();
+  console.log(username);
+  const User = await users.findOne({username: username});
+  return User;
+}
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
 ) {
-
-  let Email = "";
-  if(req.query.userEmail){
-    Email = req.query.userEmail.toString();
-  }
 
   // validate if it is a GET
   if (req.method !== "GET") {
@@ -35,18 +36,27 @@ export default async function handler(
       .status(200)
       .json({ error: "This API call only accepts GET methods" });
   }
-
-    // get Invoice
+  let username = "";
+  let Email = "";
+  let queryVal = "";
+  if(req.query.userEmail){
+    Email = req.query.userEmail.toString();
     try{
-      if(Email){
-        //console.log(Email);
-        var user = await getUser(Email.toString());
-        //console.log('email');
-        //console.log(user);
+        var user = await getUserByEmail(Email.toString());
         return res.status(200).json({ success: true, data: user });
-      }
-       
     }catch(err: any){
       return res.status(400).json({ error: "Error on '/api/getUser': " + err })
     }
+  }
+  else if(req.query.username){
+    username = req.query.username.toString();
+    console.log(username);
+    try{
+        var user = await getUserByUsername(username.toString());
+        return res.status(200).json({ success: true, data: user });
+    }catch(err: any){
+      return res.status(400).json({ error: "Error on '/api/getUser': " + err })
+    }
+  }
+  
 }

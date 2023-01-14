@@ -63,38 +63,28 @@ const Profile: NextPage = () => {
         getUsers();
     }, []);
 
-    function isCategory(element:any, index:any, array:any){
-        if(category){
-            category.map((item)=> {
-                console.log(element.category)
-                if(element.category.toString().contains(item)){
-                    //console.log(element.category)
-                    //console.log('true contains category')
-                    return true;
-                }
-            })
-        }
-    }
-
     useEffect(() => {
       
         if(!users){
             getUsers();
         }
         if(users && category){
-            //console.log(category);
-            
-            let newUsers = users.filter(
-                user => user.category.toString().includes(category.toString()));
-
-            console.log('new users'+newUsers);
-            setUsers(newUsers);
+            //console.log(category);    
         }
+
     }, [users, category]);
+
+    const filterUsers = () => {
+        let newUsers = users.filter(
+            user => user.category.toString().includes(category.toString()));
+
+        //console.log('new users'+newUsers);
+        setUsers(newUsers);
+    }
 
     const formSubmit = (actions: any) => {
         actions.setSubmitting(false);
-        //filterUsers();
+        filterUsers();
       };
 
   return (
@@ -178,9 +168,13 @@ const Profile: NextPage = () => {
                     <div key={item.id}>
                         <Grid>
                             <Grid.Col sm={6}>
-                                <img className={styles.avatar} src={item.avatar}></img>
-                                <p>{item.username}</p>
-                                <p>{item.bio}</p>
+                                <Link  href={"/panas/"+item.username}>
+                                    <div style={{cursor:"pointer"}}>
+                                        <img className={styles.avatar} src={item.avatar} ></img>
+                                        <p >{item.username}</p>
+                                        <p >{item.bio}</p>
+                                    </div>
+                                </Link>
                             </Grid.Col>
                             <Grid.Col sm={6}>
                                 <p> <FiArchive></FiArchive> {item.category.toString()}</p>
