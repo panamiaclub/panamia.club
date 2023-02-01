@@ -115,7 +115,7 @@
 
 .footer-dark {
   position: relative;
-  padding-top: 50px;
+  padding-top: 20px;
   padding-right: 30px;
   padding-bottom: 15px;
   padding-left: 30px;
@@ -195,7 +195,7 @@
 .footer {
   display: flex;
   flex: 1;
-  padding: 2rem 0;
+  padding: 1rem 0;
   border-top: 1px solid #000000;
   justify-content: center;
   align-items: center;

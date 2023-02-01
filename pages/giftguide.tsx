@@ -109,8 +109,12 @@ const GiftGuide: NextPage = () => {
     <div className={styles.App}>
   
         
+<<<<<<< HEAD
        
   <img src='/CosaHecha/1.svg' alt="svg1" width="100%"/>
+=======
+        <img src='/CosaHecha/1.svg' alt="svg1" width="100%"/>
+>>>>>>> 71c89c6ba44db6d7928f547be3384920e8ca735c
         <img src='/CosaHecha/2.svg' alt="svg1" width="100%"/>
         <img src='/CosaHecha/3.svg' alt="svg1" width="100%"/>
         <img src='/CosaHecha/4.svg' alt="svg1" width="100%"/>
