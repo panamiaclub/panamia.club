@@ -12,12 +12,13 @@
 }
 
 .App{
-  background-color: #FFECC8!important;
+  background-color: #f8f8f8!important;
   color:black;
+  min-height: 90vh;
 }
 
 .headings{
-  color:#ee5867;
+  color:black;
   letter-spacing: 0.4em;
 }
 
@@ -117,7 +118,6 @@
   position: relative;
   padding-top: 20px;
   padding-right: 30px;
-  padding-bottom: 15px;
   padding-left: 30px;
   border-bottom-style: solid;
   border-bottom-width: 1px;
@@ -149,7 +149,6 @@
 
 .footer-link {
   margin-top: 12px;
-  margin-bottom: 6px;
   color: #000000;
   font-size: 14px;
   line-height: 16px;

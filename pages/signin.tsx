@@ -112,7 +112,7 @@ const SignIn: NextPage = ({ providers }: any) => {
               : "Already have an account? "}
 
               
-            <Button onClick={() => setAuthType(oppAuthType[authType])}  style={{backgroundColor:"#EB5867"}}>
+            <Button onClick={() => setAuthType(oppAuthType[authType])}  style={{backgroundColor:"#4AB3EA"}}>
               <Text >{oppAuthType[authType]}</Text>
             </Button>
           </Text>
@@ -169,7 +169,7 @@ const SignIn: NextPage = ({ providers }: any) => {
                   </Field>
                   <Button
                     mt={6}
-                    type="submit" style={{backgroundColor:"#EB5867"}}
+                    type="submit" style={{backgroundColor:"#4AB3EA"}}
                   >
                     {authType}
                   </Button>

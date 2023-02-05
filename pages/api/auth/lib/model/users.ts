@@ -66,6 +66,10 @@ const usersSchema = new Schema(
         featured:{
             type: Boolean,
             required: false
+        },
+        onboardingFormComplete:{
+            type: Boolean,
+            required: false
         }
 
     }

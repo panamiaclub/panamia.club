@@ -1,5 +1,5 @@
 .App{
-    background-color: #FFECC8!important;
+    background-color: #f6f6f6!important;
     color:black;
   }
 
@@ -28,6 +28,7 @@
 
 .cardStyle{
   border-radius: 15px;
+  box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
 }
 
 .galleryImages{

@@ -31,6 +31,7 @@ type LayoutProps = {
   const useStyles = createStyles((theme) => ({
     footer: {
       marginTop: 0,
+      backgroundColor: "#FFECC8",
       borderTop: `1px solid ${
         theme.colorScheme === 'light' ? theme.colors.gray[5] : theme.colors.gray[2]
       }`,
@@ -53,7 +54,7 @@ type LayoutProps = {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      backgroundColor: "#ffffff"
+      backgroundColor: "#FFECC8"
     },
   
     links: {
@@ -146,12 +147,12 @@ export default function Layout({ children }: LayoutProps) {
              <Header height={HEADER_HEIGHT} sx={{ borderBottom: 0 }} mb={120} style={{marginBottom:"0"}}>
                 <Container className={classes.inner} fluid>
                     <Group>
-                    <Burger opened={opened} onClick={toggle} className={classes.burger} size="sm" />
+                      <Burger opened={opened} onClick={toggle} className={classes.burger} size="sm" />
                    
                       <Link href="/">
-                      <span className={styles.logo}>
-                        <Image src="/logo.png" alt="panamia logo" width={40} height={35}/>   
-                          </span>
+                        <span className={styles.logo}>
+                          <Image src="/logo.png" alt="panamia logo" width={40} height={35}/>   
+                        </span>
                       </Link>
                 
                     </Group>

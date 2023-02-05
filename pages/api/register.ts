@@ -70,6 +70,7 @@ export default async function handler(
         username: username,
         email: email,
         hashedPassword: hashedPassword,
+        onboardingFormComplete: false
     });
 
     newUser

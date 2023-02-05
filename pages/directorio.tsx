@@ -161,11 +161,11 @@ const Profile: NextPage = () => {
                 </Grid.Col>
                 <Grid.Col sm={2}></Grid.Col>
             </Grid>
-            <Card className={styles.cardStyle}>
+            <div >
                 {users &&
                     users.map((item)=>{
                     return(
-                    <div key={item.id}>
+                        <Card className={styles.cardStyle} key={item.id}>
                         <Grid>
                             <Grid.Col sm={6}>
                                 <Link  href={"/panas/"+item.username}>
@@ -183,11 +183,11 @@ const Profile: NextPage = () => {
                                 <span className={styles.socialLink}><Link href={item.link1}><FiGlobe></FiGlobe></Link></span>
                             </Grid.Col>
                         </Grid>
-                    </div>
+                    </Card>
                     )
                     })
                 }
-            </Card>
+            </div>
         </div>
     }
     </div>
