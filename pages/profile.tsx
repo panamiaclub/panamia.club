@@ -277,42 +277,46 @@ const Profile: NextPage = () => {
                 {!editProfile &&
                 <>
                     <Grid.Col sm={4}>
-                        <div style={{margin:"2% 0%"}}>
-                            {!avatar && <CgProfile size="2em"/>}
-                            {avatar && <img src={avatar}  className={styles.avatar}></img>}
-                        </div>
-                        <h4>{username}</h4>
-                        <p>{bio}</p>
-                        {category && 
-                            <div>
-                                <>
-                                    <FiArchive></FiArchive>
-                                    {category.map((str) => {
-                                        return(
-                                            <span key={str.id}> {str} </span>
-                                        );
-                                    })}
-                                </>
+                        <Card className={styles.cardStyle}>
+                            <div style={{margin:"2% 0%"}}>
+                                {!avatar && <CgProfile size="2em"/>}
+                                {avatar && <img src={avatar}  className={styles.avatar}></img>}
                             </div>
-                        }
-                        {instagram && 
-                            <span className={styles.socialLink}><Link href={"https://instagram.com/"+instagram} target="_blank"><FiInstagram></FiInstagram></Link></span>
-                        }
-                            {twitter && 
-                            <span className={styles.socialLink}><Link href={"https://twitter.com/"+ twitter} target="_blank"><FiTwitter></FiTwitter></Link></span>
-                        }
-                        {link1 && 
-                            <span className={styles.socialLink}><Link href={link1} target="_blank"><FiGlobe></FiGlobe></Link></span>
-                        }
-                        {link2 && 
-                            <span className={styles.socialLink}><Link href={link2} target="_blank"><FiGlobe></FiGlobe></Link></span>
-                        }
-                        <br></br>
-                        <Button onClick={handleEditPressed} style={{margin:"0% 1%!important"}} size="xs">Edit Profile <FiEdit2 style={{marginLeft:"5px"}}/></Button>
-                        <Button onClick={handleManagementPressed} style={{margin:"0% 1%!important"}} size="xs">Management</Button>
+                            <h4>{username}</h4>
+                            <p>{bio}</p>
+                            {category && 
+                                <div>
+                                    <>
+                                        <FiArchive></FiArchive>
+                                        {category.map((str) => {
+                                            return(
+                                                <span key={str.id}> {str} </span>
+                                            );
+                                        })}
+                                    </>
+                                </div>
+                            }
+                            {instagram && 
+                                <span className={styles.socialLink}><Link href={"https://instagram.com/"+instagram} target="_blank"><FiInstagram></FiInstagram></Link></span>
+                            }
+                                {twitter && 
+                                <span className={styles.socialLink}><Link href={"https://twitter.com/"+ twitter} target="_blank"><FiTwitter></FiTwitter></Link></span>
+                            }
+                            {link1 && 
+                                <span className={styles.socialLink}><Link href={link1} target="_blank"><FiGlobe></FiGlobe></Link></span>
+                            }
+                            {link2 && 
+                                <span className={styles.socialLink}><Link href={link2} target="_blank"><FiGlobe></FiGlobe></Link></span>
+                            }
+                            <br></br>
+                        </Card>
+                        <div style={{marginTop:"20px"}}>
+                            <Button onClick={handleEditPressed} style={{margin:"0% 2%!important", marginRight:"20px"}} size="xs">Edit Profile <FiEdit2 style={{marginLeft:"5px"}}/></Button>
+                            <Button onClick={handleManagementPressed} size="xs">Management</Button>
+                        </div>
                     </Grid.Col>
                     <Grid.Col sm={8} className={styles.gallery}>
-                        <>
+                        <Card className={styles.cardStyle}>
                             <h3>Images</h3>
                             <Grid>
                             {images[0] && 
@@ -359,7 +363,7 @@ const Profile: NextPage = () => {
                                 </Form>
                                 )}
                             </Formik>  
-                        </>
+                        </Card>
                     </Grid.Col>
                 </>
                 }
@@ -477,6 +481,10 @@ const Profile: NextPage = () => {
                                         <label>
                                         <Field type="checkbox" name="Category" value="Collectives/Platforms" />
                                         Collectives/Platforms
+                                        </label>
+                                        <label>
+                                        <Field type="checkbox" name="Category" value="Customer" />
+                                        Customer
                                         </label>
                                     </div>
                                 <Field name="instagram">
