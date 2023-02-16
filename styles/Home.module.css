@@ -22,6 +22,15 @@
   letter-spacing: 0.4em;
 }
 
+.loginLinks{
+  letter-spacing: 0.2em;
+  cursor:pointer;
+}
+
+.loginLinks:hover{
+  color:#3683ad;
+}
+
 .headings2{
   color:#ffffff;
   letter-spacing: 0.3em;

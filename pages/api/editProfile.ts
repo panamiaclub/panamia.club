@@ -24,6 +24,7 @@ const validateForm = async (
   link2: string,
   category: string,
   avatar: string,
+  location: string
   //images: []
 ) => {
   if (username.length < 3) {
@@ -62,9 +63,9 @@ export default async function handler(
   }
 
   // get and validate body variables
-  const { username, email, bio, instagram, twitter, link1, link2, category, avatar, featured } = req.body;
+  const { username, email, bio, instagram, twitter, link1, link2, category, avatar, featured, location } = req.body;
 
-  const errorMessage = await validateForm(username, email, bio, instagram, twitter, link1, link2, category, avatar);
+  const errorMessage = await validateForm(username, email, bio, instagram, twitter, link1, link2, category, avatar, location);
   if (errorMessage) {
     return res.status(400).json(errorMessage as ResponseData);
   }
@@ -80,7 +81,8 @@ export default async function handler(
         link2: link2,
         category: category, 
         avatar: avatar,
-        featured: featured
+        featured: featured,
+        location: location
         //images: images
       };
 console.log(email);

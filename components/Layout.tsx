@@ -31,7 +31,7 @@ type LayoutProps = {
   const useStyles = createStyles((theme) => ({
     footer: {
       marginTop: 0,
-      backgroundColor: "#FFECC8",
+      backgroundColor: "white",
       borderTop: `1px solid ${
         theme.colorScheme === 'light' ? theme.colors.gray[5] : theme.colors.gray[2]
       }`,
@@ -54,7 +54,7 @@ type LayoutProps = {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      backgroundColor: "#FFECC8"
+      backgroundColor: "white"
     },
   
     links: {
@@ -80,7 +80,7 @@ type LayoutProps = {
       fontWeight: 500,
   
       '&:hover': {
-        backgroundColor: theme.colorScheme === 'light' ? theme.colors.dark[6] : theme.colors.gray[0],
+        backgroundColor: theme.colorScheme === 'light' ? theme.colors.gray[0] : theme.colors.gray[0],
       },
     },
   

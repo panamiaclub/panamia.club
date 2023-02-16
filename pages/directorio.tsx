@@ -20,7 +20,7 @@ import { Field, Form, Formik } from "formik";
 import { TextInput, NumberInput, StylesApiProvider } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { CgProfile } from 'react-icons/cg';
-import {FiEdit2, FiInstagram, FiTwitter, FiGlobe, FiMail} from 'react-icons/fi'
+import {FiEdit2, FiInstagram, FiTwitter, FiGlobe, FiMail, FiMapPin} from 'react-icons/fi'
 import {FiArchive} from 'react-icons/fi';
 import {useSession ,signIn, signOut} from 'next-auth/react';
 import { userAgent } from 'next/server';
@@ -168,15 +168,16 @@ const Profile: NextPage = () => {
                         <Card className={styles.cardStyle} key={item.id}>
                         <Grid>
                             <Grid.Col sm={6}>
-                                <Link  href={"/panas/"+item.username}>
+                                <Link  href={"/pana/"+item.username}>
                                     <div style={{cursor:"pointer"}}>
                                         <img className={styles.avatar} src={item.avatar} ></img>
                                         <p >{item.username}</p>
-                                        <p >{item.bio}</p>
+                                        <p> <FiMapPin></FiMapPin> {item.location.toString()}</p>
                                     </div>
                                 </Link>
                             </Grid.Col>
                             <Grid.Col sm={6}>
+                                <p >{item.bio}</p>
                                 <p> <FiArchive></FiArchive> {item.category.toString()}</p>
                                 <span className={styles.socialLink}><Link href={"http://instagram.com/"+item.instagramHandle}><FiInstagram></FiInstagram></Link></span>
                                 <span className={styles.socialLink}><Link href={"http://twitter.com/"+item.twitterHandle}><FiTwitter></FiTwitter></Link></span>

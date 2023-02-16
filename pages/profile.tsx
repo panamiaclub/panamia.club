@@ -21,7 +21,7 @@ import { TextInput, NumberInput, StylesApiProvider } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { CgProfile } from 'react-icons/cg';
 import {FiEdit2, FiInstagram, FiTwitter, FiGlobe, FiMail} from 'react-icons/fi'
-import {FiArchive, FiUpload} from 'react-icons/fi';
+import {FiArchive, FiUpload, FiMapPin} from 'react-icons/fi';
 import {useSession ,signIn, signOut} from 'next-auth/react';
 import { userAgent } from 'next/server';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -37,8 +37,10 @@ const Profile: NextPage = () => {
     const [bio, setBio] = useState("");
     const [instagram, setInstagram] = useState("");
     const [twitter, setTwitter] = useState("");
+    const [dateJoined, setDateJoined] = useState<any>();
     const [link1, setLink1] = useState("");
     const [link2, setLink2] = useState("");
+    const [location, setLocation] = useState("");
     const [category, setCategory] = useState<any[]>([]);
     const [avatar, setAvatar] = useState("");
     const [avatarFile, setAvatarFile] = useState("");
@@ -113,6 +115,8 @@ const Profile: NextPage = () => {
                 setAvatar(response.data.data.avatar);
                 setAdmin(response.data.data.admin);
                 setUserId(response.data.data._id);
+                setLocation(response.data.data.location);
+                setDateJoined(response.data.data.dateJoined);
             })
             .catch((error) => {
                 console.log(error);
@@ -154,13 +158,13 @@ const Profile: NextPage = () => {
     
 
   const editUser = async () => {
-        if(email && category && avatar && bio && instagram && twitter && link1 && link2 ){
+        if(email && category && avatar && bio && instagram && twitter && link1 && link2 && location ){
             //console.log('category')
             //console.log(category)
             const res = await axios
                 .put(
                     "/api/editProfile",
-                    { username, email, bio ,instagram, twitter, link1, link2, category, avatar},
+                    { username, email, bio ,instagram, twitter, link1, link2, category, avatar, location},
                     {
                     headers: {
                         Accept: "application/json",
@@ -296,6 +300,9 @@ const Profile: NextPage = () => {
                                     </>
                                 </div>
                             }
+                           { location && 
+                             <span><p><><FiMapPin></FiMapPin>{location}</></p></span>
+                            }
                             {instagram && 
                                 <span className={styles.socialLink}><Link href={"https://instagram.com/"+instagram} target="_blank"><FiInstagram></FiInstagram></Link></span>
                             }
@@ -307,6 +314,9 @@ const Profile: NextPage = () => {
                             }
                             {link2 && 
                                 <span className={styles.socialLink}><Link href={link2} target="_blank"><FiGlobe></FiGlobe></Link></span>
+                            }
+                            { dateJoined && 
+                             <p>Pana Since {new Date(dateJoined).toLocaleDateString()}</p>
                             }
                             <br></br>
                         </Card>
@@ -376,7 +386,7 @@ const Profile: NextPage = () => {
                             {avatar && <img src={avatar} className={styles.avatar}></img>}
                         </div>
                         <Formik
-                            initialValues={{avatar: avatar, username: username, bio: bio, category: category, instagram: instagram, twitter: twitter, link1: link1, link2: link2}} 
+                            initialValues={{avatar: avatar, username: username, bio: bio, category: category, instagram: instagram, twitter: twitter, link1: link1, link2: link2, location: location}} 
                             validateOnChange={false}
                             validateOnBlur={false}
                             onSubmit={(_, actions) => {
@@ -531,6 +541,18 @@ const Profile: NextPage = () => {
                                         value={link2}
                                         onChange={(e:any) => setLink2(e.target.value)}
                                         placeholder={link2}
+                                        />
+                                    </>
+                                    )}
+                                </Field>
+                                <Field name="location">
+                                    {() => (
+                                    <>
+                                        <Text><FiMapPin></FiMapPin></Text>
+                                        <Input size="xs"
+                                        value={location}
+                                        onChange={(e:any) => setLocation(e.target.value)}
+                                        placeholder={location}
                                         />
                                     </>
                                     )}

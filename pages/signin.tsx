@@ -22,6 +22,7 @@ import {
 import { Field, Form, Formik } from "formik";
 import axios from "axios";
 import Router from "next/router";
+import Link from "next/link";
 
 const SignIn: NextPage = ({ providers }: any) => {
   const { data: session } = useSession();
@@ -106,17 +107,6 @@ const SignIn: NextPage = ({ providers }: any) => {
         <Grid.Col md={4}></Grid.Col>
         <Grid.Col md={4}>
           <h2 className={styles.headings}>{authType}</h2>
-          <Text mb={6} className={styles.headings}>
-            {authType === "Login"
-              ? "Not registered yet? "
-              : "Already have an account? "}
-
-              
-            <Button onClick={() => setAuthType(oppAuthType[authType])}  style={{backgroundColor:"#4AB3EA"}}>
-              <Text >{oppAuthType[authType]}</Text>
-            </Button>
-          </Text>
-
           <Formik
             initialValues={{}} // { email: "", password: "" }
             validateOnChange={false}
@@ -177,6 +167,12 @@ const SignIn: NextPage = ({ providers }: any) => {
               </Form>
             )}
           </Formik>
+          <Text mb={6} className={styles.loginLinks} onClick={() => setAuthType(oppAuthType[authType])}>
+            {authType === "Login"
+              ? "Not registered yet? "
+              : "Already have an account? "}
+          </Text>
+
          {alert && <Alert color={"red"} style={{marginTop:"5%"}}>{alert}</Alert>}
           </Grid.Col>
           <Grid.Col md={4}></Grid.Col>

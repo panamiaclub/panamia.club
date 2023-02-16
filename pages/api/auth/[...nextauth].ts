@@ -71,7 +71,7 @@ export default NextAuth({
         //     return token;
         // },
       //  async redirect(){
-      //     return process.env.NEXT_PUBLIC_URL + "/invoicing" || "http://nxtpay.vercel.app/invoicing";
+      //     return process.env.NEXT_PUBLIC_URL + "/invoicing" || "http://panamia.vercel.app/invoicing";
       //   }
     
     },

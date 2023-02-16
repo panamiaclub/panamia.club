@@ -70,7 +70,16 @@ const usersSchema = new Schema(
         onboardingFormComplete:{
             type: Boolean,
             required: false
+        },
+        location: {
+            type: String,
+            required: false
+        },
+        dateJoined: {
+            type: Date,
+            required: false
         }
+
 
     }
 )
