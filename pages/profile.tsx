@@ -47,6 +47,7 @@ const Profile: NextPage = () => {
     const [images, setImages] = useState<any[]>([]);
     const [uploadImages, setUploadImages] = useState<any[]>([]);
     const [alert, setAlert] = useState("");
+    const [onboardingFormComplete, setOnboardingFormComplete] = useState<Boolean>();
     const [message, setMessage] = useState("");
     const [admin, setAdmin] = useState(false);
     const [userId, setUserId] = useState("");
@@ -117,6 +118,7 @@ const Profile: NextPage = () => {
                 setUserId(response.data.data._id);
                 setLocation(response.data.data.location);
                 setDateJoined(response.data.data.dateJoined);
+                setOnboardingFormComplete(response.data.data.onboardingFormComplete);
             })
             .catch((error) => {
                 console.log(error);
@@ -321,8 +323,9 @@ const Profile: NextPage = () => {
                             <br></br>
                         </Card>
                         <div style={{marginTop:"20px"}}>
-                            <Button onClick={handleEditPressed} style={{margin:"0% 2%!important", marginRight:"20px"}} size="xs">Edit Profile <FiEdit2 style={{marginLeft:"5px"}}/></Button>
-                            <Button onClick={handleManagementPressed} size="xs">Management</Button>
+                            {!onboardingFormComplete && <Button style={{margin:"0% 2%!important", marginRight:"20px", backgroundColor: "green"}} size="xs">Complete Onboarding</Button>}
+                            {onboardingFormComplete &&   <Button onClick={handleEditPressed} style={{margin:"0% 2%!important", marginRight:"20px"}} size="xs">Edit Profile <FiEdit2 style={{marginLeft:"5px"}}/></Button>}
+                            { admin && <Button onClick={handleManagementPressed} size="xs">Management</Button>}
                         </div>
                     </Grid.Col>
                     <Grid.Col sm={8} className={styles.gallery}>
