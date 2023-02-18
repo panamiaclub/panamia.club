@@ -249,7 +249,7 @@ const Pana: NextPage = () => {
                                     <>
                                         {usersInCategory.map((item) => {
                                             return(
-                                                <span> {item} </span>
+                                                <span key={item.id}> {item} </span>
                                             );
                                         })}
                                     </>
