@@ -16,16 +16,41 @@ import {
   Burger,
   Navbar,
   NavLink,
-  Grid
+  Grid, Input, Text, Box
 } from '@mantine/core';
 import { IconBrandInstagram } from '@tabler/icons'
 import {motion, useAnimation} from "framer-motion";
 import {useInView} from "react-intersection-observer";
 import {useEffect} from 'react';
 
+import { useCallback, useMemo, useState } from 'react';
+import axios from "axios";
+import React from 'react';
+import { Field, Form, Formik } from "formik";
+import { TextInput, NumberInput, StylesApiProvider } from '@mantine/core';
+import { useForm } from '@mantine/form';
+import "react-responsive-carousel/lib/styles/carousel.min.css"; // requires a loader
+import { Carousel } from 'react-responsive-carousel';
+
+import Router from "next/router";
+
 const Home: NextPage = () => {
   const {ref, inView} = useInView();
   const animation = useAnimation();
+  const [search, setSearch] = useState("");
+
+  const formSubmit = (actions: any) => {
+    actions.setSubmitting(false);
+    redirectToDirectorio();
+  };
+
+  const redirectToDirectorio = () => {
+    const { pathname } = Router;
+    if (pathname === "/giftguide") {
+      // TODO: redirect to a success register page
+      Router.push("/directorio");
+    }
+  };
 
   useEffect(() => {
     console.log("use effect , inView = " , inView);
@@ -63,9 +88,16 @@ const Home: NextPage = () => {
                 }
               }
             }}>
-              <Image src="/logo.png" height={200} width={300}></Image>
-              <h2 className={styles.headings}>Your favorite directory for local creatives.</h2>
-              <Link href='/newsletter' target="_blank"><Button style={{backgroundColor:"#EE5967", color:"#FFECC8"}} >Sign Up For Our Newsletter</Button></Link>
+              
+             <Grid>
+                <Grid.Col md={6} xs={12}>
+                  <h1 className={styles.headingBig}>Your <span style={{color:"#39B6FF"}}>favorite</span> directory for <span style={{color:"#fad288"}}>local</span> creatives.</h1>
+                  <Link href='/newsletter' target="_blank"><Button style={{backgroundColor:"#EE5967", color:"#FFFFFF"}}>Sign Up For Our Newsletter</Button></Link>
+                </Grid.Col>
+                <Grid.Col md={6} xs={12}>
+                  <Image src="/macbook.png" height={400} width={500} style={{marginBottom:"10%"}}></Image>
+                </Grid.Col>
+            </Grid>
             </motion.div>
         </div>
         <div className={styles.aboutContainer} id="About" ref={ref}>
@@ -91,6 +123,63 @@ const Home: NextPage = () => {
                 <Grid.Col span={4} md={5} xs={4}></Grid.Col>
             </Grid>
           </motion.div>
+        </div>
+        <div className={styles.featuredPanas} >
+          <h1 style={{color:"#39B6FF"}}>Featured Panas</h1>
+          <Carousel centerMode={true} centerSlidePercentage={30}>
+              <div>
+                  <img src="HolisticMami.png" />
+                  {/* <p className="legend">Holistic Mami</p> */}
+              </div>
+              <div>
+                  <img src="Mystix.jpg" />
+              </div>
+              <div>
+                  <img src="Igor.jpg" />
+              </div>
+              <div>
+                  <img src="MarreroTarot.png" />
+              </div>
+              <div>
+                  <img src="sugarPlug.png" />
+              </div>
+              <div>
+                  <img src="waxworms.jpg" />
+              </div>
+              <div>
+                  <img src="GirlBossKollections.png" />
+              </div>
+          </Carousel>
+        </div>
+        <div className={styles.searchD} >
+          <h1 style={{color:"#004AAD"}}>Search all Local Creators</h1>
+          <Formik
+                    initialValues={{}}
+                    validateOnChange={false}
+                    validateOnBlur={false}
+                    onSubmit={(_, actions) => {
+                    formSubmit(actions);
+                    }}
+                >
+                    {(props) => (
+                    <Form style={{ width: "40%", margin: "0 auto" }}>
+                      <Box mb={4}>
+                      <Field name="search">
+                          {() => (
+                          <>
+                              <Input
+                              value={search}
+                              onChange={(e:any) => setSearch(e.target.value)}
+                              placeholder={"enter keyword(s)"}
+                              />
+                          </>
+                          )}
+                      </Field>
+                      <Button type="submit" style={{margin:"2% 40%",backgroundColor:"#39B6FF"}}>Search</Button>
+                      </Box>
+                  </Form>
+                    )}
+                </Formik>
         </div>
   </div>
   )
