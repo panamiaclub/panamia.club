@@ -113,7 +113,7 @@ const Admin: NextPage = () => {
       };
 
   const editFeatured = async (email: any, featured: any) => {
-        if(email  && avatar){
+        if(email  && featured){
             const res = await axios
                 .put(
                     "/api/editFeatured",

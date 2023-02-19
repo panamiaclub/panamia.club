@@ -126,7 +126,7 @@ const Home: NextPage = () => {
         </div>
         <div className={styles.featuredPanas} >
           <h1 style={{color:"#39B6FF"}}>Featured Panas</h1>
-          <Carousel centerMode={true} centerSlidePercentage={30}>
+          <Carousel centerMode={true} centerSlidePercentage={30} infiniteLoop={true}>
               <div>
                   <img src="HolisticMami.png" />
                   {/* <p className="legend">Holistic Mami</p> */}

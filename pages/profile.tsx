@@ -20,11 +20,11 @@ import { Field, Form, Formik } from "formik";
 import { TextInput, NumberInput, StylesApiProvider } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { CgProfile } from 'react-icons/cg';
-import {FiEdit2, FiInstagram, FiTwitter, FiGlobe, FiMail} from 'react-icons/fi'
+import {FiEdit2, FiInstagram, FiTwitter, FiGlobe, FiMail, FiCamera} from 'react-icons/fi'
 import {FiArchive, FiUpload, FiMapPin} from 'react-icons/fi';
 import {useSession ,signIn, signOut} from 'next-auth/react';
 import { userAgent } from 'next/server';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import axios from "axios";
 import AxiosResponse from "axios";
 import { link } from 'fs';
@@ -43,12 +43,17 @@ const Profile: NextPage = () => {
     const [location, setLocation] = useState("");
     const [category, setCategory] = useState<any[]>([]);
     const [avatar, setAvatar] = useState("");
+    const [bannerImage, setBannerImage] = useState("");
     const [avatarFile, setAvatarFile] = useState("");
+    const [bannerImageFile, setBannerImageFile] = useState("");
     const [images, setImages] = useState<any[]>([]);
     const [uploadImages, setUploadImages] = useState<any[]>([]);
     const [alert, setAlert] = useState("");
     const [onboardingFormComplete, setOnboardingFormComplete] = useState<Boolean>();
-    const [message, setMessage] = useState("");
+    const [imageAlert, setImageAlert] = useState("");
+    const [imageMessage, setImageMessage] = useState("");
+    const [imageUploadAlert, setImageUploadAlert] = useState("");
+    const [imageUploadMessage, setImageUploadMessage] = useState("");
     const [admin, setAdmin] = useState(false);
     const [userId, setUserId] = useState("");
 
@@ -92,11 +97,11 @@ const Profile: NextPage = () => {
       };
 
       const getUser = async() => {
-        if(email){
+        if(session?.user?.email){
             //console.log(email);
             const res = await axios
             .get(
-                "/api/getUser?userEmail="+email,
+                "/api/getUser?userEmail="+session?.user?.email,
                 {
                 headers: {
                     Accept: "application/json",
@@ -114,6 +119,7 @@ const Profile: NextPage = () => {
                 setLink1(response.data.data.link1);
                 setLink2(response.data.data.link2);
                 setAvatar(response.data.data.avatar);
+                setBannerImage(response.data.data.bannerImage);
                 setAdmin(response.data.data.admin);
                 setUserId(response.data.data._id);
                 setLocation(response.data.data.location);
@@ -160,13 +166,13 @@ const Profile: NextPage = () => {
     
 
   const editUser = async () => {
-        if(email && category && avatar && bio && instagram && twitter && link1 && link2 && location ){
+        if(email && category && bio && instagram && twitter && link1 && link2 && location ){
             //console.log('category')
             //console.log(category)
             const res = await axios
                 .put(
                     "/api/editProfile",
-                    { username, email, bio ,instagram, twitter, link1, link2, category, avatar, location},
+                    { username, email, bio ,instagram, twitter, link1, link2, category, location},
                     {
                     headers: {
                         Accept: "application/json",
@@ -183,8 +189,60 @@ const Profile: NextPage = () => {
                     setAlert(error);
                 });
         }
+       
     handleCancelPressed();
   };
+
+  const editBannerImage = async() => {
+        if(session?.user?.email && bannerImage){
+            console.log('edit banner inmage ewith sessoine smail')
+            const res = await axios
+            .put(
+                "/api/editBanner",
+                {  email: session.user.email, bannerImage: bannerImage },
+                {
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                },
+                }
+            )
+            .then(async (res) => {
+                console.log(res);
+                //redirectToHome();
+                setImageMessage("Succesfully updated image!");
+            })
+            .catch((error) => {
+                //console.log(error);
+                setImageAlert(error);
+            });
+        }   
+  }
+
+  const editAvatar = async() => {
+    if(session?.user?.email && avatar){
+        const res = await axios
+        .put(
+            "/api/editAvatar",
+            {  email: session?.user?.email, avatar: avatar },
+            {
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            },
+            }
+        )
+        .then(async (res) => {
+            console.log(res);
+            //redirectToHome();
+            setImageMessage("Succesfully updated image!");
+        })
+        .catch((error) => {
+            //console.log(error);
+            setImageAlert(error);
+        });
+    }   
+}
 
   const convertAndSetUploadImages = (files:any) => {
     let arr:any[] = [];
@@ -228,7 +286,7 @@ const Profile: NextPage = () => {
                     }
                 )
                 .then(async (res) => {
-                    setMessage("Uploading Images");
+                    setImageUploadMessage("Uploading Images");
                 })
                 .catch((error) => {
                     //console.log(error);
@@ -261,6 +319,19 @@ const Profile: NextPage = () => {
                 //console.log('base64image'+result);
                 setAvatar(result);
             });
+
+            editAvatar();
+        }
+
+        if(bannerImageFile){
+            console.log('set banner image')
+            //console.log(bannerImageFile)
+            let base64file= getBase64(bannerImageFile, (result:string) => {
+                //console.log('base64image'+result);
+                setBannerImage(result);
+            });
+
+            editBannerImage();
         }
 
         if(!username){
@@ -269,7 +340,22 @@ const Profile: NextPage = () => {
         if(!images){
             getUserImages();
         }
-    }, [email, username, instagram, bio, link1, link2, twitter, session, avatar, avatarFile, category, userId, images])
+    }, [email, username, instagram, bio, link1, link2, twitter, session, avatar, avatarFile, category, userId, images, bannerImage, bannerImageFile])
+
+    // Create a reference to the hidden file input element
+    const hiddenBannerFileInput = useRef();
+    
+    // Programatically click the hidden file input element
+    // when the Button component is clicked
+    const handleClickBannerChange = () => {
+        console.log('banner change triggered')
+        document.getElementById('bannerFileInput')?.click();
+    };
+
+    const handleClickAvatarChange = () => {
+        console.log('banner change triggered')
+        document.getElementById('avatarInput')?.click();
+    };
 
   return (
     <div className={styles.App}>
@@ -278,15 +364,46 @@ const Profile: NextPage = () => {
             <Grid>
                 <Grid.Col sm={3}><h1 style={{marginLeft:"2%"}}>Profile</h1></Grid.Col>
             </Grid>
-            <hr></hr>
+            <hr></hr> 
             <Grid>
                 {!editProfile &&
                 <>
                     <Grid.Col sm={4}>
                         <Card className={styles.cardStyle}>
-                            <div style={{margin:"2% 0%"}}>
+                            <div className={styles.banner}>
+                                {!bannerImage && <img src="/banner.jpg" className={styles.bannerImage}></img>}
+                                {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
+                                <div onClick={handleClickBannerChange}  style={{marginTop:'-6%', marginLeft:"1%", cursor:"pointer"}}>
+                                    <FiCamera color="white"></FiCamera>
+
+                                    <Input id="bannerFileInput"
+                                            value={undefined} 
+                                            type="file" 
+                                            accept="image/*" style={{display:"none"}}
+                                            onChange={async(e:any) => {
+                                                let file = (e.target.files[0])
+                                                setBannerImageFile(file);
+                                            }}
+                                        />    
+                                </div>
+                            </div>
+                            <div className={styles.avatarStyle}>
                                 {!avatar && <CgProfile size="2em"/>}
                                 {avatar && <img src={avatar}  className={styles.avatar}></img>}
+                                <div onClick={handleClickAvatarChange}  style={{ marginTop:"-10%", cursor:"pointer"}}>
+                                    
+                                    <FiCamera color="white"></FiCamera>
+
+                                    <Input size="xs" id="avatarInput"
+                                            value={undefined} 
+                                            type="file" 
+                                            accept="image/*" style={{display:"none"}}
+                                            onChange={async(e:any) => {
+                                                let file = (e.target.files[0])
+                                                setAvatarFile(file);
+                                            }}
+                                        />
+                                </div>
                             </div>
                             <h4>{username}</h4>
                             <p>{bio}</p>
@@ -321,10 +438,12 @@ const Profile: NextPage = () => {
                              <p>Pana Since {new Date(dateJoined).toLocaleDateString()}</p>
                             }
                             <br></br>
+                            {imageAlert && <Alert color={"red"} style={{marginTop:"5%"}}>{imageAlert}</Alert>}
+                            {imageMessage && <Alert color={"green"} style={{marginTop:"5%"}}>{imageMessage}</Alert>}
                         </Card>
                         <div style={{marginTop:"20px"}}>
                             {!onboardingFormComplete && <Button style={{margin:"0% 2%!important", marginRight:"20px", backgroundColor: "green"}} size="xs">Complete Onboarding</Button>}
-                            {onboardingFormComplete &&   <Button onClick={handleEditPressed} style={{margin:"0% 2%!important", marginRight:"20px"}} size="xs">Edit Profile <FiEdit2 style={{marginLeft:"5px"}}/></Button>}
+                            { <Button onClick={handleEditPressed} style={{margin:"0% 2%!important", marginRight:"20px"}} size="xs">Edit Profile <FiEdit2 style={{marginLeft:"5px"}}/></Button>}
                             { admin && <Button onClick={handleManagementPressed} size="xs">Management</Button>}
                         </div>
                     </Grid.Col>
@@ -376,6 +495,8 @@ const Profile: NextPage = () => {
                                 </Form>
                                 )}
                             </Formik>  
+                            {imageUploadAlert && <Alert color={"red"} style={{marginTop:"5%"}}>{imageUploadAlert}</Alert>}
+                            {imageUploadMessage && <Alert color={"green"} style={{marginTop:"5%"}}>{imageUploadMessage}</Alert>}
                         </Card>
                     </Grid.Col>
                 </>
@@ -399,24 +520,6 @@ const Profile: NextPage = () => {
                             {(props) => (
                             <Form style={{ width: "100%" }} className={styles.form}>
                                 <Box mb={4}>
-                                    {
-                                        <Field name="avatar">
-                                        {() => (
-                                        <>
-                                            <Text>Avatar:</Text>
-                                            <Input size="xs"
-                                            value={undefined} 
-                                            type="file" 
-                                            accept="image/*"
-                                            onChange={async(e:any) => {
-                                                let file = (e.target.files[0])
-                                                setAvatarFile(file);
-                                            }}
-                                            />
-                                        </>
-                                        )}
-                                    </Field>
-                                    }
                                 <Field name="username">
                                     {() => (
                                     <>
@@ -429,18 +532,6 @@ const Profile: NextPage = () => {
                                     </>
                                     )}
                                 </Field>
-                                {/* <Field name="email">
-                                    {() => (
-                                    <>
-                                        <Text><FiMail></FiMail>Email:</Text>
-                                        <Input
-                                        value={email}
-                                        onChange={(e:any) => setEmail(e.target.value)}
-                                        placeholder={session?.user?.email || "email"}
-                                        />
-                                    </>
-                                    )}
-                                </Field> */}
                                 <Field name="bio">
                                     {() => (
                                     <>

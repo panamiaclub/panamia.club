@@ -54,6 +54,11 @@ const usersSchema = new Schema(
             required:false,
             unique:false
         },
+        bannerImage: {
+            type: String,
+            required:false,
+            unique:false
+        },
         hashedPassword: {
             type: String,
             required: true,

@@ -27,6 +27,8 @@ import { setNestedObjectValues } from 'formik';
 import { CgProfile } from 'react-icons/cg';
 import {FiEdit2, FiInstagram, FiTwitter, FiGlobe, FiMail, FiPlus} from 'react-icons/fi'
 import {FiArchive, FiUpload, FiPlusCircle, FiMapPin} from 'react-icons/fi';
+import "react-responsive-carousel/lib/styles/carousel.min.css"; // requires a loader
+import { Carousel } from 'react-responsive-carousel';
 
 const Pana: NextPage = () => {
     const {data:session, status} = useSession();
@@ -44,9 +46,8 @@ const Pana: NextPage = () => {
     const [location, setLocation] = useState("");
     const [dateJoined, setDateJoined] = useState<any>();
     const [avatar, setAvatar] = useState("");
-    const [avatarFile, setAvatarFile] = useState("");
+    const [bannerImage, setBannerImage] = useState("");
     const [images, setImages] = useState<any[]>([]);
-    const [uploadImages, setUploadImages] = useState<any[]>([]);
     const [alert, setAlert] = useState("");
     const [message, setMessage] = useState("");
     const [admin, setAdmin] = useState(false);
@@ -96,7 +97,7 @@ const Pana: NextPage = () => {
         getUsersByCategory();
     }
     
-  }, [username, user, fullname, userId, email, images, avatar, bio, link1, link2, twitter, instagram, location, dateJoined, session])
+  }, [username, user, fullname, userId, email, images, avatar, bio, link1, link2, twitter, instagram, location, dateJoined, session, bannerImage])
 
 
     useEffect(()=>{
@@ -133,6 +134,8 @@ const Pana: NextPage = () => {
             setLink1(response.data.data.link1);
             setLink2(response.data.data.link2);
             setAvatar(response.data.data.avatar);
+            console.log(response.data.data.bannerImage);
+            setBannerImage(response.data.data.bannerImage);
             setAdmin(response.data.data.admin);
             setUserId(response.data.data._id);
             setLocation(response.data.data.location);
@@ -217,7 +220,11 @@ const Pana: NextPage = () => {
             <Grid>
                     <Grid.Col sm={4}>
                         <Card className={styles.cardStyle}>
-                            <div style={{margin:"2% 0%"}}>
+                            <div className={styles.banner}>
+                                {!bannerImage && <img src="/banner.jpg" className={styles.bannerImage}></img>}
+                                {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
+                            </div>
+                            <div className={styles.avatarStyle}>
                                 {!avatar && <CgProfile size="2em"/>}
                                 {avatar && <img src={avatar}  className={styles.avatar}></img>}
                             </div>
@@ -249,7 +256,7 @@ const Pana: NextPage = () => {
                                     <>
                                         {usersInCategory.map((item) => {
                                             return(
-                                                <span key={item.id}> {item} </span>
+                                                <span key={item}> {item} </span>
                                             );
                                         })}
                                     </>
@@ -280,8 +287,16 @@ const Pana: NextPage = () => {
                             </Card>
                             <Card className={styles.cardStyle}>
                                 <h3>Gallery</h3>
-                            
-                                <Grid>
+                                <Carousel centerMode={true} centerSlidePercentage={20} infiniteLoop={true} showThumbs={false}>
+                                    {images && 
+                                    images.map((item:any) => {
+                                        return(
+                                            <div key={item._id}><img className={styles.galleryImages} src={item}></img></div>
+                                        );
+                                    })
+                                }
+                                </Carousel>
+                                {/* <Grid>
                                 {images && 
                                     images.map((item:any) => {
                                         return(
@@ -289,7 +304,7 @@ const Pana: NextPage = () => {
                                         );
                                     })
                                 }
-                                </Grid>
+                                </Grid> */}
                             </Card>
                         </>
                     </Grid.Col>

@@ -34,7 +34,7 @@ const Profile: NextPage = () => {
     const [users, setUsers] = useState<any[]>([]);
     const [category, setCategory] = useState<any[]>([]);
     const [alert, setAlert] = useState("");
-
+    const [search, setSearch] = useState("");
     const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});
 
   const getUsers = async () => {
@@ -80,11 +80,27 @@ const Profile: NextPage = () => {
 
         //console.log('new users'+newUsers);
         setUsers(newUsers);
+
+
+    }
+
+    const filterUsersSearch =()=>{
+        if(search){
+            console.log(search)
+            let newUsers = users.filter(user => user.bio.toString().toLowerCase().includes(search.toLowerCase()));
+            console.log("filtered users.");
+            setUsers(newUsers);
+        }
     }
 
     const formSubmit = (actions: any) => {
         actions.setSubmitting(false);
         filterUsers();
+      };
+
+      const formSubmitSearch = (actions: any) => {
+        actions.setSubmitting(false);
+        filterUsersSearch();
       };
 
   return (
@@ -95,96 +111,123 @@ const Profile: NextPage = () => {
                 <Grid.Col sm={3}><h2 style={{marginLeft:"2%"}}>El Directorio</h2></Grid.Col>
             </Grid>
             <hr></hr>
-            <Grid style={{marginBottom:"2%"}}>
-                <Grid.Col sm={2}></Grid.Col>
-                <Grid.Col sm={8}>
-                    
-                    <Formik
-                        initialValues={{category: category}} 
-                        validateOnChange={false}
-                        validateOnBlur={false}
-                        onSubmit={(_, actions) => {
-                        formSubmit(actions);
-                        }}
-                    >
-                        {(props) => (
-                        <Form style={{ width: "100%" }} className={styles.form}>
-                            <>
-                            {/* 
-                                Multiple checkboxes with the same name attribute, but different
-                                value attributes will be considered a "checkbox group". Formik will automagically
-                                bind the checked values to a single array for your benefit. All the add and remove
-                                logic will be taken care of for you.
-                            */}
-                            <div id="checkbox-group"></div>
-                                <div role="group" aria-labelledby="checkbox-group"  
-                                onChange={async(e:any) => {
-                                    if(e.target.checked){
-                                        var arrayy = new Array();
-                                        if(category){
-                                            category.map((item)=>{
-                                                arrayy.push(item);
-                                            })
+            <Card className={styles.cardStyle} >
+                <Grid style={{marginBottom:"2%"}}> 
+                    <Grid.Col sm={6}>
+                        <Formik
+                            initialValues={{category: category}} 
+                            validateOnChange={false}
+                            validateOnBlur={false}
+                            onSubmit={(_, actions) => {
+                            formSubmit(actions);
+                            }}
+                        >
+                            {(props) => (
+                            <Form style={{ width: "100%" }} className={styles.form}>
+                                <>
+                                <div id="checkbox-group"></div>
+                                    <div role="group" aria-labelledby="checkbox-group"  
+                                    onChange={async(e:any) => {
+                                        if(e.target.checked){
+                                            var arrayy = new Array();
+                                            if(category){
+                                                category.map((item)=>{
+                                                    arrayy.push(item);
+                                                })
+                                            }
+                                            arrayy.push(e.target.value.toString());
+                                            console.log(arrayy);
+                                            setCategory(arrayy);
                                         }
-                                        arrayy.push(e.target.value.toString());
-                                        console.log(arrayy);
-                                        setCategory(arrayy);
-                                    }
-                                }}>
-                                    <span style={{fontSize:"1.5em"}}>Filter:</span>
-                                    <label>
-                                    <Field type="checkbox" name="Category" value="Art" />
-                                    Art
-                                    </label>
-                                    <label>
-                                    <Field type="checkbox" name="Category" value="Food" />
-                                    Food
-                                    </label>
-                                    <label>
-                                    <Field type="checkbox" name="Category" value="Services" />
-                                    Services
-                                    </label>
-                                    <label>
-                                    <Field type="checkbox" name="Category" value="Apparel/Accessories" />
-                                    Apparel/Accessories
-                                    </label>
-                                    <label>
-                                    <Field type="checkbox" name="Category" value="Collectives/Platforms" />
-                                    Collectives/Platforms
-                                    </label>
-                                </div>
-                            </>
+                                    }}>
+                                        <h2>Filter</h2>
+                                        <label>
+                                        <Field type="checkbox" name="Category" value="Art" />
+                                        Art
+                                        </label>
+                                        <label>
+                                        <Field type="checkbox" name="Category" value="Food" />
+                                        Food
+                                        </label>
+                                        <label>
+                                        <Field type="checkbox" name="Category" value="Services" />
+                                        Services
+                                        </label>
+                                        <label>
+                                        <Field type="checkbox" name="Category" value="Apparel/Accessories" />
+                                        Apparel/Accessories
+                                        </label>
+                                        <label>
+                                        <Field type="checkbox" name="Category" value="Collectives/Platforms" />
+                                        Collectives/Platforms
+                                        </label>
+                                    </div>
+                                </>
+                            </Form>
+                            )}
+                        </Formik>
+                    </Grid.Col>
+                    <Grid.Col sm={6}>
+                        <h3>Search</h3>
+                        <Formik
+                            initialValues={{}}
+                            validateOnChange={false}
+                            validateOnBlur={false}
+                            onSubmit={(_, actions) => {
+                            formSubmitSearch(actions);
+                            }}
+                        >
+                            {(props) => (
+                            <Form >
+                                <Box mb={4}>
+                                    <Field name="search">
+                                        {() => (
+                                        <>
+                                            <Input
+                                            value={search}  style={{width:"70%",marginRight:"20px", display:'inline-block'}}
+                                            onChange={(e:any) => setSearch(e.target.value)}
+                                            placeholder={"enter keyword(s)"}
+                                            />
+                                        </>
+                                        )}
+                                    </Field>
+                                     <Button type="submit" style={{margin:"0",backgroundColor:"#39B6FF", display:'inline-block'}}>Search</Button>
+                                </Box>
                         </Form>
-                        )}
-                    </Formik>
-                {alert && <Alert color={"red"} style={{marginTop:"5%"}}>{alert}</Alert>}
-                </Grid.Col>
-                <Grid.Col sm={2}></Grid.Col>
-            </Grid>
+                            )}
+                        </Formik>
+                        </Grid.Col>
+                        {alert && <Alert color={"red"} style={{marginTop:"5%"}}>{alert}</Alert>}
+                    </Grid>
+                </Card>
             <div >
                 {users &&
                     users.map((item)=>{
                     return(
-                        <Card className={styles.cardStyle} key={item.id}>
-                        <Grid>
+                        <Grid key={item.username}>
                             <Grid.Col sm={6}>
-                                <Link  href={"/pana/"+item.username}>
-                                    <div style={{cursor:"pointer"}}>
-                                        <img className={styles.avatar} src={item.avatar} ></img>
-                                        <p >{item.username}</p>
-                                        <p> <FiMapPin></FiMapPin> {item.location.toString()}</p>
-                                    </div>
-                                </Link>
-                            </Grid.Col>
-                            <Grid.Col sm={6}>
-                                <p >{item.bio}</p>
-                                <p> <FiArchive></FiArchive> {item.category.toString()}</p>
-                                <span className={styles.socialLink}><Link href={"http://instagram.com/"+item.instagramHandle}><FiInstagram></FiInstagram></Link></span>
-                                <span className={styles.socialLink}><Link href={"http://twitter.com/"+item.twitterHandle}><FiTwitter></FiTwitter></Link></span>
-                                <span className={styles.socialLink}><Link href={item.link1}><FiGlobe></FiGlobe></Link></span>
+                                <Card className={styles.cardStyle} key={item.id}>
+                                    <Grid>
+                                        <Grid.Col sm={6}>
+                                            <Link  href={"/pana/"+item.username}>
+                                                <div style={{cursor:"pointer"}}>
+                                                    <img className={styles.avatar} src={item.avatar} ></img>
+                                                    <h3>{item.username}</h3>
+                                                    <p> <FiMapPin></FiMapPin> {item.location.toString()}</p>
+                                                </div>
+                                            </Link>
+                                        </Grid.Col>
+                                        <Grid.Col sm={6}>
+                                            <p>{item.bio}</p>
+                                            <p> <FiArchive></FiArchive> {item.category.toString()}</p>
+                                            <span className={styles.socialLink}><Link href={"http://instagram.com/"+item.instagramHandle}><FiInstagram></FiInstagram></Link></span>
+                                            <span className={styles.socialLink}><Link href={"http://twitter.com/"+item.twitterHandle}><FiTwitter></FiTwitter></Link></span>
+                                            <span className={styles.socialLink}><Link href={item.link1}><FiGlobe></FiGlobe></Link></span>
+                                        </Grid.Col>
+                                    </Grid>
+                                </Card>
                             </Grid.Col>
                         </Grid>
-                    </Card>
                     )
                     })
                 }
