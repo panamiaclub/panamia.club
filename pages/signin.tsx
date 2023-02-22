@@ -57,26 +57,28 @@ const SignIn: NextPage = ({ providers }: any) => {
 }, [email, username, password])
 
   const registerUser = async () => {
-    const res = await axios
-      .post(
-        "/api/register",
-        { username, email, password },
-        {
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        }
-      )
-      .then(async () => {
-        await loginUser();
-        redirectToProfile();
-      })
-      .catch((error) => {
-        console.log(error);
-        setAlert(error);
-      });
-    console.log(res);
+    if(username && email && password){
+      const res = await axios
+        .post(
+          "/api/register",
+          { username, email, password },
+          {
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+          }
+        )
+        .then(async () => {
+          await loginUser();
+          redirectToProfile();
+        })
+        .catch((error) => {
+          console.log(error);
+          setAlert(error);
+        });
+      console.log(res);
+    }
   };
 
   const loginUser = async () => {

@@ -12,7 +12,7 @@ const usersSchema = new Schema(
         fullname: {
             type: String,
             required: false,
-            unique: true
+            unique: false
         },
         email: {
             type: String,
