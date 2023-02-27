@@ -75,7 +75,7 @@ const SignIn: NextPage = ({ providers }: any) => {
         })
         .catch((error) => {
           console.log(error);
-          setAlert(error);
+          setAlert(error.response.data.error);
         });
       console.log(res);
     }
@@ -110,7 +110,7 @@ const SignIn: NextPage = ({ providers }: any) => {
         <Grid.Col md={4}>
           <h2 className={styles.headings}>{authType}</h2>
           <Formik
-            initialValues={{}} // { email: "", password: "" }
+            initialValues={{username:username, email:email, password:password}}
             validateOnChange={false}
             validateOnBlur={false}
             onSubmit={(_, actions) => {

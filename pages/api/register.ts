@@ -59,7 +59,7 @@ export default async function handler(
   if (errorMessage) {
     return res.status(400).json(errorMessage as ResponseData);
   }
-
+  
   // hash password
   const hashedPassword = await bcrypt.hash(password, 12);
   if(hashedPassword){

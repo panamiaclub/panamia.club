@@ -63,26 +63,32 @@ const usersSchema = new Schema(
             type: String,
             required: true,
             minlength: 5,
+            unique:false
         },
         admin: {
             type: Boolean,
-            required: false
+            required: false,
+            unique:false
         },
         featured:{
             type: Boolean,
-            required: false
+            required: false,
+            unique:false
         },
         onboardingFormComplete:{
             type: Boolean,
-            required: false
+            required: false,
+            unique:false
         },
         location: {
             type: String,
-            required: false
+            required: false,
+            unique:false
         },
         dateJoined: {
             type: Date,
-            required: false
+            required: false,
+            unique:false
         }
 
 
