@@ -18,16 +18,17 @@ const validateForm = async (
   email: string,
   featured: string, 
 ) => {
-  if (!validateEmail(email)) {
-    return { error: "Email is invalid" };
-  }
+  // if (!validateEmail(email)) {
+  //   return { error: "Email is invalid" };
+  // }
   if(featured){
     console.log('featured'+featured);
    
   }
-  const emailUser = await users.findOne({ email: email });
+  //await dbConnect();
+  //const emailUser = await users.findOne({ email: email });
 
-  await dbConnect();
+  
 
   return null;
 };

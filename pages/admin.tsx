@@ -187,7 +187,7 @@ const Admin: NextPage = () => {
             </Grid>
             <hr></hr>
             <Grid>
-                {admin && users &&
+                {admin && 
                 <>
                     <Grid.Col sm={3}> 
                         <div style={{margin:"2% 30%"}}>
@@ -199,12 +199,18 @@ const Admin: NextPage = () => {
                     </Grid.Col>
                     <Grid.Col sm={9}>
                         <table>
+                            <tr>
+                                <th>username</th>
+                                <th>email</th>
+                                <th>category</th>
+                                <th></th>
+                            </tr>
                             <tbody>
-                            {
+                            {users && 
                                 users.map((item) => {
                                     console.log(item);
                                     return(
-                                        <>
+                                        <tr>
                                         <td>{item.username}</td>
                                         <td>{item.email}</td>
                                         <td>{item.category.toString()}</td>
@@ -217,7 +223,7 @@ const Admin: NextPage = () => {
                                             <Button onClick={() => handleFeaturePressed(item.email, true)} style={{margin:"0 20%"}} size="xs">Feature<FiStar style={{marginLeft:"5px", display:"inline"}}/></Button>
                                             }
                                         </td>
-                                        </>
+                                        </tr>
                                     );
                                 })
                             }

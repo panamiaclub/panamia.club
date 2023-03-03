@@ -144,7 +144,7 @@ const Pana: NextPage = () => {
         })
         .catch((error) => {
             console.log(error);
-            setAlert(error);
+            setAlert(error.response.data.error);
         });
         //console.log(res);
     }
@@ -174,7 +174,7 @@ const Pana: NextPage = () => {
         })
         .catch((error) => {
             console.log(error);
-            setAlert(error);
+            setAlert(error.response.data.error);
         });
   }
 
@@ -182,7 +182,7 @@ const Pana: NextPage = () => {
     console.log('get users by category')
         const res = await axios
         .get(
-            "/api/getUsersByCategory?category="+category[0],
+            "/api/getUsersByCategory?category="+category[1],
             {
             headers: {
                 Accept: "application/json",
@@ -194,15 +194,17 @@ const Pana: NextPage = () => {
             let arr:any[] = [];
             console.log(response);
             response.data.data.forEach((item:any)=>{
-                arr.push(item.image);
-                //console.log(item.image);
+                if(item.username != username){
+                    arr.push(item);
+                    console.log(item);
+                }
             })
             setUsersInCategory(arr);
-            console.log(images);
+            console.log(usersInCategory);
         })
         .catch((error) => {
             console.log(error);
-            setAlert(error);
+            setAlert(error.response.data.error);
         });
   }
 
@@ -256,7 +258,14 @@ const Pana: NextPage = () => {
                                     <>
                                         {usersInCategory.map((item) => {
                                             return(
-                                                <span key={item}> {item} </span>
+                                                <div>
+                                                    <Link href={"/pana/"+item.username}>
+                                                        <>
+                                                            <img key={item} src={item.avatar} style={{width:"50px", borderRadius:"25px"}}></img>
+                                                            <span key={item} style={{marginBottom:"20px"}}> {item.username} </span>
+                                                        </>
+                                                    </Link>
+                                                </div>
                                             );
                                         })}
                                     </>

@@ -205,7 +205,7 @@ const Profile: NextPage = () => {
                     users.map((item)=>{
                     return(
                         <Grid key={item.username}>
-                            <Grid.Col sm={6}>
+                            <Grid.Col sm={12}>
                                 <Card className={styles.cardStyle} key={item.id}>
                                     <Grid>
                                         <Grid.Col sm={6}>
@@ -213,16 +213,17 @@ const Profile: NextPage = () => {
                                                 <div style={{cursor:"pointer"}}>
                                                     <img className={styles.avatar} src={item.avatar} ></img>
                                                     <h3>{item.username}</h3>
-                                                    <p> <FiMapPin></FiMapPin> {item.location.toString()}</p>
+                                                    {item.location && <p> <FiMapPin></FiMapPin> {item.location.toString()}</p>}
                                                 </div>
                                             </Link>
                                         </Grid.Col>
                                         <Grid.Col sm={6}>
                                             <p>{item.bio}</p>
                                             <p> <FiArchive></FiArchive> {item.category.toString()}</p>
-                                            <span className={styles.socialLink}><Link href={"http://instagram.com/"+item.instagramHandle}><FiInstagram></FiInstagram></Link></span>
-                                            <span className={styles.socialLink}><Link href={"http://twitter.com/"+item.twitterHandle}><FiTwitter></FiTwitter></Link></span>
-                                            <span className={styles.socialLink}><Link href={item.link1}><FiGlobe></FiGlobe></Link></span>
+                                            {item.instagramHandle && <span className={styles.socialLink}><Link href={"http://instagram.com/"+item.instagramHandle}><FiInstagram></FiInstagram></Link></span>}
+                                            {item.twitterHandle && <span className={styles.socialLink}><Link href={"http://twitter.com/"+item.twitterHandle}><FiTwitter></FiTwitter></Link></span>}
+                                            {item.link1 && <span className={styles.socialLink}><Link href={item.link1}><FiGlobe></FiGlobe></Link></span>}
+                                            {item.link2 && <span className={styles.socialLink}><Link href={item.link2}><FiGlobe></FiGlobe></Link></span>}
                                         </Grid.Col>
                                     </Grid>
                                 </Card>

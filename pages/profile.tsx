@@ -20,7 +20,7 @@ import { Field, Form, Formik } from "formik";
 import { TextInput, NumberInput, StylesApiProvider } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { CgProfile } from 'react-icons/cg';
-import {FiEdit2, FiInstagram, FiTwitter, FiGlobe, FiMail, FiCamera} from 'react-icons/fi'
+import {FiEdit2, FiInstagram, FiTwitter, FiGlobe, FiMail, FiCamera, FiMap} from 'react-icons/fi'
 import {FiArchive, FiUpload, FiMapPin} from 'react-icons/fi';
 import {useSession ,signIn, signOut} from 'next-auth/react';
 import { userAgent } from 'next/server';
@@ -32,6 +32,7 @@ import { link } from 'fs';
 const Profile: NextPage = () => {
     const {data:session, status} = useSession();
     const [editProfile, setEditProfile] = useState(false);
+    const [resetPW, setResetPW] = useState(false);
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [bio, setBio] = useState("");
@@ -56,11 +57,19 @@ const Profile: NextPage = () => {
     const [imageUploadMessage, setImageUploadMessage] = useState("");
     const [admin, setAdmin] = useState(false);
     const [userId, setUserId] = useState("");
+    const [resetPWalert, setResetPWalert] = useState("");
+    const [message,setMessage] = useState("");
+    const [password,setPassword] = useState("");
+    const [passwordRetyped,setPasswordRetyped] = useState("");
 
     const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});
     const handleEditPressed= () => {
         getUser();
         setEditProfile(true)
+    };
+
+    const handleResetPressed= () => {
+        setResetPW(true);
     };
 
     const handleManagementPressed = () => {
@@ -96,6 +105,7 @@ const Profile: NextPage = () => {
         }
       };
 
+      //get
       const getUser = async() => {
         if(session?.user?.email){
             //console.log(email);
@@ -112,6 +122,7 @@ const Profile: NextPage = () => {
             .then(async (response) => {
                 //console.log(response.data.data);
                 setUsername(response.data.data.username);
+                setEmail(response.data.data.email);
                 setBio(response.data.data.bio);
                 setCategory(response.data.data.category);
                 setInstagram(response.data.data.instagramHandle);
@@ -128,15 +139,16 @@ const Profile: NextPage = () => {
             })
             .catch((error) => {
                 console.log(error);
-                setAlert(error);
+                setAlert(error.response.data.error);
             });
             //console.log(res);
         }
       }
 
       const getUserImages = async() => {
+        console.log('get user images')
         if(userId){
-            console.log(userId);
+            //console.log(userId);
             const res = await axios
             .get(
                 "/api/getUserImages?userId="+userId,
@@ -151,6 +163,7 @@ const Profile: NextPage = () => {
                 let arr:any[] = [];
                 //console.log(response);
                 response.data.data.forEach((item:any)=>{
+                    //console.log(item);
                     arr.push(item.image);
                     //console.log(item.image);
                 })
@@ -158,12 +171,13 @@ const Profile: NextPage = () => {
                 //console.log(images);
             })
             .catch((error) => {
-                console.log(error);
-                setAlert(error);
+                //console.log(error);
+                setAlert(error.response.data.error);
             });
         }
       }
     
+  //edit
 
   const editUser = async () => {
         if(email && category && bio && instagram && twitter && link1 && link2 && location ){
@@ -186,12 +200,43 @@ const Profile: NextPage = () => {
                 })
                 .catch((error) => {
                     //console.log(error);
-                    setAlert(error);
+                    setAlert(error.response.data.error);
                 });
         }
        
     handleCancelPressed();
   };
+
+  const resetPassword = async () => {
+    if(email && password && passwordRetyped ){
+        //console.log('password')
+        //console.log(password)
+        if(password != passwordRetyped){
+            setResetPWalert("Passwords don't match.");
+        }else{
+            const res = await axios
+                .put(
+                    "/api/resetPassword",
+                    { email, password},
+                    {
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json",
+                    },
+                    }
+                )
+                .then(async (res) => {
+                    setMessage(res.data.msg);
+                    setResetPW(false);
+                })
+                .catch((error) => {
+                    //console.log(error);
+                    setResetPWalert(error.response.data.error);
+            });
+        }
+    }
+   
+};
 
   const editBannerImage = async() => {
         if(session?.user?.email && bannerImage){
@@ -214,7 +259,7 @@ const Profile: NextPage = () => {
             })
             .catch((error) => {
                 //console.log(error);
-                setImageAlert(error);
+                setImageAlert(error.response.data.error);
             });
         }   
   }
@@ -239,7 +284,7 @@ const Profile: NextPage = () => {
         })
         .catch((error) => {
             //console.log(error);
-            setImageAlert(error);
+            setImageAlert(error.response.data.error);
         });
     }   
 }
@@ -311,6 +356,7 @@ const Profile: NextPage = () => {
             //console.log(email);
         }
         if(images){
+            console.log('images');
             console.log(images);
         }
 
@@ -363,6 +409,8 @@ const Profile: NextPage = () => {
         <div className={styles.container} style={{minHeight:"85vh"}}>
             <Grid>
                 <Grid.Col sm={3}><h1 style={{marginLeft:"2%"}}>Profile</h1></Grid.Col>
+                <Grid.Col sm={8}></Grid.Col>
+                <Grid.Col sm={1}> { admin && <Button onClick={handleManagementPressed} style={{marginTop:"20%"}} size="xs">Management</Button>}</Grid.Col>
             </Grid>
             <hr></hr> 
             <Grid>
@@ -373,7 +421,7 @@ const Profile: NextPage = () => {
                             <div className={styles.banner}>
                                 {!bannerImage && <img src="/banner.jpg" className={styles.bannerImage}></img>}
                                 {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
-                                <div onClick={handleClickBannerChange}  style={{marginTop:'-6%', marginLeft:"1%", cursor:"pointer"}}>
+                                <div onClick={handleClickBannerChange}  style={{marginTop:'-5%', marginLeft:"2%", cursor:"pointer"}}>
                                     <FiCamera color="white"></FiCamera>
 
                                     <Input id="bannerFileInput"
@@ -390,7 +438,7 @@ const Profile: NextPage = () => {
                             <div className={styles.avatarStyle}>
                                 {!avatar && <CgProfile size="2em"/>}
                                 {avatar && <img src={avatar}  className={styles.avatar}></img>}
-                                <div onClick={handleClickAvatarChange}  style={{ marginTop:"-10%", cursor:"pointer"}}>
+                                <div onClick={handleClickAvatarChange}  style={{ marginTop:"-8%", cursor:"pointer"}}>
                                     
                                     <FiCamera color="white"></FiCamera>
 
@@ -440,64 +488,123 @@ const Profile: NextPage = () => {
                             <br></br>
                             {imageAlert && <Alert color={"red"} style={{marginTop:"5%"}}>{imageAlert}</Alert>}
                             {imageMessage && <Alert color={"green"} style={{marginTop:"5%"}}>{imageMessage}</Alert>}
+                            {message && <Alert color={"green"} style={{marginTop:"5%"}}>{message}</Alert>}
                         </Card>
                         <div style={{marginTop:"20px"}}>
-                            {!onboardingFormComplete && <Button style={{margin:"0% 2%!important", marginRight:"20px", backgroundColor: "green"}} size="xs">Complete Onboarding</Button>}
-                            { <Button onClick={handleEditPressed} style={{margin:"0% 2%!important", marginRight:"20px"}} size="xs">Edit Profile <FiEdit2 style={{marginLeft:"5px"}}/></Button>}
-                            { admin && <Button onClick={handleManagementPressed} size="xs">Management</Button>}
+                            {!onboardingFormComplete && <><Button style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px", backgroundColor: "green"}} size="xs">Complete Onboarding</Button><br></br></>}
+                            { <Button onClick={handleResetPressed} style={{margin:"0% 2%!important", marginRight:"20px"}} size="xs">Reset Password<FiEdit2 style={{marginLeft:"5px"}}/></Button>}
+                            { <><Button onClick={handleEditPressed} style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px"}} size="xs">Edit Profile</Button><br></br></>}
+                            { <Button onClick={handleEditPressed} style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px"}} size="xs">Become a Ciudadano of Panalandia <FiMap style={{marginLeft:"5px"}}/></Button>}
                         </div>
                     </Grid.Col>
                     <Grid.Col sm={8} className={styles.gallery}>
-                        <Card className={styles.cardStyle}>
-                            <h3>Images</h3>
-                            <Grid>
-                            {images[0] && 
-                                images.map((item:any) => {
-                                    return(
-                                        <Grid.Col sm={4}  key={item._id}><img className={styles.galleryImages} src={item}></img></Grid.Col>
-                                    );
-                                })
-                            }
-                            </Grid>
-                            <Formik
-                            initialValues={{images: images}} 
-                            validateOnChange={false}
-                            validateOnBlur={false}
-                            onSubmit={(_, actions) => {
-                                addPhotos(actions);
-                            }}
-                            >
-                                {(props) => (
-                                <Form style={{ width: "100%" }} className={styles.form}>
-                                    <Box mb={4}>
-                                        {
-                                             <Field name="avatar">
-                                             {() => (
-                                             <div  style={{margin:"0% 1%", display:"inline-block"}}>
-                                                 <Text>Upload More Images:</Text>
-                                                 <Input size="xs" 
-                                                 value={undefined} 
-                                                 type="file" 
-                                                 multiple
-                                                 accept="image/*"
-                                                 onChange={async(e:any) => {
-                                                    //console.log(e.target.files);
-                                                     let files = Array.from(e.target.files);
-                                                     convertAndSetUploadImages(files);
-                                                 }}
-                                                 />
-                                             </div>
-                                             )}
-                                         </Field>
-                                        }  
-                                        <Button type="submit" size="xs" style={{margin:"0%", display:"inline-block"}}>Upload<FiUpload style={{marginLeft:"5px", display:"inline"}}/></Button>
-                                    </Box>
-                                </Form>
-                                )}
-                            </Formik>  
-                            {imageUploadAlert && <Alert color={"red"} style={{marginTop:"5%"}}>{imageUploadAlert}</Alert>}
-                            {imageUploadMessage && <Alert color={"green"} style={{marginTop:"5%"}}>{imageUploadMessage}</Alert>}
-                        </Card>
+                        <div>
+                            {resetPW &&
+                                <Card className={styles.cardStyle}>
+                                    <Formik
+                                            initialValues={{email:email, password:password}}
+                                        validateOnChange={false}
+                                        validateOnBlur={false}
+                                        onSubmit={(_, actions) => {
+                                            resetPassword();
+                                        }}
+                                    >
+                                        {(props) => (
+                                        <Form style={{ width: "100%" }}>
+                                            <Box mb={4}>
+                                            <Field name="password">
+                                                {() => (
+                                                <>
+                                                    <Text>Password</Text>
+                                                    <Input
+                                                    value={password}
+                                                    onChange={(e:any) => setPassword(e.target.value)}
+                                                    type="password"
+                                                    placeholder="Password"
+                                                    />
+                                                </>
+                                                )}
+                                            </Field>
+                                            <Field name="passwordConfirm">
+                                                {() => (
+                                                <>
+                                                    <Text>Retype Password</Text>
+                                                    <Input
+                                                    value={passwordRetyped}
+                                                    onChange={(e:any) => setPasswordRetyped(e.target.value)}
+                                                    type="password"
+                                                    placeholder="Retype Password"
+                                                    />
+                                                </>
+                                                )}
+                                            </Field>
+                                            <Button
+                                                mt={6}
+                                                type="submit" style={{backgroundColor:"#238BE6"}}
+                                            >
+                                            Submit
+                                            </Button>
+                                            </Box>
+                                        </Form>
+                                        )}
+                                    </Formik>
+
+                                {resetPWalert && <Alert color={"red"} style={{marginTop:"5%"}}>{resetPWalert}</Alert>}
+                                    </Card>
+                                }
+                            <Card className={styles.cardStyle}>
+                                <h3>Images</h3>
+                                <Grid>
+                                {images && 
+                                    images.map((item:any) => {
+                                        return(
+                                            <Grid.Col sm={3}  key={item._id}><img className={styles.galleryImages} src={item}></img></Grid.Col>
+                                        );
+                                    })
+                                }
+                                </Grid>
+                            </Card>
+                            <Card className={styles.cardStyle}>
+                                <Formik
+                                    initialValues={{images: images}} 
+                                    validateOnChange={false}
+                                    validateOnBlur={false}
+                                    onSubmit={(_, actions) => {
+                                        addPhotos(actions);
+                                    }}
+                                    >
+                                        {(props) => (
+                                        <Form style={{ width: "100%" }} className={styles.form}>
+                                            <Box mb={4}>
+                                                {
+                                                    <Field name="avatar">
+                                                    {() => (
+                                                    <div  style={{margin:"0% 1%", display:"inline-block"}}>
+                                                        <h3>Upload More Images:</h3>
+                                                        <Input size="xs" 
+                                                        value={undefined} 
+                                                        type="file" 
+                                                        multiple
+                                                        accept="image/*"
+                                                        onChange={async(e:any) => {
+                                                            //console.log(e.target.files);
+                                                            let files = Array.from(e.target.files);
+                                                            convertAndSetUploadImages(files);
+                                                        }}
+                                                        />
+                                                    </div>
+                                                    )}
+                                                </Field>
+                                                }  
+                                                <Button type="submit" size="xs" style={{margin:"0%", display:"inline-block"}}>Upload<FiUpload style={{marginLeft:"5px", display:"inline"}}/></Button>
+                                            </Box>
+                                        </Form>
+                                        )}
+                                    </Formik>  
+                                    {imageUploadAlert && <Alert color={"red"} style={{marginTop:"5%"}}>{imageUploadAlert}</Alert>}
+                                    {imageUploadMessage && <Alert color={"green"} style={{marginTop:"5%"}}>{imageUploadMessage}</Alert>}
+                                </Card>
+                        </div>
                     </Grid.Col>
                 </>
                 }

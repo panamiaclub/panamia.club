@@ -122,9 +122,9 @@ export default function Layout({ children }: LayoutProps) {
     (function loop() {
       setTimeout(() => {
         if(session){
-          setLinks([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}, {link:"/directorio", label:"El Directorio", links: null}, {link:"/profile", label:"Profile", links: null}]);
+          setLinks([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null},{link:"/directorio", label:"El Directorio", links: null}, {link:"/profile", label:"Profile", links: null}]);
         }else if(!session){
-          setLinks([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}]);
+          setLinks([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}, {link:"/directorio", label:"El Directorio", links: null}]);
         }
         loop();
       }, 20000);
