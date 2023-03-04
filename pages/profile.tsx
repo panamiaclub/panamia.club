@@ -467,7 +467,7 @@ const Profile: NextPage = () => {
                                     </>
                                 </div>
                             }
-                           { location && 
+                            { location && 
                              <span><p><><FiMapPin></FiMapPin>{location}</></p></span>
                             }
                             {instagram && 
