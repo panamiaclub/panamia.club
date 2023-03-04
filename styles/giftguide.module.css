@@ -336,6 +336,7 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
 
 .formText{
   color:#EE5967;
+  margin-top:"20px";
 }
 
 .formContainer{

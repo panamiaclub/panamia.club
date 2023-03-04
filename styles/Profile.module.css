@@ -17,9 +17,10 @@
 .socialLink{
   margin-right: 10px;
   cursor: pointer;
+  color: #B85446;
 }
 .socialLink:hover{
-  color:#5FA0BF;
+  color:#5d161b;
 }
 
 .form{

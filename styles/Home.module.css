@@ -17,9 +17,32 @@
   min-height: 90vh;
 }
 
+.Directorio{
+  
+    background: rgb(253,187,45);
+    background: -moz-linear-gradient(0deg, rgba(253,187,45,1) 7%, rgba(162,49,75,1) 47%, rgba(82,42,51,1) 72%, rgba(47,39,41,1) 93%);
+    background: -webkit-linear-gradient(0deg, rgba(253,187,45,1) 7%, rgba(162,49,75,1) 47%, rgba(82,42,51,1) 72%, rgba(47,39,41,1) 93%);
+    background: linear-gradient(0deg, rgba(253,187,45,1) 7%, rgba(162,49,75,1) 47%, rgba(82,42,51,1) 72%, rgba(47,39,41,1) 93%);
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#fdbb2d",endColorstr="#2f2729",GradientType=1);
+    min-height:90vh;
+    color:black;
+}
+.avatar{
+  width:50px;
+  border-radius: 75px;
+}
+.formInputText{
+  color:"#EE5967";
+   display:"block";
+}
+
 .headings{
   color:black;
   letter-spacing: 0.4em;
+}
+
+.headingsGOALS{
+  color:#f8f8f8;
 }
 
 .headingBig{
@@ -310,37 +333,38 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
   width:"100%";
 }
 
-.card {
-  margin: 1rem;
-  padding: 1.5rem;
-  text-align: left;
-  color: inherit;
-  text-decoration: none;
-  border: 1px solid #282727;
-  border-radius: 10px;
-  transition: color 0.15s ease, border-color 0.15s ease;
-  max-width: 400px;
-
-  flex: 1 0 20em;
+.cardStyle {
+  border-radius: 15px;
+  box-shadow: rgba(234, 234, 234, 0.35) 0px 5px 15px;
+  margin-bottom:2%;
+}
+.GoalsDiv{
+  
+  background: rgb(253,187,45);
+  background: -moz-linear-gradient(0deg, rgba(253,187,45,1) 7%, rgba(162,49,75,1) 47%, rgba(82,42,51,1) 72%, rgba(47,39,41,1) 93%);
+  background: -webkit-linear-gradient(0deg, rgba(253,187,45,1) 7%, rgba(162,49,75,1) 47%, rgba(82,42,51,1) 72%, rgba(47,39,41,1) 93%);
+  background: linear-gradient(0deg, rgba(253,187,45,1) 7%, rgba(162,49,75,1) 47%, rgba(82,42,51,1) 72%, rgba(47,39,41,1) 93%);
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#fdbb2d",endColorstr="#2f2729",GradientType=1);
 }
 
-/* .card:hover,
-.card:focus,
-.card:active {
-  color: #0070f3;
-  border-color: #0070f3;
-} */
-
-.card {
-  margin: 0 0 1rem 0;
-  font-size: 1.5rem;
+.igPromo{
+  background: rgb(47,39,41);
+background: -moz-linear-gradient(0deg, rgba(47,39,41,1) 7%, rgba(248,248,248,1) 93%);
+background: -webkit-linear-gradient(0deg, rgba(47,39,41,1) 7%, rgba(248,248,248,1) 93%);
+background: linear-gradient(0deg, rgba(47,39,41,1) 7%, rgba(248,248,248,1) 93%);
+filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#2f2729",endColorstr="#f8f8f8",GradientType=1);
 }
 
-.card {
-  margin: 0;
-  font-size: 1.25rem;
-  line-height: 1.5;
+.cardStyleGOALS{
+  border-radius: 15px;
+  box-shadow: rgba(208, 208, 208, 0.35) 0px 5px 15px;
+  margin-bottom:2%;
 }
+
+.cardStyleGOALS h3{
+  color:#BF585A;
+}
+
 
 .logo {
   height: 2em;

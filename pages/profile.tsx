@@ -81,6 +81,7 @@ const Profile: NextPage = () => {
       };
 
     const handleCancelPressed = () => {setEditProfile(false)}; 
+   const cancelResetPW = () => {setResetPW(false)}; 
 
     if(editProfile){
         //console.log(editProfile)
@@ -538,6 +539,13 @@ const Profile: NextPage = () => {
                                                 </>
                                                 )}
                                             </Field>
+                                            <Button
+                                                mt={6}
+                                                type="submit" style={{backgroundColor:"black", marginRight:"20px"}}
+                                                onClick={cancelResetPW}
+                                            >
+                                            Cancel
+                                            </Button>
                                             <Button
                                                 mt={6}
                                                 type="submit" style={{backgroundColor:"#238BE6"}}

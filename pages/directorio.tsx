@@ -2,6 +2,7 @@ import type { NextPage } from 'next'
 import Link from 'next/link';
 import Head from 'next/head'
 import Image from 'next/image'
+import stylesHome from '../styles/Home.module.css'
 import styles from '../styles/Profile.module.css'
 import {
     createStyles,
@@ -104,13 +105,12 @@ const Profile: NextPage = () => {
       };
 
   return (
-    <div className={styles.App}>
+    <div className={stylesHome.Directorio}>
         {
         <div className={styles.container} style={{minHeight:"85vh"}}>
             <Grid>
-                <Grid.Col sm={3}><h2 style={{marginLeft:"2%"}}>El Directorio</h2></Grid.Col>
+                <Grid.Col sm={3}><h2 style={{marginLeft:"2%", color:"#f8f8f8"}}>El Directorio</h2></Grid.Col>
             </Grid>
-            <hr></hr>
             <Card className={styles.cardStyle} >
                 <Grid style={{marginBottom:"2%"}}> 
                     <Grid.Col sm={6}>
@@ -200,7 +200,8 @@ const Profile: NextPage = () => {
                         {alert && <Alert color={"red"} style={{marginTop:"5%"}}>{alert}</Alert>}
                     </Grid>
                 </Card>
-            <div >
+            <hr></hr>
+            <div style={{marginTop:"20px"}}>
                 {users &&
                     users.map((item, index)=>{
                     return(
@@ -211,8 +212,8 @@ const Profile: NextPage = () => {
                                         <Grid.Col sm={6}>
                                             <Link  href={"/pana/"+item.username} key={item+"link"}>
                                                 <div style={{cursor:"pointer"}}>
-                                                    {item.avatar && <img className={styles.avatar} src={item.avatar} ></img>}
-                                                    <h3>{item.username}</h3>
+                                                    {item.avatar && <img className={stylesHome.avatar} src={item.avatar} ></img>}
+                                                    <h3 className={stylesHome.username}>{item.username}</h3>
                                                     {item.location && <p> <FiMapPin></FiMapPin> {item.location.toString()}</p>}
                                                 </div>
                                             </Link>

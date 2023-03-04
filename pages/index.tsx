@@ -16,8 +16,9 @@ import {
   Burger,
   Navbar,
   NavLink,
-  Grid, Input, Text, Box
+  Grid, Input, Text, Box, Card, Alert
 } from '@mantine/core';
+
 import { IconBrandInstagram } from '@tabler/icons'
 import {motion, useAnimation} from "framer-motion";
 import {useInView} from "react-intersection-observer";
@@ -106,6 +107,7 @@ const Home: NextPage = () => {
                 <Grid.Col md={2} xs={0}></Grid.Col>
                 <Grid.Col  md={8} xs={12}>
                 <div className={styles.textSection}>
+                  <h1 className={styles.headings2}>¿¿Que Tal Pana??</h1>
                     <h4 className={styles.headings2}>Being a small business owner may be really overwhelming and isolating at times, but you aren’t alone. Miami is filled with small vendors, all with different strengths and skillsets. We started Pana Mia as a way to bring everyone together, to pool our resources, insights and strategies. As consumers start recognizing the benefits of shopping local, we want to create a centralized space where they can explore and fall in love with local brands.</h4>
                 </div>
                 
@@ -124,7 +126,7 @@ const Home: NextPage = () => {
             </Grid>
           </motion.div>
         </div>
-        <div className={styles.featuredPanas} >
+        <div className={styles.featuredPanas}style={{margin:"5% 0"}} >
           <h1 style={{color:"#39B6FF"}}>Featured Panas</h1>
           <Carousel centerMode={true} centerSlidePercentage={30} infiniteLoop={true}>
               <div>
@@ -151,35 +153,51 @@ const Home: NextPage = () => {
               </div>
           </Carousel>
         </div>
-        <div className={styles.searchD} >
-          <h1 style={{color:"#004AAD"}}>Search all Local Creators</h1>
-          <Formik
-                    initialValues={{}}
-                    validateOnChange={false}
-                    validateOnBlur={false}
-                    onSubmit={(_, actions) => {
-                    formSubmit(actions);
-                    }}
-                >
-                    {(props) => (
-                    <Form style={{ width: "40%", margin: "0 auto" }}>
-                      <Box mb={4}>
-                      <Field name="search">
-                          {() => (
-                          <>
-                              <Input
-                              value={search}
-                              onChange={(e:any) => setSearch(e.target.value)}
-                              placeholder={"enter keyword(s)"}
-                              />
-                          </>
-                          )}
-                      </Field>
-                      <Button type="submit" style={{margin:"2% 40%",backgroundColor:"#39B6FF"}}>Search</Button>
-                      </Box>
-                  </Form>
-                    )}
-                </Formik>
+        <div>
+          <Grid style={{paddingBottom:"10%", marginBottom:"0"}} className={styles.igPromo}>
+            <Grid.Col sm={4}><img src="ig_promo_1.jpg" width="100%"></img></Grid.Col>
+            <Grid.Col sm={4}><img src="ig_promo_2.jpg" width="100%"></img></Grid.Col>
+            <Grid.Col sm={4}><img src="ig_promo_3.jpg" width="100%"></img></Grid.Col>
+          </Grid>
+          <div id="Goals" style={{height:"100vh", padding:"10% 0!important", marginBottom:"0", marginTop:"0"}} className={styles.GoalsDiv}>
+              <h1 className={styles.headingsGOALS} style={{textAlign:"center"}}>GOALS</h1>
+              <Grid style={{margin:"0 2%"}} >
+                <Grid.Col sm={6}>
+                  <Card className={styles.cardStyleGOALS} style={{height:"100%"}}>
+                    <img src="directorio.png" width="100px"></img>
+                    <h3>Directory</h3>
+                    <p>Vendors perpetually struggle with getting their product in front of their target audience and patrons who want to support local struggle with the convenience of shopping at Big Box stores for everyday errands. Often supporting local is designated to sporadic “events” that fails to provide consistency for either party. Our goal is to meet the needs of both by creating a local directory of small vendors in Miami.</p>
+                  </Card>
+                </Grid.Col>
+                <Grid.Col sm={6}>
+                  <Card className={styles.cardStyleGOALS} style={{height:"100%"}}>
+                  <img src="community.png" width="100px"></img>
+                    <h3>Vendor Community</h3>
+                    <p>We would like to be host to an ever-growing and changing active group of local entrepreneurs and artists. Our intention is to host a space where creatives and entrepreneurs in similar or intersecting industries can discuss, ask for help/advice, or even collaborate on projects. It also will allow us to directly reach our members for Club projects and get feedback/suggestions or direct help as we progress.</p>
+                  </Card>
+                </Grid.Col>
+              </Grid>
+              <Grid style={{margin:"0 2%"}}>
+                <Grid.Col sm={6}>
+                  <Card className={styles.cardStyleGOALS} style={{height:"100%"}}>
+                  <img src="workshops.png" width="100px"></img>
+                    <h3>Vendor Workshops</h3>
+                    <p>We started Pana Mia Club as a way to bring everyone together, to pool our resources, insights and strategies. On our signup form, vendors can specify if they want to offer workshops to the community. Topics include general knowledge such as shipping, web design and accounting; or, more industry specific knowledge such as how to take a food product to market, sourcing solutions in apparel, and music production.</p>
+                  </Card>
+                </Grid.Col>
+                <Grid.Col sm={6}>
+                  <Card className={styles.cardStyleGOALS} style={{height:"100%"}}>
+                  <img src="transparency.png" width="100px"></img>
+                    <h3>Market Transparency</h3>
+                    <p>It seems like new markets pop up every day. We want to create a database of markets and collect vendor feedback. More info means vendors can make the best decision for their business. Ultimately we could collectively bargain with markets to make vendor fees more fair and equitable.</p>
+                  </Card>
+                </Grid.Col>
+              </Grid>
+          </div>
+          <div style={{textAlign:"center", backgroundColor:"#FDBB2D", height:"80vh"}}>
+            <h1 style={{color:"#f9f9f9", paddingTop:"20%", marginTop:"0"}}>Enter Panalandia</h1>
+            <Button type="submit" style={{margin:"2% 40%",backgroundColor:"#9D384F"}}><Link href="/directorio">Search</Link></Button>
+            </div>
         </div>
   </div>
   )
