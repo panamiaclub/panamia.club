@@ -99,7 +99,7 @@ const Newsletter: NextPage = () => {
         })
         .catch((error) => {
             console.log(error);
-            setAlert(error);
+            setAlert(error.response.data.error);
         });
         console.log(res);
     }

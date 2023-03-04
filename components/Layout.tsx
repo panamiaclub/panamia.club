@@ -103,7 +103,7 @@ export default function Layout({ children }: LayoutProps) {
     const { classes } = useStyles();
   const [opened, { toggle }] = useDisclosure(false);
 
-  const [links, setLinks] = useState([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}]);//{link:"/giftguide", label:"Gift Guide", links:null}
+  const [links, setLinks] = useState([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null},{link:"/directorio", label:"El Directorio", links: null}]);//{link:"/giftguide", label:"Gift Guide", links:null}
 
   const items = links.map((link) => {
     return (

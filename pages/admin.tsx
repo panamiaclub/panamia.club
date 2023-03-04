@@ -85,7 +85,7 @@ const Admin: NextPage = () => {
             })
             .catch((error) => {
                 console.log(error);
-                setAlert(error);
+                setAlert(error.response.data.error);
             });
             console.log(res);
         }
@@ -108,7 +108,7 @@ const Admin: NextPage = () => {
           })
           .catch((error) => {
             console.log(error);
-            setAlert(error);
+            setAlert(error.response.data.error);
           });
       };
 
@@ -131,7 +131,7 @@ const Admin: NextPage = () => {
                 })
                 .catch((error) => {
                     //console.log(error);
-                    setAlert(error);
+                    setAlert(error.response.data.error);
                 });
         }
     handleCancelPressed();
@@ -207,10 +207,10 @@ const Admin: NextPage = () => {
                             </tr>
                             <tbody>
                             {users && 
-                                users.map((item) => {
+                                users.map((item, index) => {
                                     console.log(item);
                                     return(
-                                        <tr>
+                                        <tr key={index}>
                                         <td>{item.username}</td>
                                         <td>{item.email}</td>
                                         <td>{item.category.toString()}</td>

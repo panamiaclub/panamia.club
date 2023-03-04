@@ -256,9 +256,9 @@ const Pana: NextPage = () => {
                             {usersInCategory && 
                                 <div>
                                     <>
-                                        {usersInCategory.map((item) => {
+                                        {usersInCategory.map((item, index) => {
                                             return(
-                                                <div>
+                                                <div key={index}>
                                                     <Link href={"/pana/"+item.username}>
                                                         <>
                                                             <img key={item} src={item.avatar} style={{width:"50px", borderRadius:"25px"}}></img>
