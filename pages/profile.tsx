@@ -502,7 +502,7 @@ const Profile: NextPage = () => {
                             {resetPW &&
                                 <Card className={styles.cardStyle}>
                                     <Formik
-                                            initialValues={{email:email, password:password}}
+                                        initialValues={{email:email, password:password}}
                                         validateOnChange={false}
                                         validateOnBlur={false}
                                         onSubmit={(_, actions) => {
