@@ -492,10 +492,9 @@ const Profile: NextPage = () => {
                             {message && <Alert color={"green"} style={{marginTop:"5%"}}>{message}</Alert>}
                         </Card>
                         <div style={{marginTop:"20px"}}>
-                            {!onboardingFormComplete && <><Button style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px", backgroundColor: "green"}} size="xs">Complete Onboarding</Button><br></br></>}
+                            {!onboardingFormComplete && <Link href="/intake"><a><Button style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px", backgroundColor: "green"}} size="xs">Complete Onboarding</Button><br></br></a></Link>}
                             { <Button onClick={handleResetPressed} style={{margin:"0% 2%!important", marginRight:"20px"}} size="xs">Reset Password<FiEdit2 style={{marginLeft:"5px"}}/></Button>}
                             { <><Button onClick={handleEditPressed} style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px"}} size="xs">Edit Profile</Button><br></br></>}
-                            { <Button onClick={handleEditPressed} style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px"}} size="xs">Become a Ciudadano of Panalandia <FiMap style={{marginLeft:"5px"}}/></Button>}
                         </div>
                     </Grid.Col>
                     <Grid.Col sm={8} className={styles.gallery}>

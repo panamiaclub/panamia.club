@@ -163,14 +163,14 @@ const Home: NextPage = () => {
               <h1 className={styles.headingsGOALS} style={{textAlign:"center"}}>GOALS</h1>
               <Grid style={{margin:"0 2%"}} >
                 <Grid.Col sm={6}>
-                  <Card className={styles.cardStyleGOALS} style={{height:"100%"}}>
+                  <Card className={styles.cardStyleGOALS} style={{height:"100%", textAlign:"center"}}>
                     <img src="directorio.png" width="100px"></img>
-                    <h3>Directory</h3>
+                    <h3 >Directory</h3>
                     <p>Vendors perpetually struggle with getting their product in front of their target audience and patrons who want to support local struggle with the convenience of shopping at Big Box stores for everyday errands. Often supporting local is designated to sporadic “events” that fails to provide consistency for either party. Our goal is to meet the needs of both by creating a local directory of small vendors in Miami.</p>
                   </Card>
                 </Grid.Col>
                 <Grid.Col sm={6}>
-                  <Card className={styles.cardStyleGOALS} style={{height:"100%"}}>
+                  <Card className={styles.cardStyleGOALS} style={{height:"100%", textAlign:"center"}}>
                   <img src="community.png" width="100px"></img>
                     <h3>Vendor Community</h3>
                     <p>We would like to be host to an ever-growing and changing active group of local entrepreneurs and artists. Our intention is to host a space where creatives and entrepreneurs in similar or intersecting industries can discuss, ask for help/advice, or even collaborate on projects. It also will allow us to directly reach our members for Club projects and get feedback/suggestions or direct help as we progress.</p>
@@ -179,14 +179,14 @@ const Home: NextPage = () => {
               </Grid>
               <Grid style={{margin:"0 2%"}}>
                 <Grid.Col sm={6}>
-                  <Card className={styles.cardStyleGOALS} style={{height:"100%"}}>
+                  <Card className={styles.cardStyleGOALS} style={{height:"100%", textAlign:"center"}}>
                   <img src="workshops.png" width="100px"></img>
                     <h3>Vendor Workshops</h3>
                     <p>We started Pana Mia Club as a way to bring everyone together, to pool our resources, insights and strategies. On our signup form, vendors can specify if they want to offer workshops to the community. Topics include general knowledge such as shipping, web design and accounting; or, more industry specific knowledge such as how to take a food product to market, sourcing solutions in apparel, and music production.</p>
                   </Card>
                 </Grid.Col>
                 <Grid.Col sm={6}>
-                  <Card className={styles.cardStyleGOALS} style={{height:"100%"}}>
+                  <Card className={styles.cardStyleGOALS} style={{height:"100%", textAlign:"center"}}>
                   <img src="transparency.png" width="100px"></img>
                     <h3>Market Transparency</h3>
                     <p>It seems like new markets pop up every day. We want to create a database of markets and collect vendor feedback. More info means vendors can make the best decision for their business. Ultimately we could collectively bargain with markets to make vendor fees more fair and equitable.</p>

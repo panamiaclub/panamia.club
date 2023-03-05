@@ -260,10 +260,10 @@ const Pana: NextPage = () => {
                                             return(
                                                 <div key={index}>
                                                     <Link href={"/pana/"+item.username}>
-                                                        <>
+                                                        <a>
                                                             <img key={item} src={item.avatar} style={{width:"50px", borderRadius:"25px"}}></img>
                                                             <span key={item} style={{marginBottom:"20px"}}> {item.username} </span>
-                                                        </>
+                                                        </a>
                                                     </Link>
                                                 </div>
                                             );

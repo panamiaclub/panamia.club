@@ -37,7 +37,7 @@ import { IconMathIntegral } from '@tabler/icons';
 import { ReactSVG } from 'react-svg'
 import svg1 from '../public/CosaHecha/1.svg';
 
-const ServicesIntake: NextPage = () => {
+const ArtIntake: NextPage = () => {
   const {data:session, status} = useSession();
   const {ref, inView} = useInView();
   const animation = useAnimation();
@@ -48,6 +48,8 @@ const ServicesIntake: NextPage = () => {
   const [name, setName] = useState("");
   const [backgroundEthnicity, setBackgroundEthnicity] = useState("");
   const [locationOptions, setLocationOptions] = useState<any>([]);
+  const [address, setAddress] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [about, setAbout] = useState("");
   const [category, setCategory] = useState<any>([]);
   const [serviceType, setServiceType] = useState<any>([]);
@@ -67,6 +69,10 @@ const ServicesIntake: NextPage = () => {
   const [image1File, setImage1File] = useState<any>();
   const [image2File, setImage2File] = useState<any>();
   const [image3File, setImage3File] = useState<any>();
+  const [marketInterest, setMarketInterest] = useState(Boolean);
+  const [productType, setProductType] = useState("");
+  const [source, setSource] = useState<any>([]);
+  const [mediums, setMediums] = useState<any>([]);
   const [igConsent, setIgConsent] = useState(Boolean);
   const [marketConsent, setMarketConsent] = useState(Boolean);
   const [collabConsent, setCollabConsent] = useState(Boolean);
@@ -154,7 +160,7 @@ const ServicesIntake: NextPage = () => {
             <Grid  className={styles.formContainer}>
                 <Grid.Col span={3} md={3} xs={0}></Grid.Col>
                 <Grid.Col span={6} md={6} xs={12}>
-                <h2 style={{color:"#EE5967"}}>Services Vendor Intake Form</h2>
+                <h2 style={{color:"#EE5967"}}>Functional/Fine Art Vendor Intake Form</h2>
                 <Formik
                     initialValues={{}}
                     validateOnChange={false}
@@ -202,6 +208,34 @@ const ServicesIntake: NextPage = () => {
                           </>
                           )}
                       </Field>
+                      <Field name="category">
+                          {() => (
+                          <>
+                          <Text className={styles.formText} style={{marginTop:"20px"}}>Do you make functional or fine art?</Text>
+                              <input
+                              value={"Functional"}
+                              onChange={(e:any) => setCategory(e.target.value)}
+                             type="radio" name="Functional"
+                              /><label htmlFor="Functional">Functional</label>
+                                <input
+                              value={"Fine"}
+                              onChange={(e:any) => setCategory(e.target.value)}
+                             type="radio" name="Fine"
+                              /><label htmlFor="Fine">Fine</label>
+                               <input
+                              value={"Both"}
+                              onChange={(e:any) => setCategory(e.target.value)}
+                             type="radio"  name="Both"
+                              /><label htmlFor="Both">Both</label>
+                               <input
+                              value={"Both(Separately)"}
+                              onChange={(e:any) => setCategory(e.target.value)}
+                              type="radio" name="BothSeparately"
+                              /><label htmlFor="BothSeparately">Both(Separately)</label>
+                          </>
+                          )}
+                      </Field>
+
                       <Field name="backgroundEthnicity">
                           {() => (
                           <>
@@ -262,80 +296,80 @@ const ServicesIntake: NextPage = () => {
                                             }}
                                         />
 
-                  <div id="checkbox-group" style={{color:"#EE5967", margin:"20px 0"}}>What Category does your services fall under?</div>
+                  <div id="checkbox-group" style={{color:"#EE5967", margin:"20px 0"}}>What Mediums do you typically work with?</div>
                       <div role="group" aria-labelledby="checkbox-group"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
                               let arrayy = new Array();
-                              if(category){
-                                  category.map((item:any)=>{
+                              if(mediums){
+                                mediums.map((item:any)=>{
                                       arrayy.push(item);
                                   })
                               }
                               arrayy.push(e.target.value.toString());
                               //console.log(arrayy);
-                              setCategory(arrayy);
+                              setMediums(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Hair/Nails/Make-up/Beauty"/>Hair/Nails/Make-up/Beauty</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Tattoo/Piercing/Body Modification"/>Tattoo/Piercing/Body Modification</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Health/Nutrition"/>Health/Nutrition</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Music"/>Music</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Photography/Videograph"/>Photography/Videograph</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Design/Art"/>Design/Art</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Tailoring/Sewing"/>Tailoring/Sewing</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Mechanical"/>Mechanical</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Spiritual/Metaphysical"/>Spiritual/Metaphysical</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Pets"/>Pets</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Tutoring/Educational"/>Tutoring/Educational</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Finance/Business"/>Finance/Business</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Landscape/Botanical"/>Landscape/Botanical</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Clothing/Fabric/Fiber Materials"/>Clothing/Fabric/Fiber Materials</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Wood/Plants"/>Wood/Plants</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Stone/Marble/Semi-Precious Gems"/>Stone/Marble/Semi-Precious Gems</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Digital Art (2-D/3-D)"/>Digital Art (2-D/3-D)</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Video/Photo"/>Video/Photo</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Collage"/>Collage</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Paper/Plastic"/>Paper/Plastic</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Recycled Materials"/>Recycled Materials</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Paint (Oil/Acrylic/Watercolor)"/>Paint (Oil/Acrylic/Watercolor)</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Ink/Chalk/Charcoal/Graphite"/>Ink/Chalk/Charcoal/Graphite</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Ceramics"/>Ceramics</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Electronic/Digital/Vocal Instruments"/>Electronic/Digital/Vocal Instruments</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Dance/Movement/Choreography/Life Performances"/>Dance/Movement/Choreography/Life Performances</label>
                       </div>
 
-                      <div id="checkbox-group-location-options"  style={{color:"#EE5967", margin:"20px 0"}}>Where do you perform this service?</div>
+                      <div id="checkbox-group-location-options"  style={{color:"#EE5967", margin:"20px 0"}}>How do you source your product?</div>
                       <div role="group" aria-labelledby="checkbox-group-location-options"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
                               let arrayy = new Array();
-                              if(locationOptions){
-                                locationOptions.map((item:any)=>{
+                              if(source){
+                                source.map((item:any)=>{
                                       arrayy.push(item);
                                   })
                               }
                               arrayy.push(e.target.value.toString());
                               //console.log(arrayy);
-                              setLocationOptions(arrayy);
+                              setSource(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="My Location"/>My Location</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Wherever my client is"/>Wherever my client is</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Markets/Events"/>Markets/Events</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Remotely"/>Remotely</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Events I Promote"/>Events I Promote</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Handmade"/>Handmade</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Imported Artisinal"/>Imported Artisinal</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Factory-made"/>Factory-made</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Reworked/Upcycled"/>Reworked/Upcycled</label>
                       </div>
 
-                      <div id="checkbox-group-service-type"  style={{color:"#EE5967", margin:"20px 0"}}>How do you service your client?</div>
-                      <div role="group" aria-labelledby="checkbox-group-service-type"  
-                        onChange={async(e:any) => {
-                          if(e.target.checked){
-                              let arrayy = new Array();
-                              if(serviceType){
-                                serviceType.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
-                              }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
-                              setServiceType(arrayy);
-                          }
-                      }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="serviceType" value="Appointment"/>By Appointment</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="serviceType" value="Walk-in"/>Walk-in</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="serviceType" value="Markets/Events"/>Markets/Events</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="serviceType" value="Remotely"/>Remotely</label>
-                      </div>
+                      <Field name="category">
+                          {() => (
+                          <>
+                          <Text className={styles.formText} style={{marginTop:"20px"}}>Is your product mainly...?</Text>
+                              <input
+                              value={"Physical"}
+                              onChange={(e:any) => setProductType(e.target.value)}
+                             type="radio" name="Physical"
+                              /><label htmlFor="Physical">Physical</label>
+                                <input
+                              value={"Digital"}
+                              onChange={(e:any) => setProductType(e.target.value)}
+                             type="radio" name="Digital"
+                              /><label htmlFor="Digital">Digital</label>
+                               <input
+                              value={"Both"}
+                              onChange={(e:any) => setProductType(e.target.value)}
+                             type="radio"  name="Both"
+                              /><label htmlFor="Both">Both</label>
+                          </>
+                          )}
+                      </Field>
 
-                     
                       <Field name="tags" required>
                           {() => (
                           <>
@@ -344,19 +378,6 @@ const ServicesIntake: NextPage = () => {
                               value={tags}
                               onChange={(e:any) => setTags(e.target.value)}
                               placeholder={"separate each word by a space"}
-                              />
-                          </>
-                          )}
-                      </Field>
-
-                      <Field name="businessNeed">
-                          {() => (
-                          <>
-                           <Text className={styles.formText} style={{marginTop:"20px"}}>What is your business' biggest need right now?</Text>
-                              <Input
-                              value={businessNeed}
-                              onChange={(e:any) => setBusinessNeed(e.target.value)}
-                              placeholder={""}
                               />
                           </>
                           )}
@@ -403,6 +424,27 @@ const ServicesIntake: NextPage = () => {
                             setImage3File(file);
                         }}
                     />
+
+                    <Text className={styles.formText} style={{marginTop:"20px"}}>Are you interested in taking your product to market?</Text>
+                      <Field  value={marketInterest} as="select" className={styles.selectField} name="marketInterest" onChange={(e:any) => setMarketInterest(e.target.value)}>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                        <option value="Maybe">Maybe</option>
+                      </Field>
+
+                      <Field name="businessNeed">
+                          {() => (
+                          <>
+                           <Text className={styles.formText} style={{marginTop:"20px"}}>What is your business' biggest need right now?</Text>
+                              <Input
+                              value={businessNeed}
+                              onChange={(e:any) => setBusinessNeed(e.target.value)}
+                              placeholder={""}
+                              />
+                          </>
+                          )}
+                      </Field>
+
 
                       <Text className={styles.formText} style={{marginTop:"20px"}}>Would you be interested in hosting a workshop for our members? (Ex. SEO, industry specific knowledge, helpful tech)</Text>
                       <Field  value={workshop} as="select" className={styles.selectField} name="workshop" onChange={(e:any) => setWorkshop(e.target.value)}>
@@ -499,4 +541,4 @@ const ServicesIntake: NextPage = () => {
   )
 }
 
-export default ServicesIntake
+export default ArtIntake
