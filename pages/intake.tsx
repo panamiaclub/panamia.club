@@ -121,7 +121,7 @@ const Intake: NextPage = () => {
                     <div>
                         <>
                             
-                            {category.map((str:any) => {
+                            {category.map((str:any, index) => {
                                 let link = "";
                                  if(str == "Services"){
                                         link = "servicesintake"
@@ -139,7 +139,7 @@ const Intake: NextPage = () => {
 
                                 return(
                                    
-                                    <Link href={link}><Button key={str.id} style={{margin:"0 20px"}} disabled={onboardingFormComplete}> {str} </Button></Link>
+                                    <Link href={link}><Button key={index} style={{margin:"0 20px"}} disabled={onboardingFormComplete}> {str} </Button></Link>
                                 );
                             })}
                         </>
