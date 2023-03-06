@@ -187,7 +187,7 @@ const ArtIntake: NextPage = () => {
                       <Field name="name" required>
                           {() => (
                           <>
-                          <Text className={styles.formText} style={{marginTop:"20px"}}>Name of your Business/Service:</Text>
+                          <Text className={styles.formText} style={{marginTop:"20px"}}>Name/Name of your Business/Brand/Project:</Text>
                               <Input
                               value={name}
                               onChange={(e:any) => setName(e.target.value)}

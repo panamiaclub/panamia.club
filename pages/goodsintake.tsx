@@ -61,6 +61,7 @@ const GoodsIntake: NextPage = () => {
   const [igUsername, setIgUsername] = useState("");
   const [tags, setTags] = useState("");
   const [logo, setLogo] = useState("");
+  const [marketInterest, setMarketInterest] = useState("");
   const [logoFile, setLogoFile] = useState<any>();
   const [image1, setImage1] = useState("");
   const [image2, setImage2] = useState("");
@@ -366,6 +367,13 @@ const GoodsIntake: NextPage = () => {
                               />
                           </>
                           )}
+                      </Field>
+
+                      <Text className={styles.formText} style={{marginTop:"20px"}}>Are you interested in taking your product to market?</Text>
+                      <Field  value={marketInterest} as="select" className={styles.selectField} name="marketInterest" onChange={(e:any) => setMarketInterest(e.target.value)}>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                        <option value="Maybe">Maybe</option>
                       </Field>
 
                       <Field name="businessNeed">
