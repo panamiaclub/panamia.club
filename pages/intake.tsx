@@ -121,7 +121,7 @@ const Intake: NextPage = () => {
                     <div>
                         <>
                             
-                            {category.map((str:any, index) => {
+                            {category.map((str:any, index:number) => {
                                 let link = "";
                                  if(str == "Services"){
                                         link = "servicesintake"
