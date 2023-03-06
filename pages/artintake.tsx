@@ -324,6 +324,7 @@ const ArtIntake: NextPage = () => {
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Ceramics"/>Ceramics</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Electronic/Digital/Vocal Instruments"/>Electronic/Digital/Vocal Instruments</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Dance/Movement/Choreography/Life Performances"/>Dance/Movement/Choreography/Life Performances</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
                       </div>
 
                       <div id="checkbox-group-location-options"  style={{color:"#EE5967", margin:"20px 0"}}>How do you source your product?</div>
@@ -345,6 +346,7 @@ const ArtIntake: NextPage = () => {
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Imported Artisinal"/>Imported Artisinal</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Factory-made"/>Factory-made</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Reworked/Upcycled"/>Reworked/Upcycled</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Other"/>Other</label>
                       </div>
 
                       <Field name="category">

@@ -291,6 +291,7 @@ const GoodsIntake: NextPage = () => {
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Finance/Business"/>Finance/Business</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Landscape/Botanical"/>Landscape/Botanical</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Software/Electronics"/>Software/Electronics</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
                           
                       </div>
 
@@ -350,6 +351,7 @@ const GoodsIntake: NextPage = () => {
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Children/Babies"/>Children/Babies</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Mature"/>Mature</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Pets/Animals"/>Pets/Animals</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Other"/>Other</label>
                       </div>
 
                      

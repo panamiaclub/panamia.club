@@ -349,6 +349,7 @@ const OrgIntake: NextPage = () => {
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Markets/Events"/>Markets/Events</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Remotely"/>Remotely</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Events I Promote"/>Events I Promote</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Other"/>Other</label>
                       </div>
 
                       <Field name="address">

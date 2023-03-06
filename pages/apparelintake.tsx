@@ -54,6 +54,7 @@ const ApparelIntake: NextPage = () => {
   const [source, setSource] = useState<any>([]);
   const [audience, setAudience] = useState<any>([]);
   const [businessNeed, setBusinessNeed] = useState("");
+  const [marketInterest, setMarketInterest] = useState("");
   const [interest, setInterest] = useState("");
   const [workshop, setWorkshop] = useState("");
   const [workshopDetails, setWorkshopDetails] = useState("");
@@ -289,6 +290,7 @@ const ApparelIntake: NextPage = () => {
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Swimsuits"/>Swimsuits</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Tops"/>Tops</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Bottoms"/>Bottoms</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
                       </div>
 
                       <div id="checkbox-group-location-options"  style={{color:"#EE5967", margin:"20px 0"}}>Where do you sell this product?</div>
@@ -311,6 +313,7 @@ const ApparelIntake: NextPage = () => {
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Markets/Events"/>Markets/Events</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Local Shipping"/>Local Shipping</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Worldwide Shipping"/>Worldwide Shipping</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Other"/>Other</label>
                       </div>
 
                       <Field name="location">
@@ -347,6 +350,7 @@ const ApparelIntake: NextPage = () => {
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Children/Babies"/>Children/Babies</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Mature"/>Mature</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Pets/Animals"/>Pets/Animals</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Other"/>Other</label>
                       </div>
 
                       <div id="checkbox-group-source"  style={{color:"#EE5967", margin:"20px 0"}}>How do you source your product?</div>
@@ -369,6 +373,7 @@ const ApparelIntake: NextPage = () => {
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="source" value="Factory-made"/>Factory-made</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="source" value="Reworked/Upcycled"/>Reworked/Upcycled</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="source" value="Second-hand/Vintage"/>Second-hand/Vintage</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="source" value="Other"/>Other</label>
                       </div>
                      
                       <Field name="tags" required>

@@ -290,6 +290,7 @@ const ServicesIntake: NextPage = () => {
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Tutoring/Educational"/>Tutoring/Educational</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Finance/Business"/>Finance/Business</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Landscape/Botanical"/>Landscape/Botanical</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
                       </div>
 
                       <div id="checkbox-group-location-options"  style={{color:"#EE5967", margin:"20px 0"}}>Where do you perform this service?</div>
@@ -312,6 +313,7 @@ const ServicesIntake: NextPage = () => {
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Markets/Events"/>Markets/Events</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Remotely"/>Remotely</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Events I Promote"/>Events I Promote</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Other"/>Other</label>
                       </div>
 
                       <div id="checkbox-group-service-type"  style={{color:"#EE5967", margin:"20px 0"}}>How do you service your client?</div>

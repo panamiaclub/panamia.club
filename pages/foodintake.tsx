@@ -359,6 +359,7 @@ const FoodIntake: NextPage = () => {
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Singular Food Product"/>Singular Food Product</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Snacks"/>Snacks</label>
                           <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Tapas/Appetizers"/>Tapas/Appetizers</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
                       </div>
 
                       <div id="checkbox-group-dining-type"  style={{color:"#EE5967", margin:"20px 0"}}>Dining Type</div>
@@ -376,10 +377,11 @@ const FoodIntake: NextPage = () => {
                               setDiningOptions(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Food Truck"/>Food Truck</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Catering"/>Catering</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Delivery"/>Delivery</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Restaurant/Dine-In"/>Restaurant/Dine-In</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="diningOptions" value="Food Truck"/>Food Truck</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="diningOptions" value="Catering"/>Catering</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="diningOptions" value="Delivery"/>Delivery</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="diningOptions" value="Restaurant/Dine-In"/>Restaurant/Dine-In</label>
+                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="diningOptions" value="Other"/>Other</label>
                       </div>
                      
                       <Field name="tags" required>
