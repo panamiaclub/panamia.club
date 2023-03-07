@@ -181,7 +181,7 @@ const Profile: NextPage = () => {
   //edit
 
   const editUser = async () => {
-        if(email && category && bio && instagram && twitter && link1 && link2 && location ){
+        if(email){
             //console.log('category')
             //console.log(category)
             const res = await axios
