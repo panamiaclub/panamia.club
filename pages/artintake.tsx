@@ -51,7 +51,7 @@ const ArtIntake: NextPage = () => {
   const [address, setAddress] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [about, setAbout] = useState("");
-  const [category, setCategory] = useState<any>([]);
+  const [category, setCategory] = useState("");
   const [serviceType, setServiceType] = useState<any>([]);
   const [businessNeed, setBusinessNeed] = useState("");
   const [interest, setInterest] = useState("");
@@ -82,14 +82,14 @@ const ArtIntake: NextPage = () => {
 
   const formSubmit = (actions: any) => {
     actions.setSubmitting(false);
-    createNewsletterEntry();
+    createFormEntry();
   };
 
-  const redirectToHome = () => {
+  const redirectToIntake = () => {
     const { pathname } = Router;
-    if (pathname === "/giftguide") {
+    if (success) {
       // TODO: redirect to a success register page
-      Router.push("/giftguide");
+      Router.push("/intake");
     }
   };
 
@@ -108,13 +108,13 @@ const ArtIntake: NextPage = () => {
     }
   }, [twitterHandle, name, email, igUsername, about]);
 
-  const createNewsletterEntry = async () => {
-    console.log('create newsletter fired')
-    if(name && email  && igUsername && twitterHandle ){
+  const createFormEntry = async () => {
+    console.log('create artIntake fired')
+    if(name && email && about && category && igUsername && logo && mediums && source && productType && tags && interest && image1 && image2 && image3 && marketInterest && businessNeed && workshop && workshopDetails && igConsent && collabConsent && marketConsent ){
         const res = await axios
         .post(
-            "/api/createNewsletterEntry",
-            { name, email, igUsername, twitterHandle },
+            "/api/createArtIntakeEntry",
+            { email, name, about, category, backgroundEthnicity, igUsername, twitterHandle, website, logo, mediums, source, productType, tags, interest, image1, image2, image3, marketInterest, workshop, workshopDetails, igConsent, marketConsent, collabConsent },
             {
             headers: {
                 Accept: "application/json",
@@ -123,14 +123,16 @@ const ArtIntake: NextPage = () => {
             }
         )
         .then(async () => {
-            //redirectToHome();
-            setSuccess("Succesfully signed up!")
+            redirectToIntake();
+            setSuccess("Succesfully filled out form!")
         })
         .catch((error) => {
             console.log(error);
             setAlert(error.response.data.error);
         });
         console.log(res);
+    }else{
+      setAlert("Please Fill out all required fields.");
     }
   };
 
@@ -162,7 +164,7 @@ const ArtIntake: NextPage = () => {
                 <Grid.Col span={6} md={6} xs={12}>
                 <h2 style={{color:"#EE5967"}}>Functional/Fine Art Vendor Intake Form</h2>
                 <Formik
-                    initialValues={{}}
+                    initialValues={{email, name, about, category, backgroundEthnicity, igUsername, twitterHandle, website, logo, mediums, source, productType, tags, interest, image1, image2, image3, marketInterest, workshop, workshopDetails, igConsent, marketConsent, collabConsent}}
                     validateOnChange={false}
                     validateOnBlur={false}
                     onSubmit={(_, actions) => {
@@ -208,7 +210,7 @@ const ArtIntake: NextPage = () => {
                           </>
                           )}
                       </Field>
-                      <Field name="category">
+                      <Field name="category" required>
                           {() => (
                           <>
                           <Text className={styles.formText} style={{marginTop:"20px"}}>Do you make functional or fine art?</Text>
@@ -285,7 +287,7 @@ const ArtIntake: NextPage = () => {
                           )}
                       </Field>
 
-                      <Text  style={{color:"#EE5967", margin:"20px 0"}}>Logo</Text>
+                      <Text  style={{margin:"20px 0"}}>Logo</Text>
                       <Input size="xs" id="logo" required
                                             value={logo} 
                                             type="file" 
@@ -296,7 +298,7 @@ const ArtIntake: NextPage = () => {
                                             }}
                                         />
 
-                  <div id="checkbox-group" style={{color:"#EE5967", margin:"20px 0"}}>What Mediums do you typically work with?</div>
+                  <div id="checkbox-group" style={{margin:"20px 0"}}>What Mediums do you typically work with?</div>
                       <div role="group" aria-labelledby="checkbox-group"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
@@ -311,23 +313,23 @@ const ArtIntake: NextPage = () => {
                               setMediums(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Clothing/Fabric/Fiber Materials"/>Clothing/Fabric/Fiber Materials</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Wood/Plants"/>Wood/Plants</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Stone/Marble/Semi-Precious Gems"/>Stone/Marble/Semi-Precious Gems</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Digital Art (2-D/3-D)"/>Digital Art (2-D/3-D)</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Video/Photo"/>Video/Photo</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Collage"/>Collage</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Paper/Plastic"/>Paper/Plastic</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Recycled Materials"/>Recycled Materials</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Paint (Oil/Acrylic/Watercolor)"/>Paint (Oil/Acrylic/Watercolor)</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Ink/Chalk/Charcoal/Graphite"/>Ink/Chalk/Charcoal/Graphite</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Ceramics"/>Ceramics</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Electronic/Digital/Vocal Instruments"/>Electronic/Digital/Vocal Instruments</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Dance/Movement/Choreography/Life Performances"/>Dance/Movement/Choreography/Life Performances</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Clothing/Fabric/Fiber Materials"/>Clothing/Fabric/Fiber Materials</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Wood/Plants"/>Wood/Plants</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Stone/Marble/Semi-Precious Gems"/>Stone/Marble/Semi-Precious Gems</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Digital Art (2-D/3-D)"/>Digital Art (2-D/3-D)</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Video/Photo"/>Video/Photo</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Collage"/>Collage</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Paper/Plastic"/>Paper/Plastic</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Recycled Materials"/>Recycled Materials</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Paint (Oil/Acrylic/Watercolor)"/>Paint (Oil/Acrylic/Watercolor)</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Ink/Chalk/Charcoal/Graphite"/>Ink/Chalk/Charcoal/Graphite</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Ceramics"/>Ceramics</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Electronic/Digital/Vocal Instruments"/>Electronic/Digital/Vocal Instruments</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Dance/Movement/Choreography/Life Performances"/>Dance/Movement/Choreography/Life Performances</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
                       </div>
 
-                      <div id="checkbox-group-location-options"  style={{color:"#EE5967", margin:"20px 0"}}>How do you source your product?</div>
+                      <div id="checkbox-group-location-options"  style={{margin:"20px 0"}}>How do you source your product?</div>
                       <div role="group" aria-labelledby="checkbox-group-location-options"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
@@ -342,14 +344,14 @@ const ArtIntake: NextPage = () => {
                               setSource(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Handmade"/>Handmade</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Imported Artisinal"/>Imported Artisinal</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Factory-made"/>Factory-made</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Reworked/Upcycled"/>Reworked/Upcycled</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Other"/>Other</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Handmade"/>Handmade</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Imported Artisinal"/>Imported Artisinal</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Factory-made"/>Factory-made</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Reworked/Upcycled"/>Reworked/Upcycled</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Other"/>Other</label>
                       </div>
 
-                      <Field name="category">
+                      <Field name="productType" required>
                           {() => (
                           <>
                           <Text className={styles.formText} style={{marginTop:"20px"}}>Is your product mainly...?</Text>
@@ -385,7 +387,7 @@ const ArtIntake: NextPage = () => {
                           )}
                       </Field>
 
-                      <Field name="interest">
+                      <Field name="interest" required>
                           {() => (
                           <>
                            <Text className={styles.formText} style={{marginTop:"20px"}}>What do you want to get out of this membership?</Text>
@@ -398,7 +400,7 @@ const ArtIntake: NextPage = () => {
                           )}
                       </Field>
                       
-                      <Text  style={{color:"#EE5967", margin:"20px 0"}}>At least 3 pictures that best represent your brand/business (Ex: Final product, in-action shot,  satisfied customer, etc.)</Text>
+                      <Text  style={{margin:"20px 0"}}>At least 3 pictures that best represent your brand/business (Ex: Final product, in-action shot,  satisfied customer, etc.)</Text>
                       <Input size="xs" id="image1Input"
                                             value={image1} 
                                             type="file" 
@@ -428,13 +430,13 @@ const ArtIntake: NextPage = () => {
                     />
 
                     <Text className={styles.formText} style={{marginTop:"20px"}}>Are you interested in taking your product to market?</Text>
-                      <Field  value={marketInterest} as="select" className={styles.selectField} name="marketInterest" onChange={(e:any) => setMarketInterest(e.target.value)}>
+                      <Field  value={marketInterest} as="select" required className={styles.selectField} name="marketInterest" onChange={(e:any) => setMarketInterest(e.target.value)}>
                         <option value="Yes">Yes</option>
                         <option value="No">No</option>
                         <option value="Maybe">Maybe</option>
                       </Field>
 
-                      <Field name="businessNeed">
+                      <Field name="businessNeed" required>
                           {() => (
                           <>
                            <Text className={styles.formText} style={{marginTop:"20px"}}>What is your business' biggest need right now?</Text>
@@ -449,13 +451,13 @@ const ArtIntake: NextPage = () => {
 
 
                       <Text className={styles.formText} style={{marginTop:"20px"}}>Would you be interested in hosting a workshop for our members? (Ex. SEO, industry specific knowledge, helpful tech)</Text>
-                      <Field  value={workshop} as="select" className={styles.selectField} name="workshop" onChange={(e:any) => setWorkshop(e.target.value)}>
+                      <Field required  value={workshop} as="select" className={styles.selectField} name="workshop" onChange={(e:any) => setWorkshop(e.target.value)}>
                         <option value="Yes">Yes</option>
                         <option value="No">No</option>
                         <option value="Maybe">Maybe</option>
                       </Field>
 
-                      <Field name="workshopDetails">
+                      <Field name="workshopDetails" required>
                           {() => (
                           <>
                            <Text style={{marginTop:"20px"}} className={styles.formText}>If you responded "Yes" to the question above, what content would you like to present on?</Text>
@@ -474,7 +476,7 @@ const ArtIntake: NextPage = () => {
                         <p>This is also a platform designed to bring the local vendor community to the people looking to support small businesses. Individually, it can be hard to grow an audience, but if we unite our influences we can reach more people, and make it easier for them to find us! If someone wants to support local, they can search our vendor directory and find you! </p>
                       </Card>
 
-                      <Field name="igConsent">
+                      <Field name="igConsent" required>
                           {() => (
                           <>
                           <Text className={styles.formText} style={{marginTop:"20px"}}>I am willing to share/disseminate Pana Mia Club media/content and accept the collab invite on IG when my profile is published</Text>
@@ -487,10 +489,10 @@ const ArtIntake: NextPage = () => {
                           )}
                       </Field>
 
-                      <Field name="marketConsent">
+                      <Field name="marketConsent" required>
                           {() => (
                           <>
-                          <Text className={styles.formText} style={{marginTop:"20px"}}>I am willing to contribute my experiences at local markets in order to grow collective info on markets (initial)</Text>
+                          <Text className={styles.formText} style={{marginTop:"20px"}}>I am willing to contribute my experiences at local markets in order to grow collective info on markets</Text>
                               <input
                               value={"true"}
                               onChange={(e:any) => setMarketConsent(true)}
@@ -500,10 +502,10 @@ const ArtIntake: NextPage = () => {
                           )}
                       </Field>
 
-                      <Field name="collabConsent">
+                      <Field name="collabConsent" required>
                           {() => (
                           <>
-                          <Text className={styles.formText} style={{marginTop:"20px"}}>I am willing to collaborate with Pana Mia Club to create content to be shared by me and the club, (i.e. reels, work in progress, new releases) (initial)</Text>
+                          <Text className={styles.formText} style={{marginTop:"20px"}}>I am willing to collaborate with Pana Mia Club to create content to be shared by me and the club, (i.e. reels, work in progress, new releases)</Text>
                               <input
                               value={"true"}
                               onChange={(e:any) => setCollabConsent(true)}

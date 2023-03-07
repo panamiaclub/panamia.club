@@ -132,8 +132,10 @@ const Intake: NextPage = () => {
                                  }else if(str == "Apparel/Accessories"){
                                     link = "apparelintake"
                                  }else if(str == "Collectives/Platform"){
-                                    return (<></>);
-                                 }else if(str == "Custoner"){
+                                    link = "orgintake"
+                                 }else if(str == "Goods"){
+                                    link = "goodsintake"
+                                 }else if(str == "Customer"){
                                     return (<></>);
                                  }
 

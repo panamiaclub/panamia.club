@@ -48,7 +48,7 @@ const ApparelIntake: NextPage = () => {
   const [name, setName] = useState("");
   const [backgroundEthnicity, setBackgroundEthnicity] = useState("");
   const [locationOptions, setLocationOptions] = useState<any>([]);
-  const [location, setLocation] = useState("");
+  const [address, setAddress] = useState("");
   const [about, setAbout] = useState("");
   const [category, setCategory] = useState<any>([]);
   const [source, setSource] = useState<any>([]);
@@ -254,7 +254,7 @@ const ApparelIntake: NextPage = () => {
                           )}
                       </Field>
 
-                      <Text  style={{color:"#EE5967", margin:"20px 0"}}>Logo</Text>
+                      <Text  style={{margin:"20px 0"}}>Logo</Text>
                       <Input size="xs" id="logo" required
                                             value={logo} 
                                             type="file" 
@@ -265,7 +265,7 @@ const ApparelIntake: NextPage = () => {
                                             }}
                                         />
 
-                  <div id="checkbox-group" style={{color:"#EE5967", margin:"20px 0"}}>What sort of apparel do you sell?</div>
+                  <div id="checkbox-group" style={{margin:"20px 0"}}>What sort of apparel do you sell?</div>
                       <div role="group" aria-labelledby="checkbox-group"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
@@ -280,20 +280,20 @@ const ApparelIntake: NextPage = () => {
                               setCategory(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Shoes"/>Shoes</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Jewelry"/>Jewelry</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Hats"/>Hats</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Outerwear"/>Outerwear (Jackets/Coats/etc.)</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Sportswear"/>Sportswear</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Bags/Accessories"/>Bags/Accessories</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Intimates/Lingerie"/>Intimates/Lingerie</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Swimsuits"/>Swimsuits</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Tops"/>Tops</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Bottoms"/>Bottoms</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Shoes"/>Shoes</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Jewelry"/>Jewelry</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Hats"/>Hats</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Outerwear"/>Outerwear (Jackets/Coats/etc.)</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Sportswear"/>Sportswear</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Bags/Accessories"/>Bags/Accessories</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Intimates/Lingerie"/>Intimates/Lingerie</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Swimsuits"/>Swimsuits</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Tops"/>Tops</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Bottoms"/>Bottoms</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
                       </div>
 
-                      <div id="checkbox-group-location-options"  style={{color:"#EE5967", margin:"20px 0"}}>Where do you sell this product?</div>
+                      <div id="checkbox-group-location-options"  style={{margin:"20px 0"}}>Where do you sell this product?</div>
                       <div role="group" aria-labelledby="checkbox-group-location-options"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
@@ -308,28 +308,28 @@ const ApparelIntake: NextPage = () => {
                               setLocationOptions(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="My Location"/>My Location</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Pickup"/>Pickup</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Markets/Events"/>Markets/Events</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Local Shipping"/>Local Shipping</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Worldwide Shipping"/>Worldwide Shipping</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Other"/>Other</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="My Location"/>My Location</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Pickup"/>Pickup</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Markets/Events"/>Markets/Events</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Local Shipping"/>Local Shipping</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Worldwide Shipping"/>Worldwide Shipping</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Other"/>Other</label>
                       </div>
 
-                      <Field name="location">
+                      <Field name="address">
                           {() => (
                           <>
                            <Text style={{marginTop:"20px"}} className={styles.formText}>Address:</Text>
                               <Input
-                              value={location}
-                              onChange={(e:any) => setLocation(e.target.value)}
+                              value={address}
+                              onChange={(e:any) => setAddress(e.target.value)}
                               placeholder={"Address"}
                               />
                           </>
                           )}
                       </Field>
 
-                      <div id="checkbox-group-audience"  style={{color:"#EE5967", margin:"20px 0"}}>What is the general audience of your products?</div>
+                      <div id="checkbox-group-audience"  style={{margin:"20px 0"}}>What is the general audience of your products?</div>
                       <div role="group" aria-labelledby="checkbox-group-audience"  
                         onChange={async(e:any) => {
                           if(e.target.checked){
@@ -344,16 +344,16 @@ const ApparelIntake: NextPage = () => {
                               setAudience(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Women"/>Women</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Men"/>Men</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Unisex"/>Unisex</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Children/Babies"/>Children/Babies</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Mature"/>Mature</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Pets/Animals"/>Pets/Animals</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="audience" value="Other"/>Other</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="audience" value="Women"/>Women</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="audience" value="Men"/>Men</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="audience" value="Unisex"/>Unisex</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="audience" value="Children/Babies"/>Children/Babies</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="audience" value="Mature"/>Mature</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="audience" value="Pets/Animals"/>Pets/Animals</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="audience" value="Other"/>Other</label>
                       </div>
 
-                      <div id="checkbox-group-source"  style={{color:"#EE5967", margin:"20px 0"}}>How do you source your product?</div>
+                      <div id="checkbox-group-source"  style={{margin:"20px 0"}}>How do you source your product?</div>
                       <div role="group" aria-labelledby="checkbox-group-source"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
@@ -368,12 +368,12 @@ const ApparelIntake: NextPage = () => {
                               setSource(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="source" value="Handmade"/>Handmade</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="source" value="Imported Artisinal"/>Imported Artisinal</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="source" value="Factory-made"/>Factory-made</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="source" value="Reworked/Upcycled"/>Reworked/Upcycled</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="source" value="Second-hand/Vintage"/>Second-hand/Vintage</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="source" value="Other"/>Other</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="source" value="Handmade"/>Handmade</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="source" value="Imported Artisinal"/>Imported Artisinal</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="source" value="Factory-made"/>Factory-made</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="source" value="Reworked/Upcycled"/>Reworked/Upcycled</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="source" value="Second-hand/Vintage"/>Second-hand/Vintage</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="source" value="Other"/>Other</label>
                       </div>
                      
                       <Field name="tags" required>
@@ -384,19 +384,6 @@ const ApparelIntake: NextPage = () => {
                               value={tags}
                               onChange={(e:any) => setTags(e.target.value)}
                               placeholder={"separate each word by a space"}
-                              />
-                          </>
-                          )}
-                      </Field>
-
-                      <Field name="businessNeed">
-                          {() => (
-                          <>
-                           <Text className={styles.formText} style={{marginTop:"20px"}}>What is your business' biggest need right now?</Text>
-                              <Input
-                              value={businessNeed}
-                              onChange={(e:any) => setBusinessNeed(e.target.value)}
-                              placeholder={""}
                               />
                           </>
                           )}
@@ -415,7 +402,7 @@ const ApparelIntake: NextPage = () => {
                           )}
                       </Field>
                       
-                      <Text  style={{color:"#EE5967", margin:"20px 0"}}>At least 3 pictures that best represent your brand/business (Ex: Final product, in-action shot,  satisfied customer, etc.)</Text>
+                      <Text  style={{margin:"20px 0"}}>At least 3 pictures that best represent your brand/business (Ex: Final product, in-action shot,  satisfied customer, etc.)</Text>
                       <Input size="xs" id="image1Input"
                                             value={image1} 
                                             type="file" 
@@ -450,6 +437,19 @@ const ApparelIntake: NextPage = () => {
                         <option value="No">No</option>
                         <option value="Maybe">Maybe</option>
                       </Field>      
+
+                      <Field name="businessNeed">
+                          {() => (
+                          <>
+                           <Text className={styles.formText} style={{marginTop:"20px"}}>What is your business' biggest need right now?</Text>
+                              <Input
+                              value={businessNeed}
+                              onChange={(e:any) => setBusinessNeed(e.target.value)}
+                              placeholder={""}
+                              />
+                          </>
+                          )}
+                      </Field>
 
                       <Text className={styles.formText} style={{marginTop:"20px"}}>Would you be interested in hosting a workshop for our members? (Ex. SEO, industry specific knowledge, helpful tech)</Text>
                       <Field  value={workshop} as="select" className={styles.selectField} name="workshop" onChange={(e:any) => setWorkshop(e.target.value)}>

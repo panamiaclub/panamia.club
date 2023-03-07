@@ -693,6 +693,10 @@ const Profile: NextPage = () => {
                                         Services
                                         </label>
                                         <label>
+                                        <Field type="checkbox" name="Category" value="Goods" />
+                                        Goods
+                                        </label>
+                                        <label>
                                         <Field type="checkbox" name="Category" value="Apparel/Accessories" />
                                         Apparel/Accessories
                                         </label>

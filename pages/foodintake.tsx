@@ -254,7 +254,7 @@ const FoodIntake: NextPage = () => {
                           )}
                       </Field>
 
-                      <Text  style={{color:"#EE5967", margin:"20px 0"}}>Logo</Text>
+                      <Text  style={{margin:"20px 0"}}>Logo</Text>
                       <Input size="xs" id="logo" required
                                             value={logo} 
                                             type="file" 
@@ -265,7 +265,7 @@ const FoodIntake: NextPage = () => {
                                             }}
                                         />
 
-                  <div id="checkbox-group" style={{color:"#EE5967", margin:"20px 0"}}>Allergen Friendly Options</div>
+                  <div id="checkbox-group" style={{margin:"20px 0"}}>Allergen Friendly Options</div>
                       <div role="group" aria-labelledby="checkbox-group"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
@@ -280,27 +280,20 @@ const FoodIntake: NextPage = () => {
                               setAllergenFriendlyOptions(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="allergen-options" value="Gluten Free"/>Gluten Free</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="allergen-options" value="Vegan/Plant Based"/>Vegan/Plant Based</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="allergen-options" value="Vegetarian"/>Vegetarian</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="allergen-options" value="Keto"/>Keto</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="allergen-options" value="Nut Free"/>Nut Free</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="allergen-options" value="Dairy Free"/>Dairy Free</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="allergen-options" value="Egg Free"/>Egg Free</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="allergen-options" value="Alkaline"/>Alkaline</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="allergen-options" value="Paleo"/>Paleo</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="allergen-options" value="Auto-Immune Protocol"/>Auto-Immune Protocol</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="allergen-options" value="Gluten Free"/>Gluten Free</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="allergen-options" value="Vegan/Plant Based"/>Vegan/Plant Based</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="allergen-options" value="Vegetarian"/>Vegetarian</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="allergen-options" value="Keto"/>Keto</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="allergen-options" value="Nut Free"/>Nut Free</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="allergen-options" value="Dairy Free"/>Dairy Free</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="allergen-options" value="Egg Free"/>Egg Free</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="allergen-options" value="Alkaline"/>Alkaline</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="allergen-options" value="Paleo"/>Paleo</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="allergen-options" value="Auto-Immune Protocol"/>Auto-Immune Protocol</label>
                           
                       </div>
 
-                      <Text className={styles.formText} style={{marginTop:"20px"}}>Are you interested in taking your product to market?</Text>
-                      <Field  value={marketInterest} as="select" className={styles.selectField} name="marketInterest" onChange={(e:any) => setMarketInterest(e.target.value)}>
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                        <option value="Maybe">Maybe</option>
-                      </Field>
-
-                      <div id="checkbox-group-location-options"  style={{color:"#EE5967", margin:"20px 0"}}>Where do you sell this product?</div>
+                      <div id="checkbox-group-location-options"  style={{margin:"20px 0"}}>Where do you sell this product?</div>
                       <div role="group" aria-labelledby="checkbox-group-location-options"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
@@ -315,11 +308,11 @@ const FoodIntake: NextPage = () => {
                               setLocationOptions(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="My Location"/>My Location</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Pickup"/>Pickup</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Markets/Events"/>Markets/Events</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Local Shipping"/>Local Shipping</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Worldwide Shipping"/>Worldwide Shipping</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="My Location"/>My Location</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Pickup"/>Pickup</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Markets/Events"/>Markets/Events</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Local Shipping"/>Local Shipping</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Worldwide Shipping"/>Worldwide Shipping</label>
                       </div>
 
                       <Field name="address">
@@ -335,7 +328,7 @@ const FoodIntake: NextPage = () => {
                           )}
                       </Field>
 
-                      <div id="checkbox-group-category"  style={{color:"#EE5967", margin:"20px 0"}}>Does your food fit into any of these specific categories?</div>
+                      <div id="checkbox-group-category"  style={{ margin:"20px 0"}}>Does your food fit into any of these specific categories?</div>
                       <div role="group" aria-labelledby="checkbox-group-category"  
                         onChange={async(e:any) => {
                           if(e.target.checked){
@@ -350,19 +343,19 @@ const FoodIntake: NextPage = () => {
                               setCategory(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Breakfast"/>Breakfast</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Lunch"/>Lunch</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Dinner"/>Dinner</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Brunch"/>Brunch</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Infused"/>Infused</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Drinks"/>Drinks</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Singular Food Product"/>Singular Food Product</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Snacks"/>Snacks</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Tapas/Appetizers"/>Tapas/Appetizers</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Breakfast"/>Breakfast</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Lunch"/>Lunch</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Dinner"/>Dinner</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Brunch"/>Brunch</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Infused"/>Infused</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Drinks"/>Drinks</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Singular Food Product"/>Singular Food Product</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Snacks"/>Snacks</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Tapas/Appetizers"/>Tapas/Appetizers</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
                       </div>
 
-                      <div id="checkbox-group-dining-type"  style={{color:"#EE5967", margin:"20px 0"}}>Dining Type</div>
+                      <div id="checkbox-group-dining-type"  style={{margin:"20px 0"}}>Dining Type</div>
                       <div role="group" aria-labelledby="checkbox-group-dining-type"  
                         onChange={async(e:any) => {
                           if(e.target.checked){
@@ -377,11 +370,11 @@ const FoodIntake: NextPage = () => {
                               setDiningOptions(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="diningOptions" value="Food Truck"/>Food Truck</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="diningOptions" value="Catering"/>Catering</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="diningOptions" value="Delivery"/>Delivery</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="diningOptions" value="Restaurant/Dine-In"/>Restaurant/Dine-In</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="diningOptions" value="Other"/>Other</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="diningOptions" value="Food Truck"/>Food Truck</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="diningOptions" value="Catering"/>Catering</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="diningOptions" value="Delivery"/>Delivery</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="diningOptions" value="Restaurant/Dine-In"/>Restaurant/Dine-In</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="diningOptions" value="Other"/>Other</label>
                       </div>
                      
                       <Field name="tags" required>
@@ -392,19 +385,6 @@ const FoodIntake: NextPage = () => {
                               value={tags}
                               onChange={(e:any) => setTags(e.target.value)}
                               placeholder={"separate each word by a space"}
-                              />
-                          </>
-                          )}
-                      </Field>
-
-                      <Field name="businessNeed">
-                          {() => (
-                          <>
-                           <Text className={styles.formText} style={{marginTop:"20px"}}>What is your business' biggest need right now?</Text>
-                              <Input
-                              value={businessNeed}
-                              onChange={(e:any) => setBusinessNeed(e.target.value)}
-                              placeholder={""}
                               />
                           </>
                           )}
@@ -423,7 +403,7 @@ const FoodIntake: NextPage = () => {
                           )}
                       </Field>
                       
-                      <Text  style={{color:"#EE5967", margin:"20px 0"}}>At least 3 pictures that best represent your brand/business (Ex: Final product, in-action shot,  satisfied customer, etc.)</Text>
+                      <Text  style={{margin:"20px 0"}}>At least 3 pictures that best represent your brand/business (Ex: Final product, in-action shot,  satisfied customer, etc.)</Text>
                       <Input size="xs" id="image1Input"
                                             value={image1} 
                                             type="file" 
@@ -451,6 +431,26 @@ const FoodIntake: NextPage = () => {
                             setImage3File(file);
                         }}
                     />
+
+            <Text className={styles.formText} style={{marginTop:"20px"}}>Are you interested in taking your product to market?</Text>
+                      <Field  value={marketInterest} as="select" className={styles.selectField} name="marketInterest" onChange={(e:any) => setMarketInterest(e.target.value)}>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                        <option value="Maybe">Maybe</option>
+                      </Field>
+
+              <Field name="businessNeed">
+                          {() => (
+                          <>
+                           <Text className={styles.formText} style={{marginTop:"20px"}}>What is your business' biggest need right now?</Text>
+                              <Input
+                              value={businessNeed}
+                              onChange={(e:any) => setBusinessNeed(e.target.value)}
+                              placeholder={""}
+                              />
+                          </>
+                          )}
+                      </Field>
 
                       <Text className={styles.formText} style={{marginTop:"20px"}}>Would you be interested in hosting a workshop for our members? (Ex. SEO, industry specific knowledge, helpful tech)</Text>
                       <Field  value={workshop} as="select" className={styles.selectField} name="workshop" onChange={(e:any) => setWorkshop(e.target.value)}>

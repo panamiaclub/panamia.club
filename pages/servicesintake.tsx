@@ -48,6 +48,7 @@ const ServicesIntake: NextPage = () => {
   const [name, setName] = useState("");
   const [backgroundEthnicity, setBackgroundEthnicity] = useState("");
   const [locationOptions, setLocationOptions] = useState<any>([]);
+  const [address, setAddress] = useState("");
   const [about, setAbout] = useState("");
   const [category, setCategory] = useState<any>([]);
   const [serviceType, setServiceType] = useState<any>([]);
@@ -251,7 +252,7 @@ const ServicesIntake: NextPage = () => {
                           )}
                       </Field>
 
-                      <Text  style={{color:"#EE5967", margin:"20px 0"}}>Logo</Text>
+                      <Text  style={{margin:"20px 0"}}>Logo</Text>
                       <Input size="xs" id="logo" required
                                             value={logo} 
                                             type="file" 
@@ -262,7 +263,7 @@ const ServicesIntake: NextPage = () => {
                                             }}
                                         />
 
-                  <div id="checkbox-group" style={{color:"#EE5967", margin:"20px 0"}}>What Category does your services fall under?</div>
+                  <div id="checkbox-group" style={{margin:"20px 0"}}>What Category does your services fall under?</div>
                       <div role="group" aria-labelledby="checkbox-group"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
@@ -277,23 +278,23 @@ const ServicesIntake: NextPage = () => {
                               setCategory(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Hair/Nails/Make-up/Beauty"/>Hair/Nails/Make-up/Beauty</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Tattoo/Piercing/Body Modification"/>Tattoo/Piercing/Body Modification</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Health/Nutrition"/>Health/Nutrition</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Music"/>Music</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Photography/Videograph"/>Photography/Videograph</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Design/Art"/>Design/Art</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Tailoring/Sewing"/>Tailoring/Sewing</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Mechanical"/>Mechanical</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Spiritual/Metaphysical"/>Spiritual/Metaphysical</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Pets"/>Pets</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Tutoring/Educational"/>Tutoring/Educational</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Finance/Business"/>Finance/Business</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Landscape/Botanical"/>Landscape/Botanical</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Hair/Nails/Make-up/Beauty"/>Hair/Nails/Make-up/Beauty</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Tattoo/Piercing/Body Modification"/>Tattoo/Piercing/Body Modification</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Health/Nutrition"/>Health/Nutrition</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Music"/>Music</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Photography/Videograph"/>Photography/Videograph</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Design/Art"/>Design/Art</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Tailoring/Sewing"/>Tailoring/Sewing</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Mechanical"/>Mechanical</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Spiritual/Metaphysical"/>Spiritual/Metaphysical</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Pets"/>Pets</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Tutoring/Educational"/>Tutoring/Educational</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Finance/Business"/>Finance/Business</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Landscape/Botanical"/>Landscape/Botanical</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
                       </div>
 
-                      <div id="checkbox-group-location-options"  style={{color:"#EE5967", margin:"20px 0"}}>Where do you perform this service?</div>
+                      <div id="checkbox-group-location-options"  style={{margin:"20px 0"}}>Where do you perform this service?</div>
                       <div role="group" aria-labelledby="checkbox-group-location-options"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
@@ -308,15 +309,28 @@ const ServicesIntake: NextPage = () => {
                               setLocationOptions(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="My Location"/>My Location</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Wherever my client is"/>Wherever my client is</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Markets/Events"/>Markets/Events</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Remotely"/>Remotely</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Events I Promote"/>Events I Promote</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Other"/>Other</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="My Location"/>My Location</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Wherever my client is"/>Wherever my client is</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Markets/Events"/>Markets/Events</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Remotely"/>Remotely</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Events I Promote"/>Events I Promote</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Other"/>Other</label>
                       </div>
 
-                      <div id="checkbox-group-service-type"  style={{color:"#EE5967", margin:"20px 0"}}>How do you service your client?</div>
+                      <Field name="address">
+                          {() => (
+                          <>
+                           <Text className={styles.formText} style={{marginTop:"20px"}}>Address:</Text>
+                              <Input
+                              value={address}
+                              onChange={(e:any) => setAddress(e.target.value)}
+                              placeholder={""}
+                              />
+                          </>
+                          )}
+                      </Field>
+
+                      <div id="checkbox-group-service-type"  style={{margin:"20px 0"}}>How do you service your client?</div>
                       <div role="group" aria-labelledby="checkbox-group-service-type"  
                         onChange={async(e:any) => {
                           if(e.target.checked){
@@ -331,10 +345,10 @@ const ServicesIntake: NextPage = () => {
                               setServiceType(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="serviceType" value="Appointment"/>By Appointment</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="serviceType" value="Walk-in"/>Walk-in</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="serviceType" value="Markets/Events"/>Markets/Events</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="serviceType" value="Remotely"/>Remotely</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="serviceType" value="Appointment"/>By Appointment</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="serviceType" value="Walk-in"/>Walk-in</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="serviceType" value="Markets/Events"/>Markets/Events</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="serviceType" value="Remotely"/>Remotely</label>
                       </div>
 
                      
@@ -346,19 +360,6 @@ const ServicesIntake: NextPage = () => {
                               value={tags}
                               onChange={(e:any) => setTags(e.target.value)}
                               placeholder={"separate each word by a space"}
-                              />
-                          </>
-                          )}
-                      </Field>
-
-                      <Field name="businessNeed">
-                          {() => (
-                          <>
-                           <Text className={styles.formText} style={{marginTop:"20px"}}>What is your business' biggest need right now?</Text>
-                              <Input
-                              value={businessNeed}
-                              onChange={(e:any) => setBusinessNeed(e.target.value)}
-                              placeholder={""}
                               />
                           </>
                           )}
@@ -377,7 +378,7 @@ const ServicesIntake: NextPage = () => {
                           )}
                       </Field>
                       
-                      <Text  style={{color:"#EE5967", margin:"20px 0"}}>At least 3 pictures that best represent your brand/business (Ex: Final product, in-action shot,  satisfied customer, etc.)</Text>
+                      <Text  style={{margin:"20px 0"}}>At least 3 pictures that best represent your brand/business (Ex: Final product, in-action shot,  satisfied customer, etc.)</Text>
                       <Input size="xs" id="image1Input"
                                             value={image1} 
                                             type="file" 
@@ -405,6 +406,20 @@ const ServicesIntake: NextPage = () => {
                             setImage3File(file);
                         }}
                     />
+
+
+                    <Field name="businessNeed">
+                          {() => (
+                          <>
+                           <Text className={styles.formText} style={{marginTop:"20px"}}>What is your business' biggest need right now?</Text>
+                              <Input
+                              value={businessNeed}
+                              onChange={(e:any) => setBusinessNeed(e.target.value)}
+                              placeholder={""}
+                              />
+                          </>
+                          )}
+                      </Field>
 
                       <Text className={styles.formText} style={{marginTop:"20px"}}>Would you be interested in hosting a workshop for our members? (Ex. SEO, industry specific knowledge, helpful tech)</Text>
                       <Field  value={workshop} as="select" className={styles.selectField} name="workshop" onChange={(e:any) => setWorkshop(e.target.value)}>

@@ -259,7 +259,7 @@ const OrgIntake: NextPage = () => {
                           )}
                       </Field>
 
-                      <Text  style={{color:"#EE5967", margin:"20px 0"}}>Logo</Text>
+                      <Text  style={{margin:"20px 0"}}>Logo</Text>
                       <Input size="xs" id="logo" required
                                             value={logo} 
                                             type="file" 
@@ -329,7 +329,7 @@ const OrgIntake: NextPage = () => {
                           )}
                       </Field>
 
-                      <div id="checkbox-group-location-options"  style={{color:"#EE5967", margin:"20px 0"}}>How do you connect with your base?</div>
+                      <div id="checkbox-group-location-options"  style={{margin:"20px 0"}}>How do you connect with your base?</div>
                       <div role="group" aria-labelledby="checkbox-group-location-options"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
@@ -344,12 +344,12 @@ const OrgIntake: NextPage = () => {
                               setLocationOptions(arrayy);
                           }
                       }}>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="My Location"/>My Location</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Social Media"/>Social Media</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Markets/Events"/>Markets/Events</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Remotely"/>Remotely</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Events I Promote"/>Events I Promote</label>
-                          <label style={{color:"#EE5967", display:"block"}}><Field type="checkbox" name="locationOptions" value="Other"/>Other</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="My Location"/>My Location</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Social Media"/>Social Media</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Markets/Events"/>Markets/Events</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Remotely"/>Remotely</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Events I Promote"/>Events I Promote</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Other"/>Other</label>
                       </div>
 
                       <Field name="address">
@@ -387,19 +387,6 @@ const OrgIntake: NextPage = () => {
                               value={tags}
                               onChange={(e:any) => setTags(e.target.value)}
                               placeholder={"separate each word by a space"}
-                              />
-                          </>
-                          )}
-                      </Field>
-
-                      <Field name="businessNeed">
-                          {() => (
-                          <>
-                           <Text className={styles.formText} style={{marginTop:"20px"}}>What is your business' biggest need right now?</Text>
-                              <Input
-                              value={businessNeed}
-                              onChange={(e:any) => setBusinessNeed(e.target.value)}
-                              placeholder={""}
                               />
                           </>
                           )}
@@ -447,6 +434,21 @@ const OrgIntake: NextPage = () => {
                         }}
                     />
 
+
+                    <Field name="businessNeed">
+                          {() => (
+                          <>
+                           <Text className={styles.formText} style={{marginTop:"20px"}}>What is your business' biggest need right now?</Text>
+                              <Input
+                              value={businessNeed}
+                              onChange={(e:any) => setBusinessNeed(e.target.value)}
+                              placeholder={""}
+                              />
+                          </>
+                          )}
+                      </Field>
+
+
                       <Text className={styles.formText} style={{marginTop:"20px"}}>Would you be interested in hosting a workshop for our members? (Ex. SEO, industry specific knowledge, helpful tech)</Text>
                       <Field  value={workshop} as="select" className={styles.selectField} name="workshop" onChange={(e:any) => setWorkshop(e.target.value)}>
                         <option value="Yes">Yes</option>
@@ -489,7 +491,7 @@ const OrgIntake: NextPage = () => {
                       <Field name="marketConsent">
                           {() => (
                           <>
-                          <Text className={styles.formText} style={{marginTop:"20px"}}>I am willing to contribute my experiences at local markets in order to grow collective info on markets (initial)</Text>
+                          <Text className={styles.formText} style={{marginTop:"20px"}}>I am willing to contribute my experiences at local markets in order to grow collective info on markets</Text>
                               <input
                               value={"true"}
                               onChange={(e:any) => setMarketConsent(true)}
@@ -502,7 +504,7 @@ const OrgIntake: NextPage = () => {
                       <Field name="collabConsent">
                           {() => (
                           <>
-                          <Text className={styles.formText} style={{marginTop:"20px"}}>I am willing to collaborate with Pana Mia Club to create content to be shared by me and the club, (i.e. reels, work in progress, new releases) (initial)</Text>
+                          <Text className={styles.formText} style={{marginTop:"20px"}}>I am willing to collaborate with Pana Mia Club to create content to be shared by me and the club, (i.e. reels, work in progress, new releases)</Text>
                               <input
                               value={"true"}
                               onChange={(e:any) => setCollabConsent(true)}
