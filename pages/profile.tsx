@@ -332,11 +332,11 @@ const Profile: NextPage = () => {
                     }
                 )
                 .then(async (res) => {
-                    setImageUploadMessage("Uploading Images");
+                    setImageUploadMessage("Uploaded Images!");
                 })
                 .catch((error) => {
                     //console.log(error);
-                    setAlert(error);
+                    setAlert(error.response.data.error);
                 });
             })
             
