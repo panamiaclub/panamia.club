@@ -141,7 +141,7 @@ const Intake: NextPage = () => {
 
                                 return(
                                    
-                                    <Link href={link}><Button key={index} style={{margin:"0 20px"}} disabled={onboardingFormComplete}> {str} </Button></Link>
+                                    <Link href={link} key={index}><Button style={{margin:"0 20px"}} disabled={onboardingFormComplete}> {str} </Button></Link>
                                 );
                             })}
                         </>
