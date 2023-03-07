@@ -131,7 +131,7 @@ const Intake: NextPage = () => {
                                     link = "foodintake"
                                  }else if(str == "Apparel/Accessories"){
                                     link = "apparelintake"
-                                 }else if(str == "Collectives/Platform"){
+                                 }else if(str == "Collectives/Platforms"){
                                     link = "orgintake"
                                  }else if(str == "Goods"){
                                     link = "goodsintake"
