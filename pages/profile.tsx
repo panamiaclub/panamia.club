@@ -665,18 +665,18 @@ const Profile: NextPage = () => {
                                     bind the checked values to a single array for your benefit. All the add and remove
                                     logic will be taken care of for you.
                                 */}
-                                <div id="checkbox-group">Category</div>
-                                    <div role="group" aria-labelledby="checkbox-group"  
+                                <div id="checkbox-group-cat">Category</div>
+                                    <div role="group" aria-labelledby="Category"  
                                     onChange={async(e:any) => {
                                         if(e.target.checked){
+                                            //console.log(e.target.value);
                                             var arrayy = new Array();
                                             if(category){
-                                                category.map((item)=>{
-                                                    arrayy.push(item);
-                                                })
+                                                arrayy = category;
                                             }
-                                            arrayy.push(e.target.value.toString());
-                                            //console.log(arrayy);
+                                            if(!arrayy.includes(e.target.value)){
+                                               arrayy.push(e.target.value);
+                                            }
                                             setCategory(arrayy);
                                         }
                                     }}>
