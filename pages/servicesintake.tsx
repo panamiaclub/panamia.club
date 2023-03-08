@@ -16,7 +16,7 @@ import {
     Burger,
     Grid, Input, 
     Card,
-    Button, Text, Box, Alert
+    Button, Text, Box, Alert, Textarea
   } from '@mantine/core';
 import { IconBrandInstagram } from '@tabler/icons'
 import {motion, useAnimation} from "framer-motion";
@@ -195,7 +195,7 @@ const ServicesIntake: NextPage = () => {
                           {() => (
                           <>
                           <Text className={styles.formText} style={{marginTop:"20px"}}>Explain your project as if you were talking to a stranger. Where are you based?</Text>
-                              <Input
+                              <Textarea
                               value={about}
                               onChange={(e:any) => setAbout(e.target.value)}
                               placeholder={"About"}
@@ -263,7 +263,7 @@ const ServicesIntake: NextPage = () => {
                                             }}
                                         />
 
-                  <div id="checkbox-group" style={{margin:"20px 0"}}>What Category does your services fall under?</div>
+                    <div id="checkbox-group" style={{margin:"20px 0"}}>What Category does your services fall under?</div>
                       <div role="group" aria-labelledby="checkbox-group"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
@@ -369,7 +369,7 @@ const ServicesIntake: NextPage = () => {
                           {() => (
                           <>
                            <Text className={styles.formText} style={{marginTop:"20px"}}>What do you want to get out of this membership?</Text>
-                              <Input
+                              <Textarea
                               value={interest}
                               onChange={(e:any) => setInterest(e.target.value)}
                               placeholder={""}
@@ -412,7 +412,7 @@ const ServicesIntake: NextPage = () => {
                           {() => (
                           <>
                            <Text className={styles.formText} style={{marginTop:"20px"}}>What is your business' biggest need right now?</Text>
-                              <Input
+                              <Textarea
                               value={businessNeed}
                               onChange={(e:any) => setBusinessNeed(e.target.value)}
                               placeholder={""}
@@ -432,7 +432,7 @@ const ServicesIntake: NextPage = () => {
                           {() => (
                           <>
                            <Text style={{marginTop:"20px"}} className={styles.formText}>If you responded "Yes" to the question above, what content would you like to present on?</Text>
-                              <Input
+                              <Textarea
                               value={workshopDetails}
                               onChange={(e:any) => setWorkshopDetails(e.target.value)}
                               placeholder={""}

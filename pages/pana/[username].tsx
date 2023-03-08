@@ -93,8 +93,13 @@ const Pana: NextPage = () => {
         console.log(images);
     }
 
-    if(category){
+    if(category && usersInCategory.length == 0){
         getUsersByCategory();
+    }
+
+    if(usersInCategory){
+        console.log('users in categorye')
+        console.log(usersInCategory);
     }
     
   }, [username, user, fullname, userId, email, images, avatar, bio, link1, link2, twitter, instagram, location, dateJoined, session, bannerImage])
@@ -179,10 +184,29 @@ const Pana: NextPage = () => {
   }
 
   const getUsersByCategory = async() => {
-    console.log('get users by category')
+        console.log('get users by category')
+        if(category){
+            let arr:any[] = [];
+            if(usersInCategory){
+                //arr = usersInCategory;
+            }
+            arr = getUsersAndFormatArray();
+            if(arr){
+                setUsersInCategory(arr);
+                console.log('array ');
+                console.log(arr);
+            }
+        }    
+  }
+
+  const getUsersAndFormatArray = () => {
+    let arr2:any[] = [];
+    category.map(async(item)=> {
+        //console.log(item)
+        
         const res = await axios
         .get(
-            "/api/getUsersByCategory?category="+category[1],
+            "/api/getUsersByCategory?category="+item,
             {
             headers: {
                 Accept: "application/json",
@@ -191,21 +215,20 @@ const Pana: NextPage = () => {
             }
         )
         .then(async (response) => {
-            let arr:any[] = [];
-            console.log(response);
             response.data.data.forEach((item:any)=>{
-                if(item.username != username){
-                    arr.push(item);
-                    console.log(item);
+                //console.log(item.username)
+                if(!arr2.includes(item.username) && item.username != username){
+                    arr2.push(item);
+                    //console.log('push'+item);
                 }
             })
-            setUsersInCategory(arr);
-            console.log(usersInCategory);
         })
         .catch((error) => {
-            console.log(error);
+            //onsole.log(error);
             setAlert(error.response.data.error);
         });
+        })
+    return arr2;
   }
 
 
@@ -250,28 +273,29 @@ const Pana: NextPage = () => {
                             }
                             <br></br>
                         </Card>
-                        <Card className={styles.cardStyle}>
-                            
-                            <h4>Others In The Same Category</h4>
-                            {usersInCategory && 
-                                <div>
-                                    <>
+                        {usersInCategory && 
+                            <Card className={styles.cardStyle}>
+                                    <div>
+                                        <h4>Others In The Same Category</h4>
                                         {usersInCategory.map((item, index) => {
+                                            console.log('iTEIM')
+                                            console.log(item);
+
                                             return(
                                                 <div key={index}>
                                                     <Link href={"/pana/"+item.username}>
                                                         <a>
-                                                            <img key={item} src={item.avatar} style={{width:"50px", borderRadius:"25px"}}></img>
-                                                            <span key={item} style={{marginBottom:"20px"}}> {item.username} </span>
+                                                            {!item.avatar && <CgProfile size="2em"/>}
+                                                            {item.avatar && <img key={item.username + "avatar"} src={item.avatar} style={{width:"50px", borderRadius:"25px"}}></img>}
+                                                            <span key={item.username} style={{marginBottom:"20px"}}> {item.username} </span>
                                                         </a>
                                                     </Link>
                                                 </div>
                                             );
                                         })}
-                                    </>
-                                </div>
-                            }
-                        </Card>
+                                    </div>
+                            </Card>
+                         }
                     </Grid.Col>
                     <Grid.Col sm={8} className={styles.gallery}>
                         <>

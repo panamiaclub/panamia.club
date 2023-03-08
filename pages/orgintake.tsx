@@ -16,7 +16,7 @@ import {
     Burger,
     Grid, Input, 
     Card,
-    Button, Text, Box, Alert
+    Button, Text, Box, Alert, Textarea
   } from '@mantine/core';
 import { IconBrandInstagram } from '@tabler/icons'
 import {motion, useAnimation} from "framer-motion";
@@ -202,7 +202,7 @@ const OrgIntake: NextPage = () => {
                           {() => (
                           <>
                           <Text className={styles.formText} style={{marginTop:"20px"}}>Explain your project as if you were talking to a stranger. Where are you based?</Text>
-                              <Input
+                              <Textarea
                               value={about}
                               onChange={(e:any) => setAbout(e.target.value)}
                               placeholder={"About"}
@@ -281,7 +281,7 @@ const OrgIntake: NextPage = () => {
                           {() => (
                           <>
                            <Text style={{marginTop:"20px"}} className={styles.formText}>Tell us what community issue you're addressing:</Text>
-                              <Input
+                              <Textarea
                               value={communityIssue}
                               onChange={(e:any) => setCommunityIssue(e.target.value)}
                               placeholder={""}
@@ -369,7 +369,7 @@ const OrgIntake: NextPage = () => {
                           {() => (
                           <>
                            <Text style={{marginTop:"20px"}} className={styles.formText}>How often do you engage with your community? Ex: events, newsletters, social media, meetings.</Text>
-                              <Input
+                              <Textarea
                               value={communityEngagement}
                               onChange={(e:any) => setCommunityEngagement(e.target.value)}
                               placeholder={""}
@@ -396,7 +396,7 @@ const OrgIntake: NextPage = () => {
                           {() => (
                           <>
                            <Text className={styles.formText} style={{marginTop:"20px"}}>What do you want to get out of this membership?</Text>
-                              <Input
+                              <Textarea
                               value={interest}
                               onChange={(e:any) => setInterest(e.target.value)}
                               placeholder={""}
@@ -439,7 +439,7 @@ const OrgIntake: NextPage = () => {
                           {() => (
                           <>
                            <Text className={styles.formText} style={{marginTop:"20px"}}>What is your business' biggest need right now?</Text>
-                              <Input
+                              <Textarea
                               value={businessNeed}
                               onChange={(e:any) => setBusinessNeed(e.target.value)}
                               placeholder={""}
@@ -460,7 +460,7 @@ const OrgIntake: NextPage = () => {
                           {() => (
                           <>
                            <Text style={{marginTop:"20px"}} className={styles.formText}>If you responded "Yes" to the question above, what content would you like to present on?</Text>
-                              <Input
+                              <Textarea
                               value={workshopDetails}
                               onChange={(e:any) => setWorkshopDetails(e.target.value)}
                               placeholder={""}
