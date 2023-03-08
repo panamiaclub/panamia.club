@@ -33,6 +33,7 @@ const Profile: NextPage = () => {
     const {data:session, status} = useSession();
     const [editProfile, setEditProfile] = useState(false);
     const [users, setUsers] = useState<any[]>([]);
+    const [ogUsers, setOGUsers] = useState<any[]>([]);
     const [category, setCategory] = useState<any[]>([]);
     const [alert, setAlert] = useState("");
     const [search, setSearch] = useState("");
@@ -52,6 +53,7 @@ const Profile: NextPage = () => {
       .then(async (res) => {
         console.log(res);
         setUsers(res.data.data);
+        setOGUsers(res.data.data);
       })
       .catch((error) => {
         console.log(error);
@@ -76,13 +78,18 @@ const Profile: NextPage = () => {
     }, [users, category]);
 
     const filterUsers = () => {
-        let newUsers = users.filter(
-            user => user.category.toString().includes(category.toString()));
-
-        //console.log('new users'+newUsers);
-        setUsers(newUsers);
-
-
+        if(category.length > 0){
+            console.log(category);
+            let newUsers: any[] = [];
+            newUsers = ogUsers;
+            category.forEach((item)=>{
+                newUsers = ogUsers.filter(
+                    user => user.category.toString().includes(item.toString()));
+            })
+        
+            //console.log('new users'+newUsers);
+            setUsers(newUsers);
+        }
     }
 
     const filterUsersSearch =()=>{
@@ -95,8 +102,8 @@ const Profile: NextPage = () => {
     }
 
     const formSubmit = (actions: any) => {
-        actions.setSubmitting(false);
-        filterUsers();
+        //actions.setSubmitting(false);
+        //filterUsers();
       };
 
       const formSubmitSearch = (actions: any) => {
@@ -129,7 +136,7 @@ const Profile: NextPage = () => {
                                     <div role="group" aria-labelledby="checkbox-group"  
                                     onChange={async(e:any) => {
                                         if(e.target.checked){
-                                            //console.log(e.target.value);
+                                            console.log(e.target.value);
                                             var arrayy = new Array();
                                             if(category){
                                                 arrayy = category;
@@ -143,13 +150,17 @@ const Profile: NextPage = () => {
                                             if(category){
                                                 category.map((item:any) => {
                                                 if(item != e.target.value){
+                                                    console.log(item)
                                                   arrayy.push(item);
                                                 }
                                              })
                                             }
                                             console.log(arrayy);
                                             setCategory(arrayy);
+                                            setUsers(ogUsers);
                                           }
+                                          filterUsers();
+                                          
                                     }}>
                                         <h2>Filter</h2>
                                         <label>

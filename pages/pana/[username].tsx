@@ -285,7 +285,7 @@ const Pana: NextPage = () => {
                                                 <div key={index}>
                                                     <Link href={"/pana/"+item.username}>
                                                         <a>
-                                                            {!item.avatar && <CgProfile size="2em"/>}
+                                                            {!item.avatar && <CgProfile size="3.4em"/>}
                                                             {item.avatar && <img key={item.username + "avatar"} src={item.avatar} style={{width:"50px", borderRadius:"25px"}}></img>}
                                                             <span key={item.username} style={{marginBottom:"20px"}}> {item.username} </span>
                                                         </a>
