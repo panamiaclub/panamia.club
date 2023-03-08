@@ -269,16 +269,27 @@ const FoodIntake: NextPage = () => {
                       <div role="group" aria-labelledby="checkbox-group"  
                       onChange={async(e:any) => {
                           if(e.target.checked){
-                              let arrayy = new Array();
-                              if(allergenFriendlyOptions){
-                                allergenFriendlyOptions.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
-                              }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
-                              setAllergenFriendlyOptions(arrayy);
+                            let arrayy = new Array();
+                            if(allergenFriendlyOptions){
+                              arrayy = allergenFriendlyOptions;
+                            } 
+                            if(!arrayy.includes(e.target.value)){
+                              arrayy.push(e.target.value);
                           }
+                          console.log(arrayy);
+                          setAllergenFriendlyOptions(arrayy);
+                        }else{
+                          let arrayy = new Array();
+                          if(allergenFriendlyOptions){
+                            allergenFriendlyOptions.map((item:any) => {
+                              if(item != e.target.value){
+                                arrayy.push(item);
+                              }
+                          })
+                          }
+                          console.log(arrayy);
+                          setAllergenFriendlyOptions(arrayy);
+                        }
                       }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="allergen-options" value="Gluten Free"/>Gluten Free</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="allergen-options" value="Vegan/Plant Based"/>Vegan/Plant Based</label>
@@ -296,17 +307,28 @@ const FoodIntake: NextPage = () => {
                       <div id="checkbox-group-location-options"  style={{margin:"20px 0"}}>Where do you sell this product?</div>
                       <div role="group" aria-labelledby="checkbox-group-location-options"  
                       onChange={async(e:any) => {
-                          if(e.target.checked){
-                              let arrayy = new Array();
-                              if(locationOptions){
-                                locationOptions.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
-                              }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
-                              setLocationOptions(arrayy);
-                          }
+                        if(e.target.checked){
+                          let arrayy = new Array();
+                          if(locationOptions){
+                            arrayy = locationOptions;
+                          } 
+                          if(!arrayy.includes(e.target.value)){
+                            arrayy.push(e.target.value);
+                        }
+                        console.log(arrayy);
+                        setLocationOptions(arrayy);
+                      }else{
+                        let arrayy = new Array();
+                        if(locationOptions){
+                          locationOptions.map((item:any) => {
+                            if(item != e.target.value){
+                              arrayy.push(item);
+                            }
+                        })
+                        }
+                        console.log(arrayy);
+                        setLocationOptions(arrayy);
+                      }
                       }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="My Location"/>My Location</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Pickup"/>Pickup</label>
@@ -332,16 +354,27 @@ const FoodIntake: NextPage = () => {
                       <div role="group" aria-labelledby="checkbox-group-category"  
                         onChange={async(e:any) => {
                           if(e.target.checked){
-                              let arrayy = new Array();
-                              if(category){
-                                category.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
-                              }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
-                              setCategory(arrayy);
+                            let arrayy = new Array();
+                            if(category){
+                              arrayy = category;
+                            } 
+                            if(!arrayy.includes(e.target.value)){
+                              arrayy.push(e.target.value);
                           }
+                          console.log(arrayy);
+                          setCategory(arrayy);
+                        }else{
+                          let arrayy = new Array();
+                          if(category){
+                            category.map((item:any) => {
+                              if(item != e.target.value){
+                                arrayy.push(item);
+                              }
+                          })
+                          }
+                          console.log(arrayy);
+                          setCategory(arrayy);
+                        }
                       }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="category" value="Breakfast"/>Breakfast</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="category" value="Lunch"/>Lunch</label>
@@ -359,16 +392,27 @@ const FoodIntake: NextPage = () => {
                       <div role="group" aria-labelledby="checkbox-group-dining-type"  
                         onChange={async(e:any) => {
                           if(e.target.checked){
-                              let arrayy = new Array();
-                              if(diningOptions){
-                                diningOptions.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
-                              }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
-                              setDiningOptions(arrayy);
+                            let arrayy = new Array();
+                            if(diningOptions){
+                              arrayy = diningOptions;
+                            } 
+                            if(!arrayy.includes(e.target.value)){
+                              arrayy.push(e.target.value);
                           }
+                          console.log(arrayy);
+                          setDiningOptions(arrayy);
+                        }else{
+                          let arrayy = new Array();
+                          if(diningOptions){
+                            diningOptions.map((item:any) => {
+                              if(item != e.target.value){
+                                arrayy.push(item);
+                              }
+                          })
+                          }
+                          console.log(arrayy);
+                          setDiningOptions(arrayy);
+                        }
                       }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="diningOptions" value="Food Truck"/>Food Truck</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="diningOptions" value="Catering"/>Catering</label>

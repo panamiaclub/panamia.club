@@ -268,17 +268,28 @@ const ApparelIntake: NextPage = () => {
                   <div id="checkbox-group" style={{margin:"20px 0"}}>What sort of apparel do you sell?</div>
                       <div role="group" aria-labelledby="checkbox-group"  
                       onChange={async(e:any) => {
-                          if(e.target.checked){
-                              let arrayy = new Array();
-                              if(category){
-                                  category.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
-                              }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
-                              setCategory(arrayy);
+                        if(e.target.checked){
+                            let arrayy = new Array();
+                            if(category){
+                              arrayy = category;
+                            } 
+                            if(!arrayy.includes(e.target.value)){
+                              arrayy.push(e.target.value);
                           }
+                          console.log(arrayy);
+                          setCategory(arrayy);
+                        }else{
+                          let arrayy = new Array();
+                          if(category){
+                            category.map((item:any) => {
+                              if(item != e.target.value){
+                                arrayy.push(item);
+                              }
+                          })
+                          }
+                          console.log(arrayy);
+                          setCategory(arrayy);
+                        }
                       }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="category" value="Shoes"/>Shoes</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="category" value="Jewelry"/>Jewelry</label>
@@ -296,17 +307,28 @@ const ApparelIntake: NextPage = () => {
                       <div id="checkbox-group-location-options"  style={{margin:"20px 0"}}>Where do you sell this product?</div>
                       <div role="group" aria-labelledby="checkbox-group-location-options"  
                       onChange={async(e:any) => {
-                          if(e.target.checked){
-                              let arrayy = new Array();
-                              if(locationOptions){
-                                locationOptions.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
-                              }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
-                              setLocationOptions(arrayy);
+                        if(e.target.checked){
+                            let arrayy = new Array();
+                            if(locationOptions){
+                              arrayy = locationOptions;
+                            } 
+                            if(!arrayy.includes(e.target.value)){
+                              arrayy.push(e.target.value);
                           }
+                          console.log(arrayy);
+                          setLocationOptions(arrayy);
+                        }else{
+                          let arrayy = new Array();
+                          if(locationOptions){
+                            locationOptions.map((item:any) => {
+                              if(item != e.target.value){
+                                arrayy.push(item);
+                              }
+                          })
+                          }
+                          console.log(arrayy);
+                          setLocationOptions(arrayy);
+                        }
                       }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="My Location"/>My Location</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Pickup"/>Pickup</label>
@@ -332,17 +354,28 @@ const ApparelIntake: NextPage = () => {
                       <div id="checkbox-group-audience"  style={{margin:"20px 0"}}>What is the general audience of your products?</div>
                       <div role="group" aria-labelledby="checkbox-group-audience"  
                         onChange={async(e:any) => {
-                          if(e.target.checked){
+                            if(e.target.checked){
+                                let arrayy = new Array();
+                                if(audience){
+                                  arrayy = audience;
+                                } 
+                                if(!arrayy.includes(e.target.value)){
+                                  arrayy.push(e.target.value);
+                              }
+                              console.log(arrayy);
+                              setAudience(arrayy);
+                            }else{
                               let arrayy = new Array();
                               if(audience){
-                                audience.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
+                                audience.map((item:any) => {
+                                  if(item != e.target.value){
+                                    arrayy.push(item);
+                                  }
+                              })
                               }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
+                              console.log(arrayy);
                               setAudience(arrayy);
-                          }
+                            }
                       }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="audience" value="Women"/>Women</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="audience" value="Men"/>Men</label>
@@ -356,17 +389,28 @@ const ApparelIntake: NextPage = () => {
                       <div id="checkbox-group-source"  style={{margin:"20px 0"}}>How do you source your product?</div>
                       <div role="group" aria-labelledby="checkbox-group-source"  
                       onChange={async(e:any) => {
-                          if(e.target.checked){
-                              let arrayy = new Array();
-                              if(source){
-                                source.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
-                              }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
-                              setSource(arrayy);
+                        if(e.target.checked){
+                            let arrayy = new Array();
+                            if(source){
+                              arrayy = source;
+                            } 
+                            if(!arrayy.includes(e.target.value)){
+                              arrayy.push(e.target.value);
                           }
+                          console.log(arrayy);
+                          setSource(arrayy);
+                        }else{
+                          let arrayy = new Array();
+                          if(source){
+                            source.map((item:any) => {
+                              if(item != e.target.value){
+                                arrayy.push(item);
+                              }
+                          })
+                          }
+                          console.log(arrayy);
+                          setSource(arrayy);
+                        }
                       }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="source" value="Handmade"/>Handmade</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="source" value="Imported Artisinal"/>Imported Artisinal</label>

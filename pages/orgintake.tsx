@@ -332,17 +332,28 @@ const OrgIntake: NextPage = () => {
                       <div id="checkbox-group-location-options"  style={{margin:"20px 0"}}>How do you connect with your base?</div>
                       <div role="group" aria-labelledby="checkbox-group-location-options"  
                       onChange={async(e:any) => {
-                          if(e.target.checked){
-                              let arrayy = new Array();
-                              if(locationOptions){
-                                locationOptions.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
-                              }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
-                              setLocationOptions(arrayy);
+                        if(e.target.checked){
+                            let arrayy = new Array();
+                            if(locationOptions){
+                              arrayy = locationOptions;
+                            } 
+                            if(!arrayy.includes(e.target.value)){
+                              arrayy.push(e.target.value);
                           }
+                          console.log(arrayy);
+                          setLocationOptions(arrayy);
+                        }else{
+                          let arrayy = new Array();
+                          if(locationOptions){
+                            locationOptions.map((item:any) => {
+                              if(item != e.target.value){
+                                arrayy.push(item);
+                              }
+                          })
+                          }
+                          console.log(arrayy);
+                          setLocationOptions(arrayy);
+                        }
                       }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="My Location"/>My Location</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Social Media"/>Social Media</label>

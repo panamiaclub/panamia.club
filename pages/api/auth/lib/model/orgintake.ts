@@ -144,6 +144,11 @@ const organizationIntakeSchema = new Schema(
             required: false,
             unique: false
         },
+        complete:{
+            type: Boolean,
+            required: false,
+            unique: false
+        }
     }
 )
 

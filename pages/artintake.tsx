@@ -76,12 +76,14 @@ const ArtIntake: NextPage = () => {
   const [igConsent, setIgConsent] = useState(Boolean);
   const [marketConsent, setMarketConsent] = useState(Boolean);
   const [collabConsent, setCollabConsent] = useState(Boolean);
+  const [complete, setComplete] = useState(Boolean);
   const [referrals, setReferrals] = useState("");
 
   if(email && name  && igUsername && twitterHandle ){}
 
   const formSubmit = (actions: any) => {
     actions.setSubmitting(false);
+    setComplete(true);
     createFormEntry();
   };
 
@@ -110,11 +112,11 @@ const ArtIntake: NextPage = () => {
 
   const createFormEntry = async () => {
     console.log('create artIntake fired')
-    if(name && email && about && category && igUsername && logo && mediums && source && productType && tags && interest && image1 && image2 && image3 && marketInterest && businessNeed && workshop && workshopDetails && igConsent && collabConsent && marketConsent ){
+    if(name && email && about && category && igUsername && logo && mediums && source && productType && tags && interest && image1 && image2 && image3 && marketInterest && businessNeed && workshop && workshopDetails && igConsent && collabConsent && marketConsent && complete ){
         const res = await axios
         .post(
             "/api/createArtIntakeEntry",
-            { email, name, about, category, backgroundEthnicity, igUsername, twitterHandle, website, logo, mediums, source, productType, tags, interest, image1, image2, image3, marketInterest, workshop, workshopDetails, igConsent, marketConsent, collabConsent },
+            { email, name, about, category, backgroundEthnicity, igUsername, twitterHandle, website, logo, mediums, source, productType, tags, interest, image1, image2, image3, marketInterest, workshop, workshopDetails, igConsent, marketConsent, collabConsent, complete },
             {
             headers: {
                 Accept: "application/json",
@@ -301,16 +303,28 @@ const ArtIntake: NextPage = () => {
                   <div id="checkbox-group" style={{margin:"20px 0"}}>What Mediums do you typically work with?</div>
                       <div role="group" aria-labelledby="checkbox-group"  
                       onChange={async(e:any) => {
+                        console.log(e.target);
                           if(e.target.checked){
                               let arrayy = new Array();
                               if(mediums){
-                                mediums.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
+                               arrayy = mediums;
                               }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
+                              if(!arrayy.includes(e.target.value)){
+                                 arrayy.push(e.target.value);
+                              }
+                              console.log(arrayy);
                               setMediums(arrayy);
+                          }else{
+                            let arrayy = new Array();
+                            if(mediums){
+                             mediums.map((item:any) => {
+                                if(item != e.target.value){
+                                  arrayy.push(item);
+                                }
+                             })
+                            }
+                            console.log(arrayy);
+                            setMediums(arrayy);
                           }
                       }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="category" value="Clothing/Fabric/Fiber Materials"/>Clothing/Fabric/Fiber Materials</label>
@@ -331,19 +345,30 @@ const ArtIntake: NextPage = () => {
 
                       <div id="checkbox-group-location-options"  style={{margin:"20px 0"}}>How do you source your product?</div>
                       <div role="group" aria-labelledby="checkbox-group-location-options"  
-                      onChange={async(e:any) => {
-                          if(e.target.checked){
+                        onChange={async(e:any) => {
+                            if(e.target.checked){
+                                let arrayy = new Array();
+                                if(source){
+                                  arrayy = source;
+                                } 
+                                if(!arrayy.includes(e.target.value)){
+                                  arrayy.push(e.target.value);
+                              }
+                              console.log(arrayy);
+                              setSource(arrayy);
+                            }else{
                               let arrayy = new Array();
                               if(source){
-                                source.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
+                                source.map((item:any) => {
+                                  if(item != e.target.value){
+                                    arrayy.push(item);
+                                  }
+                              })
                               }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
+                              console.log(arrayy);
                               setSource(arrayy);
-                          }
-                      }}>
+                            }
+                        }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Handmade"/>Handmade</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Imported Artisinal"/>Imported Artisinal</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Factory-made"/>Factory-made</label>

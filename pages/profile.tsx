@@ -678,7 +678,18 @@ const Profile: NextPage = () => {
                                                arrayy.push(e.target.value);
                                             }
                                             setCategory(arrayy);
-                                        }
+                                        }else{
+                                            let arrayy = new Array();
+                                            if(category){
+                                                category.map((item:any) => {
+                                                if(item != e.target.value){
+                                                  arrayy.push(item);
+                                                }
+                                             })
+                                            }
+                                            console.log(arrayy);
+                                            setCategory(arrayy);
+                                          }
                                     }}>
                                         <label>
                                         <Field type="checkbox" name="Category" value="Art" />

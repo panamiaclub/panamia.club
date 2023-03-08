@@ -266,17 +266,28 @@ const ServicesIntake: NextPage = () => {
                     <div id="checkbox-group" style={{margin:"20px 0"}}>What Category does your services fall under?</div>
                       <div role="group" aria-labelledby="checkbox-group"  
                       onChange={async(e:any) => {
-                          if(e.target.checked){
-                              let arrayy = new Array();
-                              if(category){
-                                  category.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
-                              }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
-                              setCategory(arrayy);
+                        if(e.target.checked){
+                            let arrayy = new Array();
+                            if(category){
+                              arrayy = category;
+                            } 
+                            if(!arrayy.includes(e.target.value)){
+                              arrayy.push(e.target.value);
                           }
+                          console.log(arrayy);
+                          setCategory(arrayy);
+                        }else{
+                          let arrayy = new Array();
+                          if(category){
+                            category.map((item:any) => {
+                              if(item != e.target.value){
+                                arrayy.push(item);
+                              }
+                          })
+                          }
+                          console.log(arrayy);
+                          setCategory(arrayy);
+                        }
                       }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="category" value="Hair/Nails/Make-up/Beauty"/>Hair/Nails/Make-up/Beauty</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="category" value="Tattoo/Piercing/Body Modification"/>Tattoo/Piercing/Body Modification</label>
@@ -297,17 +308,28 @@ const ServicesIntake: NextPage = () => {
                       <div id="checkbox-group-location-options"  style={{margin:"20px 0"}}>Where do you perform this service?</div>
                       <div role="group" aria-labelledby="checkbox-group-location-options"  
                       onChange={async(e:any) => {
-                          if(e.target.checked){
-                              let arrayy = new Array();
-                              if(locationOptions){
-                                locationOptions.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
-                              }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
-                              setLocationOptions(arrayy);
+                        if(e.target.checked){
+                            let arrayy = new Array();
+                            if(locationOptions){
+                              arrayy = locationOptions;
+                            } 
+                            if(!arrayy.includes(e.target.value)){
+                              arrayy.push(e.target.value);
                           }
+                          console.log(arrayy);
+                          setLocationOptions(arrayy);
+                        }else{
+                          let arrayy = new Array();
+                          if(locationOptions){
+                            locationOptions.map((item:any) => {
+                              if(item != e.target.value){
+                                arrayy.push(item);
+                              }
+                          })
+                          }
+                          console.log(arrayy);
+                          setLocationOptions(arrayy);
+                        }
                       }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="My Location"/>My Location</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Wherever my client is"/>Wherever my client is</label>
@@ -333,17 +355,28 @@ const ServicesIntake: NextPage = () => {
                       <div id="checkbox-group-service-type"  style={{margin:"20px 0"}}>How do you service your client?</div>
                       <div role="group" aria-labelledby="checkbox-group-service-type"  
                         onChange={async(e:any) => {
-                          if(e.target.checked){
+                            if(e.target.checked){
+                                let arrayy = new Array();
+                                if(serviceType){
+                                  arrayy = serviceType;
+                                } 
+                                if(!arrayy.includes(e.target.value)){
+                                  arrayy.push(e.target.value);
+                              }
+                              console.log(arrayy);
+                              setServiceType(arrayy);
+                            }else{
                               let arrayy = new Array();
                               if(serviceType){
-                                serviceType.map((item:any)=>{
-                                      arrayy.push(item);
-                                  })
+                                serviceType.map((item:any) => {
+                                  if(item != e.target.value){
+                                    arrayy.push(item);
+                                  }
+                              })
                               }
-                              arrayy.push(e.target.value.toString());
-                              //console.log(arrayy);
+                              console.log(arrayy);
                               setServiceType(arrayy);
-                          }
+                            }
                       }}>
                           <label style={{display:"block"}}><Field type="checkbox" name="serviceType" value="Appointment"/>By Appointment</label>
                           <label style={{display:"block"}}><Field type="checkbox" name="serviceType" value="Walk-in"/>Walk-in</label>
