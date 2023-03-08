@@ -129,16 +129,27 @@ const Profile: NextPage = () => {
                                     <div role="group" aria-labelledby="checkbox-group"  
                                     onChange={async(e:any) => {
                                         if(e.target.checked){
+                                            //console.log(e.target.value);
                                             var arrayy = new Array();
                                             if(category){
-                                                category.map((item)=>{
-                                                    arrayy.push(item);
-                                                })
+                                                arrayy = category;
                                             }
-                                            arrayy.push(e.target.value.toString());
+                                            if(!arrayy.includes(e.target.value)){
+                                               arrayy.push(e.target.value);
+                                            }
+                                            setCategory(arrayy);
+                                        }else{
+                                            let arrayy = new Array();
+                                            if(category){
+                                                category.map((item:any) => {
+                                                if(item != e.target.value){
+                                                  arrayy.push(item);
+                                                }
+                                             })
+                                            }
                                             console.log(arrayy);
                                             setCategory(arrayy);
-                                        }
+                                          }
                                     }}>
                                         <h2>Filter</h2>
                                         <label>
