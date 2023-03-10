@@ -154,6 +154,18 @@ const OrgIntake: NextPage = () => {
     }
   }, [inView]);
 
+  const getBase64 = (file:any, cb:any) => {
+    let reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = function () {
+        cb(reader.result)
+    };
+    reader.onerror = function (error) {
+        console.log('Error: ', error);
+    };
+  }
+
+
   return (
     <div className={styles.App}>
         <div className={styles.mainContainer} ref={ref}>
@@ -261,14 +273,16 @@ const OrgIntake: NextPage = () => {
 
                       <Text  style={{margin:"20px 0"}}>Logo</Text>
                       <Input size="xs" id="logo" required
-                                            value={logo} 
-                                            type="file" 
-                                            accept="image/*"
-                                            onChange={async(e:any) => {
-                                                let file = (e.target.files[0])
-                                                setLogoFile(file);
-                                            }}
-                                        />
+                        type="file" 
+                        accept="image/*"
+                        onChange={async(e:any) => {
+                            let file = (e.target.files[0])
+                            let base64file= getBase64(file, (result:string) => {
+                                console.log('base64logo'+result);
+                                setLogo(result);
+                            })
+                        }}
+                    />
 
                 <Text className={styles.formText} style={{marginTop:"20px"}}>Are you looking for volunteer help?</Text>
                       <Field  value={needVolunteers} as="select" className={styles.selectField} name="needVolunteers" onChange={(e:any) => setNeedVolunteers(e.target.value)}>
@@ -418,30 +432,36 @@ const OrgIntake: NextPage = () => {
                       
                       <Text  style={{color:"#EE5967", margin:"20px 0"}}>At least 3 pictures that best represent your brand/business (Ex: Final product, in-action shot,  satisfied customer, etc.)</Text>
                       <Input size="xs" id="image1Input"
-                                            value={image1} 
-                                            type="file" 
-                                            accept="image/*"
-                                            onChange={async(e:any) => {
-                                                let file = (e.target.files[0])
-                                                setImage1File(file);
-                                            }}
-                                        />
+                            type="file" 
+                            accept="image/*"
+                            onChange={async(e:any) => {
+                                let file = (e.target.files[0])
+                                let base64file= getBase64(file, (result:string) => {
+                                    console.log('base64logo'+result);
+                                    setImage1(result);
+                                })
+                            }}
+                        />
                       <Input size="xs" id="image2Input"
-                        value={image2} 
                         type="file" 
                         accept="image/*"
                         onChange={async(e:any) => {
                             let file = (e.target.files[0])
-                            setImage2File(file);
+                            let base64file= getBase64(file, (result:string) => {
+                                console.log('base64logo'+result);
+                                setImage2(result);
+                            })
                         }}
                     />
                       <Input size="xs" id="image3Input"
-                        value={image3} 
                         type="file" 
                         accept="image/*"
                         onChange={async(e:any) => {
                             let file = (e.target.files[0])
-                            setImage3File(file);
+                                let base64file= getBase64(file, (result:string) => {
+                                    console.log('base64logo'+result);
+                                    setImage3(result);
+                                })
                         }}
                     />
 
@@ -461,11 +481,11 @@ const OrgIntake: NextPage = () => {
 
 
                       <Text className={styles.formText} style={{marginTop:"20px"}}>Would you be interested in hosting a workshop for our members? (Ex. SEO, industry specific knowledge, helpful tech)</Text>
-                      <Field  value={workshop} as="select" className={styles.selectField} name="workshop" onChange={(e:any) => setWorkshop(e.target.value)}>
+                      <select  value={workshop} className={styles.selectField} name="workshop" onChange={(e:any) => setWorkshop(e.target.value)}>
                         <option value="Yes">Yes</option>
                         <option value="No">No</option>
                         <option value="Maybe">Maybe</option>
-                      </Field>
+                      </select>
 
                       <Field name="workshopDetails">
                           {() => (

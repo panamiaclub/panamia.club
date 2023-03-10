@@ -337,7 +337,7 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
   height: 2.5em;
   border: 1px solid lightgrey!important;
   border-radius: 5px;
-  color:lightgrey;
+  color:rgb(108, 108, 108);
 }
 
 .formText{

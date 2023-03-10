@@ -62,14 +62,10 @@ const ArtIntake: NextPage = () => {
   const [igUsername, setIgUsername] = useState("");
   const [tags, setTags] = useState("");
   const [logo, setLogo] = useState("");
-  const [logoFile, setLogoFile] = useState<any>();
   const [image1, setImage1] = useState("");
   const [image2, setImage2] = useState("");
   const [image3, setImage3] = useState("");
-  const [image1File, setImage1File] = useState<any>();
-  const [image2File, setImage2File] = useState<any>();
-  const [image3File, setImage3File] = useState<any>();
-  const [marketInterest, setMarketInterest] = useState(Boolean);
+  const [marketInterest, setMarketInterest] = useState("");
   const [productType, setProductType] = useState("");
   const [source, setSource] = useState<any>([]);
   const [mediums, setMediums] = useState<any>([]);
@@ -89,10 +85,8 @@ const ArtIntake: NextPage = () => {
 
   const redirectToIntake = () => {
     const { pathname } = Router;
-    if (success) {
       // TODO: redirect to a success register page
-      Router.push("/intake");
-    }
+    Router.push("/intake");
   };
 
   useEffect(() => {
@@ -112,11 +106,26 @@ const ArtIntake: NextPage = () => {
 
   const createFormEntry = async () => {
     console.log('create artIntake fired')
-    if(name && email && about && category && igUsername && logo && mediums && source && productType && tags && interest && image1 && image2 && image3 && marketInterest && businessNeed && workshop && workshopDetails && igConsent && collabConsent && marketConsent && complete ){
-        const res = await axios
+    console.log( logo && businessNeed && workshop && workshopDetails && igConsent && collabConsent && marketConsent )
+    console.log(mediums)
+    console.log(source)
+    console.log(productType)
+    console.log(tags)
+    console.log(interest)
+    console.log(marketInterest)
+    console.log(businessNeed)
+    console.log(workshop)
+    console.log(workshopDetails)
+    console.log(igConsent)
+    console.log(collabConsent)
+    console.log(marketConsent)
+
+    if(name && email && about && category && igUsername && logo && mediums && source && productType && tags && interest && marketInterest && businessNeed && workshop && workshopDetails && igConsent && collabConsent && marketConsent ){
+        console.log('api call') 
+      const res = await axios
         .post(
             "/api/createArtIntakeEntry",
-            { email, name, about, category, backgroundEthnicity, igUsername, twitterHandle, website, logo, mediums, source, productType, tags, interest, image1, image2, image3, marketInterest, workshop, workshopDetails, igConsent, marketConsent, collabConsent, complete },
+            { email, name, about, category, backgroundEthnicity, igUsername, twitterHandle, website, logo, mediums, source, productType, tags, interest, image1, image2, image3, marketInterest, workshop, workshopDetails, igConsent, marketConsent, collabConsent, complete:true },
             {
             headers: {
                 Accept: "application/json",
@@ -138,6 +147,16 @@ const ArtIntake: NextPage = () => {
     }
   };
 
+  const getBase64= (file:any, cb:any) => {
+    let reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = function () {
+        cb(reader.result)
+    };
+    reader.onerror = function (error) {
+        console.log('Error: ', error);
+    };
+  }
 
   useEffect(() => {
     console.log("use effect , inView = " , inView);
@@ -290,15 +309,18 @@ const ArtIntake: NextPage = () => {
                       </Field>
 
                       <Text  style={{margin:"20px 0"}}>Logo</Text>
-                      <Input size="xs" id="logo" required
-                                            value={logo} 
-                                            type="file" 
-                                            accept="image/*"
-                                            onChange={async(e:any) => {
-                                                let file = (e.target.files[0])
-                                                setLogoFile(file);
-                                            }}
-                                        />
+                      <Input size="xs" id="logo" required 
+                        type="file" 
+                        accept="image/*"
+                        onChange={async(e:any) => {
+                            let file = (e.target.files[0])
+                            let base64file= getBase64(file, (result:string) => {
+                              console.log('base64image'+result);
+                              setLogo(result);
+                          });
+              
+                        }}
+                    />
 
                   <div id="checkbox-group" style={{margin:"20px 0"}}>What Mediums do you typically work with?</div>
                       <div role="group" aria-labelledby="checkbox-group"  
@@ -343,8 +365,8 @@ const ArtIntake: NextPage = () => {
                           <label style={{display:"block"}}><Field type="checkbox" name="category" value="Other"/>Other</label>
                       </div>
 
-                      <div id="checkbox-group-location-options"  style={{margin:"20px 0"}}>How do you source your product?</div>
-                      <div role="group" aria-labelledby="checkbox-group-location-options"  
+                      <div id="checkbox-group-source"  style={{margin:"20px 0"}}>How do you source your product?</div>
+                      <div role="group" aria-labelledby="checkbox-group-source"  
                         onChange={async(e:any) => {
                             if(e.target.checked){
                                 let arrayy = new Array();
@@ -369,11 +391,11 @@ const ArtIntake: NextPage = () => {
                               setSource(arrayy);
                             }
                         }}>
-                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Handmade"/>Handmade</label>
-                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Imported Artisinal"/>Imported Artisinal</label>
-                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Factory-made"/>Factory-made</label>
-                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Reworked/Upcycled"/>Reworked/Upcycled</label>
-                          <label style={{display:"block"}}><Field type="checkbox" name="locationOptions" value="Other"/>Other</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="source" value="Handmade"/>Handmade</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="source" value="Imported Artisinal"/>Imported Artisinal</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="source" value="Factory-made"/>Factory-made</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="source" value="Reworked/Upcycled"/>Reworked/Upcycled</label>
+                          <label style={{display:"block"}}><Field type="checkbox" name="source" value="Other"/>Other</label>
                       </div>
 
                       <Field name="productType" required>
@@ -427,39 +449,45 @@ const ArtIntake: NextPage = () => {
                       
                       <Text  style={{margin:"20px 0"}}>At least 3 pictures that best represent your brand/business (Ex: Final product, in-action shot,  satisfied customer, etc.)</Text>
                       <Input size="xs" id="image1Input"
-                                            value={image1} 
-                                            type="file" 
-                                            accept="image/*"
-                                            onChange={async(e:any) => {
-                                                let file = (e.target.files[0])
-                                                setImage1File(file);
-                                            }}
-                                        />
-                      <Input size="xs" id="image2Input"
-                        value={image2} 
-                        type="file" 
-                        accept="image/*"
-                        onChange={async(e:any) => {
+                          type="file" 
+                          accept="image/*"
+                          onChange={async(e:any) => {
                             let file = (e.target.files[0])
-                            setImage2File(file);
-                        }}
-                    />
-                      <Input size="xs" id="image3Input"
-                        value={image3} 
-                        type="file" 
-                        accept="image/*"
-                        onChange={async(e:any) => {
+                            let base64file= getBase64(file, (result:string) => {
+                              console.log('base64image1'+result);
+                              setImage1(result);
+                            })
+                          }}
+                      />
+                        <Input size="xs" id="image2Input"
+                          type="file" 
+                          accept="image/*"
+                          onChange={async(e:any) => {
                             let file = (e.target.files[0])
-                            setImage3File(file);
-                        }}
-                    />
+                            let base64file= getBase64(file, (result:string) => {
+                              console.log('base64image2'+result);
+                              setImage2(result);
+                            })
+                          }}
+                      />
+                        <Input size="xs" id="image3Input"
+                          type="file" 
+                          accept="image/*"
+                          onChange={async(e:any) => {
+                            let file = (e.target.files[0])
+                            let base64file= getBase64(file, (result:string) => {
+                              console.log('base64image3'+result);
+                              setImage3(result);
+                            })
+                          }}
+                      />
 
                     <Text className={styles.formText} style={{marginTop:"20px"}}>Are you interested in taking your product to market?</Text>
-                      <Field  value={marketInterest} as="select" required className={styles.selectField} name="marketInterest" onChange={(e:any) => setMarketInterest(e.target.value)}>
+                      <select required value={marketInterest} className={styles.selectField} name="marketInterest" onChange={(e:any) => setMarketInterest(e.target.value)}>
                         <option value="Yes">Yes</option>
                         <option value="No">No</option>
                         <option value="Maybe">Maybe</option>
-                      </Field>
+                      </select>
 
                       <Field name="businessNeed" required>
                           {() => (
@@ -476,11 +504,11 @@ const ArtIntake: NextPage = () => {
 
 
                       <Text className={styles.formText} style={{marginTop:"20px"}}>Would you be interested in hosting a workshop for our members? (Ex. SEO, industry specific knowledge, helpful tech)</Text>
-                      <Field required  value={workshop} as="select" className={styles.selectField} name="workshop" onChange={(e:any) => setWorkshop(e.target.value)}>
+                      <select required  value={workshop} className={styles.selectField} name="workshop" onChange={(e:any) => setWorkshop(e.target.value)}>
                         <option value="Yes">Yes</option>
                         <option value="No">No</option>
                         <option value="Maybe">Maybe</option>
-                      </Field>
+                      </select>
 
                       <Field name="workshopDetails" required>
                           {() => (

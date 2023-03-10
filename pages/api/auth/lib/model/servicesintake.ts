@@ -137,5 +137,5 @@ const servicesIntakeSchema = new Schema(
     }
 )
 
-const services = mongoose.models.servicesIntake || mongoose.model("servicesIntake", servicesIntakeSchema);
-export default services;
+const servicesIntake = mongoose.models.servicesIntake || mongoose.model("servicesIntake", servicesIntakeSchema);
+export default servicesIntake;
