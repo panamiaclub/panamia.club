@@ -422,7 +422,7 @@ const Profile: NextPage = () => {
                             <div className={styles.banner}>
                                 {!bannerImage && <img src="/banner.jpg" className={styles.bannerImage}></img>}
                                 {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
-                                <div onClick={handleClickBannerChange}  style={{marginTop:'-5%', marginLeft:"2%", cursor:"pointer"}}>
+                                <div onClick={handleClickBannerChange}  style={{marginTop:'-8%', marginLeft:"2%", cursor:"pointer"}}>
                                     <FiCamera color="white"></FiCamera>
 
                                     <Input id="bannerFileInput"
@@ -439,7 +439,7 @@ const Profile: NextPage = () => {
                             <div className={styles.avatarStyle}>
                                 {!avatar && <CgProfile size="2em"/>}
                                 {avatar && <img src={avatar}  className={styles.avatar}></img>}
-                                <div onClick={handleClickAvatarChange}  style={{ marginTop:"-8%", cursor:"pointer"}}>
+                                <div onClick={handleClickAvatarChange}  style={{ marginTop:"-10%", cursor:"pointer"}}>
                                     
                                     <FiCamera color="white"></FiCamera>
 

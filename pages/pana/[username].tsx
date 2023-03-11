@@ -102,7 +102,7 @@ const Pana: NextPage = () => {
         console.log(usersInCategory);
     }
     
-  }, [username, user, fullname, userId, email, images, avatar, bio, link1, link2, twitter, instagram, location, dateJoined, session, bannerImage])
+  }, [username, user, fullname, userId, email, images, avatar, bio, link1, link2, twitter, instagram, location, dateJoined, session, bannerImage, usersInCategory])
 
 
     useEffect(()=>{
