@@ -89,11 +89,6 @@ const servicesIntakeSchema = new Schema(
             required: false,
             unique: false
         },
-        marketInterest: {
-            type: String,
-            required: false,
-            unique: false
-        },
         businessNeed: {
             type: String,
             required: false,

@@ -76,7 +76,7 @@ const FoodIntake: NextPage = () => {
 
   const formSubmit = (actions: any) => {
     actions.setSubmitting(false);
-    createNewsletterEntry();
+    createFormEntry();
   };
 
   const redirectToHome = () => {
@@ -102,31 +102,6 @@ const FoodIntake: NextPage = () => {
     }
   }, [twitterHandle, name, email, igUsername, about]);
 
-  const createNewsletterEntry = async () => {
-    console.log('create newsletter fired')
-    if(name && email  && igUsername && twitterHandle ){
-        const res = await axios
-        .post(
-            "/api/createNewsletterEntry",
-            { name, email, igUsername, twitterHandle },
-            {
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json",
-            },
-            }
-        )
-        .then(async () => {
-            //redirectToHome();
-            setSuccess("Succesfully signed up!")
-        })
-        .catch((error) => {
-            console.log(error);
-            setAlert(error.response.data.error);
-        });
-        console.log(res);
-    }
-  };
 
 
   useEffect(() => {
@@ -158,6 +133,42 @@ const FoodIntake: NextPage = () => {
     };
   }
 
+
+  const redirectToIntake = () => {
+    const { pathname } = Router;
+      // TODO: redirect to a success register page
+    Router.push("/intake");
+  };
+
+  const createFormEntry = async () => {
+
+    if(email && name && about && backgroundEthnicity && igUsername && twitterHandle && website && logo && allergenFriendlyOptions && locationOptions && category && diningOptions && tags && interest && image1 && image2 && image3 && marketInterest && businessNeed && workshop && igConsent && marketConsent && collabConsent ){
+        console.log('api call') 
+      const res = await axios
+        .post(
+            "/api/createFoodIntakeEntry",
+            { email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, allergenFriendlyOptions, locationOptions, address, category, diningOptions, tags, interest, image1, image2, image3, marketInterest, businessNeed, workshop, workshopDetails, igConsent, marketConsent, collabConsent, complete:true, referrals },
+            {
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            },
+            }
+        )
+        .then(async () => {
+          setSuccess("Succesfully filled out form!")
+            redirectToIntake();
+        })
+        .catch((error) => {
+            console.log(error);
+            setAlert(error.response.data.error);
+        });
+        console.log(res);
+    }else{
+      setAlert("Please Fill out all required fields.");
+    }
+  };
+
   return (
     <div className={styles.App}>
         <div className={styles.mainContainer} ref={ref}>
@@ -167,7 +178,7 @@ const FoodIntake: NextPage = () => {
                 <Grid.Col span={6} md={6} xs={12}>
                 <h2 style={{color:"#EE5967"}}>Food Vendor Intake Form</h2>
                 <Formik
-                    initialValues={{}}
+                    initialValues={{email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, allergenFriendlyOptions, locationOptions, address, category, diningOptions, tags, interest, image1, image2, image3, marketInterest, businessNeed, workshop, workshopDetails, igConsent, marketConsent, collabConsent, referrals}}
                     validateOnChange={false}
                     validateOnBlur={false}
                     onSubmit={(_, actions) => {

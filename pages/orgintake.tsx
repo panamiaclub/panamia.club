@@ -83,7 +83,7 @@ const OrgIntake: NextPage = () => {
 
   const formSubmit = (actions: any) => {
     actions.setSubmitting(false);
-    createNewsletterEntry();
+    createFormEntry();
   };
 
   const redirectToHome = () => {
@@ -165,6 +165,43 @@ const OrgIntake: NextPage = () => {
     };
   }
 
+  const redirectToIntake = () => {
+    const { pathname } = Router;
+      // TODO: redirect to a success register page
+    Router.push("/intake");
+  };
+
+  const createFormEntry = async () => {
+
+    if(email && name && about && backgroundEthnicity && igUsername && twitterHandle && website && logo && needVolunteers && communityIssue && teamSize && missionStatement && demographic && locationOptions && address && tags && interest && image1 && image2 && image3 && businessNeed && workshop && igConsent && marketConsent && collabConsent ){
+        console.log('api call') 
+      const res = await axios
+        .post(
+            "/api/createOrgIntakeEntry",
+            { email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, needVolunteers, communityIssue, teamSize, missionStatement, demographic, locationOptions, address, communityEngagement, tags, interest, image1, image2, image3, businessNeed, workshop, workshopDetails, igConsent, marketConsent, collabConsent, complete:true, referrals },
+            {
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            },
+            }
+        )
+        .then(async () => {
+            redirectToIntake();
+            setSuccess("Succesfully filled out form!")
+        })
+        .catch((error) => {
+            console.log(error);
+            setAlert(error.response.data.error);
+        });
+        console.log(res);
+    }else{
+      setAlert("Please Fill out all required fields.");
+    }
+  };
+
+
+
 
   return (
     <div className={styles.App}>
@@ -176,7 +213,7 @@ const OrgIntake: NextPage = () => {
                 <h2 style={{color:"#EE5967"}}>Organization/Platform Intake Form</h2>
                 <p>Why are you filling out this form? We want to better understand your organization/platform and get a better sense of your mission and needs. Tell us how we can best promote you, and what you are looking to get out of this membership.</p>
                 <Formik
-                    initialValues={{}}
+                    initialValues={{email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, needVolunteers, communityIssue, teamSize, missionStatement, demographic, locationOptions, address, communityEngagement, tags, interest, image1, image2, image3, businessNeed, workshop, workshopDetails, igConsent, marketConsent, collabConsent, referrals}}
                     validateOnChange={false}
                     validateOnBlur={false}
                     onSubmit={(_, actions) => {

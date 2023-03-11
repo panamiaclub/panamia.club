@@ -105,21 +105,6 @@ const ArtIntake: NextPage = () => {
   }, [twitterHandle, name, email, igUsername, about]);
 
   const createFormEntry = async () => {
-    console.log('create artIntake fired')
-    console.log( logo && businessNeed && workshop && workshopDetails && igConsent && collabConsent && marketConsent )
-    console.log(mediums)
-    console.log(source)
-    console.log(productType)
-    console.log(tags)
-    console.log(interest)
-    console.log(marketInterest)
-    console.log(businessNeed)
-    console.log(workshop)
-    console.log(workshopDetails)
-    console.log(igConsent)
-    console.log(collabConsent)
-    console.log(marketConsent)
-
     if(name && email && about && category && igUsername && logo && mediums && source && productType && tags && interest && marketInterest && businessNeed && workshop && workshopDetails && igConsent && collabConsent && marketConsent ){
         console.log('api call') 
       const res = await axios

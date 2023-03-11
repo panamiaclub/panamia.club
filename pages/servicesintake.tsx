@@ -74,7 +74,7 @@ const ServicesIntake: NextPage = () => {
 
   const formSubmit = (actions: any) => {
     actions.setSubmitting(false);
-    createNewsletterEntry();
+    createFormEntry();
   };
 
   const redirectToHome = () => {
@@ -100,13 +100,20 @@ const ServicesIntake: NextPage = () => {
     }
   }, [twitterHandle, name, email, igUsername, about]);
 
-  const createNewsletterEntry = async () => {
-    console.log('create newsletter fired')
-    if(name && email  && igUsername && twitterHandle ){
-        const res = await axios
+  const redirectToIntake = () => {
+    const { pathname } = Router;
+      // TODO: redirect to a success register page
+    Router.push("/intake");
+  };
+
+  const createFormEntry = async () => {
+
+    if(email && name && about && backgroundEthnicity && igUsername && twitterHandle && website && logo && category && locationOptions && serviceType && tags && interest && image1 && image2 && image3 && businessNeed && workshop && igConsent && marketConsent && collabConsent ){
+        console.log('api call') 
+      const res = await axios
         .post(
-            "/api/createNewsletterEntry",
-            { name, email, igUsername, twitterHandle },
+            "/api/createServicesIntakeEntry",
+            { email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, category, locationOptions, address, serviceType, tags, interest, image1, image2, image3, businessNeed, workshop, workshopDetails, igConsent, marketConsent, collabConsent, complete:true, referrals },
             {
             headers: {
                 Accept: "application/json",
@@ -115,14 +122,16 @@ const ServicesIntake: NextPage = () => {
             }
         )
         .then(async () => {
-            //redirectToHome();
-            setSuccess("Succesfully signed up!")
+            redirectToIntake();
+            setSuccess("Succesfully filled out form!")
         })
         .catch((error) => {
             console.log(error);
             setAlert(error.response.data.error);
         });
         console.log(res);
+    }else{
+      setAlert("Please Fill out all required fields.");
     }
   };
 
@@ -165,7 +174,7 @@ const ServicesIntake: NextPage = () => {
                 <Grid.Col span={6} md={6} xs={12}>
                 <h2 style={{color:"#EE5967"}}>Services Vendor Intake Form</h2>
                 <Formik
-                    initialValues={{}}
+                    initialValues={{email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, category, locationOptions, address, serviceType, tags, interest, image1, image2, image3, businessNeed, workshop, workshopDetails, igConsent, marketConsent, collabConsent, referrals}}
                     validateOnChange={false}
                     validateOnBlur={false}
                     onSubmit={(_, actions) => {

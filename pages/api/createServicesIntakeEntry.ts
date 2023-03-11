@@ -2,6 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "./auth/lib/connectdb";
 import artIntake from "./auth/lib/model/artintake";
+import servicesIntake from "./auth/lib/model/servicesintake";
 
 interface ResponseData {
   error?: string;
@@ -36,7 +37,7 @@ export default async function handler(
   }
 
   // get and validate body variables
-  const { email, name, about, category, backgroundEthnicity, igUsername, twitterHandle, website, logo, mediums, source, productType, tags, interest, image1, image2, image3, marketInterest, workshop, workshopDetails, igConsent, marketConsent, collabConsent, complete } = req.body;
+  const { email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, category, locationOptions, address, serviceType, tags, interest, image1, image2, image3, businessNeed, workshop, workshopDetails, igConsent, marketConsent, collabConsent, complete, referrals  } = req.body;
 
   const errorMessage = await validateForm(email);
   if (errorMessage) {
@@ -44,40 +45,41 @@ export default async function handler(
   }
 
 // create new newsletter entry on MongoDB
-const newArtIntake = new artIntake({
+const newServicesIntake = new servicesIntake({
   email: email,
    name: name,
     about: about,
-     category:category,
       backgroundEthnicity:backgroundEthnicity,
        igUsername:igUsername,
         twitterHandle:twitterHandle,
          website:website,
           logo:logo,
-           mediums:mediums,
-            source:source,
-             productType:productType,
+           category:category,
+           locationOptions:locationOptions,
+           address:address,
+           serviceType:serviceType,
               tags:tags,
                interest:interest,
                 image1:image1,
                  image2:image2,
                   image3:image3,
-                   marketInterest:marketInterest,
+                   businessNeed:businessNeed,
                     workshop:workshop,
                      workshopDetails:workshopDetails,
                       igConsent:igConsent,
                        marketConsent:marketConsent,
                         collabConsent:collabConsent,
-                         complete:complete
+                         complete:complete,
+                         referrals:referrals
 });
 
-newArtIntake
+newServicesIntake
     .save()
     .then(() =>
-      res.status(200).json({ msg: "Successfuly created new ArtIntake Entry: " + newArtIntake })
+      res.status(200).json({ msg: "Successfuly created new ServicesIntake Entry: " + newServicesIntake })
     )
     .catch((err: string) =>
-      res.status(400).json({ error: "Error on '/api/createArtIntakeEntry': " + err })
+      res.status(400).json({ error: "Error on '/api/createServicesIntakeEntry': " + err })
     );
   }
 
