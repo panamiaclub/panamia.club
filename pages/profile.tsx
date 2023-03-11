@@ -437,7 +437,7 @@ const Profile: NextPage = () => {
                                 </div>
                             </div>
                             <div className={styles.avatarStyle}>
-                                {!avatar && <CgProfile size="2em"/>}
+                                {!avatar && <CgProfile size="3em"/>}
                                 {avatar && <img src={avatar}  className={styles.avatar}></img>}
                                 <div onClick={handleClickAvatarChange}  style={{ marginTop:"-10%", cursor:"pointer"}}>
                                     

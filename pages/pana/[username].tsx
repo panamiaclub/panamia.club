@@ -250,7 +250,7 @@ const Pana: NextPage = () => {
                                 {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
                             </div>
                             <div className={styles.avatarStyle}>
-                                {!avatar && <CgProfile size="2em"/>}
+                                {!avatar && <CgProfile size="3em"/>}
                                 {avatar && <img src={avatar}  className={styles.avatar}></img>}
                             </div>
                             <h4>{username} <span className={styles.socialLink}><FiPlusCircle></FiPlusCircle></span> </h4>
