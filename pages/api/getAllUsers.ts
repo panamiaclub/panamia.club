@@ -16,6 +16,11 @@ const getAllUsers = async () =>{
     return Users;
 }
 
+export const config = {
+  api: {
+    responseLimit: false,
+  },
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -34,6 +39,7 @@ export default async function handler(
       var Users = await getAllUsers();
       return res.status(200).json({ success: true, data: Users });
     }catch(err: any){
-      return res.status(400).json({ error: "Error on '/api/getInvoices': " + err })
+      return res.status(400).json({ error: "Error on '/api/getAllusers': " + err })
     }
 }
+

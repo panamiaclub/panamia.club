@@ -36,6 +36,13 @@ const validateForm = async (
   return null;
 };
 
+
+export const config = {
+  api: {
+    responseLimit: false,
+  },
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
@@ -86,4 +93,3 @@ export default async function handler(
 
     }
   
-

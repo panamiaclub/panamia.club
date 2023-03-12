@@ -10,6 +10,7 @@ import goodsIntake from "./auth/lib/model/goodsintake";
 import foodIntake from "./auth/lib/model/foodintake";
 
 import { ObjectId } from "mongodb";
+import { CgFontSpacing } from "react-icons/cg";
 
 interface ResponseData {
   error?: string;
@@ -100,6 +101,7 @@ export default async function handler(
   if(req.query.userEmail && req.query.category){
     Email = req.query.userEmail.toString();
     category = req.query.category.toString();
+    console.log(category);
     console.log(Email , category)
     try{
         if(category == "Services"){

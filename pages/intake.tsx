@@ -70,7 +70,7 @@ const Intake: NextPage = () => {
             }
         )
         .then(async (response) => {
-            //console.log(response.data.data);
+            console.log(response.data.data);
             setUserName(response.data.data.username);
             setEmail(response.data.data.email);
             setCategory(response.data.data.category);
@@ -110,7 +110,7 @@ const Intake: NextPage = () => {
   const getIntakeStatus = async(category:string) => {
     console.log('get intake status')
     if(session?.user?.email){
-        //console.log(email);
+        console.log(session.user.email);
         const res = await axios
         .get(
             "/api/getIntakeFormStatus?userEmail="+session?.user?.email+"?category="+category,
@@ -127,6 +127,7 @@ const Intake: NextPage = () => {
               setServicesIntake(response.data.data);
             }else if(category == "Art"){
               setArtIntake(response.data.data);
+              console.log(response.data.data)
             }else if(category == "Food"){
               setFoodIntake(response.data.data);
             }else if(category == "Apparel/Accessories"){
@@ -136,6 +137,7 @@ const Intake: NextPage = () => {
             }else if(category == "Goods"){
               setGoodsIntake(response.data.data);
             }
+            setCheckedIntake(true);
         })
         .catch((error) => {
             console.log(error);
@@ -204,13 +206,19 @@ const Intake: NextPage = () => {
     if(onboardingFormComplete)(
       console.log(onboardingFormComplete)
     )
+
+    if(!username){
+      getUser()
+    }
     
     }, [username, email, category]);
 
     useEffect(() => {
       if(category && !checkedIntake){
+        console.log(category)
         category.map((str:any) => {
           console.log('get intake status')
+          console.log(str);
           getIntakeStatus(str);
         });
       }
@@ -227,8 +235,6 @@ const Intake: NextPage = () => {
       }
     }, [onboardingFormComplete, artIntake, servicesIntake, orgIntake, apparelIntake, goodsIntake, foodIntake, checkedIntake])
 
-
-
   return (
     <div className={styles.App}>
         <div className={styles.mainContainer} ref={ref}>
@@ -238,7 +244,7 @@ const Intake: NextPage = () => {
                 <h2 style={{color:"#EE5967"}}>Intake Forms</h2>
                 <p style={{fontSize:"0.8em"}}>must complete one per category*</p>
 
-                {category && checkedIntake && 
+                {category && 
                     <div>
                         <>
                             

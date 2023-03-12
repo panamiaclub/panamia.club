@@ -84,3 +84,9 @@ newApparelIntake
     );
   }
 
+
+  export const config = {
+    api: {
+      responseLimit: '15mb',
+    },
+  }

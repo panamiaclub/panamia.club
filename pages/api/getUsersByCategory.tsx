@@ -19,6 +19,12 @@ const getUsersByCategory = async (category: string) =>{
   return Users;
 }
 
+export const config = {
+  api: {
+    responseLimit: false,
+  },
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>

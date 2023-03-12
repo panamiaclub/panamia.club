@@ -93,8 +93,8 @@ const Pana: NextPage = () => {
         console.log(images);
     }
 
-    if(category && usersInCategory.length == 0){
-        getUsersByCategory();
+    if(category && (!usersInCategory|| usersInCategory.length == 0)){
+        //getUsersByCategory();
     }
 
     if(usersInCategory){
@@ -202,7 +202,7 @@ const Pana: NextPage = () => {
   const getUsersAndFormatArray = () => {
     let arr2:any[] = [];
     category.map(async(item)=> {
-        //console.log(item)
+        console.log(item)
         
         const res = await axios
         .get(
@@ -216,16 +216,16 @@ const Pana: NextPage = () => {
         )
         .then(async (response) => {
             response.data.data.forEach((item:any)=>{
-                //console.log(item.username)
+                console.log(item.username)
                 if(!arr2.includes(item.username) && item.username != username){
                     arr2.push(item);
-                    //console.log('push'+item);
+                    console.log(item);
                 }
             })
         })
         .catch((error) => {
-            //onsole.log(error);
-            setAlert(error.response.data.error);
+            console.log(error);
+            setAlert("error fetching users");
         });
         })
     return arr2;

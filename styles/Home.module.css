@@ -30,6 +30,7 @@
 .avatar{
   width:50px;
   border-radius: 75px;
+  height:50px;
 }
 .formInputText{
   color:"#EE5967";

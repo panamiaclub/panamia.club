@@ -28,6 +28,13 @@ const validateForm = async (
   return null;
 };
 
+
+export const config = {
+  api: {
+    responseLimit: false,
+  },
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
@@ -64,11 +71,3 @@ let statuss = "";
           });
 }
   
-    export const config = {
-      api: {
-        bodyParser: {
-          sizeLimit: '5mb',
-        },
-      },
-    }
-
