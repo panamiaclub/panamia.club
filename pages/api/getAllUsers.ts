@@ -16,11 +16,6 @@ const getAllUsers = async () =>{
     return Users;
 }
 
-export const config = {
-  api: {
-    responseLimit: false,
-  },
-}
 
 export default async function handler(
   req: NextApiRequest,
