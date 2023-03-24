@@ -194,9 +194,8 @@ const Home: NextPage = () => {
                 </Grid.Col>
               </Grid>
           </div>
-          <div style={{textAlign:"center", backgroundColor:"#FDBB2D", height:"80vh"}}>
-            <h1 style={{color:"#f9f9f9", paddingTop:"20%", marginTop:"0"}}>Enter Panalandia</h1>
-            <Button type="submit" style={{margin:"2% 40%",backgroundColor:"#9D384F"}}><Link href="/directorio">Search</Link></Button>
+          <div style={{textAlign:"center", backgroundColor:"#FDBB2D", height:"50vh"}}>
+            <Button type="submit" style={{margin:"15% 40%",backgroundColor:"#9D384F"}}><Link href="/directorio">Enter Panalandia</Link></Button>
             </div>
         </div>
   </div>

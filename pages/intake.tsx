@@ -43,7 +43,6 @@ const Intake: NextPage = () => {
   const animation = useAnimation();
   const [alert, setAlert] = useState("");
   const [success, setSuccess] = useState("");
-
   const [email, setEmail] = useState("");
   const [username, setUserName] = useState("");
   const [onboardingFormComplete, setOnboardingFormComplete] = useState(Boolean);
@@ -58,7 +57,8 @@ const Intake: NextPage = () => {
 
   const getUser = async() => {
     if(session?.user?.email){
-        //console.log(email);
+      console.log('get user')  
+      console.log(email);
         const res = await axios
         .get(
             "/api/getUser?userEmail="+session?.user?.email,
@@ -153,6 +153,8 @@ const Intake: NextPage = () => {
   const checkIfAllFormsComplete = async() => {
     let anyFalse = false;
 
+    getIntakeStatus(category);
+
     category.forEach((str:any, index:number) => {
       console.log('checkl intake')
       console.log(str)
@@ -193,6 +195,8 @@ const Intake: NextPage = () => {
 
   useEffect(()=>{
     getUser();
+
+
   }, [])
 
   useEffect(() => {
@@ -202,38 +206,27 @@ const Intake: NextPage = () => {
     if(email){
       console.log(email);
     }
-    
-    if(onboardingFormComplete)(
-      console.log(onboardingFormComplete)
-    )
 
     if(!username){
       getUser()
     }
     
-    }, [username, email, category]);
-
-    useEffect(() => {
-      if(category && !checkedIntake){
-        console.log(category)
-        category.map((str:any) => {
-          console.log('get intake status')
-          console.log(str);
-          getIntakeStatus(str);
-        });
-      }
+      // if(category && !checkedIntake){
+      //   console.log(category)
+      //   category.map((str:any) => {
+      //     console.log('get intake status')
+      //     console.log(str);
+      //     getIntakeStatus(str);
+      //   });
+      // }
   
-      if(checkedIntake){
-        console.log(checkedIntake)
-        checkIfAllFormsComplete();
-      }
       if(artIntake){
         console.log('art intake ' + artIntake)
       }
       if(servicesIntake){
         console.log(servicesIntake)
       }
-    }, [onboardingFormComplete, artIntake, servicesIntake, orgIntake, apparelIntake, goodsIntake, foodIntake, checkedIntake])
+    }, [username, email, category, onboardingFormComplete, artIntake, servicesIntake, orgIntake, apparelIntake, goodsIntake, foodIntake, checkedIntake])
 
   return (
     <div className={styles.App}>
@@ -244,7 +237,7 @@ const Intake: NextPage = () => {
                 <h2 style={{color:"#EE5967"}}>Intake Forms</h2>
                 <p style={{fontSize:"0.8em"}}>must complete one per category*</p>
 
-                {category && 
+                {category &&
                     <div>
                         <>
                             
@@ -275,9 +268,11 @@ const Intake: NextPage = () => {
 
                                 return(
                                    
-                                    <Link href={link} key={index}><Button style={{margin:"0 20px"}} disabled={formComplete}> {str} </Button></Link>
+                                    <Link href={link} key={index}><Button style={{margin:"0 20px"}}> {str} </Button></Link>
                                 );
                             })}
+                            <br></br>
+                            <Button style={{margin:"0 20px", backgroundColor:"green"}} onClick={checkIfAllFormsComplete}> Refresh Intake Status</Button>
                         </>
                     </div>
                 }

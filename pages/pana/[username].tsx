@@ -239,14 +239,14 @@ const Pana: NextPage = () => {
         {session && 
         <>
             <Grid>
-                <Grid.Col sm={3}><h1 style={{marginLeft:"2%"}}>{username}</h1></Grid.Col>
+                <Grid.Col sm={12}><h1 style={{marginLeft:"2%"}}>{username}</h1></Grid.Col>
             </Grid>
             <hr></hr>
             <Grid>
                     <Grid.Col sm={4}>
                         <Card className={styles.cardStyle}>
                             <div className={styles.banner}>
-                                {!bannerImage && <img src="/banner.jpg" className={styles.bannerImage}></img>}
+                                {!bannerImage && <img src="/banner.png" className={styles.bannerImage}></img>}
                                 {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
                             </div>
                             <div className={styles.avatarStyle}>

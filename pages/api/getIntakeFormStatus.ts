@@ -23,6 +23,7 @@ const getServicesIntakes = async (email: string) =>{
     console.log(email);
     const intake = await servicesIntake.findOne({email: email, complete: true});
     if(intake){
+        console.log('true - form completed')
         return true;
     }else{
         return false;
@@ -34,6 +35,7 @@ const getArtIntakes = async (email: string) =>{
     console.log(email);
     const intake = await artIntake.findOne({email: email, complete: true});
     if(intake){
+        console.log('true - form completed')
         return true;
     }else{
         return false;
@@ -45,6 +47,7 @@ const getGoodsIntakes = async (email: string) =>{
     console.log(email);
     const intake = await goodsIntake.findOne({email: email, complete: true});
     if(intake){
+        console.log('true - form completed')
         return true;
     }else{
         return false;
@@ -56,6 +59,7 @@ const getFoodIntakes = async (email: string) =>{
     console.log(email);
     const intake = await foodIntake.findOne({email: email, complete: true});
     if(intake){
+        console.log('true - form completed')
         return true;
     }else{
         return false;
@@ -67,6 +71,7 @@ const getOrgIntakes = async (email: string) =>{
     console.log(email);
     const intake = await orgIntake.findOne({email: email, complete: true});
     if(intake){
+        console.log('true - form completed')
         return true;
     }else{
         return false;
@@ -78,6 +83,7 @@ const getApparelIntakes = async (email: string) =>{
     console.log(email);
     const intake = await apparelIntake.findOne({email: email, complete: true});
     if(intake){
+        console.log('true - form completed')
         return true;
     }else{
         return false;

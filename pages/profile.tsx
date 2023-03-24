@@ -420,7 +420,7 @@ const Profile: NextPage = () => {
                     <Grid.Col sm={4}>
                         <Card className={styles.cardStyle}>
                             <div className={styles.banner}>
-                                {!bannerImage && <img src="/banner.jpg" className={styles.bannerImage}></img>}
+                                {!bannerImage && <img src="/banner.png" className={styles.bannerImage}></img>}
                                 {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
                                 <div onClick={handleClickBannerChange}  style={{marginTop:'-8%', marginLeft:"2%", cursor:"pointer"}}>
                                     <FiCamera color="white"></FiCamera>
