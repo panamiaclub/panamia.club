@@ -37,7 +37,8 @@ export default async function handler(
     // get all users
     try{
       var Users = await getAllUsers();
-      return res.status(200).json({ success: true, data: Users });
+      res.status(200);//.json({ success: true, data: Users });
+      return res.end(JSON.stringify(Users));
     }catch(err: any){
       return res.status(400).json({ error: "Error on '/api/getAllusers': " + err })
     }
