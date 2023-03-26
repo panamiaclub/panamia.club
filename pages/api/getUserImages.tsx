@@ -49,7 +49,10 @@ export default async function handler(
         var images = await getUserImages(userId);
         //console.log('email');
         //console.log(images);
-        return res.status(200).json({ success: true, data: images });
+       res.status(200);//.json({ success: true, data: images });
+       res.setHeader('Content-Type', 'application/json');
+       res.setHeader('Cache-Control', 'max-age=180000');
+       return res.end(JSON.stringify(images));
       }
        
     }catch(err: any){

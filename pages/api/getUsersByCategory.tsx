@@ -15,7 +15,11 @@ interface ResponseData {
 const getUsersByCategory = async (category: string) =>{
   await dbConnect();
   console.log(category);
+  
   const Users = await users.find({category: category});
+  if(Users){
+    //console.log(Users)
+  }
   return Users;
 }
 
@@ -43,7 +47,10 @@ export default async function handler(
     category = req.query.category.toString();
     try{
         var users = await getUsersByCategory(category.toString());
-        return res.status(200).json({ success: true, data: users });
+        res.status(200);//.json({ success: true, data: users });
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Cache-Control', 'max-age=180000');
+        return res.end(JSON.stringify(users));
     }catch(err: any){
       return res.status(400).json({ error: "Error on '/api/getUsersByCategory': " + err })
     }

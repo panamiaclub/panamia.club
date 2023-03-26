@@ -124,7 +124,8 @@ export default async function handler(
             intake = await getGoodsIntakes(Email.toString());
          }
 
-        return res.status(200).json({ success: true, data: [intake] });
+        res.status(200);//.json({ success: true, data: [intake] });
+        return res.end(JSON.stringify(intake));
     }catch(err: any){
       return res.status(400).json({ error: "Error on '/api/getIntakeFormStatus': " + err })
     }

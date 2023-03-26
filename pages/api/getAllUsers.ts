@@ -38,6 +38,8 @@ export default async function handler(
     try{
       var Users = await getAllUsers();
       res.status(200);//.json({ success: true, data: Users });
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'max-age=180000');
       return res.end(JSON.stringify(Users));
     }catch(err: any){
       return res.status(400).json({ error: "Error on '/api/getAllusers': " + err })

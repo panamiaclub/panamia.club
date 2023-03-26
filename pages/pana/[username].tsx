@@ -57,10 +57,7 @@ const Pana: NextPage = () => {
     const router = useRouter();
     useEffect(()=>{
 
-          if(!email){
-            console.log('get user')
             getUser();
-          }
       
     }, []);
 
@@ -90,11 +87,11 @@ const Pana: NextPage = () => {
     }
 
     if(images){
-        console.log(images);
+        //console.log(images);
     }
 
-    if(category && (!usersInCategory|| usersInCategory.length == 0)){
-        //getUsersByCategory();
+    if(!usersInCategory){
+        getUsersByCategory();
     }
 
     if(usersInCategory){
@@ -127,36 +124,36 @@ const Pana: NextPage = () => {
             }
         )
         .then(async (response) => {
-            console.log(response.data.data);
+            console.log(response.data);
             //console.log(response.data.data._id)
-            setUser(response.data.data);
-            setEmail(response.data.data.email);
-            setFullname(response.data.data.fullname);
-            setBio(response.data.data.bio);
-            setCategory(response.data.data.category);
-            setInstagram(response.data.data.instagramHandle);
-            setTwitter(response.data.data.twitterHandle);
-            setLink1(response.data.data.link1);
-            setLink2(response.data.data.link2);
-            setAvatar(response.data.data.avatar);
-            console.log(response.data.data.bannerImage);
-            setBannerImage(response.data.data.bannerImage);
-            setAdmin(response.data.data.admin);
-            setUserId(response.data.data._id);
-            setLocation(response.data.data.location);
-            setDateJoined(response.data.data.dateJoined);
-            console.log(response.data.data.dateJoined);
+            setUser(response.data);
+            setEmail(response.data.email);
+            setFullname(response.data.fullname);
+            setBio(response.data.bio);
+            setCategory(response.data.category);
+            setInstagram(response.data.instagramHandle);
+            setTwitter(response.data.twitterHandle);
+            setLink1(response.data.link1);
+            setLink2(response.data.link2);
+            setAvatar(response.data.avatar);
+            console.log(response.data.bannerImage);
+            setBannerImage(response.data.bannerImage);
+            setAdmin(response.data.admin);
+            setUserId(response.data._id);
+            setLocation(response.data.location);
+            setDateJoined(response.data.dateJoined);
+            console.log(response.data.dateJoined);
         })
         .catch((error) => {
             console.log(error);
-            setAlert(error.response.data.error);
+            setAlert(error.response.error);
         });
         //console.log(res);
     }
   }
 
   const getUserImages = async() => {
-    console.log('get images')
+    //console.log('get images')
         const res = await axios
         .get(
             "/api/getUserImages?userId="+user._id,
@@ -169,23 +166,23 @@ const Pana: NextPage = () => {
         )
         .then(async (response) => {
             let arr:any[] = [];
-            console.log(response);
-            response.data.data.forEach((item:any)=>{
+            //console.log(response);
+            response.data.forEach((item:any)=>{
                 arr.push(item.image);
                 //console.log(item.image);
             })
             setImages(arr);
-            console.log(images);
+            //console.log(images);
         })
         .catch((error) => {
             console.log(error);
-            setAlert(error.response.data.error);
+            setAlert('error fetching images');
         });
   }
 
   const getUsersByCategory = async() => {
         console.log('get users by category')
-        if(category){
+        if(category && username){
             let arr:any[] = [];
             if(usersInCategory){
                 //arr = usersInCategory;
@@ -215,13 +212,17 @@ const Pana: NextPage = () => {
             }
         )
         .then(async (response) => {
-            response.data.data.forEach((item:any)=>{
-                console.log(item.username)
-                if(!arr2.includes(item.username) && item.username != username){
-                    arr2.push(item);
-                    console.log(item);
-                }
+            // response.data.forEach((item:any)=>{
+            //     if(!arr2.includes(item.username) && item.username != username){
+            //         arr2.push(item);
+            //         console.log(item);
+            //     }
+            // })
+            var newArr = response.data.filter((item:any)=> {
+                return item.username != username;
             })
+
+            arr2.push(newArr);
         })
         .catch((error) => {
             console.log(error);

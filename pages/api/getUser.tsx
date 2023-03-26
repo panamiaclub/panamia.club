@@ -59,7 +59,10 @@ export default async function handler(
     console.log(username);
     try{
         var user = await getUserByUsername(username.toString());
-        return res.status(200).json({ success: true, data: user });
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Cache-Control', 'max-age=180000');
+        res.status(200);//.json({ success: true, data: user });
+        return res.end(JSON.stringify(user));
     }catch(err: any){
       return res.status(400).json({ error: "Error on '/api/getUser': " + err })
     }

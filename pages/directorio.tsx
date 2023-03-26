@@ -51,6 +51,7 @@ const Profile: NextPage = () => {
         }
       )
       .then(async (res) => {
+        console.log('all users')
         console.log(res);
         setUsers(res.data);
         setOGUsers(res.data);
