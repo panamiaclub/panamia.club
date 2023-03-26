@@ -150,43 +150,41 @@ const Intake: NextPage = () => {
   }
 
 
-  const checkIfAllFormsComplete = async() => {
-    let anyFalse = false;
-
-    getIntakeStatus(category);
-
+  const checkIfAnyFormsComplete = async() => {
+    let anyTrue = false;
+    
     category.forEach((str:any, index:number) => {
       console.log('checkl intake')
       console.log(str)
       if(category == "Services"){
-        if(servicesIntake == false){
-          anyFalse = true;
+        if(servicesIntake == true){
+          anyTrue = true;
         }
       }else if(category == "Art"){
-       if(artIntake == false){
-        anyFalse = true;
+       if(artIntake == true){
+        anyTrue = true;
       }
       }else if(category == "Food"){
-        if(foodIntake == false){
-          anyFalse = true;
+        if(foodIntake == true){
+          anyTrue = true;
         }
       }else if(category == "Apparel/Accessories"){
-        if(apparelIntake == false){
-          anyFalse = true;
+        if(apparelIntake == true){
+          anyTrue = true;
         }
       }else if(category == "Collectives/Platforms"){
-        if(orgIntake == false){
-          anyFalse = true;
+        if(orgIntake == true){
+          anyTrue = true;
         }
       }else if(category == "Goods"){
-        if(goodsIntake == false){
-          anyFalse = true;
+        if(goodsIntake == true){
+          anyTrue = true;
         }
       }
     })
 
-    if(anyFalse == false){
-      setOnboardingFormComplete(!anyFalse);
+    if(anyTrue){
+      setOnboardingFormComplete(true);
       setSuccess("All Forms Completed");
       editUserCompleteOnboarding();
     }
@@ -211,14 +209,14 @@ const Intake: NextPage = () => {
       getUser()
     }
     
-      // if(category && !checkedIntake){
-      //   console.log(category)
-      //   category.map((str:any) => {
-      //     console.log('get intake status')
-      //     console.log(str);
-      //     getIntakeStatus(str);
-      //   });
-      // }
+      if(category && !checkedIntake){
+        console.log(category)
+        category.map((str:any) => {
+          console.log('get intake status')
+          console.log(str);
+          getIntakeStatus(str);
+        });
+      }
   
       if(artIntake){
         console.log('art intake ' + artIntake)
@@ -272,7 +270,7 @@ const Intake: NextPage = () => {
                                 );
                             })}
                             <br></br>
-                            <Button style={{margin:"0 20px", backgroundColor:"green"}} onClick={checkIfAllFormsComplete}> Refresh Intake Status</Button>
+                            <Button style={{margin:"20px 20px", backgroundColor:"green"}} onClick={checkIfAnyFormsComplete}> Complete Intake Status</Button>
                         </>
                     </div>
                 }
