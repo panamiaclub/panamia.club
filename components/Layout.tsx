@@ -124,7 +124,7 @@ export default function Layout({ children }: LayoutProps) {
         if(session){
           setLinks([{ link: "http://panamia.club/#Goals", label: "About", links:null} , {link:"/#footer", label:"Contact Us", links:null},{link:"/directorio", label:"El Directorio", links: null}, {link:"/profile", label:"Profile", links: null}]);
         }else if(!session){
-          setLinks([{ link: "#Goals", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}, {link:"/directorio", label:"El Directorio", links: null}]);
+          setLinks([{ link: "http://panamia.club/#Goals", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}, {link:"/directorio", label:"El Directorio", links: null}]);
         }
         loop();
       }, 20000);
