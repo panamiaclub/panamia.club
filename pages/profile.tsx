@@ -163,7 +163,7 @@ const Profile: NextPage = () => {
             .then(async (response) => {
                 let arr:any[] = [];
                 //console.log(response);
-                response.data.data.forEach((item:any)=>{
+                response.data.forEach((item:any)=>{
                     //console.log(item);
                     arr.push(item.image);
                     //console.log(item.image);
