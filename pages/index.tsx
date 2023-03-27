@@ -219,7 +219,7 @@ const Home: NextPage = () => {
             </div>
 
 
-          <div id="Goals" style={{height:"100vh", padding:"10% 0!important", marginTop:"0"}} className={styles.GoalsDiv}>
+          <div id="Goals" style={{minHeight:"100vh", padding:"10% 0!important", marginTop:"0"}} className={styles.GoalsDiv}>
               <h1 className={styles.headingsGOALS} style={{textAlign:"center"}}>GOALS</h1>
               <Grid style={{margin:"0 2%"}} >
                 <Grid.Col md={6} xs={12}>
@@ -254,7 +254,7 @@ const Home: NextPage = () => {
                 </Grid.Col>
               </Grid>
           </div>
-          <div style={{textAlign:"center", backgroundColor:"#FDBB2D", height:"50vh", paddingTop:"5%"}}>
+          <div style={{textAlign:"center", backgroundColor:"#FDBB2D", height:"50vh", paddingTop:"5%"}} className={styles.panaLandiaButton}>
             <Button type="submit" style={{margin:"0 40%",backgroundColor:"#9D384F"}} size='lg'><Link href="/directorio">Enter Panalandia</Link></Button>
             </div>
         </div>

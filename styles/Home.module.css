@@ -364,6 +364,7 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
 
 }
 
+
 .GoalsDiv{
   
   background: rgb(253,187,45);
@@ -418,25 +419,18 @@ filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#2f2729",endCo
 
 @media (max-width: 600px) {
 
-
-
   .grid {
     width: 100%;
     flex-direction: column;
     margin-left:7%;
   }
-}
-
-@media (prefers-color-scheme: dark) {
-  .card,
-  .footer {
-    border-color: #222;
+  .giftguideimage{
+    margin-left:20%;
   }
-  .code {
-    background: #111;
-  }
-}
 
+
+
+}
 
 
 @media only screen and (max-width: 800px) {
@@ -446,7 +440,7 @@ filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#2f2729",endCo
   .igButton{
     margin-left:0!important;
   }
-  .giftguideimage{
-    margin-left:20%;
-  }
+
+
+  
 }
