@@ -5,6 +5,7 @@ import Image from 'next/image'
 import styles from '../styles/Home.module.css'
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faTwitter } from "@fortawesome/free-brands-svg-icons"
+import {FiEdit2, FiInstagram, FiArchive, FiTwitter, FiGlobe, FiMail, FiMapPin} from 'react-icons/fi'
 import {
   createStyles,
   Menu,
@@ -39,6 +40,7 @@ const Home: NextPage = () => {
   const {ref, inView} = useInView();
   const animation = useAnimation();
   const [search, setSearch] = useState("");
+  const [panas, setPanas] = useState<any[]>([]);
 
   const formSubmit = (actions: any) => {
     actions.setSubmitting(false);
@@ -51,6 +53,25 @@ const Home: NextPage = () => {
       // TODO: redirect to a success register page
       Router.push("/directorio");
     }
+  };
+
+  const getFeaturedPanas = async () => {
+    const res = await axios
+      .get(
+        "/api/getFeaturedPanas",
+        {
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        }
+      )
+      .then(async (res) => {
+        setPanas(res.data);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
   };
 
   useEffect(() => {
@@ -69,7 +90,18 @@ const Home: NextPage = () => {
         x:"-100vw"
       })
     }
+  
   }, [inView]);
+
+  useEffect(() => {
+    getFeaturedPanas();
+  }, []);
+
+  useEffect(() => {
+    if(panas){
+      console.log(panas);
+    }
+  }, [panas]);
 
   return (
     <div className={styles.App} >
@@ -135,29 +167,35 @@ const Home: NextPage = () => {
       
         <div className={styles.featuredPanas}style={{margin:"5% 0"}} >
           <h1 style={{color:"#39B6FF"}}>Featured Panas</h1>
+          
+          
           <Carousel centerMode={true} centerSlidePercentage={30} infiniteLoop={true}>
-              <div>
-                  <img src="HolisticMami.png" />
-                  {/* <p className="legend">Holistic Mami</p> */}
-              </div>
-              <div>
-                  <img src="Mystix.jpg" />
-              </div>
-              <div>
-                  <img src="Igor.jpg" />
-              </div>
-              <div>
-                  <img src="MarreroTarot.png" />
-              </div>
-              <div>
-                  <img src="sugarPlug.png" />
-              </div>
-              <div>
-                  <img src="waxworms.jpg" />
-              </div>
-              <div>
-                  <img src="GirlBossKollections.png" />
-              </div>
+          {panas && 
+            panas.map((item:any, index:number) => {
+              return(
+                <Grid key={index}>
+                    <Grid.Col sm={12}>
+                        <Card className={styles.cardStyle}>
+                          <Link  href={"/pana/"+item.username} key={item+"link"}>
+                              <div style={{cursor:"pointer"}}>
+                                  {item.avatar && <img className={styles.avatarFeatured} src={item.avatarFeatured} ></img>}
+                                  <h3 className={styles.username}>{item.username}</h3>
+                                  {item.location && <p> <FiMapPin></FiMapPin> {item.location.toString()}</p>}
+                              </div>
+                          </Link>
+                          {item.bio && <p>{item.bio}</p>}
+                          {item.category.length > 0 && <p> <FiArchive></FiArchive> {item.category.toString()}</p>}
+                          {item.instagramHandle && <span className={styles.socialLink}><Link href={"http://instagram.com/"+item.instagramHandle}><FiInstagram></FiInstagram></Link></span>}
+                          {item.twitterHandle && <span className={styles.socialLink}><Link href={"http://twitter.com/"+item.twitterHandle}><FiTwitter></FiTwitter></Link></span>}
+                          {item.link1 && <span className={styles.socialLink}><Link href={item.link1}><FiGlobe></FiGlobe></Link></span>}
+                          {item.link2 && <span className={styles.socialLink}><Link href={item.link2}><FiGlobe></FiGlobe></Link></span>}
+                      
+                        </Card>
+                    </Grid.Col>
+                </Grid>
+            )
+            })
+            }
           </Carousel>
         </div>
         <div>
