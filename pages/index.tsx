@@ -208,13 +208,13 @@ const Home: NextPage = () => {
           </Grid>
 
            <Grid>
-                  <Grid.Col span={4} md={5} xs={2}></Grid.Col>
-                  <Grid.Col span={4} md={2} xs={8}>
+                  <Grid.Col span={4} md={2} xs={2}></Grid.Col>
+                  <Grid.Col span={4} md={8} xs={8}>
                     <div>
                       <Link href='/giftguide' target="_blank"><Button style={{backgroundColor:"#EB5867", color:"#ffffff", width:"100%", marginBottom:"20%"}} size='lg'>View Our Gift Guide</Button></Link>
                     </div>
                   </Grid.Col>
-                  <Grid.Col span={4} md={5} xs={2}></Grid.Col>
+                  <Grid.Col span={4} md={8} xs={2}></Grid.Col>
               </Grid>
             </div>
 
