@@ -255,7 +255,7 @@ const Home: NextPage = () => {
               </Grid>
           </div>
           <div style={{textAlign:"center", backgroundColor:"#FDBB2D", height:"50vh"}}>
-            <Button type="submit" style={{margin:"10% 40%",backgroundColor:"#9D384F"}} size='lg'><Link href="/directorio">Enter Panalandia</Link></Button>
+            <Button type="submit" style={{margin:"20% 40%",backgroundColor:"#9D384F"}} size='lg'><Link href="/directorio">Enter Panalandia</Link></Button>
             </div>
         </div>
   </div>
