@@ -263,7 +263,7 @@ const Profile: NextPage = () => {
                                             </Link>
                                         </Grid.Col>
                                         <Grid.Col sm={6}>
-                                            {item.bio && <p>{item.bio}</p>}
+                                            {item.bio && <p>{item.bio.substring(0, 300)}</p>}
                                             {item.category.length > 0 && <p> <FiArchive></FiArchive> {item.category.toString()}</p>}
                                             {item.instagramHandle && <span className={styles.socialLink}><Link href={"http://instagram.com/"+item.instagramHandle}><FiInstagram></FiInstagram></Link></span>}
                                             {item.twitterHandle && <span className={styles.socialLink}><Link href={"http://twitter.com/"+item.twitterHandle}><FiTwitter></FiTwitter></Link></span>}
