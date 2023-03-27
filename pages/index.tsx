@@ -174,7 +174,7 @@ const Home: NextPage = () => {
             panas.map((item:any, index:number) => {
               return(
                 <Grid key={index}>
-                    <Grid.Col sm={12}>
+                    <Grid.Col md={4} xs={12}>
                         <Card className={styles.cardStyle}>
                           <Link  href={"/pana/"+item.username} key={item+"link"}>
                               <div style={{cursor:"pointer"}}>
