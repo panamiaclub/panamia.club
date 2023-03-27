@@ -360,6 +360,8 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
   font-weight: 400;
   height:auto;
   max-height:100%;
+  width:90%;
+
 }
 
 .GoalsDiv{

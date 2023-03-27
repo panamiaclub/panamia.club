@@ -13,7 +13,7 @@ import {
     Burger,
     Grid, Input, 
     Card,
-    Button, Text, Box, Alert
+    Button, Text, Box, Alert, Textarea
   } from '@mantine/core';
   import Router from "next/router";
 import { Field, Form, Formik } from "formik";
@@ -654,10 +654,10 @@ const Profile: NextPage = () => {
                                     {() => (
                                     <>
                                         <Text><FiEdit2></FiEdit2>Bio:</Text>
-                                        <Input size="xs"
+                                        <Textarea size="xs"
                                         value={bio}
                                         onChange={(e:any) => setBio(e.target.value)}
-                                        placeholder={bio}
+                                        placeholder={bio} maxLength={400}
                                         />
                                     </>
                                     )}
