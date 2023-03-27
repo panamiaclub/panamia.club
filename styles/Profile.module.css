@@ -18,10 +18,10 @@
 .socialLink{
   margin-right: 10px;
   cursor: pointer;
-  color: #B85446;
+  color: #39B6FF;
 }
 .socialLink:hover{
-  color:#5d161b;
+  color:#287aa9;
 }
 
 .form{
@@ -29,14 +29,13 @@
   
 }
 
-.banner{
-  height:250px;
-}
-
 .bannerImage{
   width:100%;
   height:auto;
-  overflow: hidden;
+}
+
+.imagesContainer{
+  max-height:"50%";
 }
 
 .avatarStyle{
@@ -48,6 +47,10 @@
   border-radius: 15px;
   box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
   margin-bottom:2%;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+  height:auto;
+  max-height:100%;
 }
 
 .galleryImages{

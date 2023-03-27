@@ -419,77 +419,81 @@ const Profile: NextPage = () => {
                 <>
                     <Grid.Col sm={4}>
                         <Card className={styles.cardStyle}>
-                            <div className={styles.banner}>
-                                {!bannerImage && <img src="/banner.png" className={styles.bannerImage}></img>}
-                                {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
-                                <div onClick={handleClickBannerChange}  style={{marginTop:'-8%', marginLeft:"2%", cursor:"pointer"}}>
-                                    <FiCamera color="white"></FiCamera>
+                            <div className={styles.imagesContainer}>
+                                <div className={styles.banner}>
+                                    {!bannerImage && <img src="/banner.png" className={styles.bannerImage}></img>}
+                                    {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
+                                    <div onClick={handleClickBannerChange}  style={{marginTop:'-8%', marginLeft:"2%", cursor:"pointer"}}>
+                                        <FiCamera color="white"></FiCamera>
 
-                                    <Input id="bannerFileInput"
-                                            value={undefined} 
-                                            type="file" 
-                                            accept="image/*" style={{display:"none"}}
-                                            onChange={async(e:any) => {
-                                                let file = (e.target.files[0])
-                                                setBannerImageFile(file);
-                                            }}
-                                        />    
+                                        <Input id="bannerFileInput"
+                                                value={undefined} 
+                                                type="file" 
+                                                accept="image/*" style={{display:"none"}}
+                                                onChange={async(e:any) => {
+                                                    let file = (e.target.files[0])
+                                                    setBannerImageFile(file);
+                                                }}
+                                            />    
+                                    </div>
+                                </div>
+                                <div className={styles.avatarStyle}>
+                                    {!avatar && <CgProfile size="3em"/>}
+                                    {avatar && <img src={avatar}  className={styles.avatar}></img>}
+                                    <div onClick={handleClickAvatarChange}  style={{ marginTop:"-10%", cursor:"pointer"}}>
+                                        
+                                        <FiCamera color="white"></FiCamera>
+
+                                        <Input size="xs" id="avatarInput"
+                                                value={undefined} 
+                                                type="file" 
+                                                accept="image/*" style={{display:"none"}}
+                                                onChange={async(e:any) => {
+                                                    let file = (e.target.files[0])
+                                                    setAvatarFile(file);
+                                                }}
+                                            />
+                                        </div>
                                 </div>
                             </div>
-                            <div className={styles.avatarStyle}>
-                                {!avatar && <CgProfile size="3em"/>}
-                                {avatar && <img src={avatar}  className={styles.avatar}></img>}
-                                <div onClick={handleClickAvatarChange}  style={{ marginTop:"-10%", cursor:"pointer"}}>
-                                    
-                                    <FiCamera color="white"></FiCamera>
-
-                                    <Input size="xs" id="avatarInput"
-                                            value={undefined} 
-                                            type="file" 
-                                            accept="image/*" style={{display:"none"}}
-                                            onChange={async(e:any) => {
-                                                let file = (e.target.files[0])
-                                                setAvatarFile(file);
-                                            }}
-                                        />
-                                </div>
+                            <div>
+                                <h4>{username}</h4>
+                                <p>{bio}</p>
+                                {category && 
+                                    <div>
+                                        <>
+                                            <FiArchive></FiArchive>
+                                            {category.map((str) => {
+                                                return(
+                                                    <span key={str.id}> {str} </span>
+                                                );
+                                            })}
+                                        </>
+                                    </div>
+                                }
+                                { location && 
+                                <span><p><><FiMapPin></FiMapPin>{location}</></p></span>
+                                }
+                                {instagram && 
+                                    <span className={styles.socialLink}><Link href={"https://instagram.com/"+instagram} target="_blank"><FiInstagram></FiInstagram></Link></span>
+                                }
+                                    {twitter && 
+                                    <span className={styles.socialLink}><Link href={"https://twitter.com/"+ twitter} target="_blank"><FiTwitter></FiTwitter></Link></span>
+                                }
+                                {link1 && 
+                                    <span className={styles.socialLink}><Link href={link1} target="_blank"><FiGlobe></FiGlobe></Link></span>
+                                }
+                                {link2 && 
+                                    <span className={styles.socialLink}><Link href={link2} target="_blank"><FiGlobe></FiGlobe></Link></span>
+                                }
+                                { dateJoined && 
+                                <p>Pana Since {new Date(dateJoined).toLocaleDateString()}</p>
+                                }
+                                <br></br>
+                                {imageAlert && <Alert color={"red"} style={{marginTop:"5%"}}>{imageAlert}</Alert>}
+                                {imageMessage && <Alert color={"green"} style={{marginTop:"5%"}}>{imageMessage}</Alert>}
+                                {message && <Alert color={"green"} style={{marginTop:"5%"}}>{message}</Alert>}
                             </div>
-                            <h4>{username}</h4>
-                            <p>{bio}</p>
-                            {category && 
-                                <div>
-                                    <>
-                                        <FiArchive></FiArchive>
-                                        {category.map((str) => {
-                                            return(
-                                                <span key={str.id}> {str} </span>
-                                            );
-                                        })}
-                                    </>
-                                </div>
-                            }
-                            { location && 
-                             <span><p><><FiMapPin></FiMapPin>{location}</></p></span>
-                            }
-                            {instagram && 
-                                <span className={styles.socialLink}><Link href={"https://instagram.com/"+instagram} target="_blank"><FiInstagram></FiInstagram></Link></span>
-                            }
-                                {twitter && 
-                                <span className={styles.socialLink}><Link href={"https://twitter.com/"+ twitter} target="_blank"><FiTwitter></FiTwitter></Link></span>
-                            }
-                            {link1 && 
-                                <span className={styles.socialLink}><Link href={link1} target="_blank"><FiGlobe></FiGlobe></Link></span>
-                            }
-                            {link2 && 
-                                <span className={styles.socialLink}><Link href={link2} target="_blank"><FiGlobe></FiGlobe></Link></span>
-                            }
-                            { dateJoined && 
-                             <p>Pana Since {new Date(dateJoined).toLocaleDateString()}</p>
-                            }
-                            <br></br>
-                            {imageAlert && <Alert color={"red"} style={{marginTop:"5%"}}>{imageAlert}</Alert>}
-                            {imageMessage && <Alert color={"green"} style={{marginTop:"5%"}}>{imageMessage}</Alert>}
-                            {message && <Alert color={"green"} style={{marginTop:"5%"}}>{message}</Alert>}
                         </Card>
                         <div style={{marginTop:"20px"}}>
                             {!onboardingFormComplete && <Link href="/intake"><a><Button style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px", backgroundColor: "green"}} size="xs">Complete Onboarding</Button><br></br></a></Link>}

@@ -140,6 +140,9 @@ export default function Layout({ children }: LayoutProps) {
                 <title>Panamia</title>
                 <meta name="description" content="Your favorite directory for local creatives." />
                 <link rel="icon" href="/favicon.ico" />
+                <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                <link rel="preconnect" href="https://fonts.gstatic.com"/>
+                <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;400;700&display=swap" rel="stylesheet"/>
          
             <script type="text/javascript" id="hs-script-loader" async defer src="//js-na1.hs-scripts.com/23472319.js"></script>
             </Head>

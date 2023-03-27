@@ -26,6 +26,8 @@
     filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#fdbb2d",endColorstr="#2f2729",GradientType=1);
     min-height:90vh;
     color:black;
+
+  font-family: 'Montserrat', sans-serif;
 }
 .avatar{
   width:50px;
@@ -51,6 +53,8 @@
   letter-spacing: 0.3em;
   font-size: 3em;
   text-align: left;
+
+  font-family: 'Montserrat', sans-serif;
 }
 
 .loginLinks{
@@ -66,27 +70,34 @@
   color:#ffffff;
   letter-spacing: 0.3em;
   text-align:center;
+
+  font-family: 'Montserrat', sans-serif;
 }
 
 .headingsAbout{
   letter-spacing: 0.4em;
   margin-top:15%;
   font-size: 2em;
+
+  font-family: 'Montserrat', sans-serif;
 }
 
 .paragraphs{
   color:#001f34;
-  font-family: "Courier";
+
+  font-family: 'Montserrat', sans-serif;
 }
 
 .aboutContainer{
   min-height:100vh;
   background-color: #EB5867;
+
+  font-family: 'Montserrat', sans-serif;
 }
 
 .textSection{
   color:black;
-  font-family: "verdana";
+  font-family: 'Montserrat', sans-serif;
   margin: 0 auto;
   padding:1em;
   margin-top:20%;
