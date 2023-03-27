@@ -253,7 +253,7 @@ const Profile: NextPage = () => {
                             <Grid.Col sm={12}>
                                 <Card className={styles.cardStyle}>
                                     <Grid>
-                                        <Grid.Col sm={6}>
+                                        <Grid.Col xs={6}>
                                             <Link  href={"/pana/"+item.username} key={item+"link"}>
                                                 <div style={{cursor:"pointer"}}>
                                                     {item.avatar && <img className={stylesHome.avatar} src={item.avatar} ></img>}
@@ -262,7 +262,7 @@ const Profile: NextPage = () => {
                                                 </div>
                                             </Link>
                                         </Grid.Col>
-                                        <Grid.Col sm={6}>
+                                        <Grid.Col xs={6}>
                                             {item.bio && <p>{item.bio.substring(0, 400)}</p>}
                                             {item.category.length > 0 && <p> <FiArchive></FiArchive> {item.category.toString()}</p>}
                                             {item.instagramHandle && <span className={styles.socialLink}><Link href={"http://instagram.com/"+item.instagramHandle}><FiInstagram></FiInstagram></Link></span>}

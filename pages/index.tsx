@@ -148,19 +148,19 @@ const Home: NextPage = () => {
             </Grid> 
            
             <Grid style={{marginLeft:"5%"}} className={styles.igPromo}>
-              <Grid.Col sm={4}><img src="ig_promo_1.jpg" width="80%"></img></Grid.Col>
-              <Grid.Col sm={4}><img src="ig_promo_2.jpg" width="80%"></img></Grid.Col>
-               <Grid.Col sm={4}><img src="ig_promo_3.jpg" width="80%"></img></Grid.Col>
+              <Grid.Col md={4} sm={12}><img src="ig_promo_1.jpg" width="80%"></img></Grid.Col>
+              <Grid.Col md={4}  sm={12}><img src="ig_promo_2.jpg" width="80%"></img></Grid.Col>
+               <Grid.Col md={4} sm={12}><img src="ig_promo_3.jpg" width="80%"></img></Grid.Col>
             </Grid>
 
             <Grid>
-                  <Grid.Col span={4} md={5} xs={4}></Grid.Col>
-                  <Grid.Col span={4} md={2} xs={4}>
+                  <Grid.Col span={4} md={5} xs={3}></Grid.Col>
+                  <Grid.Col span={4} md={2} xs={6}>
                     <div>
                       <Link href='https://instagram.com/panamiaclub' target="_blank"><Button style={{backgroundColor:"#FFECC8", color:"#011D34", width:"100%", marginTop:"20%", marginBottom:"20%"}} >Follow Us<IconBrandInstagram style={{marginLeft: "10px"}}></IconBrandInstagram></Button></Link>
                     </div>
                   </Grid.Col>
-                  <Grid.Col span={4} md={5} xs={4}></Grid.Col>
+                  <Grid.Col span={4} md={5} xs={3}></Grid.Col>
               </Grid>
           </motion.div>
         </div>
@@ -202,35 +202,34 @@ const Home: NextPage = () => {
           
         <div className={styles.giftGuide}>
           <Grid style={{paddingBottom:"10%", marginBottom:"0"}} >
-            <Grid.Col sm={3}><img src="tappas.jpg" className={styles.giftguideimage}></img></Grid.Col>
-            <Grid.Col sm={3}><img src="pellejones.jpeg" className={styles.giftguideimage}></img></Grid.Col>
-            <Grid.Col sm={3}><img src="Crystals.jpeg" className={styles.giftguideimage}></img></Grid.Col>
-            <Grid.Col sm={3}><img src="mysticthrift.JPG"  className={styles.giftguideimage}></img></Grid.Col>
+            <Grid.Col md={4} sm={12}><img src="tappas.jpg" className={styles.giftguideimage}></img></Grid.Col>
+            <Grid.Col md={4} sm={12}><img src="pellejones.jpeg" className={styles.giftguideimage}></img></Grid.Col>
+            <Grid.Col md={4} sm={12}><img src="mysticthrift.JPG"  className={styles.giftguideimage}></img></Grid.Col>
           </Grid>
 
            <Grid>
-                  <Grid.Col span={4} md={5} xs={4}></Grid.Col>
-                  <Grid.Col span={4} md={2} xs={4}>
+                  <Grid.Col span={4} md={5} xs={2}></Grid.Col>
+                  <Grid.Col span={4} md={2} xs={8}>
                     <div>
                       <Link href='/giftguide' target="_blank"><Button style={{backgroundColor:"#EB5867", color:"#ffffff", width:"100%", marginBottom:"20%"}} size='lg'>View Our Gift Guide</Button></Link>
                     </div>
                   </Grid.Col>
-                  <Grid.Col span={4} md={5} xs={4}></Grid.Col>
+                  <Grid.Col span={4} md={5} xs={2}></Grid.Col>
               </Grid>
             </div>
 
 
-          <div id="Goals" style={{height:"100vh", padding:"10% 0!important", marginBottom:"0", marginTop:"0"}} className={styles.GoalsDiv}>
+          <div id="Goals" style={{height:"100vh", padding:"10% 0!important", marginTop:"0"}} className={styles.GoalsDiv}>
               <h1 className={styles.headingsGOALS} style={{textAlign:"center"}}>GOALS</h1>
               <Grid style={{margin:"0 2%"}} >
-                <Grid.Col sm={6}>
+                <Grid.Col md={6} xs={12}>
                   <Card className={styles.cardStyleGOALS} style={{height:"100%", textAlign:"center"}}>
                     <img src="directorio.png" width="100px"></img>
                     <h3 >Directory</h3>
                     <p>Vendors perpetually struggle with getting their product in front of their target audience and patrons who want to support local struggle with the convenience of shopping at Big Box stores for everyday errands. Often supporting local is designated to sporadic “events” that fails to provide consistency for either party. Our goal is to meet the needs of both by creating a local directory of small vendors in Miami.</p>
                   </Card>
                 </Grid.Col>
-                <Grid.Col sm={6}>
+                <Grid.Col md={6} xs={12}>
                   <Card className={styles.cardStyleGOALS} style={{height:"100%", textAlign:"center"}}>
                   <img src="community.png" width="100px"></img>
                     <h3>Vendor Community</h3>
@@ -239,14 +238,14 @@ const Home: NextPage = () => {
                 </Grid.Col>
               </Grid>
               <Grid style={{margin:"0 2%"}}>
-                <Grid.Col sm={6}>
+                <Grid.Col md={6} xs={12}>
                   <Card className={styles.cardStyleGOALS} style={{height:"100%", textAlign:"center"}}>
                   <img src="workshops.png" width="100px"></img>
                     <h3>Vendor Workshops</h3>
                     <p>We started Pana Mia Club as a way to bring everyone together, to pool our resources, insights and strategies. On our signup form, vendors can specify if they want to offer workshops to the community. Topics include general knowledge such as shipping, web design and accounting; or, more industry specific knowledge such as how to take a food product to market, sourcing solutions in apparel, and music production.</p>
                   </Card>
                 </Grid.Col>
-                <Grid.Col sm={6}>
+                <Grid.Col md={6} xs={12}>
                   <Card className={styles.cardStyleGOALS} style={{height:"100%", textAlign:"center"}}>
                   <img src="transparency.png" width="100px"></img>
                     <h3>Market Transparency</h3>
