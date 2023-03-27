@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image'
 import styles from '../styles/Home.module.css'
 import Head from 'next/head';
@@ -23,12 +24,14 @@ type LayoutProps = {
   import { useDisclosure } from '@mantine/hooks';
   import { IconChevronDown } from '@tabler/icons';
   import { MantineLogo } from '@mantine/ds';
-  
+  import {useSession ,signIn, signOut} from 'next-auth/react';
+
   const HEADER_HEIGHT = 60;
   
   const useStyles = createStyles((theme) => ({
     footer: {
       marginTop: 0,
+      backgroundColor: "white",
       borderTop: `1px solid ${
         theme.colorScheme === 'light' ? theme.colors.gray[5] : theme.colors.gray[2]
       }`,
@@ -51,7 +54,7 @@ type LayoutProps = {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      backgroundColor: "#ffffff"
+      backgroundColor: "white"
     },
   
     links: {
@@ -77,7 +80,7 @@ type LayoutProps = {
       fontWeight: 500,
   
       '&:hover': {
-        backgroundColor: theme.colorScheme === 'light' ? theme.colors.dark[6] : theme.colors.gray[0],
+        backgroundColor: theme.colorScheme === 'light' ? theme.colors.gray[0] : theme.colors.gray[0],
       },
     },
   
@@ -95,40 +98,14 @@ type LayoutProps = {
     links: { link: string; label: string; links: { link: string; label: string }[] }[];
   }
 
-  const links = [{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}];//{link:"/giftguide", label:"Gift Guide", links:null}
-
 export default function Layout({ children }: LayoutProps) {
-
+  const {data:session, status} = useSession();
     const { classes } = useStyles();
   const [opened, { toggle }] = useDisclosure(false);
+
+  const [links, setLinks] = useState([{ link: "#Goals", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null},{link:"/directorio", label:"El Directorio", links: null}]);//{link:"/giftguide", label:"Gift Guide", links:null}
+
   const items = links.map((link) => {
-    
-    // const menuItems = link.links?.map((item) => (
-    //   <Menu.Item key={item.link}>{item.label}</Menu.Item>
-    // )
-    
-    // );
-
-    // if (menuItems) {
-    //   return (
-    //     <Menu key={link.label} trigger="hover" exitTransitionDuration={0}>
-    //       <Menu.Target>
-    //         <Link
-    //           href={link.link}
-    //           className={classes.link}
-    //           onClick={(event) => {}}
-    //         >
-    //           <Center>
-    //             <span className={classes.linkLabel}>{link.label}</span>
-    //             <IconChevronDown size={12} stroke={1.5} />
-    //           </Center>
-    //         </Link>
-    //       </Menu.Target>
-    //       <Menu.Dropdown>{menuItems}</Menu.Dropdown>
-    //     </Menu>
-    //   );
-    // }
-
     return (
       <a
         key={link.label}
@@ -141,6 +118,21 @@ export default function Layout({ children }: LayoutProps) {
     );
   });
 
+  useEffect(() => {
+    (function loop() {
+      setTimeout(() => {
+        if(session){
+          setLinks([{ link: "http://panamia.club/#Goals", label: "About", links:null} , {link:"/#footer", label:"Contact Us", links:null},{link:"/directorio", label:"El Directorio", links: null}, {link:"/profile", label:"Profile", links: null}]);
+        }else if(!session){
+          setLinks([{ link: "#Goals", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}, {link:"/directorio", label:"El Directorio", links: null}]);
+        }
+        loop();
+      }, 20000);
+    })();
+  
+}, [links, session]);
+
+  const handleSignOut = () => signOut({redirect: true, callbackUrl: '/'});
 
     return (
         <div>
@@ -148,6 +140,9 @@ export default function Layout({ children }: LayoutProps) {
                 <title>Panamia</title>
                 <meta name="description" content="Your favorite directory for local creatives." />
                 <link rel="icon" href="/favicon.ico" />
+                <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                <link rel="preconnect" href="https://fonts.gstatic.com"/>
+                <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;400;700&display=swap" rel="stylesheet"/>
          
             <script type="text/javascript" id="hs-script-loader" async defer src="//js-na1.hs-scripts.com/23472319.js"></script>
             </Head>
@@ -155,21 +150,34 @@ export default function Layout({ children }: LayoutProps) {
              <Header height={HEADER_HEIGHT} sx={{ borderBottom: 0 }} mb={120} style={{marginBottom:"0"}}>
                 <Container className={classes.inner} fluid>
                     <Group>
-                    <Burger opened={opened} onClick={toggle} className={classes.burger} size="sm" />
-                   
+                      <Burger opened={opened} onClick={toggle} className={classes.burger} size="sm" />
+                      <div hidden={!opened} style={{backgroundColor:"white", boxShadow: " rgba(0, 0, 0, 0.35) 0px 5px 15px", marginTop:"50%"}}>
+                       {items}
+                      </div>
+
                       <Link href="/">
-                      <span className={styles.logo}>
-                        <Image src="/logo.png" alt="panamia logo" width={40} height={35}/>   
-                          </span>
+                        <span className={styles.logo}>
+                          <Image src="/logo.png" alt="panamia logo" width={40} height={35}/>   
+                        </span>
                       </Link>
                 
                     </Group>
                     <Group spacing={5} className={classes.links}>
                     {items}
                     </Group>
-                    <Button radius="xl" sx={{ height: 30 }} style={{backgroundColor:"#4ab3ea"}}>
-                      <Link href="/newsletter">Sign Up</Link>
-                    </Button>
+                    {session && session.user &&
+                    <Group>
+                      <p style={{color:"#495057", fontFamily:"Helvetica Neue", marginRight: "0px"}}>Hi, {session.user.email}</p>
+                      <Button radius="xl" color={"red"} sx={{ height: 30 }} onClick={handleSignOut}>
+                        Log Out
+                     </Button>
+                    </Group>
+                    }
+                     {!session && 
+                      <Button radius="xl" sx={{ height: 30 }} style={{backgroundColor:"#4ab3ea"}}>
+                        <Link href="/signin">Sign In</Link>
+                      </Button>
+                    }
                 </Container>
             </Header>
             <div>{children}</div>

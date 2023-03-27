@@ -6,11 +6,11 @@ import clientPromise from './lib/mongodb';
 import dbConnect from './lib/connectdb';
 import { MongoDBAdapter} from '@next-auth/mongodb-adapter';
 import { compare } from "bcrypt";
-import auth from "./lib/model/newsletter";
+import auth from "./lib/model/users";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { redirect } from 'next/dist/server/api-utils';
 
-const uri = process.env.MONGODB_URI
+const uri = process.env.NEXT_PUBLIC_MONGODB_URI_FULL
 const options = {
   useUnifiedTopology: true,
   useNewUrlParser: true,
@@ -34,6 +34,7 @@ export default NextAuth({
               },
             },
             async authorize(credentials) {
+              console.log(credentials);
               await dbConnect();
       
               // Find user with the email
@@ -69,17 +70,17 @@ export default NextAuth({
         //     user && (token.user = user)
         //     return token;
         // },
-       async redirect(){
-          return 'http://panamia.club'
-        }
+      //  async redirect(){
+      //     return process.env.NEXT_PUBLIC_URL + "/invoicing" || "http://panamia.vercel.app/invoicing";
+      //   }
     
     },
     session: {
         strategy: "jwt",
       },
-    secret: "secret",
+    secret: process.env.NEXT_PUBLIC_SECRET,
     jwt: {
-        secret: "ksdkfsldferSEFSEFSEf"
-    },
+        secret: process.env.NEXT_PUBLIC_JWT_SECRET
+    }
 
 });

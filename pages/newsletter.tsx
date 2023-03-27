@@ -99,7 +99,7 @@ const Newsletter: NextPage = () => {
         })
         .catch((error) => {
             console.log(error);
-            setAlert(error);
+            setAlert(error.response.data.error);
         });
         console.log(res);
     }
@@ -174,7 +174,7 @@ const Newsletter: NextPage = () => {
                               <Input
                               value={igUsername}
                               onChange={(e:any) => setIgUsername(e.target.value)}
-                              placeholder={"@username"}
+                              placeholder={"username"}
                               />
                           </>
                           )}
@@ -210,6 +210,7 @@ const Newsletter: NextPage = () => {
             </Grid>
           </motion.div>
         </div>
+        
   </div>
   )
 }

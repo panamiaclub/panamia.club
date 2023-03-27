@@ -1,7 +1,7 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "./auth/lib/connectdb";
-import auths from "./auth/lib/model/auths";
+import users from "./auth/lib/model/users";
 import bcrypt from "bcrypt";
 
 interface ResponseData {
@@ -19,6 +19,7 @@ const validateForm = async (
   email: string,
   password: string
 ) => {
+  console.log(username, email, password);
   if (username.length < 3) {
     return { error: "Username must have 3 or more characters" };
   }
@@ -27,7 +28,7 @@ const validateForm = async (
   }
 
   await dbConnect();
-  const emailUser = await auths.findOne({ email: email });
+  const emailUser = await users.findOne({ email: email });
 
   if (emailUser) {
     return { error: "Email already exists" };
@@ -58,17 +59,19 @@ export default async function handler(
   if (errorMessage) {
     return res.status(400).json(errorMessage as ResponseData);
   }
-
+  
   // hash password
   const hashedPassword = await bcrypt.hash(password, 12);
   if(hashedPassword){
     console.log(hashedPassword);
 
       // create new User on MongoDB
-    const newUser = new auths({
-        name: username,
+    const newUser = new users({
+        username: username,
         email: email,
         hashedPassword: hashedPassword,
+        dateJoined: new Date(),
+        onboardingFormComplete: false
     });
 
     newUser

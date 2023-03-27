@@ -1,0 +1,60 @@
+.App{
+    background-color: #f6f6f6!important;
+    color:black;
+  }
+
+.container{
+    width:80%;
+    margin: 0 auto;
+}
+
+.avatar{
+  width:150px;
+  height:150px;
+  border-radius: 75px;
+  border: 10px solid white;
+}
+
+.socialLink{
+  margin-right: 10px;
+  cursor: pointer;
+  color: #39B6FF;
+}
+.socialLink:hover{
+  color:#287aa9;
+}
+
+.form{
+  font-size: 0.8em;
+  
+}
+
+.bannerImage{
+  width:100%;
+  height:auto;
+}
+
+.imagesContainer{
+  max-height:"50%";
+}
+
+.avatarStyle{
+  text-align: center;
+  margin-top: -15%;
+}
+
+.cardStyle{
+  border-radius: 15px;
+  box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+  margin-bottom:2%;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+  height:auto;
+  max-height:100%;
+}
+
+.galleryImages{
+  width:200px;
+  height:200px;
+  border-radius: 15px;
+}
