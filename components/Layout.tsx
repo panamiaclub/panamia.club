@@ -151,7 +151,10 @@ export default function Layout({ children }: LayoutProps) {
                 <Container className={classes.inner} fluid>
                     <Group>
                       <Burger opened={opened} onClick={toggle} className={classes.burger} size="sm" />
-                   
+                      <div hidden={!opened} style={{backgroundColor:"white", boxShadow: " rgba(0, 0, 0, 0.35) 0px 5px 15px", marginTop:"50%"}}>
+                       {items}
+                      </div>
+
                       <Link href="/">
                         <span className={styles.logo}>
                           <Image src="/logo.png" alt="panamia logo" width={40} height={35}/>   
