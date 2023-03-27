@@ -89,7 +89,7 @@
 }
 
 .aboutContainer{
-  min-height:100vh;
+  min-height:110vh;
   background-color: #EB5867;
 
   font-family: 'Montserrat', sans-serif;
@@ -359,12 +359,21 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
   filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#fdbb2d",endColorstr="#2f2729",GradientType=1);
 }
 
-.igPromo{
+.giftGuide{
   background: rgb(47,39,41);
 background: -moz-linear-gradient(0deg, rgba(47,39,41,1) 7%, rgba(248,248,248,1) 93%);
 background: -webkit-linear-gradient(0deg, rgba(47,39,41,1) 7%, rgba(248,248,248,1) 93%);
 background: linear-gradient(0deg, rgba(47,39,41,1) 7%, rgba(248,248,248,1) 93%);
 filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#2f2729",endColorstr="#f8f8f8",GradientType=1);
+}
+
+.giftguideimage{
+  border-radius: 15px;
+  max-width:600px;
+  max-height:305px;
+  width: auto;
+  height: auto;
+  margin-left:10%;
 }
 
 .cardStyleGOALS{
@@ -396,9 +405,7 @@ filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#2f2729",endCo
 
 @media (max-width: 600px) {
 
-  .descriptionAbout{
-    width:80%;
-  }
+
 
   .grid {
     width: 100%;

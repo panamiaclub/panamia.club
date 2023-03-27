@@ -93,7 +93,7 @@ const Home: NextPage = () => {
              <Grid>
                 <Grid.Col md={6} xs={12}>
                   <h1 className={styles.headingBig}>Your <span style={{color:"#39B6FF"}}>favorite</span> directory for <span style={{color:"#fad288"}}>local</span> creatives.</h1>
-                  <Link href='/newsletter' target="_blank"><Button style={{backgroundColor:"#EE5967", color:"#FFFFFF"}}>Sign Up For Our Newsletter</Button></Link>
+                  <Link href='/newsletter' target="_blank"><Button style={{backgroundColor:"#EE5967", color:"#FFFFFF"}} size={'lg'}>Sign Up For Our Newsletter</Button></Link>
                 </Grid.Col>
                 <Grid.Col md={6} xs={12}>
                   <Image src="/macbook.png" height={400} width={500} style={{marginBottom:"10%"}}></Image>
@@ -103,7 +103,7 @@ const Home: NextPage = () => {
         </div>
         <div className={styles.aboutContainer} id="About" ref={ref}>
           <motion.div animate={animation}>
-            <Grid>
+           <Grid>
                 <Grid.Col md={2} xs={0}></Grid.Col>
                 <Grid.Col  md={8} xs={12}>
                 <div className={styles.textSection}>
@@ -113,19 +113,26 @@ const Home: NextPage = () => {
                 
                 </Grid.Col>
                 <Grid.Col md={2} xs={0}></Grid.Col>
+            </Grid> 
+           
+            <Grid style={{marginLeft:"5%"}} className={styles.igPromo}>
+              <Grid.Col sm={4}><img src="ig_promo_1.jpg" width="80%"></img></Grid.Col>
+              <Grid.Col sm={4}><img src="ig_promo_2.jpg" width="80%"></img></Grid.Col>
+               <Grid.Col sm={4}><img src="ig_promo_3.jpg" width="80%"></img></Grid.Col>
             </Grid>
+
             <Grid>
-                <Grid.Col span={4} md={5} xs={4}></Grid.Col>
-                <Grid.Col span={4} md={2} xs={4}>
-                <div className={styles.textSection}>
-                  <Link href='https://instagram.com/panamiaclub' target="_blank"><Button style={{backgroundColor:"#FFECC8", color:"#011D34"}} >Follow Us<IconBrandInstagram style={{marginLeft: "10px"}}></IconBrandInstagram></Button></Link>
-                </div>
-                
-                </Grid.Col>
-                <Grid.Col span={4} md={5} xs={4}></Grid.Col>
-            </Grid>
+                  <Grid.Col span={4} md={5} xs={4}></Grid.Col>
+                  <Grid.Col span={4} md={2} xs={4}>
+                    <div>
+                      <Link href='https://instagram.com/panamiaclub' target="_blank"><Button style={{backgroundColor:"#FFECC8", color:"#011D34", width:"100%", marginTop:"20%"}} >Follow Us<IconBrandInstagram style={{marginLeft: "10px"}}></IconBrandInstagram></Button></Link>
+                    </div>
+                  </Grid.Col>
+                  <Grid.Col span={4} md={5} xs={4}></Grid.Col>
+              </Grid>
           </motion.div>
         </div>
+      
         <div className={styles.featuredPanas}style={{margin:"5% 0"}} >
           <h1 style={{color:"#39B6FF"}}>Featured Panas</h1>
           <Carousel centerMode={true} centerSlidePercentage={30} infiniteLoop={true}>
@@ -154,11 +161,27 @@ const Home: NextPage = () => {
           </Carousel>
         </div>
         <div>
-          <Grid style={{paddingBottom:"10%", marginBottom:"0"}} className={styles.igPromo}>
-            <Grid.Col sm={4}><img src="ig_promo_1.jpg" width="100%"></img></Grid.Col>
-            <Grid.Col sm={4}><img src="ig_promo_2.jpg" width="100%"></img></Grid.Col>
-            <Grid.Col sm={4}><img src="ig_promo_3.jpg" width="100%"></img></Grid.Col>
+          
+        <div className={styles.giftGuide}>
+          <Grid style={{paddingBottom:"10%", marginBottom:"0"}} >
+            <Grid.Col sm={3}><img src="tappas.jpg" className={styles.giftguideimage}></img></Grid.Col>
+            <Grid.Col sm={3}><img src="pellejones.jpeg" className={styles.giftguideimage}></img></Grid.Col>
+            <Grid.Col sm={3}><img src="Crystals.jpeg" className={styles.giftguideimage}></img></Grid.Col>
+            <Grid.Col sm={3}><img src="mysticthrift.JPG"  className={styles.giftguideimage}></img></Grid.Col>
           </Grid>
+
+           <Grid>
+                  <Grid.Col span={4} md={5} xs={4}></Grid.Col>
+                  <Grid.Col span={4} md={2} xs={4}>
+                    <div>
+                      <Link href='/giftguide' target="_blank"><Button style={{backgroundColor:"#EB5867", color:"#ffffff", width:"100%", marginBottom:"20%"}} size='lg'>View Our Gift Guide</Button></Link>
+                    </div>
+                  </Grid.Col>
+                  <Grid.Col span={4} md={5} xs={4}></Grid.Col>
+              </Grid>
+            </div>
+
+
           <div id="Goals" style={{height:"100vh", padding:"10% 0!important", marginBottom:"0", marginTop:"0"}} className={styles.GoalsDiv}>
               <h1 className={styles.headingsGOALS} style={{textAlign:"center"}}>GOALS</h1>
               <Grid style={{margin:"0 2%"}} >

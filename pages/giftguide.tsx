@@ -109,9 +109,9 @@ const GiftGuide: NextPage = () => {
     <div className={styles.App}>
   
         
-        <img src='/CosaHecha/1.svg' alt="svg1" width="100%"/>
+        <Link href="/#footer"><img src='/CosaHecha/1.svg' alt="svg1" width="100%" style={{cursor:"pointer"}}/></Link>
         <img src='/CosaHecha/2.svg' alt="svg1" width="100%"/>
-        <img src='/CosaHecha/3.svg' alt="svg1" width="100%"/>
+        <Link href="http://panamia.club/#about"><img src='/CosaHecha/3.svg' alt="svg1" width="100%"  style={{cursor:"pointer"}}/></Link>
         <img src='/CosaHecha/4.svg' alt="svg1" width="100%"/>
         <img src='/CosaHecha/5.svg' alt="svg1" width="100%"/>
         <img src='/CosaHecha/6.svg' alt="svg1" width="100%"/>
