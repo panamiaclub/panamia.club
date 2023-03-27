@@ -169,7 +169,7 @@ const Home: NextPage = () => {
           <h1 style={{color:"#39B6FF"}}>Featured Panas</h1>
           
           
-          <Carousel centerMode={true} centerSlidePercentage={30} infiniteLoop={true}>
+          <Carousel centerMode={true} centerSlidePercentage={33} infiniteLoop={true}>
           {panas && 
             panas.map((item:any, index:number) => {
               return(
