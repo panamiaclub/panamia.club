@@ -157,7 +157,7 @@ const Home: NextPage = () => {
                   <Grid.Col span={4} md={5} xs={4}></Grid.Col>
                   <Grid.Col span={4} md={2} xs={4}>
                     <div>
-                      <Link href='https://instagram.com/panamiaclub' target="_blank"><Button style={{backgroundColor:"#FFECC8", color:"#011D34", width:"100%", marginTop:"20%"}} >Follow Us<IconBrandInstagram style={{marginLeft: "10px"}}></IconBrandInstagram></Button></Link>
+                      <Link href='https://instagram.com/panamiaclub' target="_blank"><Button style={{backgroundColor:"#FFECC8", color:"#011D34", width:"100%", marginTop:"20%", marginBottom:"20%"}} >Follow Us<IconBrandInstagram style={{marginLeft: "10px"}}></IconBrandInstagram></Button></Link>
                     </div>
                   </Grid.Col>
                   <Grid.Col span={4} md={5} xs={4}></Grid.Col>
