@@ -178,7 +178,7 @@ const Home: NextPage = () => {
                         <Card className={styles.cardStyle}>
                           <Link  href={"/pana/"+item.username} key={item+"link"}>
                               <div style={{cursor:"pointer"}}>
-                                  {item.avatar && <img className={styles.avatarFeatured} src={item.avatarFeatured} ></img>}
+                                  {item.avatar && <img className={styles.avatarFeatured} src={item.avatar} ></img>}
                                   <h3 className={styles.username}>{item.username}</h3>
                                   {item.location && <p> <FiMapPin></FiMapPin> {item.location.toString()}</p>}
                               </div>
