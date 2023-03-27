@@ -59,8 +59,6 @@ export default async function handler(
     console.log(username);
     try{
         var user = await getUserByUsername(username.toString());
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Cache-Control', 'max-age=180000');
         res.status(200);//.json({ success: true, data: user });
         res.end(JSON.stringify(user));
     }catch(err: any){
