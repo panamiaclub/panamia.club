@@ -383,7 +383,7 @@ filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#2f2729",endCo
 
 .giftguideimage{
   border-radius: 15px;
-  max-width:100%;
+  max-width:80%;
   max-height:305px;
   height: auto;
   margin-left:10%;
