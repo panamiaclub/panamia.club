@@ -214,7 +214,9 @@ const Intake: NextPage = () => {
         category.map((str:any) => {
           console.log('get intake status')
           console.log(str);
-          getIntakeStatus(str);
+          if(category != "Supporter"){
+            getIntakeStatus(str);
+          }
         });
       }
   

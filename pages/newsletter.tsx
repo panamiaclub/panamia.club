@@ -192,11 +192,12 @@ const Newsletter: NextPage = () => {
                           )}
                       </Field>
 
-                      <Text className={styles.formText}>Select Membership Type:</Text>
+                      <Text className={styles.formText}>What Best Describes You?</Text>
                       <Field  value={membership} as="select" className={styles.selectField} name="membershipType" onChange={(e:any) => setMembership(e.target.value)}>
-                        <option value="Small Busienss">Small Business</option>
-                        <option value="Artist">Artist</option>
-                        <option value="Member">Member</option>
+                        <option value="Business/Venue"> An independent locally-owned venue/brick-and-mortar business</option>
+                        <option value="Artist/Small Business">A locally based creative/small business/organization</option>
+                        <option value="Supporter">A South Florida resident looking to support more local creators</option>
+                        <option value="Tourist">A visitor looking to engage with the local SoFlo scene</option>
                       </Field>
                       <Button type="submit" style={{margin:"2% 40%",backgroundColor:"#EE5967"}}>Submit<FiEdit2 style={{marginLeft:"5px"}}/></Button>
                       </Box>

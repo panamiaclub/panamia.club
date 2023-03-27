@@ -51,6 +51,7 @@ const Profile: NextPage = () => {
     const [uploadImages, setUploadImages] = useState<any[]>([]);
     const [alert, setAlert] = useState("");
     const [onboardingFormComplete, setOnboardingFormComplete] = useState<Boolean>();
+    const [supporter, setSupporter] = useState<Boolean>();
     const [imageAlert, setImageAlert] = useState("");
     const [imageMessage, setImageMessage] = useState("");
     const [imageUploadAlert, setImageUploadAlert] = useState("");
@@ -387,6 +388,11 @@ const Profile: NextPage = () => {
         if(!images){
             getUserImages();
         }
+        if(category){
+            if(category[0] == "Supporter"){
+                setSupporter(true);
+            }
+        }
     }, [email, username, instagram, bio, link1, link2, twitter, session, avatar, avatarFile, category, userId, images, bannerImage, bannerImageFile])
 
     // Create a reference to the hidden file input element
@@ -496,7 +502,7 @@ const Profile: NextPage = () => {
                             </div>
                         </Card>
                         <div style={{marginTop:"20px"}}>
-                            {!onboardingFormComplete && <Link href="/intake"><a><Button style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px", backgroundColor: "green"}} size="xs">Complete Onboarding</Button><br></br></a></Link>}
+                            {!supporter && !onboardingFormComplete && <Link href="/intake"><a><Button style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px", backgroundColor: "green"}} size="xs">Complete Onboarding</Button><br></br></a></Link>}
                             { <Button onClick={handleResetPressed} style={{margin:"0% 2%!important", marginRight:"20px"}} size="xs">Reset Password<FiEdit2 style={{marginLeft:"5px"}}/></Button>}
                             { <><Button onClick={handleEditPressed} style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px"}} size="xs">Edit Profile</Button><br></br></>}
                         </div>
@@ -720,8 +726,8 @@ const Profile: NextPage = () => {
                                         Collectives/Platforms
                                         </label>
                                         <label>
-                                        <Field type="checkbox" name="Category" value="Customer" />
-                                        Customer
+                                        <Field type="checkbox" name="Category" value="Supporter" />
+                                        Supporter
                                         </label>
                                     </div>
                                 <Field name="instagram">
