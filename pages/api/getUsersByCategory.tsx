@@ -16,7 +16,7 @@ const getUsersByCategory = async (category: string) =>{
   await dbConnect();
   console.log(category);
   
-  const Users = await users.find({category: category});
+  const Users = await users.find({category: category}).limit(20);
   if(Users){
     //console.log(Users)
   }
