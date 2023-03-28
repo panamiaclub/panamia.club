@@ -139,6 +139,8 @@ export default function Layout({ children }: LayoutProps) {
             <Head>
                 <title>Panamia</title>
                 <meta name="description" content="Your favorite directory for local creatives." />
+                <meta property="og:url" content="https://www.panamia.club/" />
+                <meta property="og:image" content="https://www.panamia.club/_next/image/?url=%2Flogo.png&w=96&q=75" />
                 <link rel="icon" href="/favicon.ico" />
                 <link rel="preconnect" href="https://fonts.googleapis.com"/>
                 <link rel="preconnect" href="https://fonts.gstatic.com"/>
