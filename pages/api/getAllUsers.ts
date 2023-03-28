@@ -10,9 +10,9 @@ interface ResponseData {
   msg?: string;
   data?: any[];
 }
-const getAllUsers = async () =>{
+const getAllUsers = async (page:number) =>{
     await dbConnect();
-    const Users = await users.find().limit(20);
+    const Users = await users.find().skip(page*20).limit(20);
     return Users;
 }
 
@@ -33,14 +33,21 @@ export default async function handler(
       .status(200)
       .json({ error: "This API call only accepts GET methods" });
   }
+  let page = 0;
+  let queryVal = "";
 
-    // get all users
-    try{
-      var Users = await getAllUsers();
-      res.status(200);//.json({ success: true, data: Users });
-      res.end(JSON.stringify(Users));
-    }catch(err: any){
-      return res.status(400).json({ error: "Error on '/api/getAllusers': " + err })
-    }
+  if(req.query.page){
+    page = parseInt(req.query.page.toString());
+  }
+
+   // get all users
+  try{
+    console.log(page)
+    var Users = await getAllUsers(page);
+    res.status(200);//.json({ success: true, data: Users });
+    res.end(JSON.stringify(Users));
+  }catch(err: any){
+    return res.status(400).json({ error: "Error on '/api/getAllusers': " + err })
+  }
 }
 

@@ -60,20 +60,20 @@ const Pana: NextPage = () => {
 
     const router = useRouter();
     useEffect(()=>{
-
             getUser();
-      
+
+           
     }, []);
 
   useEffect(() => {
 
     if(!user){
-        console.log('get user')
+        //console.log('get user')
         getUser();
     }else{
-        console.log('get imagesss');
+        //console.log('get imagesss');
         if(!images || images.length == 0){
-            console.log('get images');
+            //console.log('get images');
             getUserImages(); 
         }
     }
@@ -90,11 +90,8 @@ const Pana: NextPage = () => {
         console.log(session)
     }
 
-    if(images){
-        //console.log(images);
-    }
-
-    if(!usersInCategory){
+    if(category && (usersInCategory.length == 0 || usersInCategory.length == 1)){
+        console.log('get users by category')
         getUsersByCategory();
     }
 
@@ -108,7 +105,7 @@ const Pana: NextPage = () => {
 
     useEffect(()=>{
         if(!router.isReady) return;
-        console.log(router.query);
+        //console.log(router.query);
         if(router.query.username){
             setUsername(router.query.username.toString());
         }
@@ -128,7 +125,7 @@ const Pana: NextPage = () => {
             }
         )
         .then(async (response) => {
-            console.log(response.data);
+            //console.log(response.data);
             //console.log(response.data.data._id)
             setUser(response.data);
             setEmail(response.data.email);
@@ -140,13 +137,13 @@ const Pana: NextPage = () => {
             setLink1(response.data.link1);
             setLink2(response.data.link2);
             setAvatar(response.data.avatar);
-            console.log(response.data.bannerImage);
+            //console.log(response.data.bannerImage);
             setBannerImage(response.data.bannerImage);
             setAdmin(response.data.admin);
             setUserId(response.data._id);
             setLocation(response.data.location);
             setDateJoined(response.data.dateJoined);
-            console.log(response.data.dateJoined);
+            //console.log(response.data.dateJoined);
         })
         .catch((error) => {
             console.log(error);
@@ -192,23 +189,30 @@ const Pana: NextPage = () => {
             if(usersInCategory){
                 //arr = usersInCategory;
             }
-            arr = getUsersAndFormatArray();
-            if(arr){
-                setUsersInCategory(arr);
-                console.log('array ');
-                console.log(arr);
+            
+            arr = await getUsersAndFormatArray(category[0]);
+            console.log(arr);
+            if(category.length > 1){
+                var newarr = await getUsersAndFormatArray(category[1]);
+                newarr.map((item:any) => {
+                    arr.push(item);
+                })
             }
+            
+            setUsersInCategory(arr);
+            console.log('array ');
+            console.log(arr);
         }    
   }
 
-  const getUsersAndFormatArray = () => {
+  const getUsersAndFormatArray = async(cat:any) => {
     let arr2:any[] = [];
-    category.map(async(item)=> {
-        console.log(item)
+    //category.map(async(item)=> {
+        console.log(cat)
         
         const res = await axios
         .get(
-            "/api/getUsersByCategory?category="+item,
+            "/api/getUsersByCategory?category="+cat,
             {
             headers: {
                 Accept: "application/json",
@@ -227,13 +231,13 @@ const Pana: NextPage = () => {
                 return item.username != username;
             })
 
-            arr2.push(newArr);
+            arr2 = (newArr);
+            console.log(newArr)
         })
         .catch((error) => {
-            console.log(error);
             setAlert("error fetching users");
         });
-        })
+        //})
     return arr2;
   }
 
@@ -248,10 +252,10 @@ const Pana: NextPage = () => {
                 <Grid.Col sm={12}><h1 style={{marginLeft:"2%"}}>{username}</h1></Grid.Col>
             </Grid>
             <hr></hr>
-            {!fullname && 
+            {!email && 
                 <BeatLoader></BeatLoader>
             }
-            {session && fullname &&
+            {session && email &&
             <>
             <Grid>
                     <Grid.Col sm={4}>
@@ -288,8 +292,8 @@ const Pana: NextPage = () => {
                             <Card className={styles.cardStyle}>
                                     <div>
                                         <h4>Others In The Same Category</h4>
-                                        {usersInCategory.map((item, index) => {
-                                            console.log('iTEIM')
+                                        {usersInCategory.slice(0, 10).map((item, index) => {
+                                            console.log('iTEM')
                                             console.log(item);
 
                                             return(
@@ -297,7 +301,7 @@ const Pana: NextPage = () => {
                                                     <Link href={"/pana/"+item.username}>
                                                         <a>
                                                             {!item.avatar && <CgProfile size="3.4em"/>}
-                                                            {item.avatar && <img key={item.username + "avatar"} src={item.avatar} style={{width:"50px", borderRadius:"25px"}}></img>}
+                                                            {item.avatar && <img key={item.username + "avatar"} src={item.avatar} style={{width:"50px", height:"50px", borderRadius:"25px"}}></img>}
                                                             <span key={item.username} style={{marginBottom:"20px"}}> {item.username} </span>
                                                         </a>
                                                     </Link>
@@ -307,6 +311,9 @@ const Pana: NextPage = () => {
                                     </div>
                             </Card>
                          }
+                          {!usersInCategory && 
+                            <BeatLoader></BeatLoader>
+                        }
                     </Grid.Col>
                     <Grid.Col sm={8} className={styles.gallery}>
                         <>
@@ -331,11 +338,11 @@ const Pana: NextPage = () => {
                             </Card>
                             <Card className={styles.cardStyle}>
                                 <h3>Gallery</h3>
-                                <Carousel centerMode={true} centerSlidePercentage={20} infiniteLoop={true} showThumbs={false}>
+                                <Carousel centerMode={true} centerSlidePercentage={33} infiniteLoop={true} showThumbs={false}>
                                     {images && 
                                     images.map((item:any) => {
                                         return(
-                                            <div key={item._id}><img className={styles.galleryImages} src={item}></img></div>
+                                            <div key={item._id} style={{margin:"0 2%"}}><img className={styles.galleryImages} src={item}></img></div>
                                         );
                                     })
                                 }
@@ -348,10 +355,6 @@ const Pana: NextPage = () => {
                     </Grid.Col>
             </Grid>
         </>
-        }
-
-        {!username &&
-            <p>Loading...</p>
         }
         </div>
     </div>

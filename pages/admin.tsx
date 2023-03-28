@@ -28,8 +28,12 @@ import axios from "axios";
 import AxiosResponse from "axios";
 import { link } from 'fs';
 
+import { BeatLoader } from 'react-spinners';
+
 const Admin: NextPage = () => {
     const {data:session, status} = useSession();
+
+    const [loading, setLoading] = useState(true);
     const [editProfile, setEditProfile] = useState(false);
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
@@ -104,7 +108,8 @@ const Admin: NextPage = () => {
           )
           .then(async (res) => {
             console.log(res);
-            setUsers(res.data.data);
+            setUsers(res.data);
+            setLoading(false);
           })
           .catch((error) => {
             console.log(error);
@@ -187,6 +192,7 @@ const Admin: NextPage = () => {
             </Grid>
             <hr></hr>
             <Grid>
+                {loading && <BeatLoader></BeatLoader>}
                 {admin && 
                 <>
                     <Grid.Col sm={3}> 

@@ -29,6 +29,7 @@ import { userAgent } from 'next/server';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from "axios";
 import AxiosResponse from "axios";
+import { Pagination } from '@mantine/core';
 
 const Profile: NextPage = () => {
     const {data:session, status} = useSession();
@@ -40,11 +41,12 @@ const Profile: NextPage = () => {
     const [alert, setAlert] = useState("");
     const [search, setSearch] = useState("");
     const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});
+    const [activePage, setPage] = useState(1);
 
   const getUsers = async () => {
     const res = await axios
       .get(
-        "/api/getAllUsers",
+        "/api/getAllUsers?page="+(activePage-1),
         {
           headers: {
             Accept: "application/json",
@@ -54,8 +56,8 @@ const Profile: NextPage = () => {
       )
       .then(async (res) => {
         console.log('all users')
-        console.log(res);
         setUsers(res.data);
+        console.log(res.data)
         setOGUsers(res.data);
 
         setLoading(false);
@@ -74,11 +76,17 @@ const Profile: NextPage = () => {
 
     useEffect(() => {
       
-        if(!users){
-            getUsers();
-        }
+        // if(!users){
+        //     getUsers();
+        // }
         if(users && category){
             //console.log(category);    
+        }
+
+        if(activePage != 1){
+            console.log(activePage)
+            //setLoading(true);
+            getUsers();
         }
 
     }, [users, category]);
@@ -250,9 +258,7 @@ const Profile: NextPage = () => {
                 </Card>
             <hr></hr>
             <div style={{marginTop:"20px"}}>
-                {loading && 
-                    <BeatLoader style={{margin:"0 45%"}} color={"#ffffff"}/>
-                }
+               
                 {users &&
                     users.map((item, index)=>{
                     return(
@@ -284,9 +290,15 @@ const Profile: NextPage = () => {
                     )
                     })
                 }
-                
+                {users && 
+                     <Pagination page={activePage} onChange={setPage} total={10} style={{margin:"0 35%",marginTop:"5%", paddingBottom:"5%", width:"100%"}}/>
+                }
+                 {loading && 
+                    <BeatLoader style={{margin:"0 45%"}} color={"#ffffff"}/>
+                }
             </div>
         </div>
+        
     }
     </div>
   )
