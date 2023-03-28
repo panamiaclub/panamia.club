@@ -14,8 +14,9 @@ import {
     Burger,
     Grid, Input, 
     Card,
-    Button, Text, Box, Alert
+    Button, Text, Box, Alert, MantineProvider, MANTINE_COLORS
   } from '@mantine/core';
+  import { BeatLoader } from 'react-spinners';
   import Router from "next/router";
 import { Field, Form, Formik } from "formik";
 import { TextInput, NumberInput, StylesApiProvider } from '@mantine/core';
@@ -32,6 +33,7 @@ import AxiosResponse from "axios";
 const Profile: NextPage = () => {
     const {data:session, status} = useSession();
     const [editProfile, setEditProfile] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [users, setUsers] = useState<any[]>([]);
     const [ogUsers, setOGUsers] = useState<any[]>([]);
     const [category, setCategory] = useState<any[]>([]);
@@ -55,6 +57,8 @@ const Profile: NextPage = () => {
         console.log(res);
         setUsers(res.data);
         setOGUsers(res.data);
+
+        setLoading(false);
       })
       .catch((error) => {
         console.log(error);
@@ -246,6 +250,9 @@ const Profile: NextPage = () => {
                 </Card>
             <hr></hr>
             <div style={{marginTop:"20px"}}>
+                {loading && 
+                    <BeatLoader style={{margin:"0 45%"}} color={"#ffffff"}/>
+                }
                 {users &&
                     users.map((item, index)=>{
                     return(
@@ -277,6 +284,7 @@ const Profile: NextPage = () => {
                     )
                     })
                 }
+                
             </div>
         </div>
     }

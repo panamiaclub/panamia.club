@@ -28,9 +28,11 @@ import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import axios from "axios";
 import AxiosResponse from "axios";
 import { link } from 'fs';
+import { BeatLoader } from 'react-spinners';
 
 const Profile: NextPage = () => {
     const {data:session, status} = useSession();
+    const [loadingImages, setLoadingImages] = useState(true);
     const [editProfile, setEditProfile] = useState(false);
     const [resetPW, setResetPW] = useState(false);
     const [username, setUsername] = useState("");
@@ -171,6 +173,7 @@ const Profile: NextPage = () => {
                 })
                 setImages(arr);
                 //console.log(images);
+                setLoadingImages(false);
             })
             .catch((error) => {
                 //console.log(error);
@@ -421,7 +424,10 @@ const Profile: NextPage = () => {
             </Grid>
             <hr></hr> 
             <Grid>
-                {!editProfile &&
+                {!username && 
+                    <BeatLoader></BeatLoader>
+                }
+                {!editProfile && username &&
                 <>
                     <Grid.Col sm={4}>
                         <Card className={styles.cardStyle}>
@@ -578,6 +584,9 @@ const Profile: NextPage = () => {
                                             <Grid.Col sm={3}  key={item._id}><img className={styles.galleryImages} src={item}></img></Grid.Col>
                                         );
                                     })
+                                }
+                                {loadingImages &&
+                                    <BeatLoader></BeatLoader>
                                 }
                                 </Grid>
                             </Card>

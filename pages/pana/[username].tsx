@@ -30,9 +30,13 @@ import {FiArchive, FiUpload, FiPlusCircle, FiMapPin} from 'react-icons/fi';
 import "react-responsive-carousel/lib/styles/carousel.min.css"; // requires a loader
 import { Carousel } from 'react-responsive-carousel';
 
+import { BeatLoader } from 'react-spinners';
+
 const Pana: NextPage = () => {
     const {data:session, status} = useSession();
     const [editProfile, setEditProfile] = useState(false);
+
+    const [loadingImages, setLoadingImages] = useState(true);
     const [username, setUsername] = useState("");
     const [fullname, setFullname] = useState("");
     const [email, setEmail] = useState("");
@@ -172,6 +176,7 @@ const Pana: NextPage = () => {
                 //console.log(item.image);
             })
             setImages(arr);
+            setLoadingImages(false);
             //console.log(images);
         })
         .catch((error) => {
@@ -237,12 +242,17 @@ const Pana: NextPage = () => {
     <div className={styles.App}>
       
         <div className={styles.container} style={{minHeight:"85vh"}}>
-        {session && 
-        <>
+       
+        
             <Grid>
                 <Grid.Col sm={12}><h1 style={{marginLeft:"2%"}}>{username}</h1></Grid.Col>
             </Grid>
             <hr></hr>
+            {!fullname && 
+                <BeatLoader></BeatLoader>
+            }
+            {session && fullname &&
+            <>
             <Grid>
                     <Grid.Col sm={4}>
                         <Card className={styles.cardStyle}>
@@ -330,15 +340,9 @@ const Pana: NextPage = () => {
                                     })
                                 }
                                 </Carousel>
-                                {/* <Grid>
-                                {images && 
-                                    images.map((item:any) => {
-                                        return(
-                                            <Grid.Col sm={4} key={item._id}><img className={styles.galleryImages} src={item}></img></Grid.Col>
-                                        );
-                                    })
+                                {loadingImages &&
+                                    <BeatLoader></BeatLoader>
                                 }
-                                </Grid> */}
                             </Card>
                         </>
                     </Grid.Col>
