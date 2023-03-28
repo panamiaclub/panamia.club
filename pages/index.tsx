@@ -173,9 +173,7 @@ const Home: NextPage = () => {
           {panas && 
             panas.map((item:any, index:number) => {
               return(
-                <Grid key={index}>
-                    <Grid.Col xl={4} md={6} xs={12}>
-                        <Card className={styles.cardStyle}>
+                        <Card className={styles.cardStyle} key={index}>
                           <Link  href={"/pana/"+item.username} key={item+"link"}>
                               <div style={{cursor:"pointer"}}>
                                   {item.avatar && <img className={styles.avatarFeatured} src={item.avatar} ></img>}
@@ -191,8 +189,6 @@ const Home: NextPage = () => {
                           {item.link2 && <span className={styles.socialLink}><Link href={item.link2}><FiGlobe></FiGlobe></Link></span>}
                       
                         </Card>
-                    </Grid.Col>
-                </Grid>
             )
             })
             }
