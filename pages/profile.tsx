@@ -36,6 +36,7 @@ const Profile: NextPage = () => {
     const [editProfile, setEditProfile] = useState(false);
     const [resetPW, setResetPW] = useState(false);
     const [username, setUsername] = useState("");
+    const [pronouns, setPronouns] = useState("");
     const [email, setEmail] = useState("");
     const [bio, setBio] = useState("");
     const [instagram, setInstagram] = useState("");
@@ -126,6 +127,8 @@ const Profile: NextPage = () => {
             .then(async (response) => {
                 //console.log(response.data.data);
                 setUsername(response.data.data.username);
+                setUserId(response.data.data.id);
+                setPronouns(response.data.data.pronouns);
                 setEmail(response.data.data.email);
                 setBio(response.data.data.bio);
                 setCategory(response.data.data.category);
@@ -191,7 +194,7 @@ const Profile: NextPage = () => {
             const res = await axios
                 .put(
                     "/api/editProfile",
-                    { username, email, bio ,instagram, twitter, link1, link2, category, location},
+                    { username, email, pronouns, bio ,instagram, twitter, link1, link2, category, location},
                     {
                     headers: {
                         Accept: "application/json",
@@ -435,7 +438,7 @@ const Profile: NextPage = () => {
                                 <div className={styles.banner}>
                                     {!bannerImage && <img src="/banner.png" className={styles.bannerImage}></img>}
                                     {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
-                                    <div onClick={handleClickBannerChange}  style={{marginTop:'-8%', marginLeft:"2%", cursor:"pointer"}}>
+                                    <div onClick={handleClickBannerChange}  style={{marginTop:'-15%', marginLeft:"2%", cursor:"pointer"}}>
                                         <FiCamera color="white"></FiCamera>
 
                                         <Input id="bannerFileInput"
@@ -469,7 +472,7 @@ const Profile: NextPage = () => {
                                 </div>
                             </div>
                             <div>
-                                <h4>{username}</h4>
+                            <h4>{username} <span>{pronouns}</span></h4>
                                 <p>{bio}</p>
                                 {category && 
                                     <div>
@@ -665,6 +668,18 @@ const Profile: NextPage = () => {
                                     </>
                                     )}
                                 </Field>
+                                <Field name="pronouns">
+                                    {() => (
+                                    <>
+                                        <Text>Pronouns:</Text>
+                                        <Input size="xs"
+                                        value={pronouns}
+                                        onChange={(e:any) => setPronouns(e.target.value)}
+                                        placeholder={pronouns || "pronouns"}
+                                        />
+                                    </>
+                                    )}
+                                </Field>
                                 <Field name="bio">
                                     {() => (
                                     <>
@@ -746,7 +761,7 @@ const Profile: NextPage = () => {
                                         <Input size="xs"
                                         value={instagram}
                                         onChange={(e:any) => setInstagram(e.target.value)}
-                                        placeholder={instagram}
+                                        placeholder={"instagram username"}
                                         />
                                     </>
                                     )}
@@ -758,7 +773,7 @@ const Profile: NextPage = () => {
                                         <Input size="xs"
                                         value={twitter}
                                         onChange={(e:any) => setTwitter(e.target.value)}
-                                        placeholder={twitter}
+                                        placeholder={"twitter username"}
                                         />
                                     </>
                                     )}

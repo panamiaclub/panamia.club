@@ -56,7 +56,7 @@ export default async function handler(
   }
   else if(req.query.username){
     username = req.query.username.toString();
-    console.log(username);
+    //console.log(username);
     try{
         var user = await getUserByUsername(username.toString());
         res.status(200);//.json({ success: true, data: user });

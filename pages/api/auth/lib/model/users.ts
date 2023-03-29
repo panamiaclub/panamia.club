@@ -14,6 +14,11 @@ const usersSchema = new Schema(
             required: false,
             unique: false
         },
+        pronouns: {
+            type: String,
+            required: false,
+            unique: false
+        },
         email: {
             type: String,
             required: true,

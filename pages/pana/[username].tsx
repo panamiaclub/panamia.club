@@ -3,7 +3,7 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link';
 import styles from '../../styles/Profile.module.css';
-import { TextInput, NumberInput, Button, Input } from '@mantine/core';
+import { TextInput, NumberInput, Button, Input, Alert } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { IconAlertTriangle } from '@tabler/icons';
 import axios from "axios";
@@ -25,7 +25,7 @@ import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic'
 import { setNestedObjectValues } from 'formik';
 import { CgProfile } from 'react-icons/cg';
-import {FiEdit2, FiInstagram, FiTwitter, FiGlobe, FiMail, FiPlus} from 'react-icons/fi'
+import {FiEdit2, FiInstagram, FiTwitter, FiGlobe, FiMail, FiPlus, FiMinusCircle} from 'react-icons/fi'
 import {FiArchive, FiUpload, FiPlusCircle, FiMapPin} from 'react-icons/fi';
 import "react-responsive-carousel/lib/styles/carousel.min.css"; // requires a loader
 import { Carousel } from 'react-responsive-carousel';
@@ -34,10 +34,13 @@ import { BeatLoader } from 'react-spinners';
 
 const Pana: NextPage = () => {
     const {data:session, status} = useSession();
-    const [editProfile, setEditProfile] = useState(false);
-
+    const [checkedFollowing, setCheckedFollowing] = useState(false);
+    const [checkedImages, setCheckedImages] = useState(false);
+    const [checkedFollowers, setCheckedFollowers] = useState(false);
     const [loadingImages, setLoadingImages] = useState(true);
+    const [following, setFollowing] = useState(false);
     const [username, setUsername] = useState("");
+    const [pronouns, setPronouns] = useState("");
     const [fullname, setFullname] = useState("");
     const [email, setEmail] = useState("");
     const [bio, setBio] = useState("");
@@ -47,6 +50,7 @@ const Pana: NextPage = () => {
     const [link2, setLink2] = useState("");
     const [category, setCategory] = useState<any[]>([]);
     const [usersInCategory, setUsersInCategory] = useState<any[]>([]);
+    const [followers, setFollowers] = useState<any[]>([]);
     const [location, setLocation] = useState("");
     const [dateJoined, setDateJoined] = useState<any>();
     const [avatar, setAvatar] = useState("");
@@ -60,7 +64,7 @@ const Pana: NextPage = () => {
 
     const router = useRouter();
     useEffect(()=>{
-            getUser();
+        getUser();
 
            
     }, []);
@@ -72,32 +76,40 @@ const Pana: NextPage = () => {
         getUser();
     }else{
         //console.log('get imagesss');
-        if(!images || images.length == 0){
+        if(!images || !checkedImages){
             //console.log('get images');
             getUserImages(); 
+            setCheckedImages(true);
         }
+    }
+
+    if(session){
+        //console.log('session user')
+        //console.log(session);
     }
 
     if(username){
         console.log(username);
     }
 
-    if(userId){
+    if(userId && checkedFollowing == false){
         console.log(userId);
+        checkIfFollowing();
     }
 
-    if(session){
-        console.log(session)
-    }
 
     if(category && (usersInCategory.length == 0 || usersInCategory.length == 1)){
-        console.log('get users by category')
+        //console.log('get users by category')
         getUsersByCategory();
     }
 
+    if(userId && !checkedFollowers){
+        getFollowers();
+    }
+
     if(usersInCategory){
-        console.log('users in categorye')
-        console.log(usersInCategory);
+        //console.log('users in categorye')
+        //console.log(usersInCategory);
     }
     
   }, [username, user, fullname, userId, email, images, avatar, bio, link1, link2, twitter, instagram, location, dateJoined, session, bannerImage, usersInCategory])
@@ -126,10 +138,11 @@ const Pana: NextPage = () => {
         )
         .then(async (response) => {
             //console.log(response.data);
-            //console.log(response.data.data._id)
+           setUserId(response.data.id); 
             setUser(response.data);
             setEmail(response.data.email);
             setFullname(response.data.fullname);
+            setPronouns(response.data.pronouns);
             setBio(response.data.bio);
             setCategory(response.data.category);
             setInstagram(response.data.instagramHandle);
@@ -137,12 +150,38 @@ const Pana: NextPage = () => {
             setLink1(response.data.link1);
             setLink2(response.data.link2);
             setAvatar(response.data.avatar);
-            //console.log(response.data.bannerImage);
             setBannerImage(response.data.bannerImage);
             setAdmin(response.data.admin);
             setUserId(response.data._id);
             setLocation(response.data.location);
             setDateJoined(response.data.dateJoined);
+            //console.log(response.data.dateJoined);
+        })
+        .catch((error) => {
+            console.log(error);
+            setAlert(error.response.error);
+        });
+        //console.log(res);
+    }
+  }
+
+  const getFollowers = async() => {
+    console.log('get user')
+    if(userId){
+        const res = await axios
+        .get(
+            "/api/getFollowrs?userId="+userId,
+            {
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            }
+            }
+        )
+        .then(async (response) => {
+            //console.log(response.data);
+            setFollowers(response.data);
+            setCheckedFollowers(true);
             //console.log(response.data.dateJoined);
         })
         .catch((error) => {
@@ -183,7 +222,7 @@ const Pana: NextPage = () => {
   }
 
   const getUsersByCategory = async() => {
-        console.log('get users by category')
+       // console.log('get users by category')
         if(category && username){
             let arr:any[] = [];
             if(usersInCategory){
@@ -191,7 +230,7 @@ const Pana: NextPage = () => {
             }
             
             arr = await getUsersAndFormatArray(category[0]);
-            console.log(arr);
+            //console.log(arr);
             if(category.length > 1){
                 var newarr = await getUsersAndFormatArray(category[1]);
                 newarr.map((item:any) => {
@@ -200,15 +239,15 @@ const Pana: NextPage = () => {
             }
             
             setUsersInCategory(arr);
-            console.log('array ');
-            console.log(arr);
+            //console.log('array ');
+            //console.log(arr);
         }    
   }
 
   const getUsersAndFormatArray = async(cat:any) => {
     let arr2:any[] = [];
     //category.map(async(item)=> {
-        console.log(cat)
+       // console.log(cat)
         
         const res = await axios
         .get(
@@ -232,13 +271,85 @@ const Pana: NextPage = () => {
             })
 
             arr2 = (newArr);
-            console.log(newArr)
+           // console.log(newArr)
         })
         .catch((error) => {
             setAlert("error fetching users");
         });
         //})
     return arr2;
+  }
+
+  const checkIfFollowing = async() => {
+    if(userId){
+        const res = await axios
+        .get(
+            "/api/checkIfFollowing?followerId="+session?.user?.id+"&userId="+userId,
+            {
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            }
+            }
+        )
+        .then(async (response) => {
+            setFollowing(response.data);
+            setCheckedFollowing(true);
+        })
+        .catch((error) => {
+            setAlert("error fetching following status");
+        });
+    }
+  }
+
+  const handleFollow = async() => {
+    if(session?.user?.id && userId){
+        console.log('handle follow');
+        var followerId = session.user.id;
+        const res = await axios
+        .post(
+            "/api/addFollower",
+            { followerId: followerId, userId: userId},
+            {
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            }
+            }
+        )
+        .then(async (response) => {
+            setFollowing(true);
+            setMessage("Followed.")
+        })
+        .catch((error) => {
+            setAlert("error fetching following status");
+        });
+    }
+  }
+
+  const handleUnFollow = async() => {
+    if(session?.user?.id && userId){
+        console.log('handle unfollow');
+        var followerId = session.user.id;
+        const res = await axios
+        .post(
+            "/api/removeFollower",
+            { followerId: followerId, userId: userId},
+            {
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            }
+            }
+        )
+        .then(async (response) => {
+            setFollowing(false);
+            setMessage('Unfollowed.');
+        })
+        .catch((error) => {
+            setAlert("error fetching following status");
+        });
+    }
   }
 
 
@@ -268,7 +379,12 @@ const Pana: NextPage = () => {
                                 {!avatar && <CgProfile size="3em"/>}
                                 {avatar && <img src={avatar}  className={styles.avatar}></img>}
                             </div>
-                            <h4>{username} <span className={styles.socialLink}><FiPlusCircle></FiPlusCircle></span> </h4>
+                            <h4>{username} <span>{pronouns}</span>
+                            <span className={styles.socialLink}>
+                                {!following && <FiPlusCircle size={'1.5em'} onClick={handleFollow}></FiPlusCircle>}
+                                {following && <FiMinusCircle color='red' size={'1.5em'} onClick={handleUnFollow}></FiMinusCircle>}
+                            </span> 
+                            </h4>
                             <h4>{fullname}</h4>
                             <p>Pana Since {new Date(dateJoined).toLocaleDateString()}</p>
                             {category && 
@@ -287,15 +403,13 @@ const Pana: NextPage = () => {
                              <span><p><><FiMapPin></FiMapPin>{location}</></p></span>
                             }
                             <br></br>
+                            {message && <Alert color={'green'}>{message}</Alert>}
                         </Card>
                         {usersInCategory && 
                             <Card className={styles.cardStyle}>
                                     <div>
                                         <h4>Others In The Same Category</h4>
-                                        {usersInCategory.slice(0, 10).map((item, index) => {
-                                            console.log('iTEM')
-                                            console.log(item);
-
+                                        {usersInCategory.slice(0, 10).map((item, index) => {       
                                             return(
                                                 <div key={index}>
                                                     <Link href={"/pana/"+item.username}>
@@ -312,6 +426,30 @@ const Pana: NextPage = () => {
                             </Card>
                          }
                           {!usersInCategory && 
+                            <BeatLoader></BeatLoader>
+                        }
+
+                        {followers && 
+                            <Card className={styles.cardStyle}>
+                                    <div>
+                                        <h4>Followers</h4>
+                                        {usersInCategory.slice(0, 10).map((item, index) => {       
+                                            return(
+                                                <div key={index}>
+                                                    <Link href={"/pana/"+item.user.username}>
+                                                        <a>
+                                                            {!item.avatar && <CgProfile size="3.4em"/>}
+                                                            {item.avatar && <img key={item.user.username + "avatar"} src={item.user.avatar} style={{width:"50px", height:"50px", borderRadius:"25px"}}></img>}
+                                                            <span key={item.user.username} style={{marginBottom:"20px"}}> {item.user.username} </span>
+                                                        </a>
+                                                    </Link>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                            </Card>
+                         }
+                         {!followers && 
                             <BeatLoader></BeatLoader>
                         }
                     </Grid.Col>

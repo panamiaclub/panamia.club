@@ -296,7 +296,7 @@ const Profile: NextPage = () => {
                     <BeatLoader style={{margin:"0 45%"}} color={"#ffffff"}/>
                 }
                 {users && 
-                     <Pagination page={activePage} onChange={(value:number) => {handlePageClick(value)}} total={2} style={{margin:"0 35%",marginTop:"5%", paddingBottom:"5%", width:"100%"}}/>
+                     <Pagination page={activePage} onChange={(value:number) => {handlePageClick(value)}} total={2} style={{margin:"0 50%",marginTop:"5%", paddingBottom:"5%", width:"100%"}}/>
                 }
                 
             </div>

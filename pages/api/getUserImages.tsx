@@ -32,7 +32,7 @@ export default async function handler(
   let userId = "";
   if(req.query.userId){
     userId = req.query.userId.toString();
-    console.log(userId);
+    //console.log(userId);
   }
 
   // validate if it is a GET

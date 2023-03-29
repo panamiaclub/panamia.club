@@ -56,7 +56,7 @@ export default async function handler(
   }
 
   // get and validate body variables
-  const { username, email, bio, instagram, twitter, link1, link2, category, featured, location, avatar, bannerImage } = req.body;
+  const { username, email, pronouns, bio, instagram, twitter, link1, link2, category, featured, location, avatar, bannerImage } = req.body;
 
     const errorMessage = await validateForm(username, email, bio);
 
@@ -68,6 +68,7 @@ export default async function handler(
     const newUser = {
         username: username,
         email: email,
+        pronouns: pronouns,
         bio: bio,
         instagramHandle: instagram,
         twitterHandle: twitter,

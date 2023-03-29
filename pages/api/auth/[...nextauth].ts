@@ -66,18 +66,16 @@ export default NextAuth({
         signIn: '/signin'
     },
     callbacks: {
-        // jwt: async ({ token, user }) => {
-        //     user && (token.user = user)
-        //     return token;
-        // },
-      //  async redirect(){
-      //     return process.env.NEXT_PUBLIC_URL + "/invoicing" || "http://panamia.vercel.app/invoicing";
-      //   }
-    
+      session: async ({ session, token }) => {
+        if (session?.user) {
+          session.user.id = token.sub;
+        }
+        return session;
+      },
     },
     session: {
-        strategy: "jwt",
-      },
+      strategy: 'jwt',
+    },
     secret: process.env.NEXT_PUBLIC_SECRET,
     jwt: {
         secret: process.env.NEXT_PUBLIC_JWT_SECRET

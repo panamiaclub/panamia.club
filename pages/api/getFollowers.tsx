@@ -1,7 +1,7 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "./auth/lib/connectdb";
-import users from "./auth/lib/model/users";
+import followers from "./auth/lib/model/followers";
 import bcrypt from "bcrypt";
 import { ObjectId } from "mongodb";
 
@@ -12,15 +12,24 @@ interface ResponseData {
   data?: any[];
 }
 
-const getUsersByCategory = async (category: string) =>{
+const getFollowers = async (userId: string) =>{
   await dbConnect();
-  //console.log(category);
+  console.log(userId);
   
-  const Users = await users.find({category: category}).limit(5);
-  if(Users){
-    //console.log(Users)
+  
+  const Followers = await followers.aggregate([{
+    $lookup:{
+      from: 'users',
+      localField: 'followerId', 
+      foreignField: 'id',
+      as: 'user'
+    }
+  }]);
+
+  if(Followers){
+    console.log(Followers)
   }
-  return Users;
+  return Followers;
 }
 
 export const config = {
@@ -40,17 +49,17 @@ export default async function handler(
       .status(200)
       .json({ error: "This API call only accepts GET methods" });
   }
-  let category = "";
+  let userId = "";
 
-  if(req.query.category){
-    category = req.query.category.toString();
-    console.log(category);
+  if(req.query.userId){
+    userId = req.query.userId.toString();
+    console.log(userId);
     try{
-        var users = await getUsersByCategory(category.toString());
+        var Followers = await getFollowers(userId.toString());
         res.status(200);//.json({ success: true, data: users });
-        return res.end(JSON.stringify(users));
+        return res.end(JSON.stringify(Followers));
     }catch(err: any){
-      return res.status(400).json({ error: "Error on '/api/getUsersByCategory': " + err })
+      return res.status(400).json({ error: "Error on '/api/getFollowers': " + err })
     }
   }
   
