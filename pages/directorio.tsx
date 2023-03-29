@@ -33,7 +33,6 @@ import { Pagination } from '@mantine/core';
 
 const Profile: NextPage = () => {
     const {data:session, status} = useSession();
-    const [editProfile, setEditProfile] = useState(false);
     const [loading, setLoading] = useState(true);
     const [users, setUsers] = useState<any[]>([]);
     const [ogUsers, setOGUsers] = useState<any[]>([]);
@@ -42,6 +41,7 @@ const Profile: NextPage = () => {
     const [search, setSearch] = useState("");
     const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});
     const [activePage, setPage] = useState(1);
+    const [previousPage, setPreviousPage] = useState(1);
 
   const getUsers = async () => {
     const res = await axios
@@ -79,17 +79,19 @@ const Profile: NextPage = () => {
         // if(!users){
         //     getUsers();
         // }
-        if(users && category){
-            //console.log(category);    
-        }
-
-        if(activePage != 1){
-            console.log(activePage)
-            //setLoading(true);
-            getUsers();
+        if(activePage){
+            console.log(activePage);    
         }
 
     }, [users, category]);
+
+    const handlePageClick = (value:number) => {
+        setLoading(true); 
+        console.log(value);
+        setPreviousPage(activePage); 
+        setPage(value);
+        getUsers();
+    }
 
     const filterUsers = () => {
         if(category.length > 0){
@@ -290,12 +292,13 @@ const Profile: NextPage = () => {
                     )
                     })
                 }
-                {users && 
-                     <Pagination page={activePage} onChange={setPage} total={10} style={{margin:"0 35%",marginTop:"5%", paddingBottom:"5%", width:"100%"}}/>
-                }
                  {loading && 
                     <BeatLoader style={{margin:"0 45%"}} color={"#ffffff"}/>
                 }
+                {users && 
+                     <Pagination page={activePage} onChange={(value:number) => {handlePageClick(value)}} total={2} style={{margin:"0 35%",marginTop:"5%", paddingBottom:"5%", width:"100%"}}/>
+                }
+                
             </div>
         </div>
         
