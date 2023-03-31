@@ -19,11 +19,7 @@
 
 .Directorio{
   
-    background: rgb(253,187,45);
-    background: -moz-linear-gradient(0deg, rgba(253,187,45,1) 7%, rgba(162,49,75,1) 47%, rgba(82,42,51,1) 72%, rgba(47,39,41,1) 93%);
-    background: -webkit-linear-gradient(0deg, rgba(253,187,45,1) 7%, rgba(162,49,75,1) 47%, rgba(82,42,51,1) 72%, rgba(47,39,41,1) 93%);
-    background: linear-gradient(0deg, rgba(253,187,45,1) 7%, rgba(162,49,75,1) 47%, rgba(82,42,51,1) 72%, rgba(47,39,41,1) 93%);
-    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#fdbb2d",endColorstr="#2f2729",GradientType=1);
+    background: rgb(245, 243, 238);
     min-height:90vh;
     color:black;
 
@@ -36,9 +32,9 @@
 }
 
 .avatarFeatured{
-  max-width:200px;
+  max-width:150px;
   max-height:150px;
-  border-radius: 25px;
+  border-radius: 75px;
 }
 .formInputText{
   color:"#EE5967";
@@ -57,7 +53,7 @@
 .headingBig{
   color:black;
   letter-spacing: 0.3em;
-  font-size: 3em;
+  font-size: 4em;
   text-align: left;
 
   font-family: 'Montserrat', sans-serif;
@@ -136,16 +132,12 @@
   text-align:left;
   padding-top:15%;
   background: rgb(248,248,248);
-background: -moz-linear-gradient(180deg, rgba(248,248,248,1) 50%, rgba(235,88,103,1) 100%);
-background: -webkit-linear-gradient(180deg, rgba(248,248,248,1) 50%, rgba(235,88,103,1) 100%);
-background: linear-gradient(180deg, rgba(248,248,248,1) 50%, rgba(235,88,103,1) 100%);
-filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#f8f8f8",endColorstr="#eb5867",GradientType=1);
 }
 
 .featuredPanas{
   min-height:50vh;
-  padding: 2em;
   text-align:center;
+  background-color:#FFECC8;
 }
 
 .searchD{
@@ -367,19 +359,12 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
 
 .GoalsDiv{
   
-  background: rgb(253,187,45);
-  background: -moz-linear-gradient(0deg, rgba(253,187,45,1) 7%, rgba(162,49,75,1) 47%, rgba(82,42,51,1) 72%, rgba(47,39,41,1) 93%);
-  background: -webkit-linear-gradient(0deg, rgba(253,187,45,1) 7%, rgba(162,49,75,1) 47%, rgba(82,42,51,1) 72%, rgba(47,39,41,1) 93%);
-  background: linear-gradient(0deg, rgba(253,187,45,1) 7%, rgba(162,49,75,1) 47%, rgba(82,42,51,1) 72%, rgba(47,39,41,1) 93%);
+  background: #FDBB2D;
   filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#fdbb2d",endColorstr="#2f2729",GradientType=1);
 }
 
 .giftGuide{
-  background: rgb(47,39,41);
-background: -moz-linear-gradient(0deg, rgba(47,39,41,1) 7%, rgba(248,248,248,1) 93%);
-background: -webkit-linear-gradient(0deg, rgba(47,39,41,1) 7%, rgba(248,248,248,1) 93%);
-background: linear-gradient(0deg, rgba(47,39,41,1) 7%, rgba(248,248,248,1) 93%);
-filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#2f2729",endColorstr="#f8f8f8",GradientType=1);
+  background:#EB5867;
 }
 
 .giftguideimage{

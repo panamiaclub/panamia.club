@@ -166,11 +166,11 @@ const Pana: NextPage = () => {
   }
 
   const getFollowers = async() => {
-    console.log('get user')
+    console.log('get followers')
     if(userId){
         const res = await axios
         .get(
-            "/api/getFollowrs?userId="+userId,
+            "/api/getFollowers?userId="+userId,
             {
             headers: {
                 Accept: "application/json",

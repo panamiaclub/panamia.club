@@ -17,7 +17,7 @@ import {
     Button, Text, Box, Alert, MantineProvider, MANTINE_COLORS
   } from '@mantine/core';
   import { BeatLoader } from 'react-spinners';
-  import Router from "next/router";
+import {useRouter} from "next/router";
 import { Field, Form, Formik } from "formik";
 import { TextInput, NumberInput, StylesApiProvider } from '@mantine/core';
 import { useForm } from '@mantine/form';
@@ -39,6 +39,7 @@ const Profile: NextPage = () => {
     const [category, setCategory] = useState<any[]>([]);
     const [alert, setAlert] = useState("");
     const [search, setSearch] = useState("");
+    const router = useRouter();
     const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});
     const [activePage, setPage] = useState(1);
     const [previousPage, setPreviousPage] = useState(1);
@@ -59,7 +60,6 @@ const Profile: NextPage = () => {
         setUsers(res.data);
         console.log(res.data)
         setOGUsers(res.data);
-
         setLoading(false);
       })
       .catch((error) => {
@@ -72,6 +72,15 @@ const Profile: NextPage = () => {
      useEffect(() => {
         console.log('get users')
         getUsers();
+
+        if(router.query.search){
+            setSearch(router.query.search.toString());
+        }
+
+        if(users && search){
+            filterUsersSearch();
+        }
+       
     }, []);
 
     useEffect(() => {
@@ -131,7 +140,7 @@ const Profile: NextPage = () => {
     const filterUsersSearch =()=>{
         if(search){
             console.log(search)
-            let newUsers = users.filter(user => user.bio.toString().toLowerCase().includes(search.toLowerCase()));
+            let newUsers = users.filter(user => user.username.toString().toLowerCase().includes(search.toLowerCase()));
             console.log("filtered users.");
             setUsers(newUsers);
         }

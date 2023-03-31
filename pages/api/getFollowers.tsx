@@ -2,6 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "./auth/lib/connectdb";
 import followers from "./auth/lib/model/followers";
+import users from './auth/lib/model/users';
 import bcrypt from "bcrypt";
 import { ObjectId } from "mongodb";
 
@@ -17,14 +18,22 @@ const getFollowers = async (userId: string) =>{
   console.log(userId);
   
   
-  const Followers = await followers.aggregate([{
+  const Followers = await followers.aggregate([
+    { "$match": { "userId": userId }},
+    {
+      $project:{
+        f_id: {"$toObjectId": "$followerId"}
+      }
+   },
+    {
     $lookup:{
       from: 'users',
-      localField: 'followerId', 
+      localField: 'f_id', 
       foreignField: 'id',
       as: 'user'
     }
   }]);
+
 
   if(Followers){
     console.log(Followers)

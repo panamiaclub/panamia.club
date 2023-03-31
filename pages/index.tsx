@@ -103,6 +103,10 @@ const Home: NextPage = () => {
     }
   }, [panas]);
 
+  const formSubmitSearch = (actions: any) => {
+    actions.setSubmitting(false);
+  };
+
   return (
     <div className={styles.App} >
   
@@ -123,16 +127,53 @@ const Home: NextPage = () => {
             }}>
               
              <Grid>
-                <Grid.Col md={6} xs={12}>
-                  <h1 className={styles.headingBig}>Your <span style={{color:"#39B6FF"}}>favorite</span> directory for <span style={{color:"#fad288"}}>local</span> creatives.</h1>
-                  <Link href='/newsletter' target="_blank"><Button style={{backgroundColor:"#EE5967", color:"#FFFFFF"}} size={'lg'}>Sign Up For Our Newsletter</Button></Link>
+                <Grid.Col md={6} xs={12}> 
+                  <h1 className={styles.headingBig}>Pana MIA Club: <span style={{color:"#39B6FF"}}> All</span> things Local in <span style={{color:"#fad288"}}>SoFlo</span></h1>
                 </Grid.Col>
-                <Grid.Col md={6} xs={12}>
-                  <Image src="/macbook.png" height={400} width={500} style={{marginBottom:"10%"}}></Image>
+                <Grid.Col md={2} xs={0}></Grid.Col>
+                <Grid.Col md={4} xs={12} style={{marginTop:"3%"}}>
+                  {/* <Image src="/macbook.png" height={400} width={500} style={{marginBottom:"10%"}}></Image> */}
+                  <h3>Search</h3>
+                      <Formik
+                          initialValues={{}}
+                          validateOnChange={false}
+                          validateOnBlur={false}
+                          onSubmit={(_, actions) => {
+                          formSubmitSearch(actions);
+                        }}
+                      >
+                          {(props) => (
+                          <Form >
+                              <Box mb={4}>
+                                  <Field name="search">
+                                      {() => (
+                                      <>
+                                          <Input
+                                          value={search}  style={{width:"50%",marginRight:"20px", display:'inline-block'}}
+                                          onChange={(e:any) => setSearch(e.target.value)}
+                                          placeholder={"type to explore SoFlo.."}
+                                          />
+                                      </>
+                                      )}
+                                  </Field>
+                                    
+                                    <Link
+                                      href={{
+                                        pathname: '/directorio',
+                                        query: {search: search}// the data
+                                      }}
+                                    >
+                                      <Button type="submit" style={{margin:"0",backgroundColor:"#39B6FF", display:'inline-block'}}>Search</Button> 
+                                    </Link>
+                              </Box>
+                      </Form>
+                          )}
+                      </Formik>
                 </Grid.Col>
             </Grid>
             </motion.div>
         </div>
+        
         <div className={styles.aboutContainer} id="About" ref={ref}>
           <motion.div animate={animation}>
            <Grid>
@@ -154,22 +195,22 @@ const Home: NextPage = () => {
             </Grid>
 
             <Grid>
-                  <Grid.Col span={4} md={5} xs={3}></Grid.Col>
-                  <Grid.Col span={4} md={2} xs={6}>
-                    <div>
-                      <Link href='https://instagram.com/panamiaclub' target="_blank"><Button style={{backgroundColor:"#FFECC8", color:"#011D34", width:"100%", marginTop:"20%", marginBottom:"20%"}} >Follow Us<IconBrandInstagram style={{marginLeft: "10px"}}></IconBrandInstagram></Button></Link>
+                  <Grid.Col span={4} md={3} xs={3}></Grid.Col>
+                  <Grid.Col span={4} md={6} xs={6}>
+                  <div>
+                      <Link href='/giftguide' target="_blank"><Button style={{backgroundColor:"#FFECC8", color:"#000000", width:"50%", marginBottom:"20%", marginLeft:"25%"}} size='lg'>View Our Gift Guide</Button></Link>
                     </div>
                   </Grid.Col>
-                  <Grid.Col span={4} md={5} xs={3}></Grid.Col>
+                  <Grid.Col span={4} md={3} xs={3}></Grid.Col>
               </Grid>
           </motion.div>
         </div>
       
-        <div className={styles.featuredPanas}style={{margin:"5% 0"}} >
+        <div className={styles.featuredPanas} style={{padding:"10% 0"}} >
           <h1 style={{color:"#39B6FF"}}>Featured Panas</h1>
           
           
-          <Carousel centerMode={true} centerSlidePercentage={33} infiniteLoop={true}>
+          <Carousel centerMode={true} centerSlidePercentage={25} infiniteLoop={true}>
           {panas && 
             panas.map((item:any, index:number) => {
               return(
@@ -182,7 +223,6 @@ const Home: NextPage = () => {
                               </div>
                           </Link>
                           {item.bio && <p>{item.bio.substring(0, 400)}</p>}
-                          {item.category.length > 0 && <p> <FiArchive></FiArchive> {item.category.toString()}</p>}
                           {item.instagramHandle && <span className={styles.socialLink}><Link href={"http://instagram.com/"+item.instagramHandle}><FiInstagram></FiInstagram></Link></span>}
                           {item.twitterHandle && <span className={styles.socialLink}><Link href={"http://twitter.com/"+item.twitterHandle}><FiTwitter></FiTwitter></Link></span>}
                           {item.link1 && <span className={styles.socialLink}><Link href={item.link1}><FiGlobe></FiGlobe></Link></span>}
@@ -195,27 +235,10 @@ const Home: NextPage = () => {
           </Carousel>
         </div>
         <div>
-          
-        <div className={styles.giftGuide}>
-          <Grid style={{paddingBottom:"10%", marginBottom:"0"}} >
-            <Grid.Col md={4} sm={12}><img src="tappas.jpg" className={styles.giftguideimage}></img></Grid.Col>
-            <Grid.Col md={4} sm={12}><img src="pellejones.jpeg" className={styles.giftguideimage}></img></Grid.Col>
-            <Grid.Col md={4} sm={12}><img src="mysticthrift.JPG"  className={styles.giftguideimage}></img></Grid.Col>
-          </Grid>
 
-           <Grid>
-                  <Grid.Col span={4} md={2} xs={0}></Grid.Col>
-                  <Grid.Col span={4} md={8} xs={12}>
-                    <div>
-                      <Link href='/giftguide' target="_blank"><Button style={{backgroundColor:"#EB5867", color:"#ffffff", width:"100%", marginBottom:"20%"}} size='lg'>View Our Gift Guide</Button></Link>
-                    </div>
-                  </Grid.Col>
-                  <Grid.Col span={4} md={8} xs={0}></Grid.Col>
-              </Grid>
-            </div>
+       
 
-
-          <div id="Goals" style={{minHeight:"100vh", padding:"10% 0!important", marginTop:"0"}} className={styles.GoalsDiv}>
+          <div id="Goals" style={{minHeight:"90vh", padding:"5% 0!important", marginTop:"0"}} className={styles.GoalsDiv}>
               <h1 className={styles.headingsGOALS} style={{textAlign:"center"}}>GOALS</h1>
               <Grid style={{margin:"0 2%"}} >
                 <Grid.Col md={6} xs={12}>
@@ -250,9 +273,9 @@ const Home: NextPage = () => {
                 </Grid.Col>
               </Grid>
           </div>
-          <div style={{textAlign:"center", backgroundColor:"#FDBB2D", height:"50vh", paddingTop:"5%"}} className={styles.panaLandiaButton}>
-            <Button type="submit" style={{margin:"0 auto",backgroundColor:"#9D384F"}} size='lg'><Link href="/directorio">Enter Panalandia</Link></Button>
-            </div>
+          <div style={{paddingLeft:'45%', backgroundColor:"#FDBB2D", paddingBottom:"5%"}}>
+            <Link href='/newsletter' target="_blank"><Button style={{backgroundColor:"#EE5967", color:"#FFFFFF"}} size={'lg'}>Sign Up For Our Newsletter</Button></Link>
+          </div>
         </div>
   </div>
   )
