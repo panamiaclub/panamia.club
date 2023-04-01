@@ -436,11 +436,11 @@ const Pana: NextPage = () => {
                                         {usersInCategory.slice(0, 10).map((item, index) => {       
                                             return(
                                                 <div key={index}>
-                                                    <Link href={"/pana/"+item.user.username}>
+                                                    <Link href={"/pana/"+item.username}>
                                                         <a>
                                                             {!item.avatar && <CgProfile size="3.4em"/>}
-                                                            {item.avatar && <img key={item.user.username + "avatar"} src={item.user.avatar} style={{width:"50px", height:"50px", borderRadius:"25px"}}></img>}
-                                                            <span key={item.user.username} style={{marginBottom:"20px"}}> {item.user.username} </span>
+                                                            {item.avatar && <img key={item.username + "avatar"} src={item.avatar} style={{width:"50px", height:"50px", borderRadius:"25px"}}></img>}
+                                                            <span key={item.username} style={{marginBottom:"20px"}}> {item.username} </span>
                                                         </a>
                                                     </Link>
                                                 </div>

@@ -99,6 +99,8 @@ const Intake: NextPage = () => {
             )
             .then(async (res) => {
                 //console.log(res);
+                setOnboardingFormComplete(true);
+                setSuccess("Onboarding Complete, your profile is public now.")
             })
             .catch((error) => {
                 //console.log(error);
@@ -215,7 +217,7 @@ const Intake: NextPage = () => {
           console.log('get intake status')
           console.log(str);
           if(category != "Supporter"){
-            getIntakeStatus(str);
+            //getIntakeStatus(str);
           }
         });
       }
@@ -271,14 +273,14 @@ const Intake: NextPage = () => {
                                     <Link href={link} key={index}><Button style={{margin:"0 20px"}}> {str} </Button></Link>
                                 );
                             })}
-                            <br></br>
-                            <Button style={{margin:"20px 20px", backgroundColor:"green"}} onClick={checkIfAnyFormsComplete}> Complete Intake Status</Button>
+                            <Button style={{margin:"20px 20px", backgroundColor:"green"}} onClick={editUserCompleteOnboarding}> Complete Intake Status</Button>
                         </>
                     </div>
                 }
                  {alert && <Alert color={"red"} style={{marginTop:"5%"}}>{alert}</Alert>}
                  {success && <><Alert color={"green"} style={{marginTop:"5%"}}>{success}</Alert></>}
-                 {checkedIntake && onboardingFormComplete == true && <Link href="/profile"><Button style={{margin:"0 20px"}}> Go To Your Profile </Button></Link>}
+                 <br></br>
+                 {onboardingFormComplete == true && <Link href="/profile"><Button style={{margin:"0 20px", backgroundColor:"black"}}> Go To Your Profile </Button></Link>}
                 </Grid.Col>
                 <Grid.Col span={3} md={3} xs={0}></Grid.Col>
             </Grid>

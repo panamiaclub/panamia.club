@@ -206,7 +206,7 @@ const Home: NextPage = () => {
           </motion.div>
         </div>
 
-        <div style={{minHeight:"100vh"}}>
+        <div>
           <Carousel centerMode={true} centerSlidePercentage={100} infiniteLoop={true}  showThumbs={false} showIndicators={false} swipeable={true}>
             <div>
               <img src="carousel_2.JPG"></img>
@@ -252,7 +252,7 @@ const Home: NextPage = () => {
           {panas && 
             panas.map((item:any, index:number) => {
               return(
-                        <Card className={styles.panascardStyle} key={index}>
+                        <Card className={styles.panascardStyle} key={index} style={{marginLeft:"10px"}}>
                           <Link  href={"/pana/"+item.username} key={item+"link"}>
                               <div style={{cursor:"pointer"}}>
                                   {item.avatar && <img className={styles.avatarFeatured} src={item.avatar} ></img>}
@@ -311,8 +311,14 @@ const Home: NextPage = () => {
                 </Grid.Col>
               </Grid>
           </div>
-          <div style={{paddingLeft:'45%', backgroundColor:"#FDBB2D", padding:"10% 0"}}>
-            <Link href='/newsletter' target="_blank"><Button style={{backgroundColor:"#EE5967", color:"#FFFFFF"}} size={'lg'}>Sign Up For Our Newsletter</Button></Link>
+          <div style={{backgroundColor:"#FDBB2D", padding:"10% 0"}}>
+          <Grid>
+            <Grid.Col md={5} xs={3}></Grid.Col>
+            <Grid.Col md={2} xs={6}>
+              <Link href='/newsletter' target="_blank"><Button style={{backgroundColor:"#EE5967", color:"#FFFFFF", width:"100%"}} size={'lg'}>Sign Up For Our Newsletter</Button></Link>
+            </Grid.Col>
+            <Grid.Col md={5} xs={3}></Grid.Col>
+          </Grid>
           </div>
         </div>
   </div>

@@ -417,8 +417,6 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
 @media (max-width: 600px) {
 
 
-
-
 }
 
 
@@ -430,6 +428,9 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
     margin-left:0!important;
   }
 
+  .newsletterButton{
+    padding-left:"25%!important";
+  }
 
   
 }

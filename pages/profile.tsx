@@ -511,7 +511,7 @@ const Profile: NextPage = () => {
                             </div>
                         </Card>
                         <div style={{marginTop:"20px"}}>
-                            {!supporter && !onboardingFormComplete && <Link href="/intake"><a><Button style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px", backgroundColor: "green"}} size="xs">Complete Onboarding</Button><br></br></a></Link>}
+                            {!supporter && <Link href="/intake"><a><Button style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px", backgroundColor: "green"}} size="xs">Onboarding</Button></a></Link>}
                             { <Button onClick={handleResetPressed} style={{margin:"0% 2%!important", marginRight:"20px"}} size="xs">Reset Password<FiEdit2 style={{marginLeft:"5px"}}/></Button>}
                             { <><Button onClick={handleEditPressed} style={{margin:"0% 2%!important", marginRight:"20px", marginBottom:"20px"}} size="xs">Edit Profile</Button><br></br></>}
                         </div>
