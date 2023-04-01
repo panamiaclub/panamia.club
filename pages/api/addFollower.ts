@@ -45,8 +45,8 @@ export default async function handler(
 
     // create new User on MongoDB
     const newFollower = new followers({
-        userId: userId,
-        followerId: followerId
+        followerId: followerId,
+        userId: userId
       });
 
     console.log(newFollower);

@@ -198,7 +198,7 @@ const Home: NextPage = () => {
                   <Grid.Col span={4} md={3} xs={3}></Grid.Col>
                   <Grid.Col span={4} md={6} xs={6}>
                   <div>
-                      <Link href='/giftguide' target="_blank"><Button style={{backgroundColor:"#FFECC8", color:"#000000", width:"50%", marginBottom:"20%", marginLeft:"25%"}} size='lg'>View Our Gift Guide</Button></Link>
+                      <Link href='/giftguide' target="_blank"><Button style={{backgroundColor:"#FFECC8", color:"#000000", width:"50%", marginBottom:"20%", marginTop:"10%", marginLeft:"25%"}} size='lg'>View Our Gift Guide</Button></Link>
                     </div>
                   </Grid.Col>
                   <Grid.Col span={4} md={3} xs={3}></Grid.Col>
