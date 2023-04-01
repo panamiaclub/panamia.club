@@ -92,7 +92,7 @@
 
 .aboutContainer{
   min-height:110vh;
-  background-color: #EB5867;
+  background-color: #181C3D;
 
   font-family: 'Montserrat', sans-serif;
 }
@@ -135,7 +135,7 @@
 }
 
 .featuredPanas{
-  min-height:50vh;
+  min-height:80vh;
   text-align:center;
   background-color:#FFECC8;
 }
@@ -152,7 +152,7 @@
 
 .about{
   color:black;
-  background-color: #fad288;
+  background-color: #FFECC8;
   margin-bottom:5%;
   text-align: left;
 }
@@ -347,6 +347,18 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
 .cardStyle{
   border-radius: 15px;
   box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+  margin-bottom:2%;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+  height:auto;
+  max-height:100%;
+  width:90%;
+
+}
+
+.panascardStyle{
+  border-radius: 15px;
+  box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 10px;
   margin-bottom:2%;
   font-family: 'Montserrat', sans-serif;
   font-weight: 400;

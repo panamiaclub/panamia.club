@@ -161,7 +161,7 @@ const Profile: NextPage = () => {
         {
         <div className={styles.container} style={{minHeight:"85vh"}}>
             <Grid>
-                <Grid.Col sm={3}><h2 style={{marginLeft:"2%", color:"#f8f8f8"}}>El Directorio</h2></Grid.Col>
+                <Grid.Col sm={3}><h2 style={{marginLeft:"2%", color:"#39B6FF"}}>El Directorio</h2></Grid.Col>
             </Grid>
             <Card className={styles.cardStyle} >
                 <Grid style={{marginBottom:"2%"}}> 
@@ -302,7 +302,7 @@ const Profile: NextPage = () => {
                     })
                 }
                  {loading && 
-                    <BeatLoader style={{margin:"0 45%"}} color={"#ffffff"}/>
+                    <BeatLoader style={{margin:"0 45%"}} color={"#000000"}/>
                 }
                 {users && 
                      <Pagination page={activePage} onChange={(value:number) => {handlePageClick(value)}} total={2} style={{margin:"0 50%",marginTop:"5%", paddingBottom:"5%", width:"100%"}}/>

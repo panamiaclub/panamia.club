@@ -205,16 +205,54 @@ const Home: NextPage = () => {
               </Grid>
           </motion.div>
         </div>
+
+        <div style={{minHeight:"100vh"}}>
+          <Carousel centerMode={true} centerSlidePercentage={100} infiniteLoop={true}  showThumbs={false} showIndicators={false} swipeable={true}>
+            <div>
+              <img src="carousel_2.JPG"></img>
+            </div>
+            <div>
+              <img src="carousel_1.JPG"></img>
+            </div>
+            <div>
+              <img src="carousel_3.JPG"></img>
+            </div>
+            <div>
+              <img src="carousel_4.JPG"></img>
+            </div>
+            <div>
+              <img src="carousel_5.JPG"></img>
+            </div>
+            <div>
+              <img src="carousel_6.JPG"></img>
+            </div>
+            <div>
+              <img src="carousel_7.JPG"></img>
+            </div>
+            <div>
+              <img src="carousel_8.JPG"></img>
+            </div>
+            <div>
+              <img src="carousel_9.JPG"></img>
+            </div>
+            <div>
+              <img src="carousel_10.JPG"></img>
+            </div>
+            <div>
+              <img src="carousel_11.JPG"></img>
+            </div>
+          </Carousel>
+        </div>
       
         <div className={styles.featuredPanas} style={{padding:"10% 0"}} >
-          <h1 style={{color:"#39B6FF"}}>Featured Panas</h1>
+          <h1 style={{color:"#39B6FF", fontSize:"2.5em"}}>Featured Panas</h1>
           
           
-          <Carousel centerMode={true} centerSlidePercentage={25} infiniteLoop={true}>
+          <Carousel centerMode={true} centerSlidePercentage={25} infiniteLoop={true} swipeable={true}>
           {panas && 
             panas.map((item:any, index:number) => {
               return(
-                        <Card className={styles.cardStyle} key={index}>
+                        <Card className={styles.panascardStyle} key={index}>
                           <Link  href={"/pana/"+item.username} key={item+"link"}>
                               <div style={{cursor:"pointer"}}>
                                   {item.avatar && <img className={styles.avatarFeatured} src={item.avatar} ></img>}
@@ -238,7 +276,7 @@ const Home: NextPage = () => {
 
        
 
-          <div id="Goals" style={{minHeight:"90vh", padding:"5% 0!important", marginTop:"0"}} className={styles.GoalsDiv}>
+          <div id="Goals" style={{minHeight:"80vh", padding:"0", paddingTop:"5%", marginTop:"0"}} className={styles.GoalsDiv}>
               <h1 className={styles.headingsGOALS} style={{textAlign:"center"}}>GOALS</h1>
               <Grid style={{margin:"0 2%"}} >
                 <Grid.Col md={6} xs={12}>
@@ -273,7 +311,7 @@ const Home: NextPage = () => {
                 </Grid.Col>
               </Grid>
           </div>
-          <div style={{paddingLeft:'45%', backgroundColor:"#FDBB2D", paddingBottom:"5%"}}>
+          <div style={{paddingLeft:'45%', backgroundColor:"#FDBB2D", paddingBottom:"10%"}}>
             <Link href='/newsletter' target="_blank"><Button style={{backgroundColor:"#EE5967", color:"#FFFFFF"}} size={'lg'}>Sign Up For Our Newsletter</Button></Link>
           </div>
         </div>
