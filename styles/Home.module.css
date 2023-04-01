@@ -416,11 +416,6 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
 
 @media (max-width: 600px) {
 
-  .grid {
-    width: 100%;
-    flex-direction: column;
-    margin-left:7%;
-  }
 
 
 
