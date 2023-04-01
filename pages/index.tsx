@@ -311,7 +311,7 @@ const Home: NextPage = () => {
                 </Grid.Col>
               </Grid>
           </div>
-          <div style={{paddingLeft:'45%', backgroundColor:"#FDBB2D", paddingBottom:"10%"}}>
+          <div style={{paddingLeft:'45%', backgroundColor:"#FDBB2D", padding:"10% 0"}}>
             <Link href='/newsletter' target="_blank"><Button style={{backgroundColor:"#EE5967", color:"#FFFFFF"}} size={'lg'}>Sign Up For Our Newsletter</Button></Link>
           </div>
         </div>
