@@ -433,7 +433,7 @@ const Pana: NextPage = () => {
                             <Card className={styles.cardStyle}>
                                     <div>
                                         <h4>Followers</h4>
-                                        {usersInCategory.slice(0, 10).map((item, index) => {       
+                                        {followers.slice(0, 10).map((item, index) => {       
                                             return(
                                                 <div key={index}>
                                                     <Link href={"/pana/"+item.username}>
