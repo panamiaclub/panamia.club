@@ -133,7 +133,7 @@ const Home: NextPage = () => {
                 <Grid.Col md={2} xs={0}></Grid.Col>
                 <Grid.Col md={4} xs={12} style={{marginTop:"3%"}}>
                   {/* <Image src="/macbook.png" height={400} width={500} style={{marginBottom:"10%"}}></Image> */}
-                  <h3 style={{color:"#39B6FF"}}>Search the Directorio</h3>
+                  <h3 style={{color:"#39B6FF", fontSize:"2em"}}>Search the Directorio</h3>
                       <Formik
                           initialValues={{}}
                           validateOnChange={false}
