@@ -247,6 +247,7 @@ const Profile: NextPage = () => {
 };
 
   const editBannerImage = async() => {
+        console.log('edit banner image')
         if(session?.user?.email && bannerImage){
             console.log('edit banner inmage ewith sessoine smail')
             const res = await axios
@@ -266,7 +267,7 @@ const Profile: NextPage = () => {
                 setImageMessage("Succesfully updated image!");
             })
             .catch((error) => {
-                //console.log(error);
+                console.log(error);
                 setImageAlert(error.response.data.error);
             });
         }   

@@ -67,3 +67,10 @@ export default async function handler(
   }
   
 
+  export const config = {
+    api: {
+        bodyParser: {
+            sizeLimit: '4mb' // Set desired value here
+        }
+    }
+}
