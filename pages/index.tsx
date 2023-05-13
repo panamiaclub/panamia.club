@@ -128,7 +128,7 @@ const Home: NextPage = () => {
               
              <Grid>
                 <Grid.Col md={6} xs={12}> 
-                  <h1 className={styles.headingBig}>Pana MIA Club: <span style={{color:"#39B6FF"}}> All</span> things Local in <span style={{color:"#fad288"}}>SoFlo</span></h1>
+                  <h1 className={styles.headingBig}>Pana MIA Club: <span style={{color:"#F52B92"}}> All</span> things Local in <span style={{color:"#F52B92"}}>SoFlo</span></h1>
                 </Grid.Col>
                 <Grid.Col md={2} xs={0}></Grid.Col>
                 <Grid.Col md={4} xs={12} style={{marginTop:"3%"}}>
@@ -315,7 +315,7 @@ const Home: NextPage = () => {
           <Grid>
             <Grid.Col md={5} xs={3}></Grid.Col>
             <Grid.Col md={2} xs={6}>
-              <Link href='/newsletter' target="_blank"><Button style={{backgroundColor:"#EE5967", color:"#FFFFFF", width:"100%"}} size={'lg'}>Sign Up For Our Newsletter</Button></Link>
+              <Link href='/newsletter' target="_blank"><Button style={{backgroundColor:"#F52B92", color:"#FFFFFF", width:"100%"}} size={'lg'}>Sign Up For Our Newsletter</Button></Link>
             </Grid.Col>
             <Grid.Col md={5} xs={3}></Grid.Col>
           </Grid>

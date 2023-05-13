@@ -69,11 +69,11 @@ const Admin: NextPage = () => {
       };
 
       const getUser = async() => {
-        if(email){
+        if(session?.user.email){
             console.log(email);
             const res = await axios
             .get(
-                "/api/getUser?userEmail="+email,
+                "/api/getUser?userEmail="+session?.user.email,
                 {
                 headers: {
                     Accept: "application/json",
@@ -172,6 +172,9 @@ const Admin: NextPage = () => {
                 //console.log('base64image'+result);
                 setAvatar(result);
             });
+        }
+        if(users){
+            console.log(users);
         }
     }, [email, username ,session, avatar, avatarFile, users])
 

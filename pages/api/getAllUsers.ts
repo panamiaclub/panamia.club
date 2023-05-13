@@ -44,6 +44,7 @@ export default async function handler(
   try{
     console.log(page)
     var Users = await getAllUsers(page);
+    //console.log(Users);
     res.status(200);//.json({ success: true, data: Users });
     res.end(JSON.stringify(Users));
   }catch(err: any){

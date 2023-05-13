@@ -159,7 +159,7 @@ export default function Layout({ children }: LayoutProps) {
 
                       <Link href="/">
                         <span className={styles.logo}>
-                          <Image src="/logo.png" alt="panamia logo" width={40} height={35}/>   
+                          <Image src="/logo_new_3.png" alt="panamia logo" width={40} height={45}/>   
                         </span>
                       </Link>
                 
@@ -170,7 +170,7 @@ export default function Layout({ children }: LayoutProps) {
                     {session && session.user &&
                     <Group>
                       <p style={{color:"#495057", fontFamily:"Helvetica Neue", marginRight: "0px"}}>Hi, {session.user.email}</p>
-                      <Button radius="xl" color={"red"} sx={{ height: 30 }} onClick={handleSignOut}>
+                      <Button radius="xl" style={{backgroundColor: "#F52B92"}} sx={{ height: 30 }} onClick={handleSignOut}>
                         Log Out
                      </Button>
                     </Group>
@@ -188,7 +188,7 @@ export default function Layout({ children }: LayoutProps) {
               <Container className={classes.footerinner}>
               <Link href="/">
                       <span className={styles.logo}>
-                        <Image src="/logo.png" alt="panamia logo" width={80} height={70}/>   
+                        <Image src="/logo_new_3.png" alt="panamia logo" width={80} height={80}/>   
                           </span>
                       </Link>
                   <Group spacing={0} className={classes.links} position="right" noWrap>
