@@ -38,9 +38,12 @@ export default NextAuth({
               await dbConnect();
       
               // Find user with the email
-              const user = await auth.findOne({
+              let user = await auth.findOne({
                 email: credentials?.email,
               });
+
+              //console.log('user authentication-----');
+              //console.log(user);
       
               // Email Not found
               if (!user) {
@@ -57,7 +60,11 @@ export default NextAuth({
               if (!isPasswordCorrect) {
                 throw new Error("Password is incorrect");
               }
-      
+              if(user){
+                console.log('set user.id')
+                user._id = user._id.toString();
+                console.log(user);
+              }
               return user;
             },
           }),
@@ -71,7 +78,7 @@ export default NextAuth({
           session.user.id = token.sub;
         }
         return session;
-      },
+      }
     },
     session: {
       strategy: 'jwt',

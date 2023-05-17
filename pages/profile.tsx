@@ -36,6 +36,7 @@ const Profile: NextPage = () => {
     const [editProfile, setEditProfile] = useState(false);
     const [resetPW, setResetPW] = useState(false);
     const [username, setUsername] = useState("");
+    const [name, setName] = useState("");
     const [pronouns, setPronouns] = useState("");
     const [email, setEmail] = useState("");
     const [bio, setBio] = useState("");
@@ -127,6 +128,7 @@ const Profile: NextPage = () => {
             .then(async (response) => {
                 //console.log(response.data.data);
                 setUsername(response.data.data.username);
+                setName(response.data.data.name);
                 setUserId(response.data.data.id);
                 setPronouns(response.data.data.pronouns);
                 setEmail(response.data.data.email);
@@ -194,7 +196,7 @@ const Profile: NextPage = () => {
             const res = await axios
                 .put(
                     "/api/editProfile",
-                    { username, email, pronouns, bio ,instagram, twitter, link1, link2, category, location},
+                    { username , name, email, pronouns, bio ,instagram, twitter, link1, link2, category, location},
                     {
                     headers: {
                         Accept: "application/json",
@@ -473,7 +475,8 @@ const Profile: NextPage = () => {
                                 </div>
                             </div>
                             <div>
-                            <h4>{username} <span>{pronouns}</span></h4>
+                                <h5>{name} </h5>
+                                <h6>{username} <span>{pronouns}</span></h6>
                                 <p>{bio}</p>
                                 {category && 
                                     <div>
@@ -665,6 +668,18 @@ const Profile: NextPage = () => {
                                         value={username}
                                         onChange={(e:any) => setUsername(e.target.value)}
                                         placeholder={username || "username"}
+                                        />
+                                    </>
+                                    )}
+                                </Field>
+                                <Field name="name">
+                                    {() => (
+                                    <>
+                                        <Text>Name:</Text>
+                                        <Input size="xs"
+                                        value={name}
+                                        onChange={(e:any) => setName(e.target.value)}
+                                        placeholder={name || "name"}
                                         />
                                     </>
                                     )}

@@ -14,11 +14,12 @@ interface ResponseData {
 
 const getFollowers = async (userId: string, followerId:string) =>{
   await dbConnect();
+  console.log('get follower status')
   console.log(userId);
-  
-
-  const Followers = await followers.findOne({userId:userId, followerId:followerId})
-
+  console.log(followerId);
+  const Followers = await followers.findOne({followerId: followerId, userId: userId})
+  console.log(Followers);
+  console.log('followers^')
   if(Followers){
     return true;
   }else{
@@ -51,7 +52,7 @@ export default async function handler(
     followerId = req.query.followerId.toString();
     console.log(userId);
     try{
-        var Followers = await getFollowers(userId.toString(),followerId.toString());
+        var Followers = await getFollowers(userId,followerId);
         res.status(200);//.json({ success: true, data: users });
         return res.end(JSON.stringify(Followers));
     }catch(err: any){

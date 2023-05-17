@@ -18,12 +18,6 @@ const getUserByEmail = async (email: string) =>{
     return User;
 }
 
-const getUserByUsername = async (username: string) =>{
-  await dbConnect();
-  //console.log(username);
-  const User = await users.findOne({username: username});
-  return User;
-}
 
 export const config = {
   api: {
@@ -45,24 +39,14 @@ export default async function handler(
   let username = "";
   let Email = "";
   let queryVal = "";
+
   if(req.query.userEmail){
     Email = req.query.userEmail.toString();
     try{
         var user = await getUserByEmail(Email.toString());
-        return res.status(200).json({ success: true, data: user });
+        return res.status(200).json({ success: true, data: user._id.toString() });
     }catch(err: any){
-      return res.status(400).json({ error: "Error on '/api/getUser': " + err })
-    }
-  }
-  else if(req.query.username){
-    username = req.query.username.toString();
-    //console.log(username);
-    try{
-        var user = await getUserByUsername(username.toString());
-        res.status(200);//.json({ success: true, data: user });
-        res.end(JSON.stringify(user));
-    }catch(err: any){
-      return res.status(400).json({ error: "Error on '/api/getUser': " + err })
+      return res.status(400).json({ error: "Error on '/api/getUserId': " + err })
     }
   }
   

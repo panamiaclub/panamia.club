@@ -1,12 +1,16 @@
-import NextAuth, { DefaultSession } from "next-auth"
- 
+import "next-auth";
+
 declare module "next-auth" {
-  /**
-   * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
-   */
-  interface Session {
-    user: {
-      id: string | undefined | null
-    } & DefaultSession["user"]
+  declare global{
+    interface User {
+      _id: string | number;
+      name: string;
+      email: string;
+      username: string;
+    }
+
+    interface Session {
+      user: User;
+    }
   }
 }

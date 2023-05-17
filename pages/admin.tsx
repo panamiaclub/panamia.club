@@ -69,11 +69,11 @@ const Admin: NextPage = () => {
       };
 
       const getUser = async() => {
-        if(session?.user.email){
+        if(session?.user?email){
             console.log(email);
             const res = await axios
             .get(
-                "/api/getUser?userEmail="+session?.user.email,
+                "/api/getUser?userEmail="+session?.user?.email,
                 {
                 headers: {
                     Accept: "application/json",

@@ -56,7 +56,7 @@ export default async function handler(
   }
 
   // get and validate body variables
-  const { username, email, pronouns, bio, instagram, twitter, link1, link2, category, featured, location, avatar, bannerImage } = req.body;
+  const { username, name, email, pronouns, bio, instagram, twitter, link1, link2, category, featured, location, avatar, bannerImage } = req.body;
 
     const errorMessage = await validateForm(username, email, bio);
 
@@ -67,6 +67,7 @@ export default async function handler(
       // create new User on MongoDB
     const newUser = {
         username: username,
+        name: name,
         email: email,
         pronouns: pronouns,
         bio: bio,

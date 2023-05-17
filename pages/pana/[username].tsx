@@ -60,6 +60,7 @@ const Pana: NextPage = () => {
     const [message, setMessage] = useState("");
     const [admin, setAdmin] = useState(false);
     const [userId, setUserId] = useState("");
+    const [followerId, setFollowerId] = useState("");
     const [user, setUser] = useState<any>();
 
     const router = useRouter();
@@ -88,12 +89,8 @@ const Pana: NextPage = () => {
         //console.log(session);
     }
 
-    if(username){
-        console.log(username);
-    }
-
     if(userId && checkedFollowing == false){
-        console.log(userId);
+        //console.log(userId);
         checkIfFollowing();
     }
 
@@ -107,12 +104,10 @@ const Pana: NextPage = () => {
         getFollowers();
     }
 
-    if(usersInCategory){
-        //console.log('users in categorye')
-        //console.log(usersInCategory);
+    if(!followerId){
+       getFollowerId();
     }
-    
-  }, [username, user, fullname, userId, email, images, avatar, bio, link1, link2, twitter, instagram, location, dateJoined, session, bannerImage, usersInCategory])
+  }, [username, user, fullname, userId, email, images, avatar, bio, link1, link2, twitter, instagram, location, dateJoined, session, bannerImage, usersInCategory, userId, followerId])
 
 
     useEffect(()=>{
@@ -123,6 +118,29 @@ const Pana: NextPage = () => {
         }
     }, [router.isReady]);
 
+    const getFollowerId = async() => {
+        console.log('get followerId')
+        if(session?.user?.email){
+            const res = await axios
+            .get(
+                "/api/getUserId?userEmail="+session?.user?.email,
+                {
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                }
+                }
+            )
+            .then(async (response) => {
+                setFollowerId(response.data.data);
+            })
+            .catch((error) => {
+                console.log(error);
+                //setAlert(error.response.error);
+            });
+            //console.log(res);
+        }
+    }
   const getUser = async() => {
     console.log('get user')
     if(username){
@@ -281,10 +299,10 @@ const Pana: NextPage = () => {
   }
 
   const checkIfFollowing = async() => {
-    if(userId){
+    if(userId && followerId){
         const res = await axios
         .get(
-            "/api/checkIfFollowing?followerId="+session?.user?.id+"&userId="+userId,
+            "/api/checkIfFollowing?followerId="+followerId+"&userId="+userId,
             {
             headers: {
                 Accept: "application/json",
@@ -293,6 +311,7 @@ const Pana: NextPage = () => {
             }
         )
         .then(async (response) => {
+            console.log(response.data)
             setFollowing(response.data);
             setCheckedFollowing(true);
         })
@@ -303,9 +322,9 @@ const Pana: NextPage = () => {
   }
 
   const handleFollow = async() => {
-    if(session?.user?.id && userId){
-        console.log('handle follow');
-        var followerId = session.user.id;
+    console.log('handle follow');
+    if(followerId && userId && !following){
+       
         const res = await axios
         .post(
             "/api/addFollower",
@@ -319,6 +338,7 @@ const Pana: NextPage = () => {
         )
         .then(async (response) => {
             setFollowing(true);
+            console.log('followed');
             setMessage("Followed.")
         })
         .catch((error) => {
@@ -343,7 +363,7 @@ const Pana: NextPage = () => {
             }
         )
         .then(async (response) => {
-            setFollowing(false);
+            setFollowing(true);
             setMessage('Unfollowed.');
         })
         .catch((error) => {
