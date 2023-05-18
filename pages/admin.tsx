@@ -69,7 +69,7 @@ const Admin: NextPage = () => {
       };
 
       const getUser = async() => {
-        if(session?.user?email){
+        if(session?.user?.email){
             console.log(email);
             const res = await axios
             .get(
