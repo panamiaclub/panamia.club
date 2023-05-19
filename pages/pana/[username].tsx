@@ -348,9 +348,8 @@ const Pana: NextPage = () => {
   }
 
   const handleUnFollow = async() => {
-    if(session?.user?.id && userId){
+    if(followerId && userId){
         console.log('handle unfollow');
-        var followerId = session.user.id;
         const res = await axios
         .post(
             "/api/removeFollower",
