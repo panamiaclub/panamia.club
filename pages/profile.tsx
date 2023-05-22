@@ -437,7 +437,7 @@ const Profile: NextPage = () => {
                 <>
                     <Grid.Col sm={4}>
                         <Card className={styles.cardStyle}>
-                            <div className={styles.imagesContainer}>
+                            <div className={styles.imagesContainer} style={{marginBottom:"10%"}}>
                                 <div className={styles.banner}>
                                     {!bannerImage && <img src="/banner.png" className={styles.bannerImage}></img>}
                                     {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
@@ -456,7 +456,7 @@ const Profile: NextPage = () => {
                                     </div>
                                 </div>
                                 <div className={styles.avatarStyle}>
-                                    {!avatar && <CgProfile size="3em"/>}
+                                    {!avatar && <CgProfile size="5em" style={{marginTop:"20%"}}/>}
                                     {avatar && <img src={avatar}  className={styles.avatar}></img>}
                                     <div onClick={handleClickAvatarChange}  style={{ marginTop:"-10%", cursor:"pointer"}}>
                                         
@@ -475,8 +475,8 @@ const Profile: NextPage = () => {
                                 </div>
                             </div>
                             <div>
-                                <h5>{name} </h5>
-                                <h6>{username} <span>{pronouns}</span></h6>
+                                <h4>{name} </h4>
+                                <h5>{username} <span>{pronouns}</span></h5>
                                 <p>{bio}</p>
                                 {category && 
                                     <div>

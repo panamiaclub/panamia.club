@@ -41,7 +41,7 @@ const Pana: NextPage = () => {
     const [following, setFollowing] = useState(false);
     const [username, setUsername] = useState("");
     const [pronouns, setPronouns] = useState("");
-    const [fullname, setFullname] = useState("");
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [bio, setBio] = useState("");
     const [instagram, setInstagram] = useState("");
@@ -107,7 +107,7 @@ const Pana: NextPage = () => {
     if(!followerId){
        getFollowerId();
     }
-  }, [username, user, fullname, userId, email, images, avatar, bio, link1, link2, twitter, instagram, location, dateJoined, session, bannerImage, usersInCategory, userId, followerId])
+  }, [username, user, name, userId, email, images, avatar, bio, link1, link2, twitter, instagram, location, dateJoined, session, bannerImage, usersInCategory, userId, followerId])
 
 
     useEffect(()=>{
@@ -159,7 +159,7 @@ const Pana: NextPage = () => {
            setUserId(response.data.id); 
             setUser(response.data);
             setEmail(response.data.email);
-            setFullname(response.data.fullname);
+            setName(response.data.name);
             setPronouns(response.data.pronouns);
             setBio(response.data.bio);
             setCategory(response.data.category);
@@ -395,16 +395,16 @@ const Pana: NextPage = () => {
                                 {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
                             </div>
                             <div className={styles.avatarStyle}>
-                                {!avatar && <CgProfile size="3em"/>}
+                                {!avatar && <CgProfile size="3em" style={{marginTop:"10%"}}/>}
                                 {avatar && <img src={avatar}  className={styles.avatar}></img>}
                             </div>
+                            <h5>{name}</h5>
                             <h4>{username} <span>{pronouns}</span>
                             <span className={styles.socialLink}>
                                 {!following && <FiPlusCircle size={'1.5em'} onClick={handleFollow}></FiPlusCircle>}
                                 {following && <FiMinusCircle color='red' size={'1.5em'} onClick={handleUnFollow}></FiMinusCircle>}
                             </span> 
                             </h4>
-                            <h4>{fullname}</h4>
                             <p>Pana Since {new Date(dateJoined).toLocaleDateString()}</p>
                             {category && 
                                 <div>
