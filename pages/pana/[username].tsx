@@ -390,14 +390,17 @@ const Pana: NextPage = () => {
             <Grid>
                     <Grid.Col sm={4}>
                         <Card className={styles.cardStyle}>
-                            <div className={styles.banner}>
-                                {!bannerImage && <img src="/banner.png" className={styles.bannerImage}></img>}
-                                {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
+                            <div className={styles.imagesContainer} style={{marginBottom:"10%"}}>
+                                <div className={styles.banner}>
+                                    {!bannerImage && <img src="/banner.png" className={styles.bannerImage}></img>}
+                                    {bannerImage && <img src={bannerImage} className={styles.bannerImage}></img>}
+                                </div>
+                                <div className={styles.avatarStyle}>
+                                    {!avatar && <CgProfile size="3em" style={{marginTop:"10%"}}/>}
+                                    {avatar && <img src={avatar}  className={styles.avatar}></img>}
+                                </div>
                             </div>
-                            <div className={styles.avatarStyle}>
-                                {!avatar && <CgProfile size="3em" style={{marginTop:"10%"}}/>}
-                                {avatar && <img src={avatar}  className={styles.avatar}></img>}
-                            </div>
+                            
                             <h5>{name}</h5>
                             <h4>{username} <span>{pronouns}</span>
                             <span className={styles.socialLink}>
