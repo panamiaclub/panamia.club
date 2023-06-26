@@ -42,7 +42,7 @@ export default async function handler(
     return res.status(400).json(errorMessage as ResponseData);
   }
   
-  console.log(followerUserName)
+  //console.log(followerUserName)
 
     // create new follower on MongoDB
     const newFollower = new followers({
@@ -52,8 +52,8 @@ export default async function handler(
         userId: userId
       });
 
-    console.log(newFollower);
-    console.log(userId);
+    //console.log(newFollower);
+    //console.log(userId);
 
     newFollower
       .save()

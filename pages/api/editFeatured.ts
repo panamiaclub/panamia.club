@@ -9,11 +9,6 @@ interface ResponseData {
   msg?: string;
 }
 
-const validateEmail = (email: string): boolean => {
-  const regEx = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
-  return regEx.test(email);
-};
-
 const validateForm = async (
   email: string,
   featured: string, 
@@ -27,9 +22,6 @@ const validateForm = async (
   }
   //await dbConnect();
   //const emailUser = await users.findOne({ email: email });
-
-  
-
   return null;
 };
 const validateBool = (featured:string)=> {
@@ -56,7 +48,9 @@ export default async function handler(
   }
 
   // get and validate body variables
-  const { email, featured } = req.body;
+  const {email, featured} = req.body;
+  console.log(email);
+  console.log(featured);
   let featuredBool = validateBool(featured);
 
   const errorMessage = await validateForm(email, featured);
@@ -65,13 +59,10 @@ export default async function handler(
   }
 
     // create new User on MongoDB
-    const newUser = {
-        email: email,
-        featured: featured
-      };
+   
       console.log(email);
       console.log(featured);
-      await users.findOneAndUpdate({ email: email }, {$set: {featured:featuredBool}}, {returnNewDocument: true})
+      await users.findOneAndUpdate({ email: email }, {$set: {featured:featuredBool}})
       .then(() =>{
           console.log('success');
           res.status(200).json({ msg: "Successfuly edited user "+ {email}+" to featured: " + featuredBool })
