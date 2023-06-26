@@ -1,7 +1,7 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "./auth/lib/connectdb";
-import followers from "./auth/lib/model/users";
+import followers from "./auth/lib/model/followers";
 import bcrypt from "bcrypt";
 import { ObjectId } from "mongodb";
 
@@ -14,12 +14,12 @@ interface ResponseData {
 
 const getFollowers = async (userId: string, followerId:string) =>{
   await dbConnect();
-  console.log('get follower status')
-  console.log(userId);
-  console.log(followerId);
+  //console.log('get follower status')
+  //console.log(userId);
+  //console.log(followerId);
   const Followers = await followers.findOne({followerId: followerId, userId: userId})
-  console.log(Followers);
-  console.log('followers^')
+  //onsole.log(Followers);
+  //console.log('followers^')
   if(Followers){
     return true;
   }else{

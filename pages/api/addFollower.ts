@@ -34,7 +34,7 @@ export default async function handler(
   }
 
   // get and validate body variables
-  const { followerId, userId } = req.body;
+  const { followerId, followerUserName, followedUserName, userId } = req.body;
 
 
   const errorMessage = await validateForm(followerId, userId);
@@ -42,10 +42,13 @@ export default async function handler(
     return res.status(400).json(errorMessage as ResponseData);
   }
   
+  console.log(followerUserName)
 
-    // create new User on MongoDB
+    // create new follower on MongoDB
     const newFollower = new followers({
         followerId: followerId,
+        followerUserName: followerUserName,
+        followedUserName: followedUserName,
         userId: userId
       });
 

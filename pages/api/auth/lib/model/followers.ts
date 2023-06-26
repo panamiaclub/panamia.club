@@ -9,6 +9,16 @@ const followersSchema = new Schema(
             required: true,
             unique: false
         },
+        followerUserName:{
+            type: String,
+            required: true,
+            unique: false,
+        },
+        followedUserName:{
+            type: String,
+            required: true,
+            unique: false,
+        },
         userId: {
             type: String,
             required: true,

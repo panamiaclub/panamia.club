@@ -37,8 +37,10 @@ const Pana: NextPage = () => {
     const [checkedFollowing, setCheckedFollowing] = useState(false);
     const [checkedImages, setCheckedImages] = useState(false);
     const [checkedFollowers, setCheckedFollowers] = useState(false);
+    const [checkedFollowingUsers, setCheckedFollowingUsers] = useState(false);
     const [loadingImages, setLoadingImages] = useState(true);
     const [following, setFollowing] = useState(false);
+    const [followerUserName, setFollowerUserName] = useState("");
     const [username, setUsername] = useState("");
     const [pronouns, setPronouns] = useState("");
     const [name, setName] = useState("");
@@ -51,6 +53,7 @@ const Pana: NextPage = () => {
     const [category, setCategory] = useState<any[]>([]);
     const [usersInCategory, setUsersInCategory] = useState<any[]>([]);
     const [followers, setFollowers] = useState<any[]>([]);
+    const [followingUsers, setFollowingUsers] = useState<any[]>([]);
     const [location, setLocation] = useState("");
     const [dateJoined, setDateJoined] = useState<any>();
     const [avatar, setAvatar] = useState("");
@@ -84,16 +87,19 @@ const Pana: NextPage = () => {
         }
     }
 
-    if(session){
-        //console.log('session user')
-        //console.log(session);
+    if(!followerUserName){
+        getFollowerUserName();
     }
 
-    if(userId && checkedFollowing == false){
+    if(userId && !checkedFollowing){
         //console.log(userId);
         checkIfFollowing();
     }
 
+    if(userId && !checkedFollowingUsers){
+        //console.log(userId);
+        getFollowing();
+    }
 
     if(category && (usersInCategory.length == 0 || usersInCategory.length == 1)){
         //console.log('get users by category')
@@ -156,7 +162,6 @@ const Pana: NextPage = () => {
         )
         .then(async (response) => {
             //console.log(response.data);
-           setUserId(response.data.id); 
             setUser(response.data);
             setEmail(response.data.email);
             setName(response.data.name);
@@ -183,6 +188,31 @@ const Pana: NextPage = () => {
     }
   }
 
+  const getFollowerUserName = async() => {
+    console.log('get follower user')
+    if(session?.user?.email){
+        const res = await axios
+        .get(
+            "/api/getUser?userEmail="+session?.user?.email,
+            {
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            }
+            }
+        )
+        .then(async (response) => {
+            console.log(response.data);
+           setFollowerUserName(response.data.data.username); 
+        })
+        .catch((error) => {
+            console.log(error);
+            setAlert(error.response.error);
+        });
+        //console.log(res);
+    }
+  }
+
   const getFollowers = async() => {
     console.log('get followers')
     if(userId){
@@ -197,9 +227,38 @@ const Pana: NextPage = () => {
             }
         )
         .then(async (response) => {
-            //console.log(response.data);
+            console.log('followers');
+            console.log(response.data);
             setFollowers(response.data);
             setCheckedFollowers(true);
+            //console.log(response.data.dateJoined);
+        })
+        .catch((error) => {
+            console.log(error);
+            setAlert(error.response.error);
+        });
+        //console.log(res);
+    }
+  }
+
+  const getFollowing = async() => {
+    console.log('get following')
+    if(userId){
+        const res = await axios
+        .get(
+            "/api/getFollowing?userId="+userId,
+            {
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            }
+            }
+        )
+        .then(async (response) => {
+            console.log('followers');
+            console.log(response.data);
+            setFollowingUsers(response.data);
+            setCheckedFollowingUsers(true);
             //console.log(response.data.dateJoined);
         })
         .catch((error) => {
@@ -289,7 +348,8 @@ const Pana: NextPage = () => {
             })
 
             arr2 = (newArr);
-           // console.log(newArr)
+            //console.log("users by category")
+            //console.log(newArr)
         })
         .catch((error) => {
             setAlert("error fetching users");
@@ -300,6 +360,8 @@ const Pana: NextPage = () => {
 
   const checkIfFollowing = async() => {
     if(userId && followerId){
+        console.log(userId);
+        console.log(followerId);
         const res = await axios
         .get(
             "/api/checkIfFollowing?followerId="+followerId+"&userId="+userId,
@@ -311,6 +373,7 @@ const Pana: NextPage = () => {
             }
         )
         .then(async (response) => {
+            console.log('get following response')
             console.log(response.data)
             setFollowing(response.data);
             setCheckedFollowing(true);
@@ -323,27 +386,29 @@ const Pana: NextPage = () => {
 
   const handleFollow = async() => {
     console.log('handle follow');
-    if(followerId && userId && !following){
-       
-        const res = await axios
-        .post(
-            "/api/addFollower",
-            { followerId: followerId, userId: userId},
-            {
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json",
-            }
-            }
-        )
-        .then(async (response) => {
-            setFollowing(true);
-            console.log('followed');
-            setMessage("Followed.")
-        })
-        .catch((error) => {
-            setAlert("error fetching following status");
-        });
+    if(followerId && userId && followerUserName && !following){
+       if(followerUserName != username){
+            const res = await axios
+            .post(
+                "/api/addFollower",
+                { followerId: followerId, followerUserName: followerUserName, followedUserName: username, userId: userId},
+                {
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                }
+                }
+            )
+            .then(async (response) => {
+                setFollowing(true);
+                console.log('followed');
+                setMessage("Followed.")
+            })
+            .catch((error) => {
+                setAlert("Error following user.");
+            });
+        }
+        setAlert("Cannot follow yourself.");
     }
   }
 
@@ -362,7 +427,7 @@ const Pana: NextPage = () => {
             }
         )
         .then(async (response) => {
-            setFollowing(true);
+            setFollowing(false);
             setMessage('Unfollowed.');
         })
         .catch((error) => {
@@ -458,11 +523,11 @@ const Pana: NextPage = () => {
                                         {followers.slice(0, 10).map((item, index) => {       
                                             return(
                                                 <div key={index}>
-                                                    <Link href={"/pana/"+item.username}>
+                                                    <Link href={"/pana/"+item.followerUserName}>
                                                         <a>
-                                                            {!item.avatar && <CgProfile size="3.4em"/>}
-                                                            {item.avatar && <img key={item.username + "avatar"} src={item.avatar} style={{width:"50px", height:"50px", borderRadius:"25px"}}></img>}
-                                                            <span key={item.username} style={{marginBottom:"20px"}}> {item.username} </span>
+                                                            {/* {!item.avatar && <CgProfile size="3.4em"/>}
+                                                            {item.avatar && <img key={item.username + "avatar"} src={item.avatar} style={{width:"50px", height:"50px", borderRadius:"25px"}}></img>} */}
+                                                            <span key={item.followerUserName} style={{marginBottom:"20px"}}> {item.followerUserName} </span>
                                                         </a>
                                                     </Link>
                                                 </div>
@@ -472,6 +537,29 @@ const Pana: NextPage = () => {
                             </Card>
                          }
                          {!followers && 
+                            <BeatLoader></BeatLoader>
+                        }
+                         {followingUsers && 
+                            <Card className={styles.cardStyle}>
+                                    <div>
+                                        <h4>Following</h4>
+                                        {followingUsers.slice(0, 10).map((item, index) => {       
+                                            return(
+                                                <div key={index}>
+                                                    <Link href={"/pana/"+item.followedUserName}>
+                                                        <a>
+                                                            {/* {!item.avatar && <CgProfile size="3.4em"/>}
+                                                            {item.avatar && <img key={item.username + "avatar"} src={item.avatar} style={{width:"50px", height:"50px", borderRadius:"25px"}}></img>} */}
+                                                            <span key={item.followedUserName} style={{marginBottom:"20px"}}> {item.followedUserName} </span>
+                                                        </a>
+                                                    </Link>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                            </Card>
+                         }
+                         {!followingUsers && 
                             <BeatLoader></BeatLoader>
                         }
                     </Grid.Col>

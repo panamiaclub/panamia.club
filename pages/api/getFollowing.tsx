@@ -17,16 +17,7 @@ const getFollowers = async (userId: string) =>{
   console.log(userId);
   
 
-  const Followers = await followers.aggregate([
-    { "$match": { "userId": userId }},
-    {
-    $lookup:{
-      from: 'users',
-      localField: 'followerId', 
-      foreignField: 'id',
-      as: 'user'
-    }
-  }]);
+  const Followers = await followers.find({followerId: userId});
 
   if(Followers){
     console.log(Followers)
