@@ -12,7 +12,7 @@ interface ResponseData {
 }
 const getAllUsers = async (page:number) =>{
     await dbConnect();
-    const Users = await users.find().skip(page*20).limit(20);
+    const Users = await users.find().skip(page*20).limit(10);
     return Users;
 }
 
