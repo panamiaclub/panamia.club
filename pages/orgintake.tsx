@@ -76,6 +76,7 @@ const OrgIntake: NextPage = () => {
   const [image3File, setImage3File] = useState<any>();
   const [igConsent, setIgConsent] = useState(Boolean);
   const [marketConsent, setMarketConsent] = useState(Boolean);
+  const [vendingConsent, setVendingConsent] = useState(Boolean);
   const [collabConsent, setCollabConsent] = useState(Boolean);
   const [referrals, setReferrals] = useState("");
 
@@ -173,12 +174,12 @@ const OrgIntake: NextPage = () => {
 
   const createFormEntry = async () => {
 
-    if(email && name && about && backgroundEthnicity && igUsername && twitterHandle && website && logo && needVolunteers && communityIssue && teamSize && missionStatement && demographic && locationOptions && address && tags && interest && image1 && image2 && image3 && businessNeed && workshop && igConsent && marketConsent && collabConsent ){
+    if(email && name && about && backgroundEthnicity && igUsername && twitterHandle && website && logo && needVolunteers && communityIssue && teamSize && missionStatement && demographic && locationOptions && address && tags && interest && image1 && image2 && image3 && businessNeed && workshop && igConsent && marketConsent && vendingConsent && collabConsent ){
         console.log('api call') 
       const res = await axios
         .post(
             "/api/createOrgIntakeEntry",
-            { email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, needVolunteers, communityIssue, teamSize, missionStatement, demographic, locationOptions, address, communityEngagement, tags, interest, image1, image2, image3, businessNeed, workshop, workshopDetails, igConsent, marketConsent, collabConsent, complete:true, referrals },
+            { email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, needVolunteers, communityIssue, teamSize, missionStatement, demographic, locationOptions, address, communityEngagement, tags, interest, image1, image2, image3, businessNeed, workshop, workshopDetails, igConsent, marketConsent, vendingConsent, collabConsent, complete:true, referrals },
             {
             headers: {
                 Accept: "application/json",
@@ -565,6 +566,19 @@ const OrgIntake: NextPage = () => {
                               onChange={(e:any) => setMarketConsent(true)}
                              type="radio" name="marketConsent"
                               /><label htmlFor="marketConsent"></label>
+                          </>
+                          )}
+                      </Field>
+
+                      <Field name="vendingConsent">
+                          {() => (
+                          <>
+                          <Text className={styles.formText} style={{marginTop:"20px"}}>I am looking for vending opportunities at local events.</Text>
+                              <input
+                              value={"true"}
+                              onChange={(e:any) => setVendingConsent(true)}
+                             type="radio" name="vendingConsent"
+                              /><label htmlFor="vendingConsent"></label>
                           </>
                           )}
                       </Field>

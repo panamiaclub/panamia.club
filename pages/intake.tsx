@@ -273,7 +273,7 @@ const Intake: NextPage = () => {
                                     <Link href={link} key={index}><Button style={{margin:"0 20px"}}> {str} </Button></Link>
                                 );
                             })}
-                            <Button style={{margin:"20px 20px", backgroundColor:"green"}} onClick={editUserCompleteOnboarding}> Complete Intake Status</Button>
+                            {/* <Button style={{margin:"20px 20px", backgroundColor:"green"}} onClick={editUserCompleteOnboarding}> Complete Intake Status</Button> */}
                         </>
                     </div>
                 }

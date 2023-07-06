@@ -67,6 +67,7 @@ const ServicesIntake: NextPage = () => {
   const [image3, setImage3] = useState("");
   const [igConsent, setIgConsent] = useState(Boolean);
   const [marketConsent, setMarketConsent] = useState(Boolean);
+  const [vendingConsent, setVendingConsent] = useState(Boolean);
   const [collabConsent, setCollabConsent] = useState(Boolean);
   const [referrals, setReferrals] = useState("");
 
@@ -527,6 +528,19 @@ const ServicesIntake: NextPage = () => {
                               onChange={(e:any) => setMarketConsent(true)}
                              type="radio" name="marketConsent"
                               /><label htmlFor="marketConsent"></label>
+                          </>
+                          )}
+                      </Field>
+
+                      <Field name="vendingConsent">
+                          {() => (
+                          <>
+                          <Text className={styles.formText} style={{marginTop:"20px"}}>I am looking for vending opportunities at local events.</Text>
+                              <input
+                              value={"true"}
+                              onChange={(e:any) => setVendingConsent(true)}
+                             type="radio" name="vendingConsent"
+                              /><label htmlFor="vendingConsent"></label>
                           </>
                           )}
                       </Field>

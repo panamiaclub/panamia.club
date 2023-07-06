@@ -223,7 +223,6 @@ const Admin: NextPage = () => {
                                         <td>{item.username}</td>
                                         <td>{item.email}</td>
                                         <td>{item.category.toString()}</td>
-                                        <td>{item.instagramHandle}</td>
                                         <td>
                                             {item.featured && 
                                                 <Button onClick={() => handleFeaturePressed(item.email, false)} style={{margin:"0 20%"}} size="xs">Remove Feature<FiStopCircle style={{marginLeft:"5px", display:"inline"}}/></Button>

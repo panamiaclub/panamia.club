@@ -37,7 +37,7 @@ export default async function handler(
   }
 
   // get and validate body variables
-  const { email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, category, locationOptions, address, serviceType, tags, interest, image1, image2, image3, businessNeed, workshop, workshopDetails, igConsent, marketConsent, collabConsent, complete, referrals  } = req.body;
+  const { email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, category, locationOptions, address, serviceType, tags, interest, image1, image2, image3, businessNeed, workshop, workshopDetails, igConsent, marketConsent, vendingConsent, collabConsent, complete, referrals  } = req.body;
 
   const errorMessage = await validateForm(email);
   if (errorMessage) {
@@ -68,6 +68,7 @@ const newServicesIntake = new servicesIntake({
                      workshopDetails:workshopDetails,
                       igConsent:igConsent,
                        marketConsent:marketConsent,
+                       vendingConsent:vendingConsent,
                         collabConsent:collabConsent,
                          complete:complete,
                          referrals:referrals

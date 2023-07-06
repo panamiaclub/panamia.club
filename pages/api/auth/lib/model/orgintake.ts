@@ -134,6 +134,11 @@ const organizationIntakeSchema = new Schema(
             required: false,
             unique: false
         },
+        vendingConsent: {
+            type: String,
+            required: false,
+            unique: false
+        },
         collabConsent: {
             type: String,
             required: false,

@@ -36,7 +36,7 @@ export default async function handler(
   }
 
   // get and validate body variables
-  const { email, name, about, category, backgroundEthnicity, igUsername, twitterHandle, website, logo, mediums, source, productType, tags, interest, image1, image2, image3, marketInterest, workshop, workshopDetails, igConsent, marketConsent, collabConsent, complete } = req.body;
+  const { email, name, about, category, backgroundEthnicity, igUsername, twitterHandle, website, logo, mediums, source, productType, tags, interest, image1, image2, image3, marketInterest, workshop, workshopDetails, igConsent, marketConsent, vendingConsent, collabConsent, complete } = req.body;
 
   const errorMessage = await validateForm(email);
   if (errorMessage) {
@@ -67,6 +67,7 @@ const newArtIntake = new artIntake({
                      workshopDetails:workshopDetails,
                       igConsent:igConsent,
                        marketConsent:marketConsent,
+                       vendingConsent: vendingConsent,
                         collabConsent:collabConsent,
                          complete:complete
 });

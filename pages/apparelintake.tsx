@@ -69,6 +69,7 @@ const ApparelIntake: NextPage = () => {
   const [image3, setImage3] = useState("");
   const [igConsent, setIgConsent] = useState(Boolean);
   const [marketConsent, setMarketConsent] = useState(Boolean);
+  const [vendingConsent, setVendingConsent] = useState(Boolean);
   const [collabConsent, setCollabConsent] = useState(Boolean);
   const [referrals, setReferrals] = useState("");
 
@@ -142,12 +143,12 @@ const ApparelIntake: NextPage = () => {
 
   const createFormEntry = async () => {
 
-    if(email && name && about && backgroundEthnicity && igUsername && twitterHandle && website && logo && category && locationOptions && audience && source  && tags && interest && image1 && image2 && image3 && marketInterest && businessNeed && workshop && igConsent && marketConsent && collabConsent ){
+    if(email && name && about && backgroundEthnicity && igUsername && twitterHandle && website && logo && category && locationOptions && audience && source  && tags && interest && image1 && image2 && image3 && marketInterest && businessNeed && workshop && igConsent && marketConsent && vendingConsent && collabConsent ){
         console.log('api call') 
       const res = await axios
         .post(
             "/api/createApparelIntakeEntry",
-            { email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, category, locationOptions, address, audience, source, tags, interest, image1, image2, image3, marketInterest, businessNeed, workshop, workshopDetails, igConsent, marketConsent, collabConsent, complete:true, referrals },
+            { email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, category, locationOptions, address, audience, source, tags, interest, image1, image2, image3, marketInterest, businessNeed, workshop, workshopDetails, igConsent, marketConsent, vendingConsent, collabConsent, complete:true, referrals },
             {
             headers: {
                 Accept: "application/json",
@@ -179,7 +180,7 @@ const ApparelIntake: NextPage = () => {
                 <Grid.Col span={6} md={6} xs={12}>
                 <h2 style={{color:"#EE5967"}}>Apparel Vendor Intake Form</h2>
                 <Formik
-                    initialValues={{email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, category, locationOptions, address, audience, source, tags, interest, image1, image2, image3, marketInterest, businessNeed, workshop, workshopDetails, igConsent, marketConsent, collabConsent, referrals }}
+                    initialValues={{email, name, about, backgroundEthnicity, igUsername, twitterHandle, website, logo, category, locationOptions, address, audience, source, tags, interest, image1, image2, image3, marketInterest, businessNeed, workshop, workshopDetails, igConsent, marketConsent, vendingConsent, collabConsent, referrals }}
                     validateOnChange={false}
                     validateOnBlur={false}
                     onSubmit={(_, actions) => {
@@ -571,6 +572,19 @@ const ApparelIntake: NextPage = () => {
                               onChange={(e:any) => setMarketConsent(true)}
                              type="radio" name="marketConsent"
                               /><label htmlFor="marketConsent"></label>
+                          </>
+                          )}
+                      </Field>
+
+                      <Field name="vendingConsent">
+                          {() => (
+                          <>
+                          <Text className={styles.formText} style={{marginTop:"20px"}}>I am looking for vending opportunities at local events.</Text>
+                              <input
+                              value={"true"}
+                              onChange={(e:any) => setVendingConsent(true)}
+                             type="radio" name="vendingConsent"
+                              /><label htmlFor="vendingConsent"></label>
                           </>
                           )}
                       </Field>

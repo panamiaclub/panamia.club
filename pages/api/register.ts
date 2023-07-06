@@ -71,7 +71,8 @@ export default async function handler(
         email: email,
         hashedPassword: hashedPassword,
         dateJoined: new Date(),
-        onboardingFormComplete: false
+        onboardingFormComplete: false,
+        featured:false
     });
 
     newUser

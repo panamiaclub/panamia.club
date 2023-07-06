@@ -71,6 +71,7 @@ const ArtIntake: NextPage = () => {
   const [mediums, setMediums] = useState<any>([]);
   const [igConsent, setIgConsent] = useState(Boolean);
   const [marketConsent, setMarketConsent] = useState(Boolean);
+  const [vendingConsent, setVendingConsent] = useState(Boolean);
   const [collabConsent, setCollabConsent] = useState(Boolean);
   const [complete, setComplete] = useState(Boolean);
   const [referrals, setReferrals] = useState("");
@@ -105,12 +106,12 @@ const ArtIntake: NextPage = () => {
   }, [twitterHandle, name, email, igUsername, about]);
 
   const createFormEntry = async () => {
-    if(name && email && about && category && igUsername && logo && mediums && source && productType && tags && interest && marketInterest && businessNeed && workshop && workshopDetails && igConsent && collabConsent && marketConsent ){
+    if(name && email && about && category && igUsername && logo && mediums && source && productType && tags && interest && marketInterest && businessNeed && workshop && workshopDetails && igConsent && collabConsent && marketConsent && vendingConsent ){
         console.log('api call') 
       const res = await axios
         .post(
             "/api/createArtIntakeEntry",
-            { email, name, about, category, backgroundEthnicity, igUsername, twitterHandle, website, logo, mediums, source, productType, tags, interest, image1, image2, image3, marketInterest, workshop, workshopDetails, igConsent, marketConsent, collabConsent, complete:true },
+            { email, name, about, category, backgroundEthnicity, igUsername, twitterHandle, website, logo, mediums, source, productType, tags, interest, image1, image2, image3, marketInterest, workshop, workshopDetails, igConsent, marketConsent, vendingConsent, collabConsent, complete:true },
             {
             headers: {
                 Accept: "application/json",
@@ -170,7 +171,7 @@ const ArtIntake: NextPage = () => {
                 <Grid.Col span={6} md={6} xs={12}>
                 <h2 style={{color:"#EE5967"}}>Functional/Fine Art Vendor Intake Form</h2>
                 <Formik
-                    initialValues={{email, name, about, category, backgroundEthnicity, igUsername, twitterHandle, website, logo, mediums, source, productType, tags, interest, image1, image2, image3, marketInterest, workshop, workshopDetails, igConsent, marketConsent, collabConsent}}
+                    initialValues={{email, name, about, category, backgroundEthnicity, igUsername, twitterHandle, website, logo, mediums, source, productType, tags, interest, image1, image2, image3, marketInterest, workshop, workshopDetails, igConsent, marketConsent, vendingConsent, collabConsent}}
                     validateOnChange={false}
                     validateOnBlur={false}
                     onSubmit={(_, actions) => {
@@ -536,6 +537,19 @@ const ArtIntake: NextPage = () => {
                               onChange={(e:any) => setMarketConsent(true)}
                              type="radio" name="marketConsent"
                               /><label htmlFor="marketConsent"></label>
+                          </>
+                          )}
+                      </Field>
+
+                      <Field name="vendingConsent" required>
+                          {() => (
+                          <>
+                          <Text className={styles.formText} style={{marginTop:"20px"}}>I am looking for vending opportunities at local events.</Text>
+                              <input
+                              value={"true"}
+                              onChange={(e:any) => setVendingConsent(true)}
+                             type="radio" name="vendingConsent"
+                              /><label htmlFor="vendingConsent"></label>
                           </>
                           )}
                       </Field>
