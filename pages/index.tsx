@@ -210,67 +210,67 @@ const Home: NextPage = () => {
           <Carousel centerMode={true} centerSlidePercentage={100} infiniteLoop={true}  showThumbs={false} showIndicators={false} swipeable={true}>
             <div>
               <picture>
-                <source srcset="carousel_2.JPG" media="(min-width: 1920px)" />
+                <source srcSet="carousel_2.JPG" media="(min-width: 1920px)" />
                 <img src="carousel_2_x1440.JPG" alt="" />
               </picture>
             </div>
             <div>
               <picture>
-                <source srcset="carousel_1.JPG" media="(min-width: 1920px)" />
+                <source srcSet="carousel_1.JPG" media="(min-width: 1920px)" />
                 <img src="carousel_1_x1440.JPG" alt="" />
               </picture>
             </div>
             <div>
               <picture>
-                <source srcset="carousel_3.JPG" media="(min-width: 1920px)" />
+                <source srcSet="carousel_3.JPG" media="(min-width: 1920px)" />
                 <img src="carousel_3_x1440.JPG" alt="" />
               </picture>
             </div>
             <div>
               <picture>
-                <source srcset="carousel_4.JPG" media="(min-width: 1920px)" />
+                <source srcSet="carousel_4.JPG" media="(min-width: 1920px)" />
                 <img src="carousel_4_x1440.JPG" alt="" />
               </picture>
             </div>
             <div>
               <picture>
-                <source srcset="carousel_5.JPG" media="(min-width: 1920px)" />
+                <source srcSet="carousel_5.JPG" media="(min-width: 1920px)" />
                 <img src="carousel_5_x1440.JPG" alt="" />
               </picture>
             </div>
             <div>
               <picture>
-                <source srcset="carousel_6.JPG" media="(min-width: 1920px)" />
+                <source srcSet="carousel_6.JPG" media="(min-width: 1920px)" />
                 <img src="carousel_6_x1440.JPG" alt="" />
               </picture>
             </div>
             <div>
               <picture>
-                <source srcset="carousel_7.JPG" media="(min-width: 1920px)" />
+                <source srcSet="carousel_7.JPG" media="(min-width: 1920px)" />
                 <img src="carousel_7_x1440.JPG" alt="" />
               </picture>
             </div>
             <div>
               <picture>
-                <source srcset="carousel_8.JPG" media="(min-width: 1920px)" />
+                <source srcSet="carousel_8.JPG" media="(min-width: 1920px)" />
                 <img src="carousel_8_x1440.JPG" alt="" />
               </picture>
             </div>
             <div>
               <picture>
-                <source srcset="carousel_9.JPG" media="(min-width: 1920px)" />
+                <source srcSet="carousel_9.JPG" media="(min-width: 1920px)" />
                 <img src="carousel_9_x1440.JPG" alt="" />
               </picture>
             </div>
             <div>
               <picture>
-                <source srcset="carousel_10.JPG" media="(min-width: 1920px)" />
+                <source srcSet="carousel_10.JPG" media="(min-width: 1920px)" />
                 <img src="carousel_10_x1440.JPG" alt="" />
               </picture>
             </div>
             <div>
               <picture>
-                <source srcset="carousel_11.JPG" media="(min-width: 1920px)" />
+                <source srcSet="carousel_11.JPG" media="(min-width: 1920px)" />
                 <img src="carousel_11_x1440.JPG" alt="" />
               </picture>
             </div>
