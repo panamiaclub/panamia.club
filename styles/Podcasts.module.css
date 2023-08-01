@@ -1,0 +1,53 @@
+.app{
+    min-height: 90vh;
+    background-color: rgb(248,248,248);
+    padding: 0 1rem;
+}
+
+.main{
+    max-width: 45rem;
+    margin: auto;
+}
+
+.header {
+    margin:auto;
+    padding: 5vh 0 0;
+    min-width: 1vw;
+    max-width:90%;
+    text-align: center;
+    color: white;
+}
+.header h2{
+    color: #FC2070;
+}
+.channelLink a{
+    display: inline-flex;
+    align-items: center;
+    padding: 1rem 3rem;
+    font-size:20px;
+    font-weight: 700;
+    background-color: red;
+    color:white;
+    border-radius: 20px;
+}
+.channelLink a:hover{
+    background-color: darkred;
+}
+
+.channelLink a svg.icon{
+    vertical-align: bottom;
+}
+
+.videos{
+    text-align: center;
+}
+
+.video{
+    margin: 3rem 0;
+    border-radius: 40px;
+    overflow: hidden;
+}
+
+.footer{
+    height:5vh;
+}
