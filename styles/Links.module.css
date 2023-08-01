@@ -1,0 +1,112 @@
+.app{
+    min-height: 90vh;
+}
+
+.main{
+    min-height: 1vh;
+    background: fixed center center no-repeat url('/links_bg.svg');
+    background-size: cover;
+}
+
+.header {
+    margin:auto;
+    padding: 5vh 0;
+    min-width: 1vw;
+    max-width:90%;
+    text-align: center;
+    color: white;
+}
+
+.logo{
+    display: inline-block;
+    height: 128px;
+    width: 128px;
+    border-radius: 50%;
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+}
+.logo img{
+    height: 128px;
+
+}
+
+.headerTitle{
+    font-size: 32px;
+    font-weight: bold;
+    padding:1rem 0;
+}
+
+.headerDesc{
+    font-size: 20px;
+    font-weight:700;
+    padding:1rem 0;
+    line-height:150%;
+    max-width: 45rem;
+    margin: auto;
+}
+.headerIcons{
+    display: flex;
+    width: fit-content;
+    margin: auto;
+}
+
+.headerIcon{
+    width: 48px;
+    height: 48px;
+    text-align: center;
+    padding: 7px;
+    margin: 6px;
+    background-color: #FC2070;
+    border-radius: 100%;
+}
+.headerIcon:hover{
+    background-color: black;
+    cursor: pointer;
+}
+
+.links{
+    display: flex;
+    flex-flow: column;
+    align-content: space-between;
+    align-items: center;
+    margin:auto;
+    max-width: 90%;
+}
+
+.link{
+    width:100%;
+    max-width: 45rem;
+    text-align: center;
+}
+
+.link a{
+    display: inline-block;
+    color:white;
+    background-color: #263447;
+    width: 100%;
+    font-size: 20px;
+    font-weight: 700;
+    padding:1.5rem 3rem;
+    border-radius: 24px;
+    margin: .5rem 0;
+}
+
+.linkHighlight a{
+    background-color: #FC2070;
+}
+
+.linkVideo{
+    margin: 1rem 0;
+    border-radius: 40px;
+    overflow: hidden;
+}
+
+.linkSpotify a{
+    background-color: black;
+    background: url('/logo_new_3.png') center 100% no-repeat black;
+    background-size: 6rem;
+    min-height:10rem;
+}
+
+.footer{
+    height:5vh;
+}
