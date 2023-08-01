@@ -103,7 +103,7 @@ export default function Layout({ children }: LayoutProps) {
     const { classes } = useStyles();
   const [opened, { toggle }] = useDisclosure(false);
 
-  const [links, setLinks] = useState([{ link: "#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null},{link:"/directorio", label:"El Directorio", links: null}]);//{link:"/giftguide", label:"Gift Guide", links:null}
+  const [links, setLinks] = useState([{ link: "#About", label: "About", links:null}, {link:"/links", label:"Links", links:null}, {link:"/#footer", label:"Contact Us", links:null} , {link:"/directorio", label:"El Directorio", links: null}]);//{link:"/giftguide", label:"Gift Guide", links:null}
 
   const items = links.map((link) => {
     return (
@@ -122,9 +122,9 @@ export default function Layout({ children }: LayoutProps) {
     (function loop() {
       setTimeout(() => {
         if(session){
-          setLinks([{ link: "http://panamia.club/#About", label: "About", links:null} , {link:"/#footer", label:"Contact Us", links:null},{link:"/directorio", label:"El Directorio", links: null}, {link:"/profile", label:"Profile", links: null}]);
+          setLinks([{ link: "/#About", label: "About", links:null} , {link:"/links", label:"Links", links:null},  {link:"/#footer", label:"Contact Us", links:null}, {link:"/directorio", label:"El Directorio", links: null}, {link:"/profile", label:"Profile", links: null}]);
         }else if(!session){
-          setLinks([{ link: "http://panamia.club/#About", label: "About", links:null} , {link:"#footer", label:"Contact Us", links:null}, {link:"/directorio", label:"El Directorio", links: null}]);
+          setLinks([{ link: "/#About", label: "About", links:null} , {link:"/links", label:"Links", links:null},  {link:"/#footer", label:"Contact Us", links:null}, {link:"/directorio", label:"El Directorio", links: null}]);
         }
         loop();
       }, 20000);

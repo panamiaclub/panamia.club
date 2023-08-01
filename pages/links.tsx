@@ -94,7 +94,7 @@ const Links: NextPage = () => {
               </a>
             </div>
             <div className={classNames(styles.link, styles.linkVideo)}>
-              <iframe width="100%" height="315" src="https://www.youtube.com/embed/videoseries?list=PLeszggVMN994u3XNwptIGamQpzrkpeakF" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>
+              <iframe width="100%" height="315" src="https://www.youtube.com/embed/videoseries?list=PLeszggVMN994u3XNwptIGamQpzrkpeakF" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
             </div>
             <div className={styles.link}>
               <a target="_blank" href="https://patreon.com/PanaMIAClub">
