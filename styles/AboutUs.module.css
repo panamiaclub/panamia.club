@@ -1,0 +1,111 @@
+.app{
+    min-height: 90vh;
+}
+
+.main{
+    min-height: 1vh;
+    background-color: #f8f8f8;
+}
+
+.header {
+    margin:auto;
+    padding: 5vh 0;
+    min-width: 1vw;
+    max-width:90%;
+    text-align: center;
+    color: #FC2070;
+}
+
+.header h1{
+    color: black;
+}
+
+.logo{
+    width:128px;
+}
+.outline{
+    max-width: 45rem;
+    margin: 1rem auto;
+    text-align: left;
+    line-height:200%;
+}
+.outline a{
+    text-decoration: underline;
+}
+.outline a:hover{
+    color:black;
+}
+
+.body{
+    background-color: #181c3d;
+    color: white;
+    font-size:18px;
+    padding: 1rem 2rem;
+}
+.body p, .body blockquote, .body h2, .body h3{
+    max-width: 45rem;
+    margin: 1rem auto;
+    line-height: 155%;
+}
+
+.body blockquote{
+    border-left: .25rem solid white;
+    padding-left:2rem;
+}
+
+.body h2, .body h3{
+    padding-top: 2rem;
+    text-shadow: 2px 2px black;
+}
+
+.body h2{
+    font-size:32px;
+    text-decoration: underline;
+}
+
+.body li a{
+    line-height: 175%;
+    text-decoration: underline;
+}
+
+.body li a:hover{
+    color: rgb(74, 179, 234);
+}
+
+.swipeGallery{
+    max-width: 45rem;
+    margin: auto;
+    text-align: center;
+}
+.swipeGallery img{
+    max-height: 40rem;
+    max-width: calc(100% - 2rem);
+    margin:1rem;
+}
+
+.spotifyFrame iframe{
+    width: 100%;
+    height: 35rem;
+}
+
+.link{
+    width:100%;
+    max-width: 45rem;
+    text-align: center;
+}
+
+.link a{
+    display: inline-block;
+    color:white;
+    background-color: #263447;
+    width: 100%;
+    font-size: 20px;
+    font-weight: 700;
+    padding:1.5rem 3rem;
+    border-radius: 24px;
+    margin: .5rem 0;
+}
+
+.footer{
+    height:5vh;
+}
