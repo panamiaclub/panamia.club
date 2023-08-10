@@ -131,12 +131,12 @@ const AboutUs: NextPage = () => {
             <p>Signing up to join Pana MIA Club is easy and free! All we ask is that you fill out our form. Please find the links below for the 6 categories. If your business fits into more than one category, choose the one that best describes you. We use your answers to create your online profile so please be as detailed as possible when answering the prompts. Pretend you’re introducing your project to our followers for the first time. 🙂</p>
             <p>
               <ol>
-                <li><a href="https://docs.google.com/forms/d/e/1FAIpQLScRaDf72JKx5-jx_nbuqVauPEsZjft_KasVPHgTUy3ETxJq8A/viewform?usp=sf_link" target="_blank" rel="noreferrer">Food</a></li>
-                <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSd8O18ZJjvgTY-zUXnHRpv0xsSuDine3-XIUC1XziqdTfKfMw/viewform?usp=sf_link" target="_blank" rel="noreferrer">Apparel/Jewelry</a></li>
-                <li><a href="https://docs.google.com/forms/d/e/1FAIpQLScRuYdLv1-ony5z5VjCqUpRMihbO9vjdD_HauohSjyI_c6ivA/viewform?usp=sf_link" target="_blank" rel="noreferrer">Consumer Goods</a></li>
-                <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSeGFuia9rDFZefGixvxcTVyx6fYTMNUiCEuap3ryyjuJNLf0w/viewform?usp=sf_link" target="_blank" rel="noreferrer">Services/Groups</a></li>
-                <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSfTUsnOxSWMjnilVU50Nnq4xdPgurlaIbJA8keNMuZBe0-WwQ/viewform?usp=sf_link" target="_blank" rel="noreferrer">Art</a></li>
-                <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSfjrQj7IS4lToILFqPQt6X_1W7utKVE3rIQgMsJhaUqfWsMSQ/viewform?usp=sf_link" target="_blank" rel="noreferrer">Platform/Organizations</a></li>
+                <li><a href="https://docs.google.com/forms/d/e/1FAIpQLScRaDf72JKx5-jx_nbuqVauPEsZjft_KasVPHgTUy3ETxJq8A/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer">Food</a></li>
+                <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSd8O18ZJjvgTY-zUXnHRpv0xsSuDine3-XIUC1XziqdTfKfMw/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer">Apparel/Jewelry</a></li>
+                <li><a href="https://docs.google.com/forms/d/e/1FAIpQLScRuYdLv1-ony5z5VjCqUpRMihbO9vjdD_HauohSjyI_c6ivA/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer">Consumer Goods</a></li>
+                <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSeGFuia9rDFZefGixvxcTVyx6fYTMNUiCEuap3ryyjuJNLf0w/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer">Services/Groups</a></li>
+                <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSfTUsnOxSWMjnilVU50Nnq4xdPgurlaIbJA8keNMuZBe0-WwQ/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer">Art</a></li>
+                <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSfjrQj7IS4lToILFqPQt6X_1W7utKVE3rIQgMsJhaUqfWsMSQ/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer">Platform/Organizations</a></li>
               </ol>
             </p>
 
@@ -148,13 +148,13 @@ const AboutUs: NextPage = () => {
 
             <a href="#donate-now"><h2 id="donate-now">Donate Now</h2></a>
             <p className={styles.link}>
-              <a target="_blank" rel="noreferrer" href="https://patreon.com/PanaMIAClub">
+              <a target="_blank" rel="noopener noreferrer" href="https://patreon.com/PanaMIAClub">
               <IconBrandPatreon size={20} stroke={1.5} color='white' />
               &nbsp;Support Us Through Patreon!
               </a>
             </p>
             <p className={styles.link}>
-              <a target="_blank" rel="noreferrer" href="https://www.gofundme.com/f/panamia-club-help-create-soflo-locals-directory">
+              <a target="_blank" rel="noopener noreferrer" href="https://www.gofundme.com/f/panamia-club-help-create-soflo-locals-directory">
               <IconCash size={20} stroke={1.5} color='white' />
               &nbsp;Donate To Our GoFundMe!
               </a>
