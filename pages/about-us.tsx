@@ -143,7 +143,7 @@ const AboutUs: NextPage = () => {
             <a href="#soflo-soundtrack"><h2 id="soflo-soundtrack">The SoFlo Soundtrack</h2></a>
             <p>Check out our Spotify Local New Music Playlist: SoFlo Sounds. Want to add your own local music? Reach out to us via email at panamiaclub@gmail.com.</p>
             <p className={styles.spotifyFrame}>
-              <iframe src="https://open.spotify.com/embed/playlist/1fCbLXVMcd0Kmo23dzj8Km?utm_source=oembed" sandbox="allow-scripts allow-popups allow-top-navigation-by-user-activation allow-forms allow-same-origin allow-storage-access-by-user-activation" allowfullscreen="true"></iframe>
+              <iframe src="https://open.spotify.com/embed/playlist/1fCbLXVMcd0Kmo23dzj8Km?utm_source=oembed" sandbox="allow-scripts allow-popups allow-top-navigation-by-user-activation allow-forms allow-same-origin allow-storage-access-by-user-activation" allowFullScreen></iframe>
             </p>
 
             <a href="#donate-now"><h2 id="donate-now">Donate Now</h2></a>
