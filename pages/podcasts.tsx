@@ -60,7 +60,7 @@ const Podcasts: NextPage = () => {
               <p>Punto De Encuentro: Pana MIA Club’s First Official Meet Up</p>
               <iframe width="100%" height="315" src="https://www.youtube.com/embed/gTzHxujUxnc" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
             </div>
-            <p className={styles.channelLink}><a href="https://www.youtube.com/@panamiaclub" target="_blank">Our Full Youtube Channel&nbsp;<IconBrandYoutube size={32} stroke={2.5} color='white' /></a></p>
+            <p className={styles.channelLink}><a href="https://www.youtube.com/@panamiaclub" target="_blank"  ref="noreferrer">Our Full Youtube Channel&nbsp;<IconBrandYoutube size={32} stroke={2.5} color='white' /></a></p>
           </section>
           <div className={styles.footer}></div>
       </div>
