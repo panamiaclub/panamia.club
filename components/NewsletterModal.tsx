@@ -69,7 +69,7 @@ export default function NewsletterModal() {
         <div>
             <button className={styles.callToAction} onClick={toggleModal}>Sign Up for our Newsletter</button>
             <dialog id="dialog-newsletter" className={styles.modal}>
-                <div className={styles.modal__title}>You're Invited to our Club!</div>
+                <div className={styles.modal__title}>You're Invited To Our Club!</div>
                 <div className={styles.modal__subtitle}>Welcome to Pana MIA Club, the SoFlo Local's Directory connecting you to your vibrant community creatives, small businesses and organizations</div>
                 <form id="form-newsletter" className={styles.modal__fields} onSubmit={submitNewsletterForm}>
                     <p>

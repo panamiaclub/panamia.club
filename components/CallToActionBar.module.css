@@ -8,3 +8,9 @@
     background-color: #181c3d;
 }
 
+@media only screen and (max-width: 600px) {
+    .callToAction{
+        flex-flow: column;
+        padding: 1rem;
+    }
+}
