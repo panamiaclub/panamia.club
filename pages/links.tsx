@@ -1,25 +1,19 @@
 import type { NextPage } from 'next'
 import classNames from 'classnames';
 
-import Image from 'next/image'
 import styles from '../styles/Links.module.css'
 import { IconBrandTwitter, IconBrandInstagram, IconBrandTiktok, IconMail, IconBrandPatreon, IconBrandSpotify } from '@tabler/icons';
-import Link from 'next/link';
-import { ActionIcon } from '@mantine/core';
 
 import {motion, useAnimation} from "framer-motion";
 import {useInView} from "react-intersection-observer";
-import {useEffect} from 'react';
+import React, {useEffect} from 'react';
 
-import { useState } from 'react';
-import React from 'react';
+import CallToActionBar from '../components/CallToActionBar';
 
 
 const Links: NextPage = () => {
   const {ref, inView} = useInView();
   const animation = useAnimation();
-  const [alert, setAlert] = useState("");
-  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     console.log("use effect , inView = " , inView);
@@ -41,6 +35,9 @@ const Links: NextPage = () => {
 
   return (
     <div className={styles.app}>
+        <div id="call-to-action-bar">
+          <CallToActionBar />
+        </div>
         <div className={styles.main} ref={ref}>
           <section className={styles.header}>
             <span className={styles.logo}>

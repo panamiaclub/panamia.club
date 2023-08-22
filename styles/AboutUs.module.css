@@ -42,7 +42,7 @@
     font-size:18px;
     padding: 1rem 2rem;
 }
-.body p, .body blockquote, .body h2, .body h3{
+.body p, .body blockquote, .body h2, .body h3, .body ul, .body ol{
     max-width: 45rem;
     margin: 1rem auto;
     line-height: 155%;

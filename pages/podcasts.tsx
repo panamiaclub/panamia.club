@@ -1,22 +1,18 @@
 import type { NextPage } from 'next'
-import classNames from 'classnames';
 
 import styles from '../styles/Podcasts.module.css'
 import { IconBrandYoutube } from '@tabler/icons';
 
 import {motion, useAnimation} from "framer-motion";
 import {useInView} from "react-intersection-observer";
-import {useEffect} from 'react';
+import React, {useEffect} from 'react';
 
-import { useState } from 'react';
-import React from 'react';
+import CallToActionBar from '../components/CallToActionBar';
 
 
 const Podcasts: NextPage = () => {
   const {ref, inView} = useInView();
   const animation = useAnimation();
-  const [alert, setAlert] = useState("");
-  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     console.log("use effect , inView = " , inView);
@@ -38,6 +34,9 @@ const Podcasts: NextPage = () => {
 
   return (
     <div className={styles.app}>
+        <div id="call-to-action-bar">
+          <CallToActionBar />
+        </div>
         <div className={styles.main} ref={ref}>
           <section className={styles.header}>
             <h2>Pana MIA Club Podcasts</h2>
