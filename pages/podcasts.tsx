@@ -1,22 +1,18 @@
 import type { NextPage } from 'next'
-import classNames from 'classnames';
 
 import styles from '../styles/Podcasts.module.css'
 import { IconBrandYoutube } from '@tabler/icons';
 
 import {motion, useAnimation} from "framer-motion";
 import {useInView} from "react-intersection-observer";
-import {useEffect} from 'react';
+import React, {useEffect} from 'react';
 
-import { useState } from 'react';
-import React from 'react';
+import CallToActionBar from '../components/CallToActionBar';
 
 
 const Podcasts: NextPage = () => {
   const {ref, inView} = useInView();
   const animation = useAnimation();
-  const [alert, setAlert] = useState("");
-  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     console.log("use effect , inView = " , inView);
@@ -38,12 +34,23 @@ const Podcasts: NextPage = () => {
 
   return (
     <div className={styles.app}>
+        <div id="call-to-action-bar">
+          <CallToActionBar />
+        </div>
         <div className={styles.main} ref={ref}>
           <section className={styles.header}>
             <h2>Pana MIA Club Podcasts</h2>
           </section>
           <section className={styles.videos}>
             <h3>Most Recent Videos</h3>
+            <div className={styles.video}>
+              <p>Panavizión ft. Julie from Easy Peasy Tattoos & Alexx in Chainss</p>
+              <iframe width="100%" height="315" src="https://www.youtube.com/embed/IX2z1-_KEJw" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+            </div>
+            <div className={styles.video}>
+              <p>PanaVizión S1E4: Witches of Miami, Bozito, and Vanessa McCoy</p>
+              <iframe width="100%" height="315" src="https://www.youtube.com/embed/u4Ehz-Jx7Uo" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+            </div>
             <div className={styles.video}>
               <p>PanaVizion Interviews Kat from Earth Pallas and Paco from Folktale San Pedro</p>
               <iframe width="100%" height="315" src="https://www.youtube.com/embed/QFtX-UczYb0" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>

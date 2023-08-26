@@ -1,0 +1,97 @@
+.callToAction{
+    background-color: #FC2070;
+    border: 1px solid #FC2070;
+    border-radius: 32px;
+    color: white;
+    padding: .5rem 2rem;
+    margin: 0 1rem;
+    font-size: 18px;
+    font-weight: 700;
+}
+.callToAction:hover{
+    cursor:pointer;
+    border-color: white;
+    background-color: black;
+}
+
+@media only screen and (max-width: 600px) {
+    .callToAction{
+        margin-top:.5rem;
+    }
+}
+
+.modal{
+    border-radius: .5rem;
+    max-width: 45rem;
+    font-size: 20px;
+    background-color: #263447;
+    color: white;
+    padding: 1.5rem;
+}
+@media only screen and (max-width: 600px) {
+    .modal{
+        font-size:18px;
+        padding:1rem .5rem;
+    }
+}
+.modal::backdrop{
+    background-color: #777;
+    filter: opacity(.5);
+}
+.modal__title{font-size:32px;font-weight:700;text-align:center;padding: .5rem;}
+@media only screen and (max-width: 600px) { .modal__title{font-size:26px;} }
+.modal__subtitle{font-size:20px;text-align:center;padding: 1rem;}
+@media only screen and (max-width: 600px) { .modal__subtitle{font-size:18px;} }
+
+.modal__fields{
+    padding: 0 1rem;
+}
+
+.field__label{
+    display: inline-block;
+    width: 100%;
+    margin:.5rem 0;
+}
+
+.field__input{
+    width: 100%;
+    font-size:16px;
+    padding:.5rem;
+}
+
+
+.modal__fields ul{
+    list-style: none;
+    padding: 0;
+}
+.modal__fields ul li{
+    padding: .5rem 0;
+}
+.modal__fields input[type='radio']{
+    transform: scale(2);
+}
+.button{
+    width: calc(50% - 1rem);
+    margin: 0 .5rem;
+    font-size:18px;
+    letter-spacing: 1px;
+    padding:1rem .5rem;
+    background-color: black;
+    color: white;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 2rem;
+    border:3px solid black;
+}
+
+.cta{
+    background-color: #FC2070;
+    color: white;
+    border:3px solid #FC2070;
+}
+
+.modal__fields button:hover{
+    cursor: pointer;
+    border:3px solid white;
+}
+

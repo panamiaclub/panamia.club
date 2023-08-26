@@ -1,0 +1,16 @@
+.callToAction{
+    display: flex;
+    width:100%;
+    align-items: center;
+    justify-content: center;
+    padding: .5rem 1rem;
+    color: white;
+    background-color: #181c3d;
+}
+
+@media only screen and (max-width: 600px) {
+    .callToAction{
+        flex-flow: column;
+        padding: 1rem;
+    }
+}
