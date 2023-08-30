@@ -30,9 +30,13 @@ export default function NewsletterModal() {
                     },
                 }
             )
-            .then(async () => {
-                alert("Thank you for signing up!")
-                toggleModal();
+            .then(async (response) => {
+                if (response.data.error) {
+                    alert(response.data.error) // soft error should display for user to correct
+                } else {
+                    alert("Thank you for signing up!");
+                    toggleModal();
+                }
             })
             .catch((error) => {
                 console.log(error);
