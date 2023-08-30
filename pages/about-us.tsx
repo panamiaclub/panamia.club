@@ -9,6 +9,7 @@ import {useInView} from "react-intersection-observer";
 import React, {useEffect, useState} from 'react';
 
 import CallToActionBar from '../components/CallToActionBar';
+import PanaLogo from '../components/PanaLogo';
 
 
 const AboutUs: NextPage = () => {
@@ -42,7 +43,7 @@ const AboutUs: NextPage = () => {
         </div>
         <div className={styles.main} ref={ref}>
           <section className={styles.header}>
-            <img className={styles.logo} src="/favicon_x256.png" alt="Pana MIA Favicon logo" />
+            <PanaLogo color="pink" size="large" />
             <h1>Pana MIA Club: Your Guide to Local</h1>
             <br />
             <div className={styles.outline}>

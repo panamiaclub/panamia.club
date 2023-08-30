@@ -14,38 +14,33 @@ const validateEmail = (email: string): boolean => {
   return regEx.test(email);
 };
 
-const validateForm = async (
-  email: string
-) => {
-  if (!validateEmail(email)) {
-    return { error: "Email is invalid" };
-  }
-
-  await dbConnect();
-  const emailUser = await newsletter.findOne({ email: email });
-  if(emailUser){
-    return { error: "You are already registered." };
-  }
-  return null;
-};
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
 ) {
+
   // validate if it is a POST
   if (req.method !== "POST") {
     return res
-      .status(200)
+      .status(400)
       .json({ error: "This API call only accepts POST methods" });
   }
 
   // get and validate body variables
   const { name, email, membershipType, igUsername, otherURL } = req.body;
 
-  const errorMessage = await validateForm(email);
-  if (errorMessage) {
-    return res.status(400).json(errorMessage as ResponseData);
+  await dbConnect();
+  const emailUser = await newsletter.findOne({ email: email });
+  if(emailUser){
+    return res
+      .status(200)
+      .json({ error: "You are already registered." });
+  }
+
+  if (!validateEmail(email)) {
+    return res
+      .status(200)
+      .json({ error: "Please enter a valid email address." });
   }
 
 // create new newsletter entry on MongoDB

@@ -1,0 +1,38 @@
+.logoContainer{
+    display: inline-flex;
+    height: 3rem;
+    width: 3rem;
+    margin: auto;
+    border-radius: 50%;
+    text-align: center;
+}
+
+.medium{
+    height: calc(3rem * 1.75);
+    width: calc(3rem * 1.75);
+}
+.large{
+    height: calc(3rem * 3);
+    width: calc(3rem * 3);
+}
+
+.borderedPink{
+    background-color: #FC2070;
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+}
+.borderedPink .logo{
+    transform: scale(0.8);
+}
+.borderedBlue{
+    background-color: #228be6;
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+}
+.borderedBlue .logo{
+    transform: scale(0.8);
+}
+
+
+.logo{
+    display: inline-block;
+    width:100%;
+}

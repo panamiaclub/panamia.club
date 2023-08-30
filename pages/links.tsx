@@ -3,6 +3,7 @@ import classNames from 'classnames';
 
 import styles from '../styles/Links.module.css'
 import { IconBrandTwitter, IconBrandInstagram, IconBrandTiktok, IconMail, IconBrandPatreon, IconBrandSpotify } from '@tabler/icons';
+import PanaLogo from '../components/PanaLogo';
 
 import {motion, useAnimation} from "framer-motion";
 import {useInView} from "react-intersection-observer";
@@ -41,7 +42,7 @@ const Links: NextPage = () => {
         <div className={styles.main} ref={ref}>
           <section className={styles.header}>
             <span className={styles.logo}>
-              <img src="/logo_new_3.png" alt="panamia logo"/>   
+              <PanaLogo color="white" bordered="pink" size="large" />  
             </span>
             <div className={styles.headerTitle}>Pana MIA Club</div>
             <div className={styles.headerDesc}>

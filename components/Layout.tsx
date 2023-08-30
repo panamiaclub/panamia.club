@@ -5,6 +5,7 @@ import Image from 'next/image'
 import styles from '../styles/Home.module.css'
 import Head from 'next/head';
 import Link from 'next/link';
+import PanaLogo from './PanaLogo';
 type LayoutProps = {
     children: React.ReactNode,
   };
@@ -157,11 +158,9 @@ export default function Layout({ children }: LayoutProps) {
                        {items}
                       </div>
 
-                      <Link href="/">
-                        <span className={styles.logo}>
-                          <Image src="/logo_new_3.png" alt="panamia logo" width={40} height={45}/>   
-                        </span>
-                      </Link>
+                      <a href="/">
+                        <PanaLogo color="pink" />
+                      </a>
                 
                     </Group>
                     <Group spacing={5} className={classes.links}>
@@ -186,22 +185,20 @@ export default function Layout({ children }: LayoutProps) {
            
             <div className={classes.footer} id="footer">
               <Container className={classes.footerinner}>
-              <Link href="/">
-                      <span className={styles.logo}>
-                        <Image src="/logo_new_3.png" alt="panamia logo" width={80} height={80}/>   
-                          </span>
-                      </Link>
-                  <Group spacing={0} className={classes.links} position="right" noWrap>
-                    <Link target="_blank" href="https://instagram.com/panamiaclub">
-                      <ActionIcon size="lg">
-                        <IconBrandInstagram size={20} stroke={1.5} />
-                      </ActionIcon>
-                    </Link>
-                    <Link target="_blank" href="https://discord.gg/SnNV48XGu3">
+                <a href="/">
+                  <PanaLogo color="pink" size="medium" />
+                </a>
+                <Group spacing={0} className={classes.links} position="right" noWrap>
+                  <Link target="_blank" href="https://instagram.com/panamiaclub">
                     <ActionIcon size="lg">
-                        <IconBrandDiscord size={20} stroke={1.5} />
-                      </ActionIcon>
-                    </Link>
+                      <IconBrandInstagram size={20} stroke={1.5} />
+                    </ActionIcon>
+                  </Link>
+                  <Link target="_blank" href="https://discord.gg/SnNV48XGu3">
+                  <ActionIcon size="lg">
+                      <IconBrandDiscord size={20} stroke={1.5} />
+                    </ActionIcon>
+                  </Link>
                 </Group>
               </Container>
             </div>
