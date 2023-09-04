@@ -10,6 +10,7 @@ import React, {useEffect, useState} from 'react';
 
 import CallToActionBar from '../components/CallToActionBar';
 import PanaLogo from '../components/PanaLogo';
+import MainHeader from '../components/MainHeader';
 
 
 const AboutUs: NextPage = () => {
@@ -38,9 +39,7 @@ const AboutUs: NextPage = () => {
 
   return (
     <div className={styles.app}>
-        <div id="call-to-action-bar">
-          <CallToActionBar />
-        </div>
+        <MainHeader />
         <div className={styles.main} ref={ref}>
           <section className={styles.header}>
             <PanaLogo color="pink" size="large" />

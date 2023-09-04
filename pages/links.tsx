@@ -10,7 +10,7 @@ import {useInView} from "react-intersection-observer";
 import React, {useEffect} from 'react';
 
 import CallToActionBar from '../components/CallToActionBar';
-
+import MainHeader from '../components/MainHeader';
 
 const Links: NextPage = () => {
   const {ref, inView} = useInView();
@@ -36,9 +36,7 @@ const Links: NextPage = () => {
 
   return (
     <div className={styles.app}>
-        <div id="call-to-action-bar">
-          <CallToActionBar />
-        </div>
+        <MainHeader />
         <div className={styles.main} ref={ref}>
           <section className={styles.header}>
             <span className={styles.logo}>

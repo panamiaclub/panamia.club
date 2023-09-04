@@ -8,6 +8,7 @@ import {useInView} from "react-intersection-observer";
 import React, {useEffect} from 'react';
 
 import CallToActionBar from '../components/CallToActionBar';
+import MainHeader from '../components/MainHeader';
 
 
 const Podcasts: NextPage = () => {
@@ -34,9 +35,7 @@ const Podcasts: NextPage = () => {
 
   return (
     <div className={styles.app}>
-        <div id="call-to-action-bar">
-          <CallToActionBar />
-        </div>
+        <MainHeader />
         <div className={styles.main} ref={ref}>
           <section className={styles.header}>
             <h2>Pana MIA Club Podcasts</h2>

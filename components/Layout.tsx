@@ -14,17 +14,14 @@ type LayoutProps = {
   import {
     ActionIcon,
     createStyles,
-    Menu,
-    Center,
     Header,
     Container,
     Group,
     Button,
-    Burger,Grid
+    Burger
   } from '@mantine/core';
   import { useDisclosure } from '@mantine/hooks';
   import { IconChevronDown } from '@tabler/icons';
-  import { MantineLogo } from '@mantine/ds';
   import {useSession ,signIn, signOut} from 'next-auth/react';
 
   const HEADER_HEIGHT = 60;
@@ -150,7 +147,7 @@ export default function Layout({ children }: LayoutProps) {
             <script type="text/javascript" id="hs-script-loader" async defer src="//js-na1.hs-scripts.com/23472319.js"></script>
             </Head>
 
-             <Header height={HEADER_HEIGHT} sx={{ borderBottom: 0 }} mb={120} style={{marginBottom:"0"}}>
+             <Header height={HEADER_HEIGHT} sx={{ borderBottom: 0 }} mb={120} style={{marginBottom:"0", display:"none"}}>
                 <Container className={classes.inner} fluid>
                     <Group>
                       <Burger opened={opened} onClick={toggle} className={classes.burger} size="sm" />

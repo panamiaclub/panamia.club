@@ -1,0 +1,100 @@
+
+  
+.header {
+    background: white;
+    color: #fff;
+}
+
+
+.burger {
+    display: none;
+    border: 2px solid #fff;
+    border-radius: 5px;
+    font-size: 1em;
+    background: transparent;
+    color: black;
+}
+
+@media only screen and (max-width: 600px) {
+    .burger{
+        display: block;
+        padding: 0.25rem 0.5rem;
+        width:max-content;
+    }
+}
+
+.nav {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1em 1em 0;
+}
+
+@media only screen and (max-width: 600px) {
+    .nav{
+        justify-content: left;
+    }
+}
+
+.navList{
+    display: flex;
+    list-style: none;
+    color: #444;
+    padding: 0;
+}
+
+@media only screen and (max-width: 600px) {
+    .navList{
+        margin:0.5rem 0;
+        transform: scaleY(0);
+        height:0;
+        order: 1;
+        width:100%;
+        flex-direction: column;
+        overflow: hidden;
+        transform-origin:top;
+    }
+    .navList[aria-expanded="true"]{
+        height:max-content;
+        transform: scaleY(1);
+        transition: all .5s ease-out;
+    }
+}
+
+.listItem{
+    display: inline-block;
+    padding:0.5rem;
+    border-radius: 0.5rem;
+}
+@media only screen and (max-width: 600px) {
+    .listItem{
+        width:calc(100% - 4rem);
+        background-color: #f4f5f6;
+        margin:0.25rem 0;
+        margin-left: 4rem;
+    }
+}
+
+.listItem:hover{
+    background-color: #f8f9fa;
+    text-decoration: underline;
+}
+
+.sessionButton{
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 1.25rem;
+    padding: 0.5rem 1.25rem;
+    background-color: #4ab3ea;
+    white-space: nowrap;
+}
+@media only screen and (max-width: 600px) {
+    .sessionButton{
+        margin-left:auto;
+    }
+}
+
+
+

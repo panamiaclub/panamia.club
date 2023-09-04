@@ -1,7 +1,8 @@
 import { FormEvent, useState } from 'react';
 import axios from "axios";
-import styles from './NewsletterModal.module.css';
 import classNames from 'classnames';
+
+import styles from './NewsletterModal.module.css';
 
 export default function NewsletterModal() {
 
