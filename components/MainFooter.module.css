@@ -1,0 +1,43 @@
+.footer{
+    background-color: white;
+    padding:1.5rem 1rem;
+    color: #444;
+    font-size: 14px;
+}
+
+.footerInner{
+    display: flex;
+    justify-content: space-between;
+}
+
+.footerInner ul{
+    margin:0;
+    list-style-type: none;
+}
+
+.footerInner li{
+    line-height:1.75rem;
+}
+
+.footerInner li strong{
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.footerLinks li a{
+    color:#FC2070
+}
+
+.footerLinks li a:hover{
+    text-decoration: underline;
+}
+
+.footerLinksAlt li a:hover{
+    text-decoration: underline;
+}
+
+.socials ul{
+    list-style: none;
+    line-height:1.5rem;
+    padding: 0 1rem;
+}

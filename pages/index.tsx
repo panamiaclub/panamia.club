@@ -36,8 +36,6 @@ import { Carousel } from 'react-responsive-carousel';
 
 import Router from "next/router";
 
-import MainHeader from '../components/MainHeader'
-
 const Home: NextPage = () => {
   const {ref, inView} = useInView();
   const animation = useAnimation();
@@ -111,7 +109,6 @@ const Home: NextPage = () => {
 
   return (
     <div className={styles.App} >
-        <MainHeader />
         <div className={styles.titleDiv}>
           <motion.div
             initial="hidden" animate="visible" variants ={{

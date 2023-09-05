@@ -24,8 +24,6 @@ import axios from "axios";
 import Router from "next/router";
 import Link from "next/link";
 
-import MainHeader from '../components/MainHeader';
-
 const SignIn: NextPage = ({ providers }: any) => {
   const { data: session } = useSession();
   const [authType, setAuthType] = useState("Login");
@@ -107,7 +105,6 @@ const SignIn: NextPage = ({ providers }: any) => {
 
   return (
     <div style={{padding:"12% 0"}} className={styles.App}>
-      <MainHeader />
       <Grid>
         <Grid.Col md={4}></Grid.Col>
         <Grid.Col md={4}>

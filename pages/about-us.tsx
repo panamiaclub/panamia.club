@@ -8,9 +8,7 @@ import {motion, useAnimation} from "framer-motion";
 import {useInView} from "react-intersection-observer";
 import React, {useEffect, useState} from 'react';
 
-import CallToActionBar from '../components/CallToActionBar';
 import PanaLogo from '../components/PanaLogo';
-import MainHeader from '../components/MainHeader';
 
 
 const AboutUs: NextPage = () => {
@@ -39,7 +37,6 @@ const AboutUs: NextPage = () => {
 
   return (
     <div className={styles.app}>
-        <MainHeader />
         <div className={styles.main} ref={ref}>
           <section className={styles.header}>
             <PanaLogo color="pink" size="large" />

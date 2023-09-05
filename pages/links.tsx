@@ -1,43 +1,21 @@
 import type { NextPage } from 'next'
+import React from 'react';
 import classNames from 'classnames';
-
-import styles from '../styles/Links.module.css'
 import { IconBrandTwitter, IconBrandInstagram, IconBrandTiktok, IconMail, IconBrandPatreon, IconBrandSpotify } from '@tabler/icons';
+
 import PanaLogo from '../components/PanaLogo';
+import styles from '../styles/Links.module.css'
+import PageMeta from '../components/PageMeta';
 
-import {motion, useAnimation} from "framer-motion";
-import {useInView} from "react-intersection-observer";
-import React, {useEffect} from 'react';
-
-import CallToActionBar from '../components/CallToActionBar';
-import MainHeader from '../components/MainHeader';
 
 const Links: NextPage = () => {
-  const {ref, inView} = useInView();
-  const animation = useAnimation();
-
-  useEffect(() => {
-    console.log("use effect , inView = " , inView);
-    if(inView){
-      animation.start({
-        x: 0,
-        transition: {
-          type: "spring",
-          duration: 1,
-          bounce: 0.3
-        }
-      })
-    }else{
-      animation.start({
-        x:"-100vw"
-      })
-    }
-  }, [inView]);
-
   return (
     <div className={styles.app}>
-        <MainHeader />
-        <div className={styles.main} ref={ref}>
+      <PageMeta
+        title="Links to Explore"
+        desc="Links to our socials, events, forms and local connections! Find out more about our community by exploring these links, becoming a subscriber, and enjoying our Spotify Playlist"
+        />
+        <div className={styles.main}>
           <section className={styles.header}>
             <span className={styles.logo}>
               <PanaLogo color="white" bordered="pink" size="large" />  

@@ -9,12 +9,10 @@ function MyApp({ Component, pageProps }: AppProps<{
   session: Session;
 }> ) {
   return(
-  <SessionProvider session={pageProps.session}>
-      <MantineProvider>
+    <SessionProvider session={pageProps.session}>
         <Layout>
           <Component {...pageProps} />
-          </Layout>
-      </MantineProvider>
+        </Layout>
     </SessionProvider>
   );
 }

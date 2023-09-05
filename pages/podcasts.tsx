@@ -1,42 +1,18 @@
 import type { NextPage } from 'next'
-
-import styles from '../styles/Podcasts.module.css'
+import React from 'react';
 import { IconBrandYoutube } from '@tabler/icons';
 
-import {motion, useAnimation} from "framer-motion";
-import {useInView} from "react-intersection-observer";
-import React, {useEffect} from 'react';
-
-import CallToActionBar from '../components/CallToActionBar';
-import MainHeader from '../components/MainHeader';
-
+import styles from '../styles/Podcasts.module.css'
+import PageMeta from '../components/PageMeta';
 
 const Podcasts: NextPage = () => {
-  const {ref, inView} = useInView();
-  const animation = useAnimation();
-
-  useEffect(() => {
-    console.log("use effect , inView = " , inView);
-    if(inView){
-      animation.start({
-        x: 0,
-        transition: {
-          type: "spring",
-          duration: 1,
-          bounce: 0.3
-        }
-      })
-    }else{
-      animation.start({
-        x:"-100vw"
-      })
-    }
-  }, [inView]);
-
   return (
     <div className={styles.app}>
-        <MainHeader />
-        <div className={styles.main} ref={ref}>
+      <PageMeta
+        title="PanaVizión, the PanaMia podcast"
+        desc="Youtube links to our most recent PanaVizión podcast videos, where we meet with SoFlo locals and discuss art, business and community."
+        />
+        <div className={styles.main}>
           <section className={styles.header}>
             <h2>Pana MIA Club Podcasts</h2>
           </section>
