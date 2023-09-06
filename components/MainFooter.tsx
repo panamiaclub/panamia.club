@@ -1,7 +1,10 @@
+import { IconBrandInstagram, IconBrandDiscord } from "@tabler/icons";
+import Link from "next/link";
+
 import PanaLogo from "./PanaLogo";
 import styles from './MainFooter.module.css';
 
-import { IconBrandInstagram, IconBrandDiscord } from "@tabler/icons";
+
 
 export default function GlobalFooter() {
     return (
@@ -12,15 +15,15 @@ export default function GlobalFooter() {
                 </a>
                 <ul className={styles.footerLinks}>
                     <li><strong>PanaMia</strong></li>
-                    <li><a href="/podcasts">Podcasts</a></li>
-                    <li><a href="/about-us">About</a></li>
-                    <li><a href="/links">Links</a></li>
-                    <li><a href="/directorio">Directorio</a></li>
+                    <li><Link href="/podcasts">Podcasts</Link></li>
+                    <li><Link href="/about-us">About</Link></li>
+                    <li><Link href="/links">Links</Link></li>
+                    <li><Link href="/directorio">Directorio</Link></li>
                 </ul>
                 <ul className={styles.footerLinksAlt}>
                     <li><strong>Users</strong></li>
-                    <li><a href="/signin">Sign In</a></li>
-                    <li><a href="/signin">Register</a></li>
+                    <li><Link href="/signin">Sign In</Link></li>
+                    <li><Link href="/signin">Register</Link></li>
                 </ul>
                 <div className={styles.socials}>
                     <ul>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {useSession ,signOut} from 'next-auth/react';
+import Link from 'next/link';
 import classNames from 'classnames';
 
 import styles from './MainHeader.module.css';
@@ -29,7 +30,7 @@ interface MenuItemProps {
 
 function MenuItem(props: MenuItemProps): JSX.Element {
     return (
-        <li><a className={styles.listItem} href={props.url}>{props.label}</a></li>
+        <li><Link className={styles.listItem} href={props.url}>{props.label}</Link></li>
     );
 }
 
@@ -58,9 +59,9 @@ export default function MainHeader() {
     return (
         <header className={styles.header}>
             <nav role="navigation" className={styles.nav}>
-                <a href="/">
+                <Link href="/">
                     <PanaLogo color="pink" />
-                </a>
+                </Link>
                 <button onClick={onBurgerClick} className={styles.burger} id="mainheader-toggle" aria-expanded="false" aria-controls="menu">
                     <span className="burger-icon"></span>
                     <span className="sr-only">Open Menu</span>
@@ -75,7 +76,7 @@ export default function MainHeader() {
                 </div>
                 }
                 {!session && 
-                    <a className={styles.sessionButton} href="/signin">Sign In</a>
+                    <Link className={styles.sessionButton} href="/signin">Sign In</Link>
                 }
             </nav>
             <div id="call-to-action-bar">
