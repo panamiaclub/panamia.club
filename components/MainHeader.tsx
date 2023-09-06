@@ -30,7 +30,7 @@ interface MenuItemProps {
 
 function MenuItem(props: MenuItemProps): JSX.Element {
     return (
-        <li><Link className={styles.listItem} href={props.url}>{props.label}</Link></li>
+        <li className={styles.listItem}><Link href={props.url}>{props.label}</Link></li>
     );
 }
 
@@ -59,9 +59,7 @@ export default function MainHeader() {
     return (
         <header className={styles.header}>
             <nav role="navigation" className={styles.nav}>
-                <Link href="/">
-                    <PanaLogo color="pink" />
-                </Link>
+                <PanaLogo color="pink" />
                 <button onClick={onBurgerClick} className={styles.burger} id="mainheader-toggle" aria-expanded="false" aria-controls="menu">
                     <span className="burger-icon"></span>
                     <span className="sr-only">Open Menu</span>
@@ -76,7 +74,9 @@ export default function MainHeader() {
                 </div>
                 }
                 {!session && 
-                    <Link className={styles.sessionButton} href="/signin">Sign In</Link>
+                    <div className={styles.sessionButton}>
+                        <Link  href="/signin">Sign In</Link>
+                    </div>
                 }
             </nav>
             <div id="call-to-action-bar">

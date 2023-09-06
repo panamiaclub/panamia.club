@@ -39,7 +39,7 @@ const AboutUs: NextPage = () => {
     <div className={styles.app}>
         <div className={styles.main} ref={ref}>
           <section className={styles.header}>
-            <PanaLogo color="pink" size="large" />
+            <PanaLogo color="pink" size="large" nolink={true} />
             <h1>Pana MIA Club: Your Guide to Local</h1>
             <br />
             <div className={styles.outline}>

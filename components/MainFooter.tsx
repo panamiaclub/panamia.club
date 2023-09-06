@@ -9,9 +9,7 @@ export default function GlobalFooter() {
     return (
         <footer className={styles.footer} id="footer">
             <div className={styles.footerInner}>
-                <Link href="/">
-                    <PanaLogo color="pink" size="medium" />
-                </Link>
+                <PanaLogo color="pink" size="medium" />
                 <ul className={styles.footerLinks}>
                     <li><strong>PanaMia</strong></li>
                     <li><Link href="/podcasts">Podcasts</Link></li>

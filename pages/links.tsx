@@ -18,7 +18,7 @@ const Links: NextPage = () => {
         <div className={styles.main}>
           <section className={styles.header}>
             <span className={styles.logo}>
-              <PanaLogo color="white" bordered="pink" size="large" />  
+              <PanaLogo color="white" bordered="pink" size="large" nolink={true} />  
             </span>
             <div className={styles.headerTitle}>Pana MIA Club</div>
             <div className={styles.headerDesc}>

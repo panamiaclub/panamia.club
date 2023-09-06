@@ -1,10 +1,14 @@
+import Link
+ from 'next/link';
 import styles from './PanaLogo.module.css';
 import classNames from 'classnames';
+import { trusted } from 'mongoose';
 
 interface LogoProps {
     color: string | "white",
     bordered: string | null,
     size: string | null,
+    nolink?: boolean
 }
 
 const defaultProps: LogoProps = {
@@ -40,11 +44,26 @@ export default function PanaLogo(props: LogoProps) {
     }
     container_classes = classNames(container_classes, color_class, size_class)
     
-    return (
-        <span className={container_classes}>
-            <img className={styles.logo} src={logo_src} alt={logo_alt} />   
-        </span>
-    );
+    if (props.nolink === true) {
+        return (
+            <div>
+                <span className={container_classes}>
+                    <img className={styles.logo} src={logo_src} alt={logo_alt} />   
+                </span>
+            </div>
+        );
+    } else {
+        return (
+            <div>
+                <Link href="/">
+                    <span className={container_classes}>
+                        <img className={styles.logo} src={logo_src} alt={logo_alt} />   
+                    </span>
+                </Link>
+            </div>
+        );
+    }
+    
 }
 
 PanaLogo.defaultProps = defaultProps;
