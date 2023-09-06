@@ -5,14 +5,13 @@ import PanaLogo from "./PanaLogo";
 import styles from './MainFooter.module.css';
 
 
-
 export default function GlobalFooter() {
     return (
         <footer className={styles.footer} id="footer">
             <div className={styles.footerInner}>
-                <a href="/">
+                <Link href="/">
                     <PanaLogo color="pink" size="medium" />
-                </a>
+                </Link>
                 <ul className={styles.footerLinks}>
                     <li><strong>PanaMia</strong></li>
                     <li><Link href="/podcasts">Podcasts</Link></li>
@@ -28,13 +27,13 @@ export default function GlobalFooter() {
                 <div className={styles.socials}>
                     <ul>
                         <li>
-                            <a target="_blank" href="https://instagram.com/panamiaclub">
+                            <a href="https://instagram.com/panamiaclub">
                                 <IconBrandInstagram size={32} stroke={1.5} />
                                 <span className="sr-only">Instagram</span>
                             </a>
                         </li>
                         <li>
-                            <a target="_blank" href="https://discord.gg/SnNV48XGu3">
+                            <a href="https://discord.gg/SnNV48XGu3">
                                 <IconBrandDiscord size={32} stroke={1.5} />
                                 <span className="sr-only">Discord</span>
                             </a>
