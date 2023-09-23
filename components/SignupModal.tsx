@@ -2,28 +2,26 @@ import { FormEvent, useState } from 'react';
 import axios from "axios";
 import classNames from 'classnames';
 
-import styles from './NewsletterModal.module.css';
+import styles from './SignupModal.module.css';
 
-export default function NewsletterModal() {
+export default function SignupModal() {
 
     const [email, setEmail] = useState("");
     const [name, setName] = useState("");
-    const igUsername: string | null = null;
-    const otherURL: string | null = null;
-    const [membership_type, setMembershipType] = useState("");
+    const [signup_type, setSignupType] = useState("");
 
-    function submitNewsletterForm(e: FormEvent) {
-        validateNewsletterForm();
-        postNewsletterForm();
+    function submitSignupForm(e: FormEvent) {
+        validateSignupForm();
+        postSignupForm();
         e.preventDefault();
     }
 
-    async function postNewsletterForm() {
+    async function postSignupForm() {
         if (email){
             const res = await axios
             .post(
-                "/api/createNewsletterEntry",
-                { name, email, igUsername, otherURL, membership_type},
+                "/api/createSignup",
+                { name, email, signup_type},
                 {
                     headers: {
                         Accept: "application/json",
@@ -35,6 +33,9 @@ export default function NewsletterModal() {
                 if (response.data.error) {
                     alert(response.data.error) // soft error should display for user to correct
                 } else {
+                    setName("");
+                    setEmail("");
+                    setSignupType("");
                     alert("Thank you for signing up!");
                     toggleModal();
                 }
@@ -48,14 +49,14 @@ export default function NewsletterModal() {
         }
     }
 
-    function validateNewsletterForm() {
+    function validateSignupForm() {
         if (email.length < 5 ) {
             
         }
     }
 
     function toggleModal() {
-        let dialog = document.getElementById('dialog-newsletter') as HTMLDialogElement;
+        let dialog = document.getElementById('dialog-signup') as HTMLDialogElement;
         if (dialog instanceof HTMLDialogElement) {
             if (dialog.open) {
                 dialog.close();
@@ -66,37 +67,38 @@ export default function NewsletterModal() {
         }
     }
 
-    function onMembershipTypeChange(e: FormEvent) {
-        if (e.target) setMembershipType((e.target as HTMLInputElement).value);
+    function onSignupTypeChange(e: FormEvent) {
+        const signupChange = (e.target as HTMLInputElement).value
+        if (e.target) setSignupType(signupChange);
     }
 
     return (
         <div>
             <button className={styles.callToAction} onClick={toggleModal}>Sign Up for our Newsletter</button>
-            <dialog id="dialog-newsletter" className={styles.modal}>
+            <dialog id="dialog-signup" className={styles.modal}>
                 <div className={styles.modal__title}>You're Invited To Our Club!</div>
                 <div className={styles.modal__subtitle}>Welcome to Pana MIA Club, the SoFlo Local's Directory connecting you to your vibrant community creatives, small businesses and organizations</div>
-                <form id="form-newsletter" className={styles.modal__fields} onSubmit={submitNewsletterForm}>
+                <form id="form-signup" className={styles.modal__fields} onSubmit={submitSignupForm}>
                     <p>
                         <label className={styles.label__field}>Full Name</label><br />
                         <input type="text" name="name" className={styles.field__input} 
-                            maxLength={75} placeholder="Your Name" onChange={(e:any) => setName(e.target.value)} />
+                            maxLength={75} placeholder="Your Name" value={name} onChange={(e:any) => setName(e.target.value)} />
                     </p>
                     <p>
                         <label className={styles.label__field}>Email Address</label><br />
                         <input type="email" name="email" className={styles.field__input}
-                            maxLength={100} placeholder="you@example.com" required onChange={(e:any) => setEmail(e.target.value)} />
+                            maxLength={100} placeholder="you@example.com" value={email} required onChange={(e:any) => setEmail(e.target.value)} />
                     </p>
                     <ul>
                         <li><strong>Which best describes you?</strong></li>
                         <li><label>
-                            <input type="radio" name="membership_type" value="creative_biz_org" onChange={onMembershipTypeChange} checked={membership_type == "creative_biz_org"} />
+                            <input type="radio" name="signup_type" value="creative_biz_org" onChange={onSignupTypeChange} checked={signup_type == "creative_biz_org"} />
                             &emsp;I am a locally-based creative/business/organization</label></li>
                         <li><label>
-                            <input type="radio" name="membership_type" value="resident_support" onChange={onMembershipTypeChange} checked={membership_type == "resident_support"} />
+                            <input type="radio" name="signup_type" value="resident_support" onChange={onSignupTypeChange} checked={signup_type == "resident_support"} />
                             &emsp;I am a South Florida resident interested in supporting local</label></li>
                         <li><label>
-                            <input type="radio" name="membership_type" value="visiting_florida" onChange={onMembershipTypeChange} checked={membership_type == "visiting_florida"} />
+                            <input type="radio" name="signup_type" value="visiting_florida" onChange={onSignupTypeChange} checked={signup_type == "visiting_florida"} />
                             &emsp;I'm visiting South Florida and want to engage with the local scene</label></li>
                     </ul>
                     <button type="submit" className={classNames(styles.button, styles.cta)}>Submit</button>

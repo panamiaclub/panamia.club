@@ -16,22 +16,10 @@ const menu_items = [
     {id:"contact", link: "/#footer", label: "Contact Us"},
 ];
 
-const menu_elements = menu_items.map((item) => {
-    return (
-        <MenuItem key={item.id} id={item.id} label={item.label} url={item.link} />
-    );
-})
-
 interface MenuItemProps {
     id: string,
     label: string,
     url: string,
-}
-
-function MenuItem(props: MenuItemProps): JSX.Element {
-    return (
-        <li className={styles.listItem}><Link href={props.url}>{props.label}</Link></li>
-    );
 }
 
 export default function MainHeader() {
@@ -40,7 +28,7 @@ export default function MainHeader() {
     const [menu_active, setMenuActive] = useState(false);
     const activeClasses = classNames(styles.navList,styles.navListActive)
 
-    function onBurgerClick(){
+    function onBurgerClick() {
         const burger = (document.getElementById('mainheader-toggle') as Element);
         const burger_icon = (burger.querySelector('span.burger-icon') as Element);
         const menu = (document.getElementById('mainheader-menu') as Element);
@@ -54,7 +42,31 @@ export default function MainHeader() {
             burger_icon.classList.add('close');
             menu.setAttribute('aria-expanded', 'true');
         }
+        return true
     }
+
+    function onMenuClick() {
+        const burger = (document.getElementById('mainheader-toggle') as Element);
+        const burger_icon = (burger.querySelector('span.burger-icon') as Element);
+        const menu = (document.getElementById('mainheader-menu') as Element);
+
+        setMenuActive(false);
+        burger_icon.classList.remove('close');
+        menu.setAttribute('aria-expanded', 'false');
+        return true
+    }
+
+    function MenuItem(props: MenuItemProps): JSX.Element {
+        return (
+            <li className={styles.listItem}><Link href={props.url}><a onClick={onMenuClick}>{props.label}</a></Link></li>
+        );
+    }
+    
+    const menu_elements = menu_items.map((item) => {
+        return (
+            <MenuItem key={item.id} id={item.id} label={item.label} url={item.link} />
+        );
+    })
 
     return (
         <header className={styles.header}>

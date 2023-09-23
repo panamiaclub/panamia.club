@@ -10,7 +10,7 @@ import PageMeta from '../components/PageMeta';
 
 const Links: NextPage = () => {
   return (
-    <div className={styles.app}>
+    <main className={styles.app}>
       <PageMeta
         title="Links to Explore"
         desc="Links to our socials, events, forms and local connections! Find out more about our community by exploring these links, becoming a subscriber, and enjoying our Spotify Playlist"
@@ -92,7 +92,7 @@ const Links: NextPage = () => {
 
           </div>
       </div>
-  </div>
+  </main>
   )
 }
 

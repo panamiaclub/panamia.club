@@ -36,7 +36,7 @@ const AboutUs: NextPage = () => {
   }, [inView]);
 
   return (
-    <div className={styles.app}>
+    <main className={styles.app}>
         <div className={styles.main} ref={ref}>
           <section className={styles.header}>
             <PanaLogo color="pink" size="large" nolink={true} />
@@ -159,7 +159,7 @@ const AboutUs: NextPage = () => {
           <div className={styles.footer}>
           </div>
       </div>
-  </div>
+  </main>
   )
 }
 
