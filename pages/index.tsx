@@ -29,8 +29,6 @@ import { useCallback, useMemo, useState } from 'react';
 import axios from "axios";
 import React from 'react';
 import { Field, Form, Formik } from "formik";
-import { TextInput, NumberInput, StylesApiProvider } from '@mantine/core';
-import { useForm } from '@mantine/form';
 import "react-responsive-carousel/lib/styles/carousel.min.css"; // requires a loader
 import { Carousel } from 'react-responsive-carousel';
 

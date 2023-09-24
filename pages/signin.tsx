@@ -3,8 +3,6 @@ import { useState, useEffect } from 'react';
 import { useSession, signIn, getProviders } from "next-auth/react";
 import Head from 'next/head'
 import Image from 'next/image'
-import { TextInput, NumberInput, StylesApiProvider } from '@mantine/core';
-import { useForm } from '@mantine/form';
 import styles from '../styles/Home.module.css'
 import { IconAlertTriangle } from '@tabler/icons';
 import {

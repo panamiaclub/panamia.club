@@ -19,8 +19,6 @@ import {
   import { BeatLoader } from 'react-spinners';
 import {useRouter} from "next/router";
 import { Field, Form, Formik } from "formik";
-import { TextInput, NumberInput, StylesApiProvider } from '@mantine/core';
-import { useForm } from '@mantine/form';
 import { CgProfile } from 'react-icons/cg';
 import {FiEdit2, FiInstagram, FiTwitter, FiGlobe, FiMail, FiMapPin} from 'react-icons/fi'
 import {FiArchive} from 'react-icons/fi';

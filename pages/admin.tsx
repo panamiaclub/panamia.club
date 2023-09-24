@@ -16,17 +16,12 @@ import {
     Button, Text, Box, Alert
   } from '@mantine/core';
   import Router from "next/router";
-import { Field, Form, Formik } from "formik";
-import { TextInput, NumberInput, StylesApiProvider } from '@mantine/core';
-import { useForm } from '@mantine/form';
 import { CgProfile } from 'react-icons/cg';
 import {FiEdit2, FiInstagram, FiTwitter, FiGlobe, FiMail, FiStar, FiFolder, FiStopCircle} from 'react-icons/fi'
 import {useSession ,signIn, signOut} from 'next-auth/react';
 import { userAgent } from 'next/server';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from "axios";
-import AxiosResponse from "axios";
-import { link } from 'fs';
 
 import { BeatLoader } from 'react-spinners';
 
