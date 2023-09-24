@@ -22,7 +22,9 @@ export default async function handler(
   <li><strong>Signup Type:</strong> ${signup_type}</li>
   </ul>
   `
-  return sendEmail(subject, body);
+  const brevoResponse = sendEmail(subject, body);
+  // TODO: Confirm 201 response from Brevo
+  res.status(200).json({ msg: "Email Queued with Brevo" })
 }
 
 export const config = {
