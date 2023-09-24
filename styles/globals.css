@@ -26,6 +26,18 @@ a {
   border: 0;
 }
 
+.image-container {
+
+  width: 100%;
+  position: relative;
+
+  .image {
+    object-fit: fill;
+    width: 100%;
+    height: auto;
+  }
+}
+
 .burger-icon{
   font-size: 20px;
 }

@@ -25,8 +25,6 @@ import {useEffect, useLayoutEffect} from 'react';
 
 import Router from "next/router";
 import { Field, Form, Formik, getIn } from "formik";
-import { TextInput, NumberInput, StylesApiProvider } from '@mantine/core';
-import { useForm } from '@mantine/form';
 import {useSession ,signIn, signOut} from 'next-auth/react';
 import { userAgent } from 'next/server';
 import { useCallback, useMemo, useState } from 'react';

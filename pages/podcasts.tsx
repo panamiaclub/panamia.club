@@ -7,7 +7,7 @@ import PageMeta from '../components/PageMeta';
 
 const Podcasts: NextPage = () => {
   return (
-    <div className={styles.app}>
+    <main className={styles.app}>
       <PageMeta
         title="PanaVizión, the PanaMia podcast"
         desc="Youtube links to our most recent PanaVizión podcast videos, where we meet with SoFlo locals and discuss art, business and community."
@@ -46,7 +46,7 @@ const Podcasts: NextPage = () => {
           </section>
           <div className={styles.footer}></div>
       </div>
-  </div>
+  </main>
   )
 }
 

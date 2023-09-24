@@ -1,11 +1,11 @@
 import styles from './CallToActionBar.module.css';
-import NewsletterModal from './NewsletterModal';
+import SignupModal from './SignupModal';
 
 export default function CallToActionBar() {
     return (
         <div className={styles.callToAction}>
             <span>Stay updated on PanaMia!</span>
-            <NewsletterModal />
+            <SignupModal />
         </div>
     );
 }
