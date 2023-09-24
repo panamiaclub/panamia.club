@@ -16,6 +16,26 @@ export default function SignupModal() {
         e.preventDefault();
     }
 
+    async function signupConfirmation() {
+        const res = await axios
+            .post(
+                "/api/sendSignup",
+                { name, email, signup_type},
+                {
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json",
+                    },
+                }
+            )
+            .then(async (response) => {
+                console.log(response);
+            })
+            .catch((error) => {
+                console.log(error);
+            });
+    }
+
     async function postSignupForm() {
         if (email){
             const res = await axios
@@ -33,6 +53,7 @@ export default function SignupModal() {
                 if (response.data.error) {
                     alert(response.data.error) // soft error should display for user to correct
                 } else {
+                    signupConfirmation();
                     setName("");
                     setEmail("");
                     setSignupType("");
