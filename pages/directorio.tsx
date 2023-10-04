@@ -148,6 +148,12 @@ const Profile: NextPage = () => {
         }
     }
 
+    const handleReset = () => {
+        setSearch("");
+        setUsers(ogUsers);
+        setCategory([]);
+    }
+
     const formSubmit = (actions: any) => {
         //actions.setSubmitting(false);
         //filterUsers();
@@ -260,15 +266,16 @@ const Profile: NextPage = () => {
                                     <Field name="search">
                                         {() => (
                                         <>
-                                            <Input
-                                            value={search}  style={{width:"70%",marginRight:"20px", display:'inline-block'}}
+                                            <Input id="search"
+                                            value={search}  style={{width:"60%", marginRight:"20px", display:'inline-block'}}
                                             onChange={(e:any) => setSearch(e.target.value)}
                                             placeholder={"enter keyword(s)"}
                                             />
                                         </>
                                         )}
                                     </Field>
-                                     <Button type="submit" style={{margin:"0",backgroundColor:"#39B6FF", display:'inline-block'}}>Search</Button>
+                                     <Button type="submit" style={{margin:"0",backgroundColor:"#39B6FF", display:'inline-block', marginRight:"20px"}}>Search</Button>
+                                     <Button onClick={handleReset} style={{margin:"0",backgroundColor:"#8a231c", display:'inline-block'}}>Reset</Button>
                                 </Box>
                         </Form>
                             )}
