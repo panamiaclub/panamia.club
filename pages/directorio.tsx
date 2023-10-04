@@ -37,6 +37,7 @@ const Profile: NextPage = () => {
     const [category, setCategory] = useState<any[]>([]);
     const [alert, setAlert] = useState("");
     const [search, setSearch] = useState("");
+    const [resetUsers, setResetUsers] = useState(false);
     const router = useRouter();
     const handleSignOut = () => signOut({redirect: false, callbackUrl: '/'});
     const [activePage, setPage] = useState(1);
@@ -89,7 +90,9 @@ const Profile: NextPage = () => {
         if(activePage){
             console.log(activePage);    
         }
-
+        if(resetUsers){
+            filterUsers();
+        }
     }, [users, category]);
 
     const handlePageClick = (value:number) => {
@@ -115,6 +118,7 @@ const Profile: NextPage = () => {
         }else{
             setUsers(shuffle(ogUsers));
         }
+        setResetUsers(false);
     }
 
     function shuffle(array:any[]) {
@@ -181,28 +185,36 @@ const Profile: NextPage = () => {
                                         if(e.target.checked){
                                             console.log(e.target.value);
                                             var arrayy = new Array();
-                                            if(category){
+                                            if(category.length > 0){
                                                 arrayy = category;
                                             }
                                             if(!arrayy.includes(e.target.value)){
                                                arrayy.push(e.target.value);
                                             }
                                             setCategory(arrayy);
-                                        }else{
+                                            setResetUsers(true);
+                                        }else if(!e.target.checked){
+                                            console.log('unchecked')
                                             let arrayy = new Array();
                                             if(category){
+                                                console.log(category);
                                                 category.map((item:any) => {
                                                 if(item != e.target.value){
-                                                    console.log(item)
                                                   arrayy.push(item);
+                                                 
+                                                  console.log(e.target.value);
+                                                  console.log(item);
                                                 }
                                              })
                                             }
+                                            console.log('new cateogires')
                                             console.log(arrayy);
                                             setCategory(arrayy);
+                                            console.log(ogUsers);
                                             setUsers(ogUsers);
+                                            setResetUsers(true);
                                           }
-                                          filterUsers();
+                                         
                                           
                                     }}>
                                         <h2>Filter</h2>
