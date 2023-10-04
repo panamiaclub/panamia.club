@@ -275,6 +275,7 @@ const Profile: NextPage = () => {
 
   const editAvatar = async() => {
     if(session?.user?.email && avatar){
+       
         const res = await axios
         .put(
             "/api/editAvatar",
@@ -448,7 +449,13 @@ const Profile: NextPage = () => {
                                                 accept="image/*" style={{display:"none"}}
                                                 onChange={async(e:any) => {
                                                     let file = (e.target.files[0])
-                                                    setBannerImageFile(file);
+                                                    if((file.size / 1024 / 1024) < 5){
+                                                        console.log(file.size/1024/1024);
+                                                        setBannerImageFile(file);
+                                                    }else{
+                                                        setImageAlert("Image is too large >5MB");
+                                                    }
+                                                    
                                                 }}
                                             />    
                                     </div>
@@ -466,7 +473,13 @@ const Profile: NextPage = () => {
                                                 accept="image/*" style={{display:"none"}}
                                                 onChange={async(e:any) => {
                                                     let file = (e.target.files[0])
-                                                    setAvatarFile(file);
+                                                    if((file.size / 1024 / 1024) < 5){
+                                                        console.log(file.size/1024/1024);
+                                                        setAvatarFile(file);
+                                                    }else{
+                                                        setImageAlert("Image is too large >5MB");
+                                                    }
+                                                   
                                                 }}
                                             />
                                         </div>
@@ -509,7 +522,7 @@ const Profile: NextPage = () => {
                                 <br></br>
                                 {imageAlert && <Alert color={"red"} style={{marginTop:"5%"}}>{imageAlert}</Alert>}
                                 {imageMessage && <Alert color={"green"} style={{marginTop:"5%"}}>{imageMessage}</Alert>}
-                                {message && <Alert color={"green"} style={{marginTop:"5%"}}>{message}</Alert>}
+                                {message && <Alert color={"yellow"} style={{marginTop:"5%"}}>{message}</Alert>}
                             </div>
                         </Card>
                         <div style={{marginTop:"20px"}}>
@@ -620,7 +633,17 @@ const Profile: NextPage = () => {
                                                         onChange={async(e:any) => {
                                                             //console.log(e.target.files);
                                                             let files = Array.from(e.target.files);
-                                                            convertAndSetUploadImages(files);
+                                                            let largeFiles = false;
+                                                            files.forEach((item:any) => {
+                                                                if((e.target.files[0].size / 1024 / 1024) > 5){
+                                                                    largeFiles = true;
+                                                                }
+                                                            })
+                                                            if(!largeFiles){
+                                                                convertAndSetUploadImages(files);
+                                                            }else{
+                                                                setMessage("Image is too large >5MB");
+                                                            }
                                                         }}
                                                         />
                                                     </div>
