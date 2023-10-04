@@ -19,6 +19,7 @@ const getAllUsers = async (page:number) =>{
 export const config = {
   api: {
     responseLimit: false,
+    maxDuration: 5,
   },
 }
 
