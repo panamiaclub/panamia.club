@@ -66,6 +66,13 @@
     padding:0.5rem;
     border-radius: 0.5rem;
 }
+.linkSpecial{
+    color:var(--color-pana-yellow);
+    font-weight: 700;
+}
+.linkSpecial:hover{
+    background-color: black;
+}
 @media only screen and (max-width: 600px) {
     .listItem a{
         width:calc(100% - 4rem);
@@ -74,6 +81,8 @@
         margin-left: 4rem;
     }
 }
+
+
 
 .listItem:hover{
     background-color: #f8f9fa;

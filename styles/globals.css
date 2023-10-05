@@ -1,3 +1,8 @@
+:root{
+  --color-pana-blue: #4ab3ea;
+  --color-pana-pink: #fc2070;
+  --color-pana-yellow: #fab22c;
+}
 
 html,
 body {

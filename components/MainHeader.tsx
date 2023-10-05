@@ -14,6 +14,7 @@ const menu_items = [
     {id:"links", link: "/links", label: "Links"},
     {id:"directorio", link: "/directorio", label: "El Directorio"},
     {id:"contact", link: "/#footer", label: "Contact Us"},
+    {id:"event", link: "https://shotgun.live/events/serotonin-dipity-mini-fest", label: "EVENT!", special: true},
     {id:"donations", link: "/donations", label: "Donate"},
 ];
 
@@ -21,6 +22,7 @@ interface MenuItemProps {
     id: string,
     label: string,
     url: string,
+    special?: boolean
 }
 
 export default function MainHeader() {
@@ -59,13 +61,17 @@ export default function MainHeader() {
 
     function MenuItem(props: MenuItemProps): JSX.Element {
         return (
-            <li className={styles.listItem}><Link href={props.url}><a onClick={onMenuClick}>{props.label}</a></Link></li>
+            <li className={styles.listItem}>
+                <Link href={props.url}>
+                    <a onClick={onMenuClick} className={(props?.special == true) ? styles.linkSpecial : ""}>{props.label}</a>
+                </Link>
+            </li>
         );
     }
     
     const menu_elements = menu_items.map((item) => {
         return (
-            <MenuItem key={item.id} id={item.id} label={item.label} url={item.link} />
+            <MenuItem key={item.id} id={item.id} label={item.label} url={item.link} special={item.special} />
         );
     })
 
