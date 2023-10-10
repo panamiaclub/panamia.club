@@ -20,6 +20,10 @@ a {
   box-sizing: border-box;
 }
 
+::selection {
+  background-color: #fc207163;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

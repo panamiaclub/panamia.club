@@ -1,6 +1,9 @@
 .header {
     background: white;
     color: #fff;
+    top: 0;
+    position: sticky;
+    z-index: 1;
 }
 
 
@@ -76,9 +79,10 @@
 @media only screen and (max-width: 600px) {
     .listItem a{
         width:calc(100% - 4rem);
+        display: block;
         background-color: #f4f5f6;
-        margin:0.25rem 0;
-        margin-left: 4rem;
+        margin:0.25rem auto;
+        /* margin-left: 4rem; */
     }
 }
 

@@ -5,6 +5,7 @@
     margin: auto;
     border-radius: 50%;
     text-align: center;
+    cursor: pointer;
 }
 
 .medium{
