@@ -93,16 +93,15 @@
 .aboutContainer{
   min-height:110vh;
   background-color: #181C3D;
-
   font-family: 'Montserrat', sans-serif;
+  padding: 40px;
 }
 
 .textSection{
   color:black;
   font-family: 'Montserrat', sans-serif;
   margin: 0 auto;
-  padding:1em;
-  margin-top:20%;
+  padding: 1em;
 }
 
 .navbar-pink, .dropdown-menu{
@@ -127,10 +126,10 @@
 }
 
 .titleDiv{
-  min-height:100vh;
+  min-height:50vh;
   padding: 2em;
   text-align:left;
-  padding-top:15%;
+  /* padding-top:15%; */
   background: rgb(248,248,248);
 }
 
@@ -144,6 +143,18 @@
   min-height:80vh;
   padding: 2em;
   text-align:center;
+}
+
+.dirSearchForm input {
+  display: inline-block;
+  border-radius: 50px !important;
+  padding: 20px;
+}
+
+.dirSearchForm button {
+  border-radius: 50px !important;
+  margin-left: -70px !important;
+  line-height: normal;
 }
 
 .margintops{
@@ -414,13 +425,33 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
   color:"#011D34"!important;
 }
 
-@media (max-width: 600px) {
+.giftGuideBtn button {
+  background-color: #FFECC8;
+  color: #000000;
+  border-radius: 25px;
+  margin-top: 20px;
+}
 
+.giftGuideBtn button:hover {
+  background-color: #FC2070;
+  color: #FFF;
+}
 
+.giftGuideBtn div {
+  max-width: 100%;
+  text-align: center;
+}
+
+.igPromo div {
+  text-align: center;
 }
 
 
 @media only screen and (max-width: 800px) {
+
+  .aboutContainer {
+    padding: 10px;
+  }
   .margintops{
     margin-top:55%;
   }
@@ -428,8 +459,44 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
     margin-left:0!important;
   }
 
+  .igPromo {
+    margin: auto;
+  }
+
+  .igPromo div {
+    padding: 5px 15px;
+  }
+
+  .igPromo img {
+    width: 100%;
+  }
+
+  .giftGuideBtn {
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .giftGuideBtn button {
+    margin: 0;
+  }
+
   .newsletterButton{
     padding-left:"25%!important";
+  }
+
+  .dirSearch h3 {
+    font-size: 1.5em !important;
+    text-align: center;
+    width: 100%;
+  }
+
+  .dirSearchForm div {
+    width: 100% !important;
+  }
+
+  .dirSearchForm button {
+    position: absolute;
+    margin-top: 3px !important;
   }
 
   
