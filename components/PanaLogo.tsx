@@ -36,6 +36,9 @@ export default function PanaLogo(props: LogoProps) {
     }
     
     let size_class = null
+    if (props.size === "small") {
+        size_class = styles.small
+    }
     if (props.size === "medium") {
         size_class = styles.medium
     }
@@ -46,7 +49,7 @@ export default function PanaLogo(props: LogoProps) {
     
     if (props.nolink === true) {
         return (
-            <div>
+            <div className={styles.logoWrapDiv}>
                 <span className={container_classes}>
                     <img className={styles.logo} src={logo_src} alt={logo_alt} />   
                 </span>
@@ -54,7 +57,7 @@ export default function PanaLogo(props: LogoProps) {
         );
     } else {
         return (
-            <div>
+            <div className={styles.logoWrapDiv}>
                 <Link href="/">
                     <span className={container_classes}>
                         <img className={styles.logo} src={logo_src} alt={logo_alt} />   

@@ -21,7 +21,27 @@ a {
 }
 
 ::selection {
-  background-color: #fc207163;
+  background-color: #fc207063;
+}
+
+button {
+  padding: .5rem 1.25rem !important;
+  border-radius: 25px !important;
+  border: none;
+}
+
+.glass {
+  backdrop-filter: blur( 3px );
+}
+
+.sticky {
+  top: 0;
+  position: sticky;
+  z-index: 1;
+}
+
+.bottomShadow {
+  box-shadow: 0px 8px 6px -6px rgba(0, 0, 0, 0.5);
 }
 
 .sr-only {
@@ -77,6 +97,33 @@ a {
   transition: transform 1s ease-out;
 }
 
+.slider-wrapper {
+  padding-bottom: 2.5rem 0;
+}
+
+.mantine-Card-root{
+  background-color: white;
+}
+
+.carousel-status {
+  padding: 0 !important;
+  margin: 0 !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.control-dots {
+  width: auto;
+  margin: 0 !important;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 1rem !important;
+
+}
+
 @media (prefers-color-scheme: light) {
   html {
     color-scheme: light;
@@ -84,5 +131,11 @@ a {
   body {
     color: black;
     background: #FFECC8;
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .slide {
+    min-width: 33.33% !important;
   }
 }

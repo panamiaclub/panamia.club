@@ -123,7 +123,7 @@ const Home: NextPage = () => {
             }
           }}>
 
-          <Grid>
+          <Grid className={styles.heroGrid}>
             <Grid.Col md={6} xs={12}>
               <h1 className={styles.headingBig}>Pana MIA Club: <span style={{ color: "#F52B92" }}> All</span> things Local in <span style={{ color: "#F52B92" }}>SoFlo</span></h1>
             </Grid.Col>
@@ -186,9 +186,25 @@ const Home: NextPage = () => {
           </Grid>
 
           <Grid className={styles.igPromo}>
-            <Grid.Col md={4} sm={12}><img src="ig_promo_1.jpg" width="80%"></img></Grid.Col>
-            <Grid.Col md={4} sm={12}><img src="ig_promo_2.jpg" width="80%"></img></Grid.Col>
-            <Grid.Col md={4} sm={12}><img src="ig_promo_3.jpg" width="80%"></img></Grid.Col>
+            <Grid.Col md={4} sm={12}>
+              <picture>
+                <source srcSet="WebP/ig_promo_1.webp" type="image/webp" />
+                <img src="ig_promo_1.jpg" width="80%" alt="" />
+              </picture>
+            </Grid.Col>
+            <Grid.Col md={4} sm={12}>
+              <picture>
+                <source srcSet="WebP/ig_promo_2.webp" type="image/webp" />
+                <img src="ig_promo_2.jpg" width="80%" alt="" />
+              </picture>
+            </Grid.Col>
+            <Grid.Col md={4} sm={12}>
+              <picture>
+                <source srcSet="WebP/ig_promo_3.webp" type="image/webp" />
+                <img src="ig_promo_3.jpg" width="80%" alt="" />
+              </picture>
+            </Grid.Col>
+
           </Grid>
 
           <Grid className={styles.giftGuideBtn}>
@@ -205,86 +221,97 @@ const Home: NextPage = () => {
         </motion.div>
       </div>
 
-      <div>
+      <div style={{ background: "#FFECC8" }}>
         <Carousel centerMode={true} centerSlidePercentage={100} infiniteLoop={true} showThumbs={false} showIndicators={false} swipeable={true}>
           <div>
             <picture>
+              <source srcSet="WebP/carousel_2.webp" type="image/webp" media="(min-width: 1920px)" />
               <source srcSet="carousel_2.JPG" media="(min-width: 1920px)" />
               <img src="carousel_2_x1440.JPG" alt="" />
             </picture>
           </div>
           <div>
             <picture>
+              <source srcSet="WebP/carousel_1.webp" type="image/webp" media="(min-width: 1920px)" />
               <source srcSet="carousel_1.JPG" media="(min-width: 1920px)" />
               <img src="carousel_1_x1440.JPG" alt="" />
             </picture>
           </div>
           <div>
             <picture>
+              <source srcSet="WebP/carousel_3.webp" type="image/webp" media="(min-width: 1920px)" />
               <source srcSet="carousel_3.JPG" media="(min-width: 1920px)" />
               <img src="carousel_3_x1440.JPG" alt="" />
             </picture>
           </div>
           <div>
             <picture>
+              <source srcSet="WebP/carousel_4.webp" type="image/webp" media="(min-width: 1920px)" />
               <source srcSet="carousel_4.JPG" media="(min-width: 1920px)" />
               <img src="carousel_4_x1440.JPG" alt="" />
             </picture>
           </div>
           <div>
             <picture>
+              <source srcSet="WebP/carousel_5.webp" type="image/webp" media="(min-width: 1920px)" />
               <source srcSet="carousel_5.JPG" media="(min-width: 1920px)" />
               <img src="carousel_5_x1440.JPG" alt="" />
             </picture>
           </div>
           <div>
             <picture>
+              <source srcSet="WebP/carousel_6.webp" type="image/webp" media="(min-width: 1920px)" />
               <source srcSet="carousel_6.JPG" media="(min-width: 1920px)" />
               <img src="carousel_6_x1440.JPG" alt="" />
             </picture>
           </div>
           <div>
             <picture>
+              <source srcSet="WebP/carousel_7.webp" type="image/webp" media="(min-width: 1920px)" />
               <source srcSet="carousel_7.JPG" media="(min-width: 1920px)" />
               <img src="carousel_7_x1440.JPG" alt="" />
             </picture>
           </div>
           <div>
             <picture>
+              <source srcSet="WebP/carousel_8.webp" type="image/webp" media="(min-width: 1920px)" />
               <source srcSet="carousel_8.JPG" media="(min-width: 1920px)" />
               <img src="carousel_8_x1440.JPG" alt="" />
             </picture>
           </div>
           <div>
             <picture>
+              <source srcSet="WebP/carousel_9.webp" type="image/webp" media="(min-width: 1920px)" />
               <source srcSet="carousel_9.JPG" media="(min-width: 1920px)" />
               <img src="carousel_9_x1440.JPG" alt="" />
             </picture>
           </div>
           <div>
             <picture>
+              <source srcSet="WebP/carousel_10.webp" type="image/webp" media="(min-width: 1920px)" />
               <source srcSet="carousel_10.JPG" media="(min-width: 1920px)" />
               <img src="carousel_10_x1440.JPG" alt="" />
             </picture>
           </div>
           <div>
             <picture>
+              <source srcSet="WebP/carousel_11.webp" type="image/webp" media="(min-width: 1920px)" />
               <source srcSet="carousel_11.JPG" media="(min-width: 1920px)" />
               <img src="carousel_11_x1440.JPG" alt="" />
             </picture>
           </div>
+
         </Carousel>
       </div>
 
-      <div className={styles.featuredPanas} style={{ padding: "10% 0" }} >
+      <div className={styles.featuredPanas} style={{ padding: "3% 0" }} >
         <h1 style={{ color: "#39B6FF", fontSize: "2.5em" }}>Featured Panas</h1>
 
-
-        <Carousel centerMode={true} centerSlidePercentage={25} infiniteLoop={true} swipeable={true}>
+        <Carousel centerMode={true} centerSlidePercentage={100} infiniteLoop={true} swipeable={true}>
           {panas &&
             panas.map((item: any, index: number) => {
               return (
-                <Card className={styles.panascardStyle} key={index} style={{ marginLeft: "10px" }}>
+                <Card className={styles.panascardStyle} key={index}>
                   <Link href={"/pana/" + item.username} key={item + "link"}>
                     <div style={{ cursor: "pointer" }}>
                       {item.avatar && <img className={styles.avatarFeatured} src={item.avatar} ></img>}
@@ -305,9 +332,6 @@ const Home: NextPage = () => {
         </Carousel>
       </div>
       <div>
-
-
-
         <div id="Goals" style={{ minHeight: "80vh", padding: "0", paddingTop: "5%", marginTop: "0" }} className={styles.GoalsDiv}>
           <h1 className={styles.headingsGOALS} style={{ textAlign: "center" }}>GOALS</h1>
           <Grid style={{ margin: "0 2%" }} >

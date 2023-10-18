@@ -50,6 +50,10 @@
   color:#f8f8f8;
 }
 
+.heroGrid {
+  display: flex;
+}
+
 .headingBig{
   color:black;
   letter-spacing: 0.3em;
@@ -370,12 +374,15 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
 .panascardStyle{
   border-radius: 15px;
   box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 10px;
+  margin: auto;
   margin-bottom:2%;
   font-family: 'Montserrat', sans-serif;
   font-weight: 400;
   height:auto;
   max-height:100%;
   width:90%;
+  background-color: white;
+  padding: 1rem;
 
 }
 
@@ -428,7 +435,6 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
 .giftGuideBtn button {
   background-color: #FFECC8;
   color: #000000;
-  border-radius: 25px;
   margin-top: 20px;
 }
 
@@ -449,6 +455,11 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
 
 @media only screen and (max-width: 800px) {
 
+  .heroGrid {
+    display: flex;
+    flex-direction: column;
+  }
+
   .aboutContainer {
     padding: 10px;
   }
@@ -461,6 +472,7 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
 
   .igPromo {
     margin: auto;
+    display: inline-flex;
   }
 
   .igPromo div {

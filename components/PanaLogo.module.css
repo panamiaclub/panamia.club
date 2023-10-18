@@ -1,11 +1,22 @@
+.logoWrapDiv {
+    display: inline-flex;
+}
+
 .logoContainer{
     display: inline-flex;
     height: 3rem;
     width: 3rem;
+    transition: width 0.3s ease-in-out;
     margin: auto;
     border-radius: 50%;
     text-align: center;
     cursor: pointer;
+}
+
+.small{
+    height: calc(3rem * 0.70);
+    width: calc(3rem * 0.70);
+    margin: 0.5em 0;
 }
 
 .medium{

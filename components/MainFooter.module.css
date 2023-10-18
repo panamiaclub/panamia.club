@@ -12,6 +12,7 @@
 
 .footerInner ul{
     margin:0;
+    padding-inline-start: initial;
     list-style-type: none;
 }
 
