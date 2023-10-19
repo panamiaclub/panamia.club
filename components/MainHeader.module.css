@@ -30,7 +30,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    padding: 1em 1em 0;
+    padding: 0 1em 0;
 }
 
 @media only screen and (max-width: 600px) {

@@ -1,7 +1,8 @@
 import Link
  from 'next/link';
-import styles from './PanaLogo.module.css';
+import styles from './PanaLogoLong.module.css';
 import classNames from 'classnames';
+import { trusted } from 'mongoose';
 
 interface LogoProps {
     color: string | "white",

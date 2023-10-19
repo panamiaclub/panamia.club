@@ -12,32 +12,9 @@ import PanaLogo from '../components/PanaLogo';
 
 
 const AboutUs: NextPage = () => {
-  const {ref, inView} = useInView();
-  const animation = useAnimation();
-  const [alert, setAlert] = useState("");
-  const [success, setSuccess] = useState("");
-
-  useEffect(() => {
-    console.log("use effect , inView = " , inView);
-    if(inView){
-      animation.start({
-        x: 0,
-        transition: {
-          type: "spring",
-          duration: 1,
-          bounce: 0.3
-        }
-      })
-    }else{
-      animation.start({
-        x:"-100vw"
-      })
-    }
-  }, [inView]);
-
   return (
     <main className={styles.app}>
-        <div className={styles.main} ref={ref}>
+        <div className={styles.main}>
           <section className={styles.header}>
             <PanaLogo color="pink" size="large" nolink={true} />
             <h1>Pana MIA Club: Your Guide to Local</h1>
@@ -99,9 +76,9 @@ const AboutUs: NextPage = () => {
 
             <a href="#womanifesto"><h3 id="womanifesto">&para; The (Wo)Manifesto</h3></a>
             <div className={styles.swipeGallery}>
-              <img src="/ig_promo_1.jpg" alt="" />
-              <img src="/ig_promo_2.jpg" alt="" />
-              <img src="/ig_promo_4.jpg" alt="" />
+              <img src="/about/ig_promo_1.webp" alt="" />
+              <img src="/about/ig_promo_2.webp" alt="" />
+              <img src="/about/ig_promo_4.webp" alt="" />
             </div>
 
             <a href="#our-ongoing-projects"><h2 id="our-ongoing-projects">Our Ongoing Projects:</h2></a>

@@ -14,9 +14,10 @@ const menu_items = [
     {id:"links", link: "/links", label: "Links"},
     {id:"directorio", link: "/directorio", label: "El Directorio"},
     {id:"contact", link: "/#footer", label: "Contact Us"},
-    {id:"event", link: "https://shotgun.live/events/serotonin-dipity-mini-fest", label: "EVENT!", special: true},
-    {id:"donations", link: "/donations", label: "Donate"},
+    {id:"donations", link: "/donations", label: "Donate", special: false},
 ];
+
+// {id:"event", link: "https://shotgun.live/events/serotonin-dipity-mini-fest", label: "EVENT!", special: true},
 
 interface MenuItemProps {
     id: string,

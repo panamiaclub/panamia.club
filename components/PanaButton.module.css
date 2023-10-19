@@ -1,0 +1,22 @@
+.panaButton, .panaButtonBlue, .panaButtonPink, .panaButtonYellow{
+    margin: 0 .5rem;
+    font-size:18px;
+    letter-spacing: 1px;
+    padding:.5rem 1.5rem;
+    background-color: black;
+    color: white;
+    font-weight: 700;
+    border-radius: 2rem;
+    border:3px solid black;
+}
+
+.panaButtonBlue{
+    background-color: var(--color-pana-blue);
+}
+.panaButtonPink{
+    background-color: var(--color-pana-pink);
+}
+.panaButtonYellow{
+    background-color: var(--color-pana-yellow);
+}
+
