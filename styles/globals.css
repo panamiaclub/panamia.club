@@ -2,6 +2,9 @@
   --color-pana-blue: #4ab3ea;
   --color-pana-pink: #fc2070;
   --color-pana-yellow: #fab22c;
+  --base-font-size: 18px;
+  --title-font-size: 32px;
+  --subtitle-font-size: 24px;
 }
 
 html,
@@ -9,6 +12,11 @@ body {
   padding: 0;
   margin: 0;
   font-family: "Verdana", "sans-serif";
+  font-size: var(--base-font-size);
+}
+
+input{
+  font-size: var(--base-font-size);
 }
 
 a {
@@ -44,6 +52,16 @@ button {
   box-shadow: 0px 8px 6px -6px rgba(0, 0, 0, 0.5);
 }
 
+.text-pana-pink{
+  color: var(--color-pana-pink);
+}
+.text-pana-blue{
+  color: var(--color-pana-blue);
+}
+.text-pana-yellow{
+  color: var(--color-pana-yellow);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -56,7 +74,6 @@ button {
 }
 
 .image-container {
-
   width: 100%;
   position: relative;
 

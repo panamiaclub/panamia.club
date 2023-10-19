@@ -5,7 +5,7 @@
     color: white;
     padding: .5rem 1rem;
     margin: 0 1rem;
-    font-size: 18px;
+    font-size: var(--base-font-size);
     font-weight: 700;
 }
 .callToAction:hover{
@@ -23,14 +23,13 @@
 .modal{
     border-radius: .5rem;
     max-width: 45rem;
-    font-size: 20px;
+    font-size: var(--base-font-size);
     background-color: #263447;
     color: white;
     padding: 1.5rem;
 }
 @media only screen and (max-width: 600px) {
     .modal{
-        font-size:18px;
         padding:1rem .5rem;
     }
 }
@@ -55,7 +54,6 @@
 
 .field__input{
     width: 100%;
-    font-size:16px;
     padding:.5rem;
 }
 
@@ -75,7 +73,7 @@
     margin: 0 .5rem;
     font-size:18px;
     letter-spacing: 1px;
-    padding:1rem .5rem;
+    padding:.5rem 1.5rem;
     background-color: black;
     color: white;
     font-weight: 700;

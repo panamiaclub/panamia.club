@@ -1,7 +1,8 @@
 import Link
  from 'next/link';
-import styles from './PanaLogo.module.css';
+import styles from './PanaLogoLong.module.css';
 import classNames from 'classnames';
+import { trusted } from 'mongoose';
 
 interface LogoProps {
     color: string | "white",
@@ -35,9 +36,6 @@ export default function PanaLogo(props: LogoProps) {
     }
     
     let size_class = null
-    if (props.size === "small") {
-        size_class = styles.small
-    }
     if (props.size === "medium") {
         size_class = styles.medium
     }
@@ -49,7 +47,7 @@ export default function PanaLogo(props: LogoProps) {
     if (props.nolink === true) {
         container_classes = classNames(container_classes, color_class, size_class)
         return (
-            <div className={styles.logoWrapDiv}>
+            <div>
                 <span className={container_classes}>
                     <img className={styles.logo} src={logo_src} alt={logo_alt} />   
                 </span>
@@ -59,7 +57,7 @@ export default function PanaLogo(props: LogoProps) {
         container_classes = classNames(container_classes, color_class, size_class, styles.logoLink)
         
         return (
-            <div className={styles.logoWrapDiv}>
+            <div>
                 <Link href="/">
                     <span className={container_classes}>
                         <img className={styles.logo} src={logo_src} alt={logo_alt} />   

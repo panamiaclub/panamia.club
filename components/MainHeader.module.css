@@ -19,7 +19,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    padding: 1em;
+    padding: 0 1em 0;
 }
 
 .nav.scrolled {

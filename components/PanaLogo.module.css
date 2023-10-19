@@ -48,3 +48,7 @@
     display: inline-block;
     width:100%;
 }
+
+.logoLink{
+    cursor: pointer;
+}

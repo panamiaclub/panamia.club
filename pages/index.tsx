@@ -367,14 +367,7 @@ const Home: NextPage = () => {
             </Grid.Col>
           </Grid>
         </div>
-        <div style={{ backgroundColor: "#FDBB2D", padding: "10% 0" }}>
-          <Grid>
-            <Grid.Col md={5} xs={3}></Grid.Col>
-            <Grid.Col md={2} xs={6}>
-              <Link href='/newsletter' target="_blank"><Button style={{ backgroundColor: "#F52B92", color: "#FFFFFF", width: "100%" }} size={'lg'}>Sign Up For Our Newsletter</Button></Link>
-            </Grid.Col>
-            <Grid.Col md={5} xs={3}></Grid.Col>
-          </Grid>
+        <div style={{ backgroundColor: "#FDBB2D", padding: "10vh 0" }}>
         </div>
       </div>
     </div>

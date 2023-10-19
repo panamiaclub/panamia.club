@@ -1,0 +1,100 @@
+
+.headerHero{
+    text-align: center;
+    background: url('/carousel_2.JPG');
+    background-size: cover;
+}
+.headerHeroOverlay{
+    background-color: rgba(255,255,255,0.5);
+}
+.hero{
+    margin:auto;
+    max-width:90vw;
+}
+
+.heroTitles{
+    margin:4rem 0;
+    color:black;
+    text-align:center;
+}
+.headerHero h2{
+    font-size:var(--title-font-size);
+    margin:12px 0;
+    display: inline-block;
+    margin:0 1rem;
+}
+.headerHero h3{
+    font-size:var(--subtitle-font-size);
+    margin:8px 0;
+    display: inline-block;
+    margin:0 1rem;
+}
+
+.directorySearch{
+    margin:2rem;
+}
+
+.directorySearchForm label {
+    color: white;
+    font-size:24px;
+}
+
+.directorySearchField {
+    margin:1rem;
+    font-size:20px;
+    height:2em;
+    padding: 0.5em;
+    border-radius:0.5em;
+    border:#AAA solid 2px;
+    min-width:33vw;
+}
+
+.directorySearchSubmit {
+    margin:1rem;
+    font-size:20px;
+    height:2em;
+    padding: 0.25em 1.5em;
+    border-radius:1.25em;
+    border:var(--color-pana-blue) solid 2px;
+    background-color: var(--color-pana-blue);
+    color:white;
+}
+
+.directorySearchSubmit:hover{
+    cursor: pointer;
+    border-color:black;
+    color:black;
+}
+
+.backgroundBar{
+    min-height:1vh;
+    width:100%;
+    background: linear-gradient(70deg, var(--color-pana-yellow)  30%, rgba(0,0,0,0) 30%), linear-gradient(40deg, var(--color-pana-blue) 60%, var(--color-pana-pink) 60%);
+    background-attachment: fixed;
+    overflow: hidden;
+}
+
+.backgroundBarInner{
+    height:15vh;
+    width:100%;
+    display: flex;
+    justify-content: space-around;
+    padding:2.5vh;
+}
+
+.backgroundBarInner img{
+    max-height:10vh;
+    opacity: 0.55;
+}
+
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+
+.buffer{
+    height:40vh;
+}

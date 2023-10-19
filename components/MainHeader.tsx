@@ -10,13 +10,14 @@ import PanaLogo from './PanaLogo';
 // https://www.a11ymatters.com/pattern/mobile-nav/
 
 const menu_items = [
-    { id: "about", link: "/about-us", label: "About" },
-    { id: "links", link: "/links", label: "Links" },
-    { id: "directorio", link: "/directorio", label: "El Directorio" },
-    { id: "contact", link: "/#footer", label: "Contact Us" },
-    { id: "event", link: "https://shotgun.live/events/serotonin-dipity-mini-fest", label: "EVENT!", special: true },
-    { id: "donations", link: "/donations", label: "Donate" },
+    {id:"about", link: "/about-us", label: "About"},
+    {id:"links", link: "/links", label: "Links"},
+    {id:"directorio", link: "/directorio", label: "El Directorio"},
+    {id:"contact", link: "/#footer", label: "Contact Us"},
+    {id:"donations", link: "/donations", label: "Donate", special: false},
 ];
+
+// {id:"event", link: "https://shotgun.live/events/serotonin-dipity-mini-fest", label: "EVENT!", special: true},
 
 interface MenuItemProps {
     id: string,
