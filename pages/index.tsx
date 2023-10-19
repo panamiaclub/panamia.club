@@ -124,13 +124,12 @@ const Home: NextPage = () => {
           }}>
 
           <Grid className={styles.heroGrid}>
-            <Grid.Col md={6} xs={12}>
+            <Grid.Col md={7} xs={12}>
               <h1 className={styles.headingBig}>Pana MIA Club: <span style={{ color: "#F52B92" }}> All</span> things Local in <span style={{ color: "#F52B92" }}>SoFlo</span></h1>
             </Grid.Col>
-            <Grid.Col md={2} xs={0}></Grid.Col>
-            <Grid.Col md={4} xs={12} style={{ marginTop: "3%" }} className={styles.dirSearch}>
+            <Grid.Col md={5} xs={12} style={{ marginTop: "3%" }} className={styles.dirSearch}>
               {/* <Image src="/macbook.png" height={400} width={500} style={{marginBottom:"10%"}}></Image> */}
-              <h3 style={{ color: "#39B6FF", fontSize: "2em" }}>Search the Directorio</h3>
+              <h3 style={{ color: "#39B6FF" }}>Search the Directorio</h3>
               <Formik
                 initialValues={{}}
                 validateOnChange={false}
@@ -146,7 +145,7 @@ const Home: NextPage = () => {
                         {() => (
                           <>
                             <Input
-                              value={search} style={{ width: "64%", display: 'inline-block' }}
+                              value={search} style={{ width: "calc(100% - 100px)", display: 'inline-block' }}
                               onChange={(e: any) => setSearch(e.target.value)}
                               placeholder={"Type to explore SoFlo..."}
                             />

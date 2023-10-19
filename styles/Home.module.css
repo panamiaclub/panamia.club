@@ -59,7 +59,6 @@
   letter-spacing: 0.3em;
   font-size: 4em;
   text-align: left;
-
   font-family: 'Montserrat', sans-serif;
 }
 
@@ -149,15 +148,21 @@
   text-align:center;
 }
 
+.dirSearchForm{
+  position: relative;
+}
+
 .dirSearchForm input {
   display: inline-block;
   border-radius: 50px !important;
   padding: 20px;
+  width: 100%;
 }
 
 .dirSearchForm button {
+  position: relative;
+  left: -100px;
   border-radius: 50px !important;
-  margin-left: -70px !important;
   line-height: normal;
 }
 
@@ -453,11 +458,27 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
 }
 
 
-@media only screen and (max-width: 800px) {
+@media only screen and (max-width: 600px) {
+  .titleDiv{
+    padding: 1em;
+  }
 
   .heroGrid {
     display: flex;
     flex-direction: column;
+  }
+
+  .headingBig{
+    font-size: var(--title-font-size);
+    text-align: center;
+    letter-spacing: 0.2em;
+  }
+
+  .dirSearchForm button {
+    max-width:100px;
+    position: absolute;
+    top: 0.25em;
+    left: calc(100% - 100px);
   }
 
   .aboutContainer {
@@ -497,7 +518,7 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
   }
 
   .dirSearch h3 {
-    font-size: 1.5em !important;
+    font-size: var(--title-font-size);
     text-align: center;
     width: 100%;
   }
@@ -505,11 +526,5 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
   .dirSearchForm div {
     width: 100% !important;
   }
-
-  .dirSearchForm button {
-    position: absolute;
-    margin-top: 3px !important;
-  }
-
   
 }

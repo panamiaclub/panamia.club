@@ -28,7 +28,7 @@
 }
 
 .navWrap {
-    background-color: #ffffffC9;
+    background-color: #fffd;
 }
 
 .navList {
@@ -66,6 +66,10 @@
     background-color: #4ab3ea;
     white-space: nowrap;
 }
+.navBorder{
+    height:2px;
+    background: linear-gradient(70deg, var(--color-pana-yellow)  30%, rgba(0,0,0,0) 30%), linear-gradient(40deg, var(--color-pana-blue) 60%, var(--color-pana-pink) 60%);
+}
 
 @media only screen and (max-width: 600px) {
     .burger {
@@ -76,6 +80,7 @@
 
     .nav {
         justify-content: left;
+        padding: .5em;
     }
 
     .navList {

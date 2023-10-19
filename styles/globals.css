@@ -2,9 +2,15 @@
   --color-pana-blue: #4ab3ea;
   --color-pana-pink: #fc2070;
   --color-pana-yellow: #fab22c;
+  --color-bg-light: #f8f8f8;
+  --color-bg-navy: #181c3d;
   --base-font-size: 18px;
   --title-font-size: 32px;
   --subtitle-font-size: 24px;
+  /* breakpoints present for reference, as they can't be used in media queries */
+  --breakpoint-sm: 600px;
+  --breakpoint-md: 900px;
+  --breakpoint-lg: 1200px;
 }
 
 html,
@@ -98,20 +104,20 @@ button {
   content:"";
   display: inline-block;
   transform: translateX(-5px) rotate(90deg);
-  transition: transform 1s ease-out;
+  transition: transform .75s ease-out;
 }
 
 .burger-icon.close::before{
   content:"|";
   display: inline-block;
   transform: translateX(5px) rotate(45deg);
-  transition: transform 1s ease-out;
+  transition: transform .5s ease-out;
 }
 .burger-icon.close::after{
   content:"|";
   display: inline-block;
   transform: rotate(-45deg);
-  transition: transform 1s ease-out;
+  transition: transform .5s ease-out;
 }
 
 .slider-wrapper {

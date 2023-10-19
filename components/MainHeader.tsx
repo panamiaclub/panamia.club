@@ -46,16 +46,7 @@ export default function MainHeader() {
     useEffect(() => {
         const handleScroll = () => {
             const newScrollPosition = window.scrollY;
-  
             setScrollPosition(newScrollPosition);
-          
-            setNavStyle({
-              padding: newScrollPosition > 0 ? '0 1em' : '1em',
-            });
-          
-            setLogoStyle({
-              size: newScrollPosition > 0 ? 'small' : '',
-            });
         };
     
         window.addEventListener('scroll', handleScroll);
@@ -114,7 +105,7 @@ export default function MainHeader() {
             <div id="call-to-action-bar">
                 <CallToActionBar />
             </div>
-            <div className={`glass sticky bottomShadow ${styles.navWrap}`}>
+            <div className={`glass sticky ${styles.navWrap}`}>
                 <nav role="navigation" className={styles.nav} style={navStyle}>
                     <PanaLogo color="pink" size={`${logoStyle.size}`} />
                     <button onClick={onBurgerClick} className={styles.burger} id="mainheader-toggle" aria-expanded="false" aria-controls="menu">
@@ -136,7 +127,9 @@ export default function MainHeader() {
                         </div>
                     }
                 </nav>
+                <div className={styles.navBorder}></div>
             </div>
+
         </header>
     );
 }
