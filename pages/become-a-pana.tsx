@@ -12,7 +12,7 @@ const BecomeAPana: NextPage = () => {
         desc="Sign up to become a Pana and get the benefits of being liste on our directory!"
         />
       <div className={styles.main}>
-        <iframe className={styles.fullFrame} src="https://docs.google.com/forms/d/e/1FAIpQLSdE7qckjuydnNl4GPLyyU6whh89MuOGTIEZIaI5EhFfOk4wVA/viewform"></iframe>
+        <iframe className={styles.fullFrame} src="https://docs.google.com/forms/d/e/1FAIpQLSdE7qckjuydnNl4GPLyyU6whh89MuOGTIEZIaI5EhFfOk4wVA/viewform?embedded=true">Loading...</iframe>
       </div>
   </main>
   )
