@@ -1,4 +1,4 @@
-import { IconBrandInstagram, IconBrandDiscord } from "@tabler/icons";
+import { IconBrandInstagram, IconBrandDiscord, IconBrandYoutube } from "@tabler/icons";
 import Link from "next/link";
 
 import PanaLogo from "./PanaLogo";
@@ -12,7 +12,7 @@ export default function GlobalFooter() {
                 <PanaLogo color="pink" size="medium" />
                 <ul className={styles.footerLinks}>
                     <li><strong>PanaMia</strong></li>
-                    <li><Link href="/podcasts">Podcasts</Link></li>
+                    <li><Link href="/podcasts">PanaVizión</Link></li>
                     <li><Link href="/about-us">About</Link></li>
                     <li><Link href="/links">Links</Link></li>
                     <li><Link href="/directorio">Directorio</Link></li>
@@ -29,6 +29,12 @@ export default function GlobalFooter() {
                             <a href="https://instagram.com/panamiaclub">
                                 <IconBrandInstagram size={32} stroke={1.5} />
                                 <span className="sr-only">Instagram</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.youtube.com/@panavizion305">
+                                <IconBrandYoutube size={32} stroke={1.5} />
+                                <span className="sr-only">Youtube</span>
                             </a>
                         </li>
                         <li>
