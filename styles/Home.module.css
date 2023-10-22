@@ -496,6 +496,10 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
     margin-left:0!important;
   }
 
+  .igPromo {
+    flex-direction: column;
+  }
+
   .igPromo div {
     padding: 5px 15px;
   }
