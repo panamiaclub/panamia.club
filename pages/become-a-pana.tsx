@@ -10,6 +10,7 @@ const BecomeAPana: NextPage = () => {
       <PageMeta
         title="Become a Pana"
         desc="Sign up to become a Pana and get the benefits of being listed on our directory!"
+        image="https://www.panamia.club/logos/pana_logo_long_pink.png"
         />
       <div className={styles.main}>
         <iframe className={styles.fullFrame} src="https://docs.google.com/forms/d/e/1FAIpQLSdE7qckjuydnNl4GPLyyU6whh89MuOGTIEZIaI5EhFfOk4wVA/viewform?embedded=true">Loading...</iframe>
