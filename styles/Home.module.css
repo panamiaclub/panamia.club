@@ -453,6 +453,11 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
   text-align: center;
 }
 
+.igPromo {
+  margin: auto;
+  display: inline-flex;
+}
+
 .igPromo div {
   text-align: center;
 }
@@ -489,11 +494,6 @@ background: linear-gradient(to bottom right, #BAEAFF, #33308C);
   }
   .igButton{
     margin-left:0!important;
-  }
-
-  .igPromo {
-    margin: auto;
-    display: inline-flex;
   }
 
   .igPromo div {
