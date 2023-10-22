@@ -41,7 +41,7 @@ const AboutUs: NextPage = () => {
                   <ul>
                     <li><a href="#el-directorio">El Directorio- Our Online Local's Directory</a></li>
                     <li><a href="#mapa-miami">MaPa Miami</a></li>
-                    <li><a href="#panavizion-podcast">PanaVizion: El Todo SoFLo Podcast</a></li>
+                    <li><a href="#panavizion-podcast">PanaVizión: El Todo SoFLo Podcast</a></li>
                   </ul>
                 </li>
                 <li>
@@ -96,7 +96,7 @@ const AboutUs: NextPage = () => {
               <li>Find profiles on each location with pictures, descriptions, hours, links and other information.</li>
             </ul>
 
-            <a href="#panavizion-podcast"><h3 id="panavizion-podcast">&para; PanaVizion: El Todo SoFLo Podcast</h3></a>
+            <a href="#panavizion-podcast"><h3 id="panavizion-podcast">&para; PanaVizión: El Todo SoFLo Podcast</h3></a>
             
 
             <a href="#how-to-register"><h2 id="how-to-register">How to register your business with Pana MIA Club</h2></a>
