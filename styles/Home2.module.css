@@ -13,7 +13,7 @@
 }
 
 .heroTitles{
-    margin:4rem 0;
+    padding:4rem 0;
     color:black;
     text-align:center;
 }
@@ -31,7 +31,7 @@
 }
 
 .directorySearch{
-    margin:2rem;
+    padding:2rem 1rem;
 }
 
 .directorySearchForm label {
@@ -40,7 +40,7 @@
 }
 
 .directorySearchField {
-    margin:1rem;
+    margin:1rem 0;
     font-size:20px;
     height:2em;
     padding: 0.5em;
@@ -48,6 +48,16 @@
     border:#AAA solid 2px;
     min-width:33vw;
 }
+
+@media only screen and (min-width: 600px) {
+    .directorySearch{
+        padding:2rem;
+    }
+    .directorySearchField {
+        margin:1rem;
+    }
+}
+
 
 .directorySearchSubmit {
     margin:1rem;
@@ -91,6 +101,100 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.whatIsContainer{
+    background: linear-gradient(60deg, var(--color-pana-blue) 0%, var(--color-pana-pink) 45%, var(--color-pana-yellow) 100%);
+}
+
+.whatIsHero{
+    max-width:45em;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: #fff;
+    margin: auto;
+
+}
+
+.whatIsList{
+    list-style: none;
+    background-color: #0002;
+    border-radius:24px;
+    padding: 1rem;
+}
+
+.whatIsList li{
+    padding-bottom: 1.5rem;
+}
+
+
+.queTalContainer{
+    background-color: var(--color-bg-navy);
+}
+
+.queTalHero{
+    max-width:45em;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: #fff;
+    margin: auto;
+}
+
+@media only screen and (max-width: 600px) {
+    .queTalHero{
+        padding: 2rem 1rem;
+        flex-direction: column;
+    }
+}
+
+/* events section */
+.eventsContainer{
+    width:100%;
+    background: linear-gradient(70deg, var(--color-pana-yellow)  30%, rgba(0,0,0,0) 30%), linear-gradient(40deg, var(--color-pana-blue) 60%, var(--color-pana-pink) 60%);
+    background-attachment: fixed;
+}
+
+.eventsHero{
+    max-width:1200px;
+    background: linear-gradient(70deg, var(--color-pana-yellow)  30%, rgba(0,0,0,0) 30%), linear-gradient(40deg, var(--color-pana-blue) 60%, var(--color-pana-pink) 60%);
+    background-attachment: fixed;
+    overflow: hidden;
+    padding: 3rem 1rem;
+    display: flex;
+    margin: auto;
+    flex-direction: column;
+}
+
+.eventsImage{
+    max-width: 100%;
+}
+
+.eventsImagePanel{
+    max-width: 100%;
+}
+
+.eventsDescPanel{
+    text-align:center;
+    color: white;
+    width: 100%;
+    padding: 1rem;
+    margin: auto;
+    background-color: #0002;
+    border-radius:24px;
+}
+
+@media only screen and (min-width: 600px) {
+    .eventsHero{
+        padding: 3rem;
+        flex-direction: row;
+    }
+    .eventsImagePanel{
+        max-width: min(1200px, 70%);
+
+    }
+    .eventsDescPanel{
+        margin-left:3rem;
+    }
 }
 
 

@@ -5,6 +5,7 @@
   --color-bg-light: #f8f8f8;
   --color-bg-navy: #181c3d;
   --base-font-size: 18px;
+  --mobile-font-size: 16px;
   --title-font-size: 32px;
   --subtitle-font-size: 24px;
   /* breakpoints present for reference, as they can't be used in media queries */
@@ -157,7 +158,13 @@ button {
   }
 }
 
-@media screen and (min-width: 768px) {
+@media screen and (max-width: 600px) {
+  .hidden-sm{
+    display: none;
+  }
+}
+
+@media screen and (min-width: 600px) {
   .slide {
     min-width: 33.33% !important;
   }

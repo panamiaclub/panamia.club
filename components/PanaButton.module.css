@@ -1,6 +1,6 @@
 .panaButton, .panaButtonBlue, .panaButtonPink, .panaButtonYellow{
     margin: 0 .5rem;
-    font-size:18px;
+    font-size: var(--base-font-size);
     letter-spacing: 1px;
     padding:.5rem 1.5rem;
     background-color: black;
@@ -8,15 +8,34 @@
     font-weight: 700;
     border-radius: 2rem;
     border:3px solid black;
+    cursor: pointer;
+    transition: background 0.5s 0s ease-in-out;
 }
 
 .panaButtonBlue{
     background-color: var(--color-pana-blue);
+    border-color: var(--color-pana-blue);
+    background: linear-gradient(90deg, var(--color-pana-blue) 0%, var(--color-pana-blue) 100%);
 }
 .panaButtonPink{
     background-color: var(--color-pana-pink);
+    border-color: var(--color-pana-pink);
+    background: linear-gradient(90deg, var(--color-pana-pink) 0%, var(--color-pana-pink) 100%);
 }
 .panaButtonYellow{
     background-color: var(--color-pana-yellow);
+    border-color: var(--color-pana-yellow);
 }
 
+.panaButtonBlue:hover, .panaButtonPink:hover, .panaButtonYellow:hover{
+    text-decoration: underline;
+}
+.panaButtonPink:hover{
+    background: linear-gradient(90deg, var(--color-pana-blue) 0%, var(--color-pana-pink) 35%, var(--color-pana-yellow) 100%);
+}
+
+@media only screen and (max-width: 600px) {
+    .panaButton, .panaButtonBlue, .panaButtonPink, .panaButtonYellow{
+        font-size: var(--mobile-font-size);
+    }
+}

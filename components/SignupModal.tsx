@@ -3,6 +3,7 @@ import axios from "axios";
 import classNames from 'classnames';
 
 import styles from './SignupModal.module.css';
+import PanaButton from './PanaButton';
 
 export default function SignupModal() {
 
@@ -95,7 +96,10 @@ export default function SignupModal() {
 
     return (
         <div>
-            <button className={styles.callToAction} onClick={toggleModal}>Sign Up for our Newsletter</button>
+            <PanaButton 
+                onClick={toggleModal}
+                text="Sign Up for our Newsletter"
+                color="pink" />
             <dialog id="dialog-signup" className={styles.modal}>
                 <div className={styles.modal__title}>You're Invited To Our Club!</div>
                 <div className={styles.modal__subtitle}>Welcome to Pana MIA Club, the SoFlo Local's Directory connecting you to your vibrant community creatives, small businesses and organizations</div>
