@@ -1,7 +1,7 @@
 
 .headerHero{
     text-align: center;
-    background: url('/carousel_2.JPG');
+    background: url('/carousel_1.JPG');
     background-size: cover;
 }
 .headerHeroOverlay{
@@ -127,6 +127,26 @@
     padding-bottom: 1.5rem;
 }
 
+.becomePanaContainer{
+    background-color: var(--color-bg-light);
+}
+
+.becomePanaBar{
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
+    text-align: center;
+    margin: auto;
+    flex-flow: column;
+    line-height: 2.5rem;
+}
+
+@media only screen and (min-width: 600px) {
+    .becomePanaBar{
+        flex-flow: row;
+    }
+}
+
 
 .queTalContainer{
     background-color: var(--color-bg-navy);
@@ -171,6 +191,7 @@
 
 .eventsImagePanel{
     max-width: 100%;
+    margin-bottom:3rem;
 }
 
 .eventsDescPanel{
@@ -190,6 +211,7 @@
     }
     .eventsImagePanel{
         max-width: min(1200px, 70%);
+        margin-bottom:0;
 
     }
     .eventsDescPanel{

@@ -63,6 +63,14 @@ const Home: NextPage = () => {
             </ul>
           </div>
         </section>
+        <section className={styles.becomePanaContainer}>
+          <div className={styles.becomePanaBar}>
+            <div>Join our free local directory today!</div>
+            <div>
+              <PanaButton href="/become-a-pana" text="Become A Pana" color="yellow" />
+            </div>
+          </div>
+        </section>
         <section className={styles.queTalContainer}>
           <div className={styles.queTalHero}>
             <h2>¿¿Que Tal Pana??</h2>
@@ -85,7 +93,7 @@ const Home: NextPage = () => {
             </div>
           </div>
         </section>
-        <section className={styles.buffer}></section>
+        <section className={styles.buffer} hidden></section>
     </div>
   )
 }
