@@ -24,10 +24,12 @@ export default function PageMeta(props: PageMetaProps) {
         meta_image = (<meta property="og:image" content={props.image} />)
     }
 
+    const full_title = new String(props.title).concat(" | Pana Mia Club"); // consolidate to prevent title elements warning
+
     return (
         <>
         <Head>
-            <title key="title">{props.title} | Pana Mia Club</title>
+            <title key="title">{full_title}</title>
             {meta_desc}
             {meta_url}
             {meta_image}
