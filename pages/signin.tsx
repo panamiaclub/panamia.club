@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useSession, signIn, getProviders } from "next-auth/react";
 import Head from 'next/head'
 import Image from 'next/image'
-import styles from '../styles/Home.module.css'
+import styles from '../styles/IndexOld.module.css'
 import { IconAlertTriangle } from '@tabler/icons';
 import {
   createStyles,

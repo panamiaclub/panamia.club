@@ -29,13 +29,66 @@
 
 .navWrap {
     background-color: #fffd;
+    top: 0;
+    position: sticky;
+    z-index: 1;
+}
+
+.navLogo{
+    order:2;
+}
+
+.burger {
+    order:1;
+    display: block;
+    padding: 0.25rem 0.5rem;
+    width: max-content;
+}
+
+.nav {
+    justify-content: left;
+    padding: .5em;
+}
+
+.navLogo img{
+    height: 24px;
 }
 
 .navList {
     display: flex;
     list-style: none;
-    color: #444;
-    padding: 0;
+    margin: 0;
+    transform: scaleY(0);
+    height: 0;
+    order: 4;
+    width: 100%;
+    flex-direction: column;
+    overflow: hidden;
+    transform-origin: top;
+    color:#444;
+}
+
+.navList[aria-expanded="true"] {
+    width: 100%;
+    height: max-content;
+    transform: scaleY(1);
+    transition: all .5s ease-out;
+}
+
+.navList > :first-child {
+    padding-top: 10px;
+}
+
+.listItem a {
+    width: calc(100% - 4rem);
+    display: block;
+    background-color: #f4f5f6;
+    margin: 0.25rem auto;
+}
+
+.sessionButton {
+    margin-left: auto;
+    order: 3;
 }
 
 .listItem a {
@@ -71,47 +124,36 @@
     background: linear-gradient(70deg, var(--color-pana-yellow)  30%, rgba(0,0,0,0) 30%), linear-gradient(40deg, var(--color-pana-blue) 60%, var(--color-pana-pink) 60%);
 }
 
-@media only screen and (max-width: 600px) {
-    .burger {
-        display: block;
-        padding: 0.25rem 0.5rem;
-        width: max-content;
+@media only screen and (min-width: 600px) {
+    .burger{
+        order: 4;
+        display: none;
     }
-
-    .nav {
-        justify-content: left;
-        padding: .5em;
+    .navLogo{
+        order: 1;
+        cursor:pointer;
+        padding: .25rem;
+    }
+    .navLogo img{
+        height: 32px;
     }
 
     .navList {
-        margin: 0;
-        transform: scaleY(0);
-        height: 0;
-        order: 1;
-        width: 100%;
-        flex-direction: column;
-        overflow: hidden;
-        transform-origin: top;
-    }
-
-    .navList[aria-expanded="true"] {
+        order: 2;
+        flex-direction: row;
+        color: #444;
+        padding: 0;
+        transform: none;
         height: max-content;
-        transform: scaleY(1);
-        transition: all .5s ease-out;
+        width: max-content;
+        margin: auto;
     }
-
     .navList > :first-child {
-        padding-top: 10px;
+        padding-top: 0;
     }
-
     .listItem a {
-        width: calc(100% - 4rem);
-        display: block;
-        background-color: #f4f5f6;
-        margin: 0.25rem auto;
-    }
-
-    .sessionButton {
-        margin-left: auto;
+        width: auto;
+        background-color: transparent;
+        margin: auto;
     }
 }

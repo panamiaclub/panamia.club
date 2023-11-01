@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import classNames from 'classnames';
+import { IconHome, TablerIcon } from '@tabler/icons';
 
 import styles from './MainHeader.module.css';
 import CallToActionBar from './CallToActionBar';
@@ -10,10 +11,9 @@ import PanaLogo from './PanaLogo';
 // https://www.a11ymatters.com/pattern/mobile-nav/
 
 const menu_items = [
+    {id:"home", link: "/", label: "Home", icon: "" },
     {id:"about", link: "/about-us", label: "About"},
     {id:"links", link: "/links", label: "Links"},
-    {id:"directorio", link: "/directorio", label: "El Directorio"},
-    {id:"contact", link: "/#footer", label: "Contact Us"},
     {id:"donations", link: "/donations", label: "Donate", special: false},
 ];
 
@@ -23,8 +23,14 @@ interface MenuItemProps {
     id: string,
     label: string,
     url: string,
+    icon?: string
     special?: boolean
 }
+
+interface IconProps {
+    reference?: string
+}
+
 
 export default function MainHeader() {
     const { data: session, status } = useSession();
@@ -37,7 +43,7 @@ export default function MainHeader() {
       }
       
     interface LogoStyle {
-    size?: string;
+        size?: string;
     }
     const [scrollPosition, setScrollPosition] = useState(0);
     const [navStyle, setNavStyle] = useState<NavStyle>({});
@@ -84,11 +90,22 @@ export default function MainHeader() {
         return true
     }
 
+    function Icon(props: IconProps): JSX.Element {
+        if (props.reference == "home") {
+            return (
+                <IconHome height="20" width="20" />
+            )
+        }
+        return (
+            <></>
+        )
+    }
+
     function MenuItem(props: MenuItemProps): JSX.Element {
         return (
             <li className={styles.listItem}>
                 <Link href={props.url}>
-                    <a onClick={onMenuClick} className={(props?.special == true) ? styles.linkSpecial : ""}>{props.label}</a>
+                    <a onClick={onMenuClick} className={(props?.special == true) ? styles.linkSpecial : ""}><Icon reference={props.icon} />{props.label}</a>
                 </Link>
             </li>
         );
@@ -96,7 +113,7 @@ export default function MainHeader() {
 
     const menu_elements = menu_items.map((item) => {
         return (
-            <MenuItem key={item.id} id={item.id} label={item.label} url={item.link} special={item.special} />
+            <MenuItem key={item.id} id={item.id} label={item.label} url={item.link} special={item.special} icon={item.icon} />
         );
     })
 
@@ -105,9 +122,11 @@ export default function MainHeader() {
             <div id="call-to-action-bar">
                 <CallToActionBar />
             </div>
-            <div className={`glass sticky ${styles.navWrap}`}>
+            <div className={styles.navWrap}>
                 <nav role="navigation" className={styles.nav} style={navStyle}>
-                    <PanaLogo color="pink" size={`${logoStyle.size}`} />
+                    <div className={styles.navLogo}>
+                        <Link href="/"><img src="/logos/pana_logo_long_pink.png" /></Link>
+                    </div>
                     <button onClick={onBurgerClick} className={styles.burger} id="mainheader-toggle" aria-expanded="false" aria-controls="menu">
                         <span className="burger-icon"></span>
                         <span className="sr-only">Open Menu</span>
