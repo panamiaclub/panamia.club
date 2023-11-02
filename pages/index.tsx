@@ -42,10 +42,18 @@ const Home: NextPage = () => {
 
             <div className={styles.backgroundBar} hidden>
               <div className={styles.backgroundBarInner}>
-                <img src="/2023_logo_white.svg" />
-                <img src="/2023_logo_white.svg" />
-                <img src="/2023_logo_white.svg" />
+                <img src="/logos/2023_logo_white.svg" />
+                <img src="/logos/2023_logo_white.svg" />
+                <img src="/logos/2023_logo_white.svg" />
               </div>
+            </div>
+          </div>
+        </section>
+        <section className={styles.becomePanaContainer}>
+          <div className={styles.becomePanaBar}>
+            <div>Join our free Locals Directory today!</div>
+            <div>
+              <PanaButton href="/become-a-pana" text="Become A Pana" color="yellow" />
             </div>
           </div>
         </section>
@@ -61,14 +69,7 @@ const Home: NextPage = () => {
             </ul>
           </div>
         </section>
-        <section className={styles.becomePanaContainer}>
-          <div className={styles.becomePanaBar}>
-            <div>Join our free local directory today!</div>
-            <div>
-              <PanaButton href="/become-a-pana" text="Become A Pana" color="yellow" />
-            </div>
-          </div>
-        </section>
+        
         <section className={styles.queTalContainer}>
           <div className={styles.queTalHero}>
             <h2>¿¿Que Tal Pana??</h2>
@@ -80,8 +81,8 @@ const Home: NextPage = () => {
           <div className={styles.eventsHero}>
             <div className={styles.eventsImagePanel}>
               <picture>
-                <source srcSet="/home/EventsBanner.webp" type="image/webp" media="(min-width: 600px)" />
-                <img src="/home/EventsBannerMobilex800.webp" className={styles.eventsImage} />
+                <source srcSet="/img/home/EventsBanner.webp" type="image/webp" media="(min-width: 600px)" />
+                <img src="/img/home/EventsBannerMobilex800.webp" className={styles.eventsImage} />
               </picture>
             </div>
             <div className={styles.eventsDescPanel}>

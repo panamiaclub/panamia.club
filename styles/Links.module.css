@@ -4,7 +4,7 @@
 
 .main{
     min-height: 1vh;
-    background: fixed center center no-repeat url('/links_bg.svg');
+    background: fixed center center no-repeat url('/img/links/links_bg.svg');
     background-size: cover;
 }
 
@@ -97,7 +97,7 @@
 
 .linkSpotify a{
     background-color: black;
-    background: url('/logo_new_3.png') center 100% no-repeat black;
+    background: url('/logos/logo_new_3.png') center 100% no-repeat black;
     background-size: 6rem;
     min-height:10rem;
 }

@@ -142,7 +142,7 @@ export default function MainHeader() {
                     }
                     {!session &&
                         <div className={styles.sessionButton}>
-                            <Link href="/signin">Sign In</Link>
+                            <Link href="/api/auth/signIn">Sign In</Link>
                         </div>
                     }
                 </nav>

@@ -1,12 +1,12 @@
 
 .headerHero{
     text-align: center;
-    background: url('/carousel_1.JPG');
+    background: url('/img/home/bg_main_hero.jpg');
     background-size: cover;
     background-position: 50% 50%;
 }
 .headerHeroOverlay{
-    background-color: rgba(0,0,0,0.5);
+    background-color: rgba(0,0,0,0.1);
 }
 .hero{
     margin:auto;
