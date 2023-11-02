@@ -111,17 +111,46 @@
     text-decoration: underline;
 }
 
-.sessionButton a {
+.sessionButton a, .sessionButton button {
     font-size: 14px;
     font-weight: 700;
     border-radius: 1.25rem;
     padding: 0.5rem 1.25rem;
     background-color: #4ab3ea;
     white-space: nowrap;
+    color: white;
 }
+
 .navBorder{
     height:2px;
     background: linear-gradient(70deg, var(--color-pana-yellow)  30%, rgba(0,0,0,0) 30%), linear-gradient(40deg, var(--color-pana-blue) 60%, var(--color-pana-pink) 60%);
+}
+
+.userModal{
+    margin-right: 1rem;
+    z-index:100;
+    border:2px solid #444;
+    padding: 1rem;
+    background-color: var(--color-bg-light);
+    color: #444;
+    font-size: var(--mobile-font-size);
+}
+
+.userModal a{
+    display: inline-block;
+    width:100%;
+    border-radius: 24px;
+    background-color: #f8f9fa;
+}
+.userModal a:hover{
+    color: var(--color-pana-pink);
+}
+.userModal svg{
+    vertical-align: text-top;
+}
+
+.userModalUser{
+    font-size:0.75rem;
 }
 
 @media only screen and (min-width: 600px) {

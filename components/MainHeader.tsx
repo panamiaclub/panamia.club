@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { MouseEventHandler, useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import classNames from 'classnames';
-import { IconHome, IconUser } from '@tabler/icons';
+import { IconHome, IconUser, IconLogout } from '@tabler/icons';
 
 import styles from './MainHeader.module.css';
 import CallToActionBar from './CallToActionBar';
@@ -90,6 +90,16 @@ export default function MainHeader() {
         return true
     }
 
+    function onUserClick(e: React.MouseEvent) {
+        e.stopPropagation();
+        const dialogUser = document.getElementById('dialog-user-mainheader') as HTMLDialogElement;
+        if (dialogUser.open) {
+            dialogUser.close()
+        } else {
+            dialogUser.show();
+        }
+    }
+
     function Icon(props: IconProps): JSX.Element {
         if (props.reference == "home") {
             return (
@@ -136,8 +146,7 @@ export default function MainHeader() {
                     </ul>
                     {session && session.user &&
                         <div className={styles.sessionButton}>
-                            <button><IconUser /></button>
-                            <span className="sr-only">{session.user.email}</span>
+                            <button onClick={onUserClick}><IconUser /></button>
                         </div>
                     }
                     {!session &&
@@ -147,6 +156,15 @@ export default function MainHeader() {
                     }
                 </nav>
                 <div className={styles.navBorder}></div>
+                <dialog id="dialog-user-mainheader" className={styles.userModal}>
+                    {session && session.user &&
+                        <div>
+                            <span className={styles.userModalUser}>{session.user.email}</span>
+                            <hr />
+                            <Link href="/api/auth/signout"><a><IconLogout height="16" />&nbsp;Sign Out</a></Link>
+                        </div>
+                    }
+                </dialog>
             </div>
 
         </header>

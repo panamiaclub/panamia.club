@@ -7,7 +7,6 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { MongoDBAdapter} from '@next-auth/mongodb-adapter';
 // import { compare } from "bcrypt";
 
-
 import clientPromise from './lib/mongodb';
 // import dbConnect from './lib/connectdb';
 // import auth from "./lib/model/users";
@@ -40,6 +39,11 @@ const options = {
     }),
     
   ],
+  theme: {
+    logo: "/logos/2023_logo_pink.svg",
+    brandColor: "#4ab3ea",
+    buttonText: "#fff",
+  },
   secret: process.env.NEXT_PUBLIC_SECRET,
   debug: false
 }
