@@ -136,7 +136,8 @@ export default function MainHeader() {
                     </ul>
                     {session && session.user &&
                         <div className={styles.sessionButton}>
-                            <button aria-label={session.user.email}><IconUser /></button>
+                            <button><IconUser /></button>
+                            <span className="sr-only">{session.user.email}</span>
                         </div>
                     }
                     {!session &&
