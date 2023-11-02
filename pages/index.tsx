@@ -62,11 +62,13 @@ const Home: NextPage = () => {
             <h2>What is Pana MIA Club actually?</h2>
             <h3>Pana MIA Club is a community platform that makes all things <em>local</em> accessible.</h3>
             <p><u>Connecting the SoFlo Community to its own vibrant &amp; innovative creators/entrepeneurs</u></p>
-            <ul className={styles.whatIsList}>
-              <li><strong>PASO UNO:</strong><br />We create profiles on local South Florida creatives and entrepeneurs for our Directorio - a publically accessible list</li>
-              <li><strong>PASO DOS:</strong><br />We build a community of Panas that support each other, collaborate, and grow together</li>
-              <li><strong>PASO TRES:</strong><br />Lured by all the super cool locals in our directory, SoFlo patrons will have no choice but to contribute to the local economy</li>
-            </ul>
+            <div className={styles.whatIsMission}>
+            <h3>Mission Statement</h3>
+            <p>We are organizing the South Florida diversified working class to build regenerative and vibrant
+               economies. By connecting locals with quality resources and educating on the benefits of reinvesting
+               locally, we cultivate financial security, personal engagement, and emphasize the power of a
+               unified community.</p>
+            </div>
           </div>
         </section>
         

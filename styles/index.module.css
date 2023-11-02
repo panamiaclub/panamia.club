@@ -119,15 +119,10 @@
 
 }
 
-.whatIsList{
-    list-style: none;
+.whatIsMission{
     background-color: #0002;
     border-radius:24px;
     padding: 1rem;
-}
-
-.whatIsList li{
-    padding-bottom: 1.5rem;
 }
 
 .becomePanaContainer{
