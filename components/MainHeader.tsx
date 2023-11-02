@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import classNames from 'classnames';
-import { IconHome, TablerIcon } from '@tabler/icons';
+import { IconHome, IconUser } from '@tabler/icons';
 
 import styles from './MainHeader.module.css';
 import CallToActionBar from './CallToActionBar';
@@ -135,14 +135,13 @@ export default function MainHeader() {
                         {menu_elements}
                     </ul>
                     {session && session.user &&
-                        <div>
-                            <p style={{ color: "#495057", fontFamily: "Helvetica Neue", marginRight: "0px" }}>Hi, {session.user.email}</p>
-                            <button className={styles.sessionButton} onClick={handleSignOut}>Log Out</button>
+                        <div className={styles.sessionButton}>
+                            <button aria-label={session.user.email}><IconUser /></button>
                         </div>
                     }
                     {!session &&
                         <div className={styles.sessionButton}>
-                            <Link href="/api/auth/signIn">Sign In</Link>
+                            <Link href="/api/auth/signin">Sign In</Link>
                         </div>
                     }
                 </nav>
