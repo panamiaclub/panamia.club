@@ -8,6 +8,7 @@ const userSchema = new Schema(
             required: true,
             unique: true
         },
+        name: String,
         status: {
             role: String,
             locked: Date

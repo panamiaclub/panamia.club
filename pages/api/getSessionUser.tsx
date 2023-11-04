@@ -46,6 +46,7 @@ export default async function handler(
     // console.log("getSessionUser:existingUser", existingUser);
     const newUser =  new user({
       email: email,
+      name: session.user?.name,
       status: {
         role: "user",
         locked: null,

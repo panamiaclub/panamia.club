@@ -36,9 +36,9 @@ export default async function handler(
       .json({ error: "This API call only accepts POST methods" });
   }
   const email = session.user?.email;
-  console.log("email", `'${email}'`);
-  const { zip_code } = req.body;
-  console.log("zip_code", zip_code);
+  // console.log("email", `'${email}'`);
+  const { name, zip_code } = req.body;
+  // console.log("zip_code", zip_code);
   if (!email) {
     return res
       .status(200)
@@ -47,6 +47,9 @@ export default async function handler(
   const existingUser = await getUserByEmail(email);
   if (existingUser) {
     // console.log("saveSessionUser:existingUser", existingUser);
+    if (name) {
+      existingUser.name = name
+    }
     if (zip_code) {
       existingUser.zip_code = zip_code
     }

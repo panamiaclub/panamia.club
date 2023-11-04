@@ -10,7 +10,6 @@ const CosaHechaLoveLocalMarketVendorForm: NextPage = () => {
       <PageMeta
         title="Cosa Hecha + Love Local Market Vendor Form"
         desc="A sustainability centric market hosted at the Hub on December 17th. "
-        image="https://www.panamia.club/logos/panamia_pink.svg"
         />
       <div className={styles.main}>
       

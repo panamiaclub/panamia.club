@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import axios from 'axios';
 
 import styles from '../../styles/account/Admin.module.css';
+import PageMeta from '../../components/PageMeta';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   return {
@@ -31,9 +32,13 @@ const User: NextPage = () => {
     )
   }
   return (
-    <div>
-      <h1>Unauthorized</h1>
-    </div>
+    <main className={styles.app}>
+      <PageMeta title="Unauthorized" desc="" />
+      <div className={styles.main}>
+        <h2 className={styles.accountTitle}>UNAUTHORIZED</h2>
+        <h3 className={styles.accountTitle}>You must be logged in to view this page.</h3>
+      </div>
+    </main>
   )
 }
 

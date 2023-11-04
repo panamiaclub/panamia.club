@@ -95,7 +95,6 @@ const BecomeAPana: NextPage = () => {
       <PageMeta
         title="Become a Pana"
         desc="Sign up to become a Pana and get the benefits of being listed on our directory!"
-        image="https://www.panamia.club/logos/panamia_pink.svg"
         />
       <div className={styles.main}>
         <h2>Pana MIA's Directory Express Sign Up Form</h2>
