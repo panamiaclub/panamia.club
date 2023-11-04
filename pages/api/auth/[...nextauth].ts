@@ -4,6 +4,7 @@ import NextAuth from 'next-auth'
 import GoogleProvider from "next-auth/providers/google";
 import EmailProvider from "next-auth/providers/email";
 import { MongoDBAdapter} from '@next-auth/mongodb-adapter';
+import { DefaultSession, User, TokenSet } from 'next-auth';
 // import { compare } from "bcrypt";
 // import CredentialsProvider from "next-auth/providers/credentials";
 
@@ -35,7 +36,7 @@ export const authOptions = {
     }),
     GoogleProvider({
       clientId: process.env.GOOGLE_OAUTH_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_SECRET || "",
+      clientSecret: process.env.GOOGLE_OATH_SECRET || "",
       authorization: {
         params: {
           prompt: "consent",
@@ -46,7 +47,8 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, user, token }) {
+    // @ts-expect-error
+    async session({ session, user, token }) { 
       session.user.name = "";
       session.user.image = "";
       return session
