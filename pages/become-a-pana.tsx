@@ -1,7 +1,7 @@
 import type { NextPage } from 'next'
 import React from 'react';
 
-import styles from '../styles/BecomeAPana.module.css'
+import styles from '../styles/GoogleEmbeddedForm.module.css'
 import PageMeta from '../components/PageMeta';
 
 const BecomeAPana: NextPage = () => {

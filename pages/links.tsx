@@ -62,19 +62,13 @@ const Links: NextPage = () => {
               </a>
             </div>
             <div className={classNames(styles.link, styles.linkHighlight)}>
-              <a target="_blank" rel="noreferrer" href="https://linktr.ee/panamiaclub">
+              <a target="_blank" rel="noreferrer" href="/become-a-pana">
               Become Our Pana!<br />
               <small>Are you a local entrepreneur or creative based in SoFlo? You’re invited to join our open-access Local’s Directory!</small>
               </a>
             </div>
             <div className={classNames(styles.link, styles.linkVideo)}>
               <iframe width="100%" height="315" src="https://www.youtube.com/embed/videoseries?list=PLeszggVMN994u3XNwptIGamQpzrkpeakF" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
-            </div>
-            <div className={styles.link}>
-              <a target="_blank" rel="noreferrer" href="https://patreon.com/PanaMIAClub">
-              <IconBrandPatreon size={20} stroke={1.5} color='white' />
-              &nbsp;Support Us Through Patreon!
-              </a>
             </div>
             <div className={classNames(styles.link, styles.linkSpotify)}>
               <a target="_blank" rel="noreferrer" href="https://open.spotify.com/user/316n6afhro32aqcvlcvxv6mrk2ry?si=7c8a5528902e45fc">

@@ -1,91 +1,66 @@
-import NextAuth from 'next-auth';
-import {useSession} from 'next-auth/react';
-import { MongoClient } from "mongodb"
-import EmailProvider from "next-auth/providers/email"; 
-import clientPromise from './lib/mongodb';
-import dbConnect from './lib/connectdb';
-import { MongoDBAdapter} from '@next-auth/mongodb-adapter';
-import { compare } from "bcrypt";
-import auth from "./lib/model/users";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { redirect } from 'next/dist/server/api-utils';
+// https://next-auth.js.org/providers/google
 
-const uri = process.env.NEXT_PUBLIC_MONGODB_URI_FULL
-const options = {
-  useUnifiedTopology: true,
-  useNewUrlParser: true,
+import NextAuth from 'next-auth'
+import GoogleProvider from "next-auth/providers/google";
+import EmailProvider from "next-auth/providers/email";
+import { MongoDBAdapter} from '@next-auth/mongodb-adapter';
+import { DefaultSession, User, TokenSet } from 'next-auth';
+// import { compare } from "bcrypt";
+// import CredentialsProvider from "next-auth/providers/credentials";
+
+import clientPromise from './lib/mongodb';
+
+const mongoAdapterOptions = {
+  collections: {
+    Accounts: "nextauth_accounts",
+    Sessions: "nextauth_sessions",
+    Users: "nextauth_users",
+    VerificationTokens: "nextauth_verification_tokens",
+  }
 }
 
 
-export default NextAuth({
-    adapter: MongoDBAdapter(clientPromise),
-    providers: [
-        CredentialsProvider({
-            id: "credentials",
-            name: "Credentials",
-            credentials: {
-              email: {
-                label: "Email",
-                type: "text",
-              },
-              password: {
-                label: "Password",
-                type: "password",
-              },
-            },
-            async authorize(credentials) {
-              console.log(credentials);
-              await dbConnect();
-      
-              // Find user with the email
-              let user = await auth.findOne({
-                email: credentials?.email,
-              });
+export const authOptions = {
+  adapter: MongoDBAdapter(clientPromise, mongoAdapterOptions),
+  providers: [
+    EmailProvider({
+      server: {
+        host: process.env.EMAIL_SERVER_HOST,
+        port: process.env.EMAIL_SERVER_PORT,
+        auth: {
+          user: process.env.EMAIL_SERVER_USER,
+          pass: process.env.EMAIL_SERVER_PASSWORD
+        }
+      },
+      from: process.env.EMAIL_FROM
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_OATH_SECRET || "",
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
+    }),
+  ],
+  callbacks: {
+    // @ts-expect-error
+    async session({ session, user, token }) { 
+      session.user.name = "";
+      session.user.image = "";
+      return session
+    },
+  },
+  theme: {
+    logo: "/logos/2023_logo_pink.svg",
+    brandColor: "#4ab3ea",
+    buttonText: "#fff",
+  },
+  secret: process.env.NEXT_PUBLIC_SECRET,
+  debug: false
+}
 
-              //console.log('user authentication-----');
-              //console.log(user);
-      
-              // Email Not found
-              if (!user) {
-                throw new Error("Email is not registered");
-              }
-      
-              // Check hased password with DB hashed password
-              const isPasswordCorrect = await compare(
-                credentials!.password,
-                user.hashedPassword
-              );
-      
-              // Incorrect password
-              if (!isPasswordCorrect) {
-                throw new Error("Password is incorrect");
-              }
-              if(user){
-                console.log('set user.id')
-                user._id = user._id.toString();
-                console.log(user);
-              }
-              return user;
-            },
-          }),
-    ],
-    pages:{
-        signIn: '/signin'
-    },
-    callbacks: {
-      // session: async ({ session, token }) => {
-      //   if (session?.user) {
-      //     session.user.id = token.sub;
-      //   }
-      //   return session;
-      // }
-    },
-    session: {
-      strategy: 'jwt',
-    },
-    secret: process.env.NEXT_PUBLIC_SECRET,
-    jwt: {
-        secret: process.env.NEXT_PUBLIC_JWT_SECRET
-    }
-
-});
+export default NextAuth(authOptions);

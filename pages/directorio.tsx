@@ -2,7 +2,7 @@ import type { NextPage } from 'next'
 import Link from 'next/link';
 import Head from 'next/head'
 import Image from 'next/image'
-import stylesHome from '../styles/Home.module.css'
+import stylesHome from '../styles/IndexOld.module.css'
 import styles from '../styles/Profile.module.css'
 import {
     createStyles,

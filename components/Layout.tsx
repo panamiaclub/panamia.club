@@ -10,13 +10,23 @@ type LayoutProps = {
 };
 
 export default function Layout({ children }: LayoutProps) {
+
+  function onBodyClick() {
+    const dialogUser = document.getElementById('dialog-user-mainheader') as HTMLDialogElement;
+    if (dialogUser) {
+      if (dialogUser.open) {
+          dialogUser.close()
+      }
+    }
+  }
+
   return (
     <>
       <GlobalHead />
       <Head>
         <title key="title">All Things Local In SoFlo | Pana Mia Club</title>
       </Head>
-      <div id="layout-body">
+      <div id="layout-body" onClick={onBodyClick}>
         <MainHeader />
         <div id="layout-main">
           {children}

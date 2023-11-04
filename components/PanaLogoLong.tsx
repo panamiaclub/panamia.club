@@ -20,11 +20,11 @@ const defaultProps: LogoProps = {
 export default function PanaLogo(props: LogoProps) {
 
     const logo_alt = "Pana Mia Club logo"
-    let logo_src = "/2023_logo_white.svg"
+    let logo_src = "/logos/2023_logo_white.svg"
     let container_classes = styles.logoContainer;
 
     if (props.color === "pink") {
-        logo_src = "/2023_logo_pink.svg"
+        logo_src = "/logos/2023_logo_pink.svg"
     }
 
     let color_class = null

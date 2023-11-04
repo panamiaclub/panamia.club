@@ -76,9 +76,9 @@ const AboutUs: NextPage = () => {
 
             <a href="#womanifesto"><h3 id="womanifesto">&para; The (Wo)Manifesto</h3></a>
             <div className={styles.swipeGallery}>
-              <img src="/about/ig_promo_1.webp" alt="" />
-              <img src="/about/ig_promo_2.webp" alt="" />
-              <img src="/about/ig_promo_4.webp" alt="" />
+              <img src="/img/about/ig_promo_1.webp" alt="" />
+              <img src="/img/about/ig_promo_2.webp" alt="" />
+              <img src="/img/about/ig_promo_4.webp" alt="" />
             </div>
 
             <a href="#our-ongoing-projects"><h2 id="our-ongoing-projects">Our Ongoing Projects:</h2></a>
@@ -118,12 +118,6 @@ const AboutUs: NextPage = () => {
             </p>
 
             <a href="#donate-now"><h2 id="donate-now">Donate Now</h2></a>
-            <p className={styles.link}>
-              <a target="_blank" rel="noopener noreferrer" href="https://patreon.com/PanaMIAClub">
-              <IconBrandPatreon size={20} stroke={1.5} color='white' />
-              &nbsp;Support Us Through Patreon!
-              </a>
-            </p>
             <p className={styles.link}>
               <a target="_blank" rel="noopener noreferrer" href="https://www.gofundme.com/f/panamia-club-help-create-soflo-locals-directory">
               <IconCash size={20} stroke={1.5} color='white' />
