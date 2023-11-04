@@ -28,10 +28,10 @@ const User: NextPage = () => {
 
   const setUserSession = async() => {
     const userSession = await getUserSession();
-    // console.log(userSession);
-    setSessionEmail(userSession.email == null ? '' : userSession.email);
-    setSessionZipCode(userSession.zip_code == null ? '' : userSession.zip_code);
-    // console.log(session_email, session_zipCode);
+    if (userSession) {
+      setSessionEmail(userSession.email == null ? '' : userSession.email);
+      setSessionZipCode(userSession.zip_code == null ? '' : userSession.zip_code);
+    }
   }
 
   const updateUserSession = async() => {
@@ -50,11 +50,11 @@ const User: NextPage = () => {
     updateUserSession();
   }
 
-  if (session) {
-    useEffect(() => {
-      setUserSession();
-    }, []);
+  useEffect(() => {
+    setUserSession();
+  }, []);
 
+  if (session) {
     return (
       <main className={styles.app}>
         <PageMeta title="User Account Settings" desc="" image="" />
