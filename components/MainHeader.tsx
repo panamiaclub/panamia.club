@@ -1,11 +1,13 @@
-import { MouseEventHandler, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import classNames from 'classnames';
-import { IconHome, IconUser, IconLogout } from '@tabler/icons';
+import { IconHome, IconUser, IconLogout, IconAlien, IconSettings } from '@tabler/icons';
+import axios from 'axios';
 
 import styles from './MainHeader.module.css';
 import CallToActionBar from './CallToActionBar';
+import { getUserSession } from '../lib/user_management';
 import PanaLogo from './PanaLogo';
 
 // https://www.a11ymatters.com/pattern/mobile-nav/
@@ -37,6 +39,7 @@ export default function MainHeader() {
     const handleSignOut = () => signOut({ redirect: true, callbackUrl: '/' });
     const [menu_active, setMenuActive] = useState(false);
     const activeClasses = classNames(styles.navList, styles.navListActive);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     interface NavStyle {
         padding?: string;
@@ -90,14 +93,23 @@ export default function MainHeader() {
         return true
     }
 
-    function onUserClick(e: React.MouseEvent) {
+    async function onUserClick(e: React.MouseEvent) {
         e.stopPropagation();
+        const userSessionData = await getUserSession();
+        // console.log("userSession", userSession);
+        if (userSessionData?.status?.role == "admin") {
+            setIsAdmin(true);
+        }
         const dialogUser = document.getElementById('dialog-user-mainheader') as HTMLDialogElement;
         if (dialogUser.open) {
             dialogUser.close()
         } else {
             dialogUser.show();
         }
+    }
+
+    async function onUserDialogClick(e: React.MouseEvent) {
+        e.stopPropagation();
     }
 
     function Icon(props: IconProps): JSX.Element {
@@ -156,12 +168,16 @@ export default function MainHeader() {
                     }
                 </nav>
                 <div className={styles.navBorder}></div>
-                <dialog id="dialog-user-mainheader" className={styles.userModal}>
+                <dialog id="dialog-user-mainheader" className={styles.userModal} onClick={onUserDialogClick}>
                     {session && session.user &&
                         <div>
                             <span className={styles.userModalUser}>{session.user.email}</span>
                             <hr />
-                            <Link href="/api/auth/signout"><a><IconLogout height="16" />&nbsp;Sign Out</a></Link>
+                            <ul>
+                                <li className={styles.adminLink} hidden={!isAdmin}><Link href="/account/admin"><a><IconAlien height="16" width="16" />&nbsp;ADMIN PORTAL</a></Link></li>
+                                <li><Link href="/account/user"><a><IconSettings height="16" width="16" />&nbsp;Account</a></Link></li>
+                                <li><Link href="/api/auth/signout"><a><IconLogout height="16" width="16" />&nbsp;Sign Out</a></Link></li>
+                            </ul>
                         </div>
                     }
                 </dialog>

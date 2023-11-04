@@ -3,17 +3,24 @@
 import NextAuth from 'next-auth'
 import GoogleProvider from "next-auth/providers/google";
 import EmailProvider from "next-auth/providers/email";
-import CredentialsProvider from "next-auth/providers/credentials";
 import { MongoDBAdapter} from '@next-auth/mongodb-adapter';
 // import { compare } from "bcrypt";
+// import CredentialsProvider from "next-auth/providers/credentials";
 
 import clientPromise from './lib/mongodb';
-// import dbConnect from './lib/connectdb';
-// import auth from "./lib/model/users";
+
+const mongoAdapterOptions = {
+  collections: {
+    Accounts: "nextauth_accounts",
+    Sessions: "nextauth_sessions",
+    Users: "nextauth_users",
+    VerificationTokens: "nextauth_verification_tokens",
+  }
+}
 
 
-const options = {
-  adapter: MongoDBAdapter(clientPromise),
+export const authOptions = {
+  adapter: MongoDBAdapter(clientPromise, mongoAdapterOptions),
   providers: [
     EmailProvider({
       server: {
@@ -27,7 +34,7 @@ const options = {
       from: process.env.EMAIL_FROM
     }),
     GoogleProvider({
-      clientId: process.env.GOOGLE_ID || "",
+      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_SECRET || "",
       authorization: {
         params: {
@@ -37,8 +44,14 @@ const options = {
         }
       }
     }),
-    
   ],
+  callbacks: {
+    async session({ session, user, token }) {
+      session.user.name = "";
+      session.user.image = "";
+      return session
+    },
+  },
   theme: {
     logo: "/logos/2023_logo_pink.svg",
     brandColor: "#4ab3ea",
@@ -48,4 +61,4 @@ const options = {
   debug: false
 }
 
-export default NextAuth(options)
+export default NextAuth(authOptions);

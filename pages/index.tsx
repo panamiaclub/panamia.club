@@ -61,7 +61,7 @@ const Home: NextPage = () => {
           <div className={styles.whatIsHero}>
             <h2>What is Pana MIA Club actually?</h2>
             <h3>Pana MIA Club is a community platform that makes all things <em>local</em> accessible.</h3>
-            <p><u>Connecting the SoFlo Community to its own vibrant &amp; innovative creators/entrepeneurs</u></p>
+            <p><u>Connecting the SoFlo Community to its own vibrant &amp; innovative creators/entrepreneurs</u></p>
             <div className={styles.whatIsMission}>
             <h3>Mission Statement</h3>
             <p>We are organizing the South Florida diversified working class to build regenerative and vibrant
@@ -89,7 +89,7 @@ const Home: NextPage = () => {
             </div>
             <div className={styles.eventsDescPanel}>
               <h2>Community Events!</h2>
-              <h3>Connecting the SoFlo Community to its own vibrant &amp; innovative creators/entrepeneurs</h3>
+              <h3>Pana MIA curates intentional events centered around meaningful connection and the celebration of local culture and art.</h3>
               <PanaButton href="https://shotgun.live/venues/pana-mia-club" text="Events" color="yellow" />
             </div>
           </div>
@@ -122,10 +122,10 @@ const Home: NextPage = () => {
             <dt>What are the perks to being a Pana?</dt>
             <dd>
               <ul>
-                <li>Be a part of our open access list of all locally-based creativees and entreprenuers
-                  availabe to patrons looking to support local
+                <li>Be a part of our open access list of all locally-based creatives and entrepreneurs
+                  available to patrons looking to support local
                 </li>
-                <li>Tag us in your conent and we can promote on our platform</li>
+                <li>Tag us in your content and we can promote on our platform</li>
                 <li>Potentially be featured in our social media, newsletters, and podcast</li>
                 <li>More opportunities for collaboration</li>
               </ul>
@@ -140,7 +140,7 @@ const Home: NextPage = () => {
             <dd>We've crafted a Google Sheets file complete with keyword search capability
               and tags, which you can access through the link in our bio. Our ultimate goal is to onboard
               all locally-owned businesses, transforming the directory into an indispensable lifestyle tool -
-              fosters collaborations by connecting businesses and creatives.</dd>
+              fostering collaborations by connecting businesses and creatives.</dd>
 
             <dt>What are the Terms & Conditions?</dt>
             <dd>We maintain the authority to remove individuals from the directory

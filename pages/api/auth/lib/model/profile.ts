@@ -10,41 +10,31 @@ const profileSchema = new Schema(
         },
         name: {
             type: String,
-            required: true,
-            unique: false
-        },
-        locally_based: {
-            type: String,
             required: true
         },
-        details: {
-            type: String,
-            required: true
+        active: Boolean,
+        status: {
+            submitted: Date,
+            approved: Date,
+            published: Date,
+            notes: String,
         },
-        background: {
-            type: String,
-            required: false
-        },
+        locally_based: String,
+        details: String,
+        background: String,
         socials: {
-            type: String,
-            required: false
+            website: {type: String},
+            instagram: {type: String},
+            facebook: {type: String},
+            twitter: {type: String},
         },
-        phone_number: {
-            type: String,
-            required: false
-        },
-        pronouns: {
-            type: String,
-            required: false
-        },
+        phone_number: String,
+        pronouns: String,
         five_words: {
             type: String,
             required: true
         },
-        tags: {
-            type: String,
-            required: false
-        }
+        tags: String
     },
     {
         timestamps: true

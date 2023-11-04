@@ -1,0 +1,8 @@
+.app{
+    min-height: 90vh;
+}
+
+.main{
+    max-width: 45rem;
+    margin: auto;
+}
