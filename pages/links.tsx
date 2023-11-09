@@ -1,5 +1,6 @@
 import type { NextPage } from 'next'
 import React from 'react';
+import Link from 'next/link';
 import classNames from 'classnames';
 import { IconBrandTwitter, IconBrandInstagram, IconBrandTiktok, IconMail, IconBrandPatreon, IconBrandSpotify } from '@tabler/icons';
 
@@ -62,10 +63,18 @@ const Links: NextPage = () => {
               </a>
             </div>
             <div className={classNames(styles.link, styles.linkHighlight)}>
-              <a target="_blank" rel="noreferrer" href="/become-a-pana">
+              <Link href="/become-a-pana"><a target="_blank" rel="noreferrer">
               Become Our Pana!<br />
               <small>Are you a local entrepreneur or creative based in SoFlo? You’re invited to join our open-access Local’s Directory!</small>
               </a>
+              </Link>
+            </div>
+            <div className={classNames(styles.link, styles.linkHighlightAlt)}>
+              <Link href="/form/cosa-hecha-love-local-market-vendor/"><a target="_blank" rel="noreferrer" >
+              Cosa Hecha + Love Local Market Vendor Application<br />
+              <small>Sign up to be a vendor at Pana MIA Club's sustainability market!</small>
+              </a>
+              </Link>
             </div>
             <div className={classNames(styles.link, styles.linkVideo)}>
               <iframe width="100%" height="315" src="https://www.youtube.com/embed/videoseries?list=PLeszggVMN994u3XNwptIGamQpzrkpeakF" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>

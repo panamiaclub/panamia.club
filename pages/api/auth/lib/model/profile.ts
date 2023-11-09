@@ -26,6 +26,7 @@ const profileSchema = new Schema(
             website: {type: String},
             instagram: {type: String},
             facebook: {type: String},
+            tiktok: {type: String},
             twitter: {type: String},
         },
         phone_number: String,

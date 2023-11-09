@@ -71,7 +71,7 @@ const User: NextPage = () => {
           <div className={styles.accountForm}>
             <div className={styles.accountFields}>
               <label>Email:</label><br />
-              <input type="text" value={session_email} disabled />
+              <input type="text" value={session_email} readOnly disabled />
               <small>You can't change your signed-in email address.</small>
             </div>
             <div className={styles.accountFields}>
