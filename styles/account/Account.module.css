@@ -1,0 +1,109 @@
+.app{
+    min-height: 70vh;
+}
+
+.main{
+    max-width: 45rem;
+    margin: auto;
+    padding: 1rem;
+    margin-bottom:10vh;
+}
+
+.accountTitle{
+    text-align: center;
+    padding: 3rem 0;
+}
+.accountProfileBar{
+    display: flex;
+    border: 1px solid var(--color-pana-pink);
+}
+.profileBarHighlight{
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: white;
+    background: linear-gradient(60deg, var(--color-pana-blue) 0%, var(--color-pana-pink) 45%, var(--color-pana-yellow) 100%);
+}
+.profileBarName{
+    padding: 0.5rem 1rem;
+}
+.profileBarEdit{
+    padding: 0.5rem 1rem;
+    margin-left: auto;
+}
+.profileBarStatus{
+    display: block;
+    text-align: right;
+    color: #777;
+    padding: 0.25rem 0;
+    margin-bottom: 1rem;
+}
+.accountList li{
+    padding: 0.25rem 0.5rem;
+}
+.accountForm{
+    
+}
+.accountFields{
+    margin-bottom: 1rem;
+}
+.accountFields label{
+    display: inline-block;
+    font-weight:700;
+    padding: 0.5rem 0;
+}
+.accountFields input{
+    width:100%;
+    padding: 0.5rem;
+}
+.accountFields small{
+    color: #777;
+}
+
+.profileFieldset{
+    padding: 1rem;
+    margin-bottom: 2rem;
+}
+.profileFieldset legend{
+    font-weight: 700;
+    font-size: 1.25rem;
+    padding: 0 1rem;
+}
+.profileFields{
+    width: 100%;
+    padding: 0.25rem 0;
+}
+.profileFields label{
+    font-weight: 700;
+}
+
+.submissionList{
+    width: 100%;
+}
+.submissionListItem{
+    border: 1px solid #999;
+    margin-bottom: 1rem;
+}
+.submissionListField{
+    padding: 0.25rem 0.5rem;
+}
+.submissionListField label{
+    font-weight: 700;
+}
+
+.submissionFieldsInternal{
+    background-color: var(--color-pana-blue);
+    display: flex;
+    font-size: .75rem;
+    color: white;
+    padding: 0.25rem;
+    line-height:1.25rem;
+    vertical-align: middle;
+}
+.submissionFieldsInternal div{
+    padding-right: 1rem;
+}
+
+.submissionFieldsAction{
+    margin-left: auto;
+}

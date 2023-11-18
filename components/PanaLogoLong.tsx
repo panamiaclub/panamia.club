@@ -1,38 +1,32 @@
-import Link
- from 'next/link';
+import Link from 'next/link';
 import styles from './PanaLogoLong.module.css';
 import classNames from 'classnames';
-import { trusted } from 'mongoose';
 
 interface LogoProps {
     color: string | "white",
-    bordered: string | null,
     size: string | null,
     nolink?: boolean
 }
 
 const defaultProps: LogoProps = {
     color: "white",
-    bordered: null,
     size: null,
 }
 
-export default function PanaLogo(props: LogoProps) {
+export default function PanaLogoLong(props: LogoProps) {
 
     const logo_alt = "Pana Mia Club logo"
-    let logo_src = "/logos/2023_logo_white.svg"
+    let logo_src = "/logos/pana_logo_long_white.png"
     let container_classes = styles.logoContainer;
 
     if (props.color === "pink") {
-        logo_src = "/logos/2023_logo_pink.svg"
+        logo_src = "/logos/pana_logo_long_pink.png"
     }
-
-    let color_class = null
-    if (props.bordered === "pink") {
-        color_class = styles.borderedPink
+    if (props.color === "blue") {
+        logo_src = "/logos/pana_logo_long_blue.png"
     }
-    if (props.bordered === "blue") {
-        color_class = styles.borderedBlue
+    if (props.color === "yellow") {
+        logo_src = "/logos/pana_logo_long_yellow.png"
     }
     
     let size_class = null
@@ -42,10 +36,10 @@ export default function PanaLogo(props: LogoProps) {
     if (props.size === "large") {
         size_class = styles.large
     }
-    container_classes = classNames(container_classes, color_class, size_class)
+    container_classes = classNames(container_classes, size_class)
     
     if (props.nolink === true) {
-        container_classes = classNames(container_classes, color_class, size_class)
+        container_classes = classNames(container_classes, size_class)
         return (
             <div>
                 <span className={container_classes}>
@@ -54,7 +48,7 @@ export default function PanaLogo(props: LogoProps) {
             </div>
         );
     } else {
-        container_classes = classNames(container_classes, color_class, size_class, styles.logoLink)
+        container_classes = classNames(container_classes, size_class, styles.logoLink)
         
         return (
             <div>
@@ -69,4 +63,4 @@ export default function PanaLogo(props: LogoProps) {
     
 }
 
-PanaLogo.defaultProps = defaultProps;
+PanaLogoLong.defaultProps = defaultProps;

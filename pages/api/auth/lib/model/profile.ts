@@ -13,29 +13,25 @@ const profileSchema = new Schema(
             required: true
         },
         active: Boolean,
-        status: {
-            submitted: Date,
-            approved: Date,
-            published: Date,
-            notes: String,
-        },
+        status: {},
         locally_based: String,
         details: String,
         background: String,
-        socials: {
-            website: {type: String},
-            instagram: {type: String},
-            facebook: {type: String},
-            tiktok: {type: String},
-            twitter: {type: String},
-        },
+        socials: {},
         phone_number: String,
-        pronouns: String,
+        whatsapp_community: Boolean,
+        pronouns: {},
         five_words: {
             type: String,
-            required: true
+            required: true,
+            index: true,
         },
-        tags: String
+        tags: String,
+        search_data: {
+            type: String,
+            index: true,
+        },
+        images: {}
     },
     {
         timestamps: true
@@ -43,4 +39,6 @@ const profileSchema = new Schema(
 )
 
 const profile = mongoose.models.profile || mongoose.model("profile", profileSchema);
+profile.ensureIndexes();
+
 export default profile;

@@ -2,10 +2,12 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { useSession } from "next-auth/react";
-import { authOptions } from "./auth/[...nextauth]";
 
+import { authOptions } from "./auth/[...nextauth]";
 import dbConnect from "./auth/lib/connectdb";
 import user from "./auth/lib/model/user";
+import BrevoApi from "@/lib/brevo_api";
+import { splitName } from "@/lib/standardized";
 
 interface ResponseData {
   error?: string;
@@ -18,6 +20,26 @@ const getUserByEmail = async (email: string) =>{
     await dbConnect();
     const User = await user.findOne({email: email});
     return User;
+}
+
+const callBrevo_createContact = async (email: string, name: string) => {
+  const brevo = new BrevoApi();
+  if (brevo.ready) {
+    // const contact = await brevo.findContact(email);
+    const [firstName, lastName] = splitName(name);
+    const attributes = {
+      "FIRSTNAME": firstName,
+      "LASTNAME": lastName,
+    }
+    let list_ids = [];
+    if (brevo.config.lists.addedByWebsite) {
+      list_ids.push(parseInt(brevo.config.lists.addedByWebsite));
+    }
+    if (brevo.config.lists.webformNewsletter) {
+      list_ids.push(parseInt(brevo.config.lists.webformNewsletter));
+    }
+    const new_contact = await brevo.createOrUpdateContact(email, attributes, list_ids);
+  }
 }
 
 export default async function handler(

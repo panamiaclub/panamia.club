@@ -1,0 +1,31 @@
+.adminButton{
+    display: inline-block;
+    margin: 0 .5rem;
+    font-size: var(--base-font-size);
+    letter-spacing: 1px;
+    background-color: black;
+    color: white;
+    font-weight: 700;
+    border:2px solid black;
+    border-radius: 5px;
+    padding: 0 1rem;
+    line-height: 1.75rem;;
+    margin: 0 0.25rem;
+}
+
+.adminButton:hover{
+    cursor:pointer;
+}
+.adminButton:disabled{
+    background-color: #777;
+    border-color: #777;
+}
+.adminButton:disabled:hover{
+    cursor:not-allowed;
+}
+
+@media only screen and (max-width: 600px) {
+    .adminButton{
+        font-size: var(--mobile-font-size);
+    }
+}

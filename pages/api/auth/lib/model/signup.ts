@@ -8,16 +8,9 @@ const signupSchema = new Schema(
             required: true,
             unique: true
         },
-        name: {
-            type: String,
-            required: false,
-            unique: false
-        },
-        signupType: {
-            type: String,
-            required: false,
-            unique: false
-        }
+        name: String,
+        signupType: String,
+        acknowledged: Boolean,
     },
     {
         timestamps: true

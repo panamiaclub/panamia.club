@@ -1,5 +1,4 @@
-import Link
- from 'next/link';
+import Link from 'next/link';
 import styles from './PanaLogo.module.css';
 import classNames from 'classnames';
 

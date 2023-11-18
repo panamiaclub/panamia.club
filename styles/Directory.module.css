@@ -1,0 +1,151 @@
+.app{
+    
+}
+
+.main{
+    margin: auto;
+    background-color: #f8f8f8;
+}
+
+.main a{
+    color: var(--color-pana-pink);
+}
+
+.header {
+    margin:auto;
+    padding:3rem 0 1rem;
+    text-align: center;
+}
+.header h2{
+    color: var(--color-pana-pink);
+    padding: 0.25rem 0;
+}
+.header h3{
+    color: var(--color-pana-orange);
+    padding: 0.25rem 0;
+}
+
+.searchForm{
+    max-width: 45rem;
+    margin:auto;
+    text-align: center;
+    padding-bottom: 1rem;
+}
+.searchFieldBar{
+    border: 0;
+    margin: 1rem auto;
+    display: flex;
+    justify-content: center;
+}
+.searchField{
+    padding: 0.5rem 1rem;
+    border-radius: 1rem;
+    width: 100%;
+    max-width:20rem;
+}
+.searchBody{
+    background-color: #f8f8f8;
+    min-height:75vh;
+    padding-bottom: 5vh;
+}
+
+.searchLoginCallout{
+    color: black;
+    text-align: center;
+    background-color: #FFF1D9;
+    max-width: 45rem;
+    margin: auto;
+    padding: 0.5rem;
+    border: 3px solid var(--color-pana-yellow);
+    border-radius: 12px;
+    margin-bottom:1rem;
+}
+
+
+.profileCard{
+    max-width: 45rem;
+    margin: auto;
+    border: 3px solid #CCC;
+    padding: 1rem;
+    margin-bottom:1rem;
+    border-radius: 12px;
+    background-color: white;
+    display: flex;
+}
+
+.profileCardSignup{
+    max-width: 45rem;
+    margin: auto;
+    border: 3px solid var(--color-pana-blue);
+    padding: 1rem;
+    margin-bottom:1rem;
+    border-radius: 12px;
+    background-color: #E1F1FF;
+    display: flex;
+}
+
+.profileCardImage{
+    width: 10rem;
+    flex-basis: 10rem;
+    padding-right:1rem;
+}
+
+.profileCardImage img{
+    width: 100%;
+}
+
+.profileCardInfo{
+    width: 100%;
+}
+
+.cardName{
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.cardFiveWords{
+    display: inline-block;
+    padding: 0.25rem;
+    margin: 0.25rem 0;
+    border-radius: 0.5rem;
+    background-color: #EEE;
+}
+
+.cardDetails{
+    padding: 0.5rem 0;
+}
+
+.cardActions{
+    padding: 0.5rem 0 0;
+    display: flex;
+}
+
+.cardlinks{
+    margin-left:auto;
+}
+.cardlinks a{
+    display: inline-block;
+    padding: 0 0.5rem;
+}
+
+.noResults{
+    max-width: 45rem;
+    margin: auto;
+    border: 3px solid #CCC;
+    padding: 1rem;
+    border-radius: 12px;
+    background-color: white;
+}
+.noResults a{
+    color: var(--color-pana-pink);
+}
+
+.directoryReferrals{
+    max-width: 45rem;
+    margin: auto;
+    text-align: center;
+    padding: 5vh;
+}
+.directoryReferrals a{
+    color: var(--color-pana-pink)
+}

@@ -2,8 +2,8 @@ import type { NextPage } from 'next'
 import React from 'react';
 import { IconBrandYoutube } from '@tabler/icons';
 
-import styles from '../styles/Podcasts.module.css'
-import PageMeta from '../components/PageMeta';
+import styles from '@/styles/Podcasts.module.css'
+import PageMeta from '@/components/PageMeta';
 
 const Podcasts: NextPage = () => {
   return (

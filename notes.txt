@@ -1,0 +1,51 @@
+[
+  {
+    '$search': {
+      'index': 'profiles-search', 
+      'compound': {
+        'should': [
+          {
+            'text': {
+              'query': 'jeremy', 
+              'path': 'name', 
+              'score': {
+                'boost': {
+                  'value': 5
+                }
+              }
+            }
+          }, {
+            'text': {
+              'query': 'vegan', 
+              'path': 'five_words', 
+              'score': {
+                'boost': {
+                  'value': 3
+                }
+              }
+            }
+          }, {
+            'text': {
+              'query': 'vegan', 
+              'path': [
+                'details', 'background'
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }, {
+    '$project': {
+      'name': 1, 
+      'socials': 1, 
+      'five_words': 1, 
+      'details': 1, 
+      'score': {
+        '$meta': 'searchScore'
+      }
+    }
+  }, {
+    '$limit': 20
+  }
+]

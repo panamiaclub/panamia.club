@@ -4,9 +4,12 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../api/auth/[...nextauth]";
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
+import Link from 'next/link';
 
-import styles from '../../styles/account/Admin.module.css';
-import PageMeta from '../../components/PageMeta';
+import styles from '@/styles/account/Account.module.css';
+import PageMeta from '@/components/PageMeta';
+import AdminHeader from '@/components/Admin/AdminHeader';
+import AdminMenu from '@/components/Admin/AdminHeader';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   return {
@@ -20,13 +23,16 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
   }
 }
 
-const User: NextPage = () => {
+const Account_Admin: NextPage = () => {
   const { data: session } = useSession();
   if (session) {
     return (
       <main className={styles.app}>
+        <PageMeta title="Admin Portal | Admin" desc="" />
+        <AdminMenu />
         <div className={styles.main}>
-          <h1>ADMIN USER PAGE</h1>
+          <h2 className={styles.accountTitle}>Admin Portal</h2>
+          <p>The future space of a real nice dashboard :)</p>
         </div>
       </main>
     )
@@ -42,5 +48,5 @@ const User: NextPage = () => {
   )
 }
 
-export default User;
+export default Account_Admin;
 

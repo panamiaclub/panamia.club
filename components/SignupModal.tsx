@@ -18,23 +18,7 @@ export default function SignupModal() {
     }
 
     async function signupConfirmation() {
-        const res = await axios
-            .post(
-                "/api/sendSignup",
-                { name, email, signup_type},
-                {
-                    headers: {
-                        Accept: "application/json",
-                        "Content-Type": "application/json",
-                    },
-                }
-            )
-            .then(async (response) => {
-                console.log(response);
-            })
-            .catch((error) => {
-                console.log(error);
-            });
+        
     }
 
     async function postSignupForm() {

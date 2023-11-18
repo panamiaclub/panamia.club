@@ -2,8 +2,8 @@ import type { NextPage } from 'next'
 import Link from 'next/link'
 import Router from "next/router";
 
-import styles from '../styles/index.module.css'
-import PanaButton from '../components/PanaButton';
+import styles from '@/styles/index.module.css'
+import PanaButton from '@/components/PanaButton';
 
 const Home: NextPage = () => {
 
@@ -94,7 +94,7 @@ const Home: NextPage = () => {
             </div>
           </div>
         </section>
-        <section className={styles.faqContainer}>
+        <section className={styles.faqContainer} id="home-faq">
           <div className={styles.faqHero}>
             <h2>Frequently Asked Questions</h2>
           <dl className={styles.faqList}>

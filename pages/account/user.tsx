@@ -1,13 +1,17 @@
 import type { NextPage } from 'next';
-import { InferGetServerSidePropsType, GetServerSideProps } from 'next';
+import { GetServerSideProps } from 'next';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../api/auth/[...nextauth]";
 import { useSession } from 'next-auth/react';
 import { useEffect, useState, FormEvent } from 'react';
+import axios from 'axios';
+import { IconEdit } from '@tabler/icons';
+import Link from 'next/link';
 
-import styles from '../../styles/account/User.module.css';
-import PageMeta from '../../components/PageMeta';
-import { getUserSession, saveUserSession } from '../../lib/user_management';
+import styles from '@/styles/account/Account.module.css';
+import PageMeta from '@/components/PageMeta';
+import { getUserSession, saveUserSession } from '@/lib/user_management';
+import PanaButton from '@/components/PanaButton';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   return {
@@ -21,11 +25,17 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
   }
 }
 
-const User: NextPage = () => {
+const Account_User: NextPage = () => {
   const { data: session } = useSession();
+  // from session
   const [session_email, setSessionEmail] = useState("");
   const [session_zipCode, setSessionZipCode] = useState("");
   const [session_name, setSessionName] = useState("");
+  // from profile
+  const [has_profile, setHasProfile] = useState(false);
+  const [profile_name, setProfileName] = useState("");
+  const [profile_status, setProfileStatus] = useState("");
+  const [profile_status_date, setProfileStatusDate] = useState("");
 
   const setUserSession = async() => {
     const userSession = await getUserSession();
@@ -58,8 +68,41 @@ const User: NextPage = () => {
     updateUserSession();
   }
 
+  async function loadProfile() {
+    const profile = await axios
+    .get(
+        "/api/getProfile",
+        {
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            },
+        }
+    )
+    .catch((error) => {
+        console.log(error);
+    });
+    return profile;
+  }
+
   useEffect(() => {
     setUserSession();
+    loadProfile().then((resp) => { 
+      const profile = resp?.data?.data;
+      // console.log(profile); 
+      if (profile) {
+        setHasProfile(true);
+        setProfileName(profile.name)
+        setProfileStatus("Submitted");
+        setProfileStatusDate(profile?.status?.submitted);
+        if (profile?.status?.published && profile?.active) {
+          setProfileStatus("Published");
+          setProfileStatusDate(profile?.status?.published);
+        }
+      }
+      
+    });
+  
   }, []);
 
   if (session) {
@@ -68,6 +111,23 @@ const User: NextPage = () => {
         <PageMeta title="User Account Settings" desc="" />
         <div className={styles.main}>
           <h2 className={styles.accountTitle}>Update Your Account Settings</h2>
+          { has_profile &&
+          <div id="pana-profile-bar">
+            <div className={styles.accountProfileBar}>
+              <div className={styles.profileBarHighlight}>Pana Profile</div>
+              <div className={styles.profileBarName}>{profile_name}</div>
+              <div className={styles.profileBarEdit}><Link href="/account/profile"><a><IconEdit height="18" width="18" /><span>Edit</span></a></Link></div>
+            </div>
+            <small className={styles.profileBarStatus}>Status: {profile_status} {profile_status_date}</small>
+          </div>
+          }
+          { !has_profile &&
+          <div id="pana-signup-bar">
+            <div className={styles.accountProfileSignup}>
+              <p>Ready to Become a Pana? <Link href="/form/become-a-pana/">Create your profile</Link> to showcase your creative talents or business!</p>
+            </div>
+          </div>
+          }
           <div className={styles.accountForm}>
             <div className={styles.accountFields}>
               <label>Email:</label><br />
@@ -94,7 +154,7 @@ const User: NextPage = () => {
                 onChange={onZipCodeChange} />
               <small>Used to personalize search results and site features.</small>
             </div>
-            <button onClick={onUpdateClick}>Update</button>
+            <PanaButton onClick={onUpdateClick} text="Update" color="blue" />
           </div>
         </div>
       </main>
@@ -111,5 +171,5 @@ const User: NextPage = () => {
   )
 }
 
-export default User;
+export default Account_User;
 

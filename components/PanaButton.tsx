@@ -2,10 +2,13 @@ import Link from 'next/link';
 import styles from './PanaButton.module.css';
 
 interface PanaButtonProps {
-    text: string,
+    children?: React.ReactNode,
+    text?: string,
     color?: string,
     onClick?: Function,
-    href?: string
+    href?: string,
+    disabled?: Boolean,
+    submit?: Boolean,
 }
 
 export default function PanaButton(props: PanaButtonProps) {
@@ -24,13 +27,29 @@ export default function PanaButton(props: PanaButtonProps) {
     if (props.color === "yellow") {
         button_class = styles.panaButtonYellow;
     }
+    if (props.color === "admin") {
+        button_class = styles.panaButtonAdmin;
+    }
     if (props.href) {
         return (
-            <Link href={props.href}><button className={button_class} onClick={handleClick}>{props.text}</button></Link>
+            <Link href={props.href}>
+                <button 
+                    className={button_class} 
+                    disabled={props.disabled ? true : false}
+                    onClick={handleClick}>
+                    {props.text}{props.children}
+                </button>
+            </Link>
         );
     }
     return (
-        <button className={button_class} onClick={handleClick}>{props.text}</button>
+        <button 
+            className={button_class} 
+            type={props.submit ? "submit" : "button"}
+            disabled={props.disabled ? true : false}
+            onClick={handleClick}>
+            {props.text}{props.children}
+        </button>
     );
 
 }

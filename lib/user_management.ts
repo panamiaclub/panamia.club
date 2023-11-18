@@ -1,9 +1,12 @@
 import axios from "axios";
-
-
+import dbConnect from "pages/api/auth/lib/connectdb";
+import user from "pages/api/auth/lib/model/user";
 
 export const getUserSession = async (host?: String) => {
     const path = "/api/getSessionUser"
+    if (process.env.HOST_URL == "http://localhost:3000") {
+        host = "http://localhost:3000"
+    }
     const url = (host) ? `${host}${path}`: path;
     const userSession = await axios
         .get(

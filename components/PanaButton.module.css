@@ -1,4 +1,5 @@
 .panaButton, .panaButtonBlue, .panaButtonPink, .panaButtonYellow{
+    display: inline-block;
     margin: 0 .5rem;
     font-size: var(--base-font-size);
     letter-spacing: 1px;
@@ -8,7 +9,17 @@
     font-weight: 700;
     border-radius: 2rem;
     border:2px solid black;
-    cursor: pointer;
+}
+
+.panaButton:hover{
+    cursor:pointer;
+}
+.panaButton:disabled{
+    opacity: 0.5;
+    filter: saturate(0.5);
+}
+.panaButton:disabled:hover{
+    cursor:not-allowed;
 }
 
 .panaButtonBlue{
@@ -26,6 +37,19 @@
     background-color: var(--color-pana-yellow);
     border-color: var(--color-pana-yellow);
     background: linear-gradient(90deg, var(--color-pana-yellow) 0%, var(--color-pana-yellow) 100%);
+}
+
+.panaButtonAdmin{
+    background-color: #FFF;
+    border-radius: 5px;
+    padding: 0 1rem;
+    line-height: 1.75rem;;
+    border: 2px solid black;
+    margin: 0 0.25rem;
+}
+.panaButtonAdmin:hover{
+    background-color: #777;
+    color: white;
 }
 
 .panaButtonBlue:hover, .panaButtonPink:hover, .panaButtonYellow:hover{
