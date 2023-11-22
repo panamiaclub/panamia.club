@@ -91,6 +91,7 @@
 .sessionButton {
     margin-left: auto;
     order: 3;
+    line-height: 0;
 }
 
 .listItem a {
@@ -143,9 +144,9 @@
     padding-left: 0;
     margin: 0;
 }
-.userModal ul li{
+/* .userModal ul li{
 
-}
+} */
 .userModal a{
     display: inline-block;
     width:100%;
@@ -202,5 +203,9 @@
         width: auto;
         background-color: transparent;
         margin: auto;
+    }
+
+    .sessionButton {
+        margin-left: initial;
     }
 }
