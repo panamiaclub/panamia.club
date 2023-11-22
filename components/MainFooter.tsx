@@ -20,7 +20,7 @@ export default function GlobalFooter() {
                 <ul className={styles.footerLinksAlt}>
                     <li><strong>Users</strong></li>
                     <li><Link href="/signin">Sign In</Link></li>
-                    <li><Link href="/become-a-pana">Become A Pana</Link></li>
+                    <li><Link href="/form/become-a-pana">Become A Pana</Link></li>
                     <li><Link href="/form/contact-us">Contact Us</Link></li>
                 </ul>
                 <div className={styles.socials}>

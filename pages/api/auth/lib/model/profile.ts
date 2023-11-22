@@ -12,26 +12,29 @@ const profileSchema = new Schema(
             type: String,
             required: true
         },
+        slug: String,
         active: Boolean,
         status: {},
+        administrative: {},
         locally_based: String,
         details: String,
         background: String,
-        socials: {},
-        phone_number: String,
-        whatsapp_community: Boolean,
-        pronouns: {},
         five_words: {
             type: String,
             required: true,
             index: true,
         },
+        socials: {},
+        phone_number: String,
+        whatsapp_community: Boolean,
+        pronouns: {},
         tags: String,
-        search_data: {
-            type: String,
-            index: true,
-        },
-        images: {}
+        counties: {},
+        categories: {},
+        primary_address: {},
+        locations: [],
+        images: {},
+        linked_profiles: [],
     },
     {
         timestamps: true
@@ -39,6 +42,5 @@ const profileSchema = new Schema(
 )
 
 const profile = mongoose.models.profile || mongoose.model("profile", profileSchema);
-profile.ensureIndexes();
 
 export default profile;

@@ -27,8 +27,8 @@ export default function PanaButton(props: PanaButtonProps) {
     if (props.color === "yellow") {
         button_class = styles.panaButtonYellow;
     }
-    if (props.color === "admin") {
-        button_class = styles.panaButtonAdmin;
+    if (props.color === "light") {
+        button_class = styles.panaButtonLight;
     }
     if (props.href) {
         return (

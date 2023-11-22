@@ -7,7 +7,7 @@ interface RequiredProps {
 
 
 export default function Required(props: RequiredProps) {
-    let desc = (<>&lowast;</>)
+    let desc = (<>&lowast;&nbsp;<small>required</small></>)
     if (props.notice) {
         desc = (<>&lowast; indicates a required field</>)
     }

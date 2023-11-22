@@ -1,10 +1,10 @@
-.panaButton, .panaButtonBlue, .panaButtonPink, .panaButtonYellow{
+.panaButton, .panaButtonBlue, .panaButtonPink, .panaButtonYellow, .panaButtonLight{
     display: inline-block;
     margin: 0 .5rem;
     font-size: var(--base-font-size);
     letter-spacing: 1px;
     padding:.5rem 1.5rem;
-    background-color: black;
+    background-color: #444;
     color: white;
     font-weight: 700;
     border-radius: 2rem;
@@ -38,6 +38,13 @@
     border-color: var(--color-pana-yellow);
     background: linear-gradient(90deg, var(--color-pana-yellow) 0%, var(--color-pana-yellow) 100%);
 }
+
+.panaButtonLight{
+    background-color: #DDD;
+    border-color: #777;
+    color: black;
+}
+
 
 .panaButtonAdmin{
     background-color: #FFF;

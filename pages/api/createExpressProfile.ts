@@ -4,7 +4,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "./auth/lib/connectdb";
 import profile from "./auth/lib/model/profile";
 import BrevoApi from "@/lib/brevo_api";
-import { buildSearchData, splitName } from "@/lib/standardized";
+import { buildSearchData, slugify, splitName } from "@/lib/standardized";
 
 interface ResponseData {
   error?: string;
@@ -99,6 +99,7 @@ export default async function handler(
   const newProfile = new profile({
       name: name,
       email: email,
+      slug: slugify(name),
       active: false,
       status: {
         submitted: new Date(),
@@ -113,7 +114,7 @@ export default async function handler(
       five_words: five_words,
       tags: tags,
       search_data: search_data,
-  });
+  }, {strict: false});
 
   try{
     const dbResponse = await newProfile.save()

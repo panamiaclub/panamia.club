@@ -1,0 +1,63 @@
+.app{
+    background-color: #EEE;
+    padding: 1rem 0;
+}
+.profileCard{
+    background-color: white;
+    padding: 1rem;
+    max-width: 45rem;
+    margin: auto;
+    border:1px solid #EEE;
+    border-radius: 12px;
+}
+.profileHeader{
+    position: relative;
+    display: flex;
+}
+.profileImage{
+    max-width: 15rem;
+    padding: 0 1rem 0 0;
+}
+
+.profileImage img{
+    width: 100%;
+}
+
+.profileFiveWords{
+    display: inline-block;
+    padding: 0.25rem;
+    margin: 0.25rem 0;
+    border-radius: 0.5rem;
+    background-color: #EEE;
+}
+
+.socialLinks{
+    position: absolute;
+    display: inline-block;
+    right: 0;
+    background-color: var(--color-pana-blue);
+    text-align: center;
+    border-radius: 12px;
+    margin-right:-3rem;
+}
+.socialLinks a{
+    display: block;
+    padding: 0.5rem 0.25rem;
+}
+.socialLinks a:first-child{
+    border-radius: 12px 12px 0 0;
+}
+.socialLinks a:last-child{
+    border-radius: 0 0 12px 12px;
+}
+.socialLinks a:hover{
+    background-color: #0007;
+}
+
+.profileInfo{
+    position: relative;
+}
+
+.profileInfo label{
+    color: #777;
+}

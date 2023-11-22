@@ -116,7 +116,7 @@ const Account_User: NextPage = () => {
             <div className={styles.accountProfileBar}>
               <div className={styles.profileBarHighlight}>Pana Profile</div>
               <div className={styles.profileBarName}>{profile_name}</div>
-              <div className={styles.profileBarEdit}><Link href="/account/profile"><a><IconEdit height="18" width="18" /><span>Edit</span></a></Link></div>
+              <div className={styles.profileBarEdit}><Link href="/account/profile/edit"><a><IconEdit height="18" width="18" /><span>Edit</span></a></Link></div>
             </div>
             <small className={styles.profileBarStatus}>Status: {profile_status} {profile_status_date}</small>
           </div>

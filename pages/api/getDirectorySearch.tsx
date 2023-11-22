@@ -98,7 +98,8 @@ export default async function handler(
           }
         }, {
           '$project': {
-            'name': 1, 
+            'name': 1,
+            'slug': 1, 
             'socials': 1, 
             'five_words': 1, 
             'details': 1, 

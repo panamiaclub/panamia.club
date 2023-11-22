@@ -1,17 +1,18 @@
 import type { NextPage } from 'next';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../api/auth/[...nextauth]";
 import { useSession } from 'next-auth/react';
 import { useEffect, useState, FormEvent } from 'react';
 import axios from 'axios';
 import { IconEdit } from '@tabler/icons';
 import Link from 'next/link';
 
+import { authOptions } from "../../api/auth/[...nextauth]";
 import styles from '@/styles/account/Account.module.css';
 import PageMeta from '@/components/PageMeta';
 import { getUserSession, saveUserSession } from '@/lib/user_management';
 import { ProfileInterface, ProfileSocialsInterface, ProfileStatusInterface, PronounsInterface  } from '@/lib/interfaces';
+import Status401_Unauthorized from '@/components/Page/Status401_Unauthorized';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   return {
@@ -146,47 +147,12 @@ const Account_Profile: NextPage = (session_user) => {
               <label>Pronouns:</label>&emsp;<span>{( profile_data.pronouns ? displayPronouns(profile_data.pronouns) : '')}</span>
             </div>
           </fieldset>
-
-          <fieldset className={styles.profileFieldset}>
-            <legend>Profile Info</legend>
-            <div className={styles.profileFields}>
-              <label>Name:</label>&emsp;<span>{profile_data?.name}</span>
-            </div>
-            <div className={styles.profileFields}>
-              <label>Details:</label>&emsp;<span>{profile_data?.details}</span>
-            </div>
-            <div className={styles.profileFields}>
-              <label>Background:</label>&emsp;<span>{profile_data?.background}</span>
-            </div>
-            <div className={styles.profileFields}>
-              <label>Socials:</label><br />
-              <ul>
-                <li><span>Website:</span>&emsp;<span>{profile_data?.socials?.website}</span></li>
-                <li><span>Instagram:</span>&emsp;<span>{profile_data?.socials?.instagram}</span></li>
-                <li><span>Facebook:</span>&emsp;<span>{profile_data?.socials?.facebook}</span></li>
-                <li><span>TikTok:</span>&emsp;<span>{profile_data?.socials?.tiktok}</span></li>
-                <li><span>Twitter:</span>&emsp;<span>{profile_data?.socials?.twitter}</span></li>
-              </ul>
-            </div>
-            <div className={styles.profileFields}>
-              <label>Five Words:</label>&emsp;<span>{profile_data?.five_words}</span>
-            </div>
-            <div className={styles.profileFields}>
-              <label>Tags:</label>&emsp;<span>{profile_data?.tags}</span>
-            </div>
-          </fieldset>
         </div>
       </main>
     )
   }
   return (
-    <main className={styles.app}>
-      <PageMeta title="Unauthorized" desc="" />
-      <div className={styles.main}>
-        <h2 className={styles.accountTitle}>UNAUTHORIZED</h2>
-        <h3 className={styles.accountTitle}>You must be logged in to view this page.</h3>
-      </div>
-    </main>
+    <Status401_Unauthorized />
   )
 }
 

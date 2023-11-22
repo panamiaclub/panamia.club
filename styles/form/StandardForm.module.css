@@ -36,10 +36,33 @@
 .innerGradientBox{
     padding:0.5rem;
     background-color: #181c3d;
+    overflow: hidden;
 }
 
 .required{
     color: #FE7E00;
+}
+.formProgress{
+    width: 100%;
+    height:1rem;
+}
+
+.formPage{
+    display: none;
+}
+.formPageActive{
+    display: block;
+    padding: 1rem;
+}
+
+.formPageActions{
+    display: flex;
+}
+.formPageActionsPrev{
+
+}
+.formPageActionsNext{
+    margin-left: auto;
 }
 
 .formFields{
@@ -67,6 +90,12 @@
     padding: 0.5rem;
     font-size: var(--base-font-size);
 }
+.formFields [type="radio"]{
+    transform: scale(1.5);
+}
+.formFields [type="checkbox"]{
+    transform: scale(1.5);
+}
 .formFields textarea{
     width:100%;
     padding: 0.5rem;
@@ -85,4 +114,14 @@
 .formSubmitFields{
     padding: 1rem 0;
     text-align: center;
+}
+
+.formPageConfirmation{
+    padding: 3rem 0;
+    text-align: center;
+}
+
+.formTrouble{
+    padding: 1rem 0;
+    text-align:center;
 }

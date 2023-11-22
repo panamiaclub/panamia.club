@@ -77,7 +77,6 @@ const Form_ContactUs: NextPage = () => {
           learn more about who we are on our <Link href="/about-us/">About Us</Link> page.</p>
         <p>Please let us know if you have any questions for us. We'll reach out to you 
           as soon as we can provide an answer.</p>
-        <p><Required notice={true}/></p>
         <section id="form-section" className={styles.outerGradientBox}>
             <form id="form-form" className={styles.innerGradientBox} onSubmit={submitContactUs}>
                 <br/>

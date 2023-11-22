@@ -20,14 +20,17 @@ export interface ProfileSocialsInterface {
     facebook?: String,
     tiktok?: String,
     twitter?: String,
+    spotify?: String,
 }
 
 export interface AddressInterface {
+    name: String,
     street1?: String,
     street2?: String,
     city?: String,
     state?: String,
     zipcode?: String,
+    hours?: String,
     lat?: String,
     lng?: String,
     google_place_id?: String,
@@ -36,12 +39,30 @@ export interface AddressInterface {
 export interface CountyInterface {
     palm_beach: Boolean,
     broward: Boolean,
-    miami_date: Boolean,
+    miami_dade: Boolean,
+}
+
+export interface CategoryInterface {
+    products: Boolean,
+    services: Boolean,
+    events: Boolean,
+    music: Boolean,
+    food: Boolean,
+    clothing: Boolean,
+    accessories: Boolean,
+    art: Boolean,
+    digital_art: Boolean,
+    tech: Boolean,
+    health_beauty: Boolean,
+    spiritual: Boolean,
+    non_profit: Boolean,
+    homemade: Boolean,
 }
 
 export interface ProfileInterface {
     email: String,
     name: String,
+    slug: String,
     active?: Boolean,
     status?: ProfileStatusInterface,
     locally_based: String,
@@ -53,7 +74,12 @@ export interface ProfileInterface {
     pronouns?: PronounsInterface,
     five_words: String,
     tags?: String,
-    images?: {}
+    counties: CountyInterface,
+    categories: CategoryInterface,
+    primary_address: AddressInterface,
+    locations: [],
+    images?: {},
+    linked_profiles: [],
 }
 
 export interface ContactUsInterface {

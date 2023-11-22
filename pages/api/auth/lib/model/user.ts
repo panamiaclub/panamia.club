@@ -15,6 +15,7 @@ const userSchema = new Schema(
         },
         alternate_emails: [],
         zip_code: String,
+        following: [],
     },
     {
         timestamps: true

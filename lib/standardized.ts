@@ -38,3 +38,21 @@ export const debounce = (func: Function, wait = 500) => {
         timeoutId = setTimeout(() => func.apply(this, args), wait);
     };
 };
+
+export const slugify = (value: string) => {
+    return value.normalize('NFD')
+        .replace("&", "and")
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9 ]/g, '')
+        .replace(/\s+/g, '-');
+}
+
+export const persistLocal = (key: string, value: any) => {
+
+}
+
+export const yieldLocal = (key: string) => {
+    
+}

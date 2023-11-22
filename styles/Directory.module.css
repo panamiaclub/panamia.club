@@ -5,6 +5,7 @@
 .main{
     margin: auto;
     background-color: #f8f8f8;
+    background: content-box url('/img/bg_shrooms_forest.jpg');
 }
 
 .main a{
@@ -15,21 +16,76 @@
     margin:auto;
     padding:3rem 0 1rem;
     text-align: center;
+    backdrop-filter: brightness(.5);
 }
 .header h2{
-    color: var(--color-pana-pink);
+    color: white;
     padding: 0.25rem 0;
 }
 .header h3{
-    color: var(--color-pana-orange);
+    color: white;
     padding: 0.25rem 0;
 }
 
+.allSearch{
+    background-color: #f8f8f8;
+}
+.searchFilters{
+    position: relative;
+    max-width: 45rem;
+    margin:auto;
+    padding: 1rem 0;
+    display: flex;
+    justify-content: space-between;
+}
+
+.filtersButton{
+    display: inline-block;
+    margin: 0 0.5rem;
+    font-size: var(--base-font-size);
+    letter-spacing: 1px;
+    padding: 0.5rem 1.5rem;
+    background-color: white;
+    color: #444;
+    font-weight: 700;
+    border-radius: 2rem;
+    border: 2px solid black;
+}
+
+.filtersModal{
+    position: absolute;
+    top: 3.5rem;
+    right: 0;
+    width: 50%;
+    margin-left: 50%;
+    border: 3px solid #777;
+    border-radius: 12px;
+}
+.filtersModal label{
+    display: inline-block;
+    white-space: nowrap;
+    padding: 0.5rem;
+    color: #777;
+}
+.filtersModal input[type="checkbox"]{
+    transform: scale(1.5);
+}
+.filtersLocation{
+    margin-bottom: .5rem;
+}
+.filtersCategory{
+    margin-bottom: .5rem;
+}
+.searchFormContainer{
+    backdrop-filter: brightness(.5);
+}
 .searchForm{
     max-width: 45rem;
     margin:auto;
     text-align: center;
     padding-bottom: 1rem;
+    color: white;
+
 }
 .searchFieldBar{
     border: 0;
@@ -39,12 +95,13 @@
 }
 .searchField{
     padding: 0.5rem 1rem;
-    border-radius: 1rem;
+    border-radius: 2rem;
     width: 100%;
-    max-width:20rem;
+}
+.searchButton{
+    margin-left: -5rem;
 }
 .searchBody{
-    background-color: #f8f8f8;
     min-height:75vh;
     padding-bottom: 5vh;
 }
@@ -135,6 +192,7 @@
     padding: 1rem;
     border-radius: 12px;
     background-color: white;
+    margin-bottom: 1rem;
 }
 .noResults a{
     color: var(--color-pana-pink);
