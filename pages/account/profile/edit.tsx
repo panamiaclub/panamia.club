@@ -11,7 +11,8 @@ import { authOptions } from "../../api/auth/[...nextauth]";
 import styles from '@/styles/account/Account.module.css';
 import PageMeta from '@/components/PageMeta';
 import { getUserSession, saveUserSession } from '@/lib/user_management';
-import { ProfileInterface, ProfileSocialsInterface, ProfileStatusInterface, PronounsInterface  } from '@/lib/interfaces';
+import { ProfileInterface } from '@/lib/interfaces';
+import { displayPronouns } from '@/lib/standardized';
 import Status401_Unauthorized from '@/components/Page/Status401_Unauthorized';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
@@ -28,7 +29,6 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
 }
 
 const Account_Profile: NextPage = (session_user) => {
-  console.log(session_user);
   const { data: session } = useSession();
   // from session
   const [session_email, setSessionEmail] = useState("");
@@ -54,27 +54,7 @@ const Account_Profile: NextPage = (session_user) => {
       name: session_name,
       zip_code: session_zipCode,
     });
-    console.log("updateUserSession:response", response);
-  }
-
-  function displayPronouns(pronouns: PronounsInterface) {
-    if (pronouns.none) {
-      return "";
-    }
-    let pronounArray = [];
-    if (pronouns.sheher) {
-      pronounArray.push("She/Her");
-    }
-    if (pronouns.hehim) {
-      pronounArray.push("He/Him");
-    }
-    if (pronouns.theythem) {
-      pronounArray.push("They/Them");
-    }
-    if (pronouns.other) {
-      pronounArray.push(pronouns.other_desc);
-    }
-    return pronounArray.join(",")
+    // console.log("updateUserSession:response", response);
   }
 
   function onZipCodeChange(e: FormEvent) {
@@ -112,7 +92,7 @@ const Account_Profile: NextPage = (session_user) => {
     setUserSession();
     loadProfile().then((resp) => { 
       const profile = (resp?.data?.data as ProfileInterface);
-      console.log(profile); 
+      // console.log(profile); 
       if (profile) {
         setHasProfile(true);
         setProfileData(profile);
@@ -146,7 +126,7 @@ const Account_Profile: NextPage = (session_user) => {
               <label>Phone Number:</label>&emsp;<span>{profile_data?.phone_number}</span>
             </div>
             <div className={styles.profileFields}>
-              <label>Pronouns:</label>&emsp;<span>{( profile_data.pronouns ? displayPronouns(profile_data.pronouns) : '')}</span>
+              <label>Pronouns:</label>&emsp;<span>{displayPronouns(profile_data.pronouns)}</span>
             </div>
           </fieldset>
 

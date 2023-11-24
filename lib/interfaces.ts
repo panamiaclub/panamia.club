@@ -1,10 +1,10 @@
 export interface PronounsInterface {
-    sheher?: Boolean,
-    hehim?: Boolean,
-    theythem?: Boolean,
-    none?: Boolean,
-    other?: Boolean,
-    other_desc?: String,
+    sheher?: boolean,
+    hehim?: boolean,
+    theythem?: boolean,
+    none?: boolean,
+    other?: boolean,
+    other_desc?: string,
 }
 
 export interface ProfileStatusInterface {
@@ -15,25 +15,25 @@ export interface ProfileStatusInterface {
 }
 
 export interface ProfileSocialsInterface {
-    website: String,
-    instagram?: String,
-    facebook?: String,
-    tiktok?: String,
-    twitter?: String,
-    spotify?: String,
+    website: string,
+    instagram?: string,
+    facebook?: string,
+    tiktok?: string,
+    twitter?: string,
+    spotify?: string,
 }
 
 export interface AddressInterface {
-    name: String,
-    street1?: String,
-    street2?: String,
-    city?: String,
-    state?: String,
-    zipcode?: String,
-    hours?: String,
-    lat?: String,
-    lng?: String,
-    google_place_id?: String,
+    name: string,
+    street1?: string,
+    street2?: string,
+    city?: string,
+    state?: string,
+    zipcode?: string,
+    hours?: string,
+    lat?: string,
+    lng?: string,
+    google_place_id?: string,
 }
 
 export interface CountyInterface {
@@ -60,20 +60,20 @@ export interface CategoryInterface {
 }
 
 export interface ProfileInterface {
-    email: String,
-    name: String,
-    slug: String,
+    email: string,
+    name: string,
+    slug: string,
     active?: Boolean,
     status?: ProfileStatusInterface,
-    locally_based: String,
-    details: String,
-    background?: String,
+    locally_based: string,
+    details: string,
+    background?: string,
     socials: ProfileSocialsInterface,
-    phone_number: String,
+    phone_number: string,
     whatsapp_community?: Boolean,
     pronouns?: PronounsInterface,
-    five_words: String,
-    tags?: String,
+    five_words: string,
+    tags?: string,
     counties: CountyInterface,
     categories: CategoryInterface,
     primary_address: AddressInterface,

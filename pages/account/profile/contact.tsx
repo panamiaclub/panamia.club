@@ -2,19 +2,26 @@ import type { NextPage } from 'next';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from "next-auth/next";
 import { useSession } from 'next-auth/react';
-import { useEffect, useState, FormEvent } from 'react';
+import { FormEvent, useRef, useState } from 'react';
 import axios from 'axios';
-import { IconEdit } from '@tabler/icons';
 import Link from 'next/link';
+import { useQueryClient, dehydrate, QueryClient } from '@tanstack/react-query';
 
 import { authOptions } from "../../api/auth/[...nextauth]";
 import styles from '@/styles/account/Account.module.css';
 import PageMeta from '@/components/PageMeta';
-import { getUserSession, saveUserSession } from '@/lib/user_management';
-import { ProfileInterface, ProfileSocialsInterface, ProfileStatusInterface, PronounsInterface  } from '@/lib/interfaces';
+import { getUserSession } from '@/lib/user_management';
+import { ProfileInterface  } from '@/lib/interfaces';
 import Status401_Unauthorized from '@/components/Page/Status401_Unauthorized';
+import PanaButton from '@/components/PanaButton';
+import { getProfile, mutateProfileContact, fetchProfile  } from './queries';
+import Spinner from '@/components/Spinner';
+
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
+  const queryClient = new QueryClient()
+  await queryClient.prefetchQuery({queryKey: ['profile'], queryFn: () => fetchProfile()})
+
   return {
     props: {
       session: await getServerSession(
@@ -23,130 +30,128 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
         authOptions
       ),
       session_user: await getUserSession(),
+      dehydratedState: dehydrate(queryClient),
     },
   }
 }
 
-const Account_Profile: NextPage = (session_user) => {
-  console.log(session_user);
-  const { data: session } = useSession();
-  // from session
-  const [session_email, setSessionEmail] = useState("");
-  const [session_zipCode, setSessionZipCode] = useState("");
-  const [session_name, setSessionName] = useState("");
-  // from profile
-  const [has_profile, setHasProfile] = useState(false);
-  const [profile_data, setProfileData] = useState({} as ProfileInterface);
-  const [profile_status, setProfileStatus] = useState("");
-  const [profile_status_date, setProfileStatusDate] = useState("");
+const FormHandler = () => {
+  const queryClient = useQueryClient();
 
-  const setUserSession = async() => {
-    const userSession = await getUserSession();
-    if (userSession) {
-      setSessionEmail(userSession.email == null ? '' : userSession.email);
-      setSessionZipCode(userSession.zip_code == null ? '' : userSession.zip_code);
-      setSessionName(userSession.name == null ? '' : userSession.name);
-    }
-  }
-
-  const updateUserSession = async() => {
-    const response = await saveUserSession({
-      name: session_name,
-      zip_code: session_zipCode,
-    });
-    console.log("updateUserSession:response", response);
-  }
-
-  function displayPronouns(pronouns: PronounsInterface) {
-    if (pronouns.none) {
-      return "";
-    }
-    let pronounArray = [];
-    if (pronouns.sheher) {
-      pronounArray.push("She/Her");
-    }
-    if (pronouns.hehim) {
-      pronounArray.push("He/Him");
-    }
-    if (pronouns.theythem) {
-      pronounArray.push("They/Them");
-    }
-    if (pronouns.other) {
-      pronounArray.push(pronouns.other_desc);
-    }
-    return pronounArray.join(",")
-  }
-
-  function onZipCodeChange(e: FormEvent) {
-    const zipCodeChange = (e.target as HTMLInputElement).value
-    if (e.target) setSessionZipCode(zipCodeChange);
-  }
-
-  function onNameChange(e: FormEvent) {
-    const nameChange = (e.target as HTMLInputElement).value
-    if (e.target) setSessionName(nameChange);
-  }
-
-  function onUpdateClick(e: FormEvent) {
-    updateUserSession();
-  }
-
-  async function loadProfile() {
-    const profile = await axios
-    .get(
-        "/api/getProfile",
-        {
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json",
-            },
-        }
-    )
-    .catch((error) => {
-        console.log(error);
-    });
-    return profile;
-  }
-
-  useEffect(() => {
-    setUserSession();
-    loadProfile().then((resp) => { 
-      const profile = (resp?.data?.data as ProfileInterface);
-      console.log(profile); 
-      if (profile) {
-        setHasProfile(true);
-        setProfileData(profile);
-        setProfileStatus("Submitted");
-        setProfileStatusDate(profile?.status?.submitted?.toString() || "");
-        if (profile?.status?.published && profile?.active) {
-          setProfileStatus("Published");
-          setProfileStatusDate(profile?.status?.published?.toString() || "");
-        }
-      }
-      
-    });
+  const email = useRef<HTMLInputElement>(null);
+  const phone_number = useRef<HTMLInputElement>(null);
+  const pronouns_sheher = useRef<HTMLInputElement>(null);
+  const pronouns_hehim = useRef<HTMLInputElement>(null);
+  const pronouns_theythem = useRef<HTMLInputElement>(null);
+  const pronouns_none = useRef<HTMLInputElement>(null);
+  const pronouns_other = useRef<HTMLInputElement>(null);
+  const pronouns_otherdesc = useRef<HTMLInputElement>(null);
   
-  }, []);
+  const pronouns_otherstate = useRef<boolean>(false);
+
+  const mutation = mutateProfileContact();
+  const { data, isLoading, isError } = getProfile();
+
+  const submitForm = (e: FormEvent) => {
+    e.preventDefault();
+    const updates = {
+      email: email.current ? email.current.value : data?.email,
+      phone_number: phone_number.current ? phone_number.current.value : data?.phone_number,
+      pronouns: {
+        sheher: pronouns_sheher.current ? pronouns_sheher.current.checked : data?.pronouns?.sheher,
+        hehim: pronouns_hehim.current ? pronouns_hehim.current.checked : data?.pronouns?.hehim,
+        theythem: pronouns_theythem.current ? pronouns_theythem.current.checked : data?.pronouns?.theythem,
+        none: pronouns_none.current ? pronouns_none.current.checked : data?.pronouns?.none,
+        other: pronouns_other.current ? pronouns_other.current.checked : data?.pronouns?.other,
+        other_desc: pronouns_otherdesc.current ? pronouns_otherdesc.current.value : data?.pronouns?.other_desc,
+      }
+    }
+    mutation.mutate(updates);
+  }
+
+  console.log("status", isLoading, data);
+  const profile = (data as ProfileInterface);
+  if (data) {
+    const profile = (data as ProfileInterface);
+    if (profile.pronouns?.other) {
+      pronouns_otherstate.current = (profile.pronouns?.other as boolean)
+    }
+    
+    return (
+      <form className={styles.accountForm} onSubmit={submitForm}>
+        <p>
+          <Link href="/account/profile/edit"><a>Back to Profile</a></Link>
+        </p>
+        <div className={styles.accountFields}>
+          <label>Email</label>&emsp;
+          <input type="email" defaultValue={data.email} ref={email} />
+        </div>
+        <div className={styles.accountFields}>
+          <label>Phone Number</label>&emsp;
+          <input type="text" defaultValue={data.phone_number} ref={phone_number} />
+        </div>
+        <div className={styles.accountFields}>
+          <label>Pronouns:</label>&emsp;
+          <ul>
+            <li>
+                <label>
+                <input type="checkbox" name="pronouns_sheher" value="she/her" 
+                defaultChecked={data.pronouns?.sheher ? true : false} ref={pronouns_sheher} />
+                &emsp;She/Her</label>
+            </li>
+            <li>
+                <label>
+                <input type="checkbox" name="pronouns_hehim" value="he/him" 
+                defaultChecked={data.pronouns?.hehim ? true : false} ref={pronouns_hehim} />
+                &emsp;He/Him</label>
+            </li>
+            <li>
+                <label>
+                <input type="checkbox" name="pronouns_theythem" value="they/them" 
+                defaultChecked={data.pronouns?.theythem ? true : false} ref={pronouns_theythem} />
+                &emsp;They/Them</label>
+            </li>
+            <li>
+                <label>
+                <input type="checkbox" name="pronouns_none" value="no preference" 
+                defaultChecked={data.pronouns?.none ? true : false} ref={pronouns_none} />
+                &emsp;No Preference</label>
+            </li>
+            <li>
+                <label>
+                <input type="checkbox" name="pronouns_other" value="other" 
+                defaultChecked={data.pronouns?.other ? true : false} ref={pronouns_other} 
+                onChange={(e) => {
+                  console.log(pronouns_otherstate);
+                  pronouns_otherstate.current = e.target.checked;
+                  pronouns_otherdesc.current.hidden = !pronouns_otherstate}} />
+                &emsp;Other:</label>
+                <input type="text" hidden={!pronouns_otherstate.current}
+                defaultValue={data.pronouns?.other_desc} ref={pronouns_otherdesc} />
+            </li>
+          </ul>
+        </div>
+        <div className={styles.accountFields}>
+          <PanaButton color="blue" submit={true}>Update</PanaButton>
+        </div>
+      </form>
+    )
+  }
+  return ( <div><Spinner /></div> );
+
+}
+
+const Account_Profile_Contact: NextPage = (props: any) => {
+  // console.log("session_user", props.session_user);
+  const { data: session } = useSession();
 
   if (session) {
     return (
       <main className={styles.app}>
-        <PageMeta title="User Account Settings" desc="" />
+        <PageMeta title="Contact Information | Edit Profile" desc="" />
         <div className={styles.main}>
-          <h2 className={styles.accountTitle}>Your Pana Profile</h2>
-          <p>Status: {profile_status} {profile_status_date}</p>
-          <fieldset className={styles.profileFieldset}>
-            <legend>Contact Info</legend>
-            <div className={styles.profileFields}>
-              <label>Email:</label>&emsp;<span>{profile_data?.email}</span>
-            </div>
-            <div className={styles.profileFields}>
-              <label>Phone Number:</label>&emsp;<span>{profile_data?.phone_number}</span>
-            </div>
-            <div className={styles.profileFields}>
-              <label>Pronouns:</label>&emsp;<span>{( profile_data.pronouns ? displayPronouns(profile_data.pronouns) : '')}</span>
-            </div>
-          </fieldset>
+          <h2 className={styles.accountTitle}>Profile - Edit Contact Info</h2>
+          <FormHandler />
         </div>
       </main>
     )
@@ -156,5 +161,5 @@ const Account_Profile: NextPage = (session_user) => {
   )
 }
 
-export default Account_Profile;
+export default Account_Profile_Contact;
 

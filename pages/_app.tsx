@@ -8,10 +8,13 @@ import { useState } from 'react';
 import {
   QueryClient,
   QueryClientProvider,
+  HydrationBoundary,
+  DehydratedState
 } from '@tanstack/react-query'
 
 function MyApp({ Component, pageProps }: AppProps<{
-  session: Session;
+  session: Session,
+  dehydratedState: DehydratedState
 }> ) {
   const [queryClient] = useState(() => new QueryClient());
 
@@ -19,9 +22,11 @@ function MyApp({ Component, pageProps }: AppProps<{
     
     <SessionProvider session={pageProps.session}>
       <QueryClientProvider client={queryClient}>
-        <Layout>
-          <Component {...pageProps} />
-        </Layout>
+        <HydrationBoundary  state={pageProps.dehydratedState}>
+          <Layout>
+            <Component {...pageProps} />
+          </Layout>
+        </HydrationBoundary>
       </QueryClientProvider>
     </SessionProvider>
   );

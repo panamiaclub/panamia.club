@@ -1,7 +1,7 @@
 import type { NextPage } from 'next'
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { IconExternalLink, IconBrandInstagram, IconBrandFacebook } from '@tabler/icons';
 
@@ -40,8 +40,14 @@ const fetchProfile = async (handle: string) => {
 
 
 const ProfileBody = ({ handle }: ProfileProps) => {
+  const queryClient = useQueryClient();
+  queryClient.prefetchQuery({ 
+    queryKey: ['profilePublic', { handle }],
+    queryFn: () => fetchProfile(handle)
+  });
+
   const { data, isLoading, isFetching, isRefetching, refetch } = useQuery({
-    queryKey: ['profilePublic', {handle}],
+    queryKey: ['profilePublic', { handle }],
     queryFn: () => fetchProfile(handle),
   });
 
@@ -105,12 +111,7 @@ const Profile_Public: NextPage = () => {
   const router = useRouter();
   const [profileHandle, setProfileHandle] = useState("");
 
-  useEffect(() => {
-    const handle = router.query.handle;
-    if (handle) {
-      setProfileHandle(handle.toString())
-    }
-  }, [router.query.handle]);
+  const handle = router.query.handle;
 
   return (
     <main className={styles.app}>
@@ -120,7 +121,7 @@ const Profile_Public: NextPage = () => {
         />
         <div className={styles.main}>
           {profileHandle && 
-          <ProfileBody handle={profileHandle} />
+          <ProfileBody handle={handle ? handle.toString() : ""} />
           }
       </div>
   </main>

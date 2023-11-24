@@ -41,8 +41,8 @@
 .accountList li{
     padding: 0.25rem 0.5rem;
 }
-.accountForm{
-    
+.accountForm a{
+    color: var(--color-pana-pink);
 }
 .accountFields{
     margin-bottom: 1rem;
@@ -56,6 +56,18 @@
     width:100%;
     padding: 0.5rem;
 }
+.accountFields input[type='checkbox']{
+    width:auto;
+    padding: 0.5rem;
+    transform: scale(1.5);
+}
+
+.accountFields ul{
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+}
+
 .accountFields small{
     color: #777;
 }
@@ -63,6 +75,9 @@
 .profileFieldset{
     padding: 1rem;
     margin-bottom: 2rem;
+}
+.profileFieldset a{
+    color: var(--color-pana-pink);
 }
 .profileFieldset legend{
     font-weight: 700;

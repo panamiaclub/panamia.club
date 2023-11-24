@@ -1,3 +1,13 @@
+import { PronounsInterface } from "./interfaces";
+
+export const standardizedFields = {
+    "email": {
+        "maxLength": 100
+    },
+    "phoneNumber": {
+        "maxLength": 15
+    },
+}
 
 export const standardizeDateTime = function (value: Date) {
     if (typeof value === "string") {
@@ -25,6 +35,31 @@ export const splitName = function (value: string) {
       lastName = value.split(' ').slice(-1).join(' ');
     }
     return [ firstName, lastName ];
+}
+
+export const displayPronouns = (pronouns: PronounsInterface | undefined) => {
+    // console.log(pronouns);
+    if (!pronouns) {
+        return "";
+    }
+    let pronounArray = [];
+    if (pronouns.sheher) {
+        pronounArray.push("She/Her");
+    }
+    if (pronouns.hehim) {
+        pronounArray.push("He/Him");
+    }
+    if (pronouns.theythem) {
+        pronounArray.push("They/Them");
+    }
+    if (pronouns.none) {
+        pronounArray.push("None");
+    }
+    if (pronouns.other) {
+        pronounArray.push(pronouns.other_desc);
+    }
+    console.log("pronounArray", pronounArray);
+    return pronounArray.join(",")
 }
 
 export const buildSearchData = function(...args: any[]) {
