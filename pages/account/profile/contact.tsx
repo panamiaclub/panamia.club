@@ -36,59 +36,47 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
 }
 
 const FormHandler = () => {
+  console.log("FormHandler");
   const queryClient = useQueryClient();
-
-  const email = useRef<HTMLInputElement>(null);
-  const phone_number = useRef<HTMLInputElement>(null);
-  const pronouns_sheher = useRef<HTMLInputElement>(null);
-  const pronouns_hehim = useRef<HTMLInputElement>(null);
-  const pronouns_theythem = useRef<HTMLInputElement>(null);
-  const pronouns_none = useRef<HTMLInputElement>(null);
-  const pronouns_other = useRef<HTMLInputElement>(null);
-  const pronouns_otherdesc = useRef<HTMLInputElement>(null);
   
-  const pronouns_otherstate = useRef<boolean>(false);
-
   const mutation = mutateProfileContact();
   const { data, isLoading, isError } = getProfile();
+  const profile = (data as ProfileInterface);
+  const [otherdesc, setOtherDesc] = useState(profile.pronouns?.other);
 
-  const submitForm = (e: FormEvent) => {
+  const submitForm = (e: FormEvent, formData: FormData) => {
     e.preventDefault();
+    formData.forEach((value, key) => console.log(key, value));
     const updates = {
-      email: email.current ? email.current.value : data?.email,
-      phone_number: phone_number.current ? phone_number.current.value : data?.phone_number,
+      email: formData.get("email"),
+      phone_number: formData.get("phone_number"),
       pronouns: {
-        sheher: pronouns_sheher.current ? pronouns_sheher.current.checked : data?.pronouns?.sheher,
-        hehim: pronouns_hehim.current ? pronouns_hehim.current.checked : data?.pronouns?.hehim,
-        theythem: pronouns_theythem.current ? pronouns_theythem.current.checked : data?.pronouns?.theythem,
-        none: pronouns_none.current ? pronouns_none.current.checked : data?.pronouns?.none,
-        other: pronouns_other.current ? pronouns_other.current.checked : data?.pronouns?.other,
-        other_desc: pronouns_otherdesc.current ? pronouns_otherdesc.current.value : data?.pronouns?.other_desc,
+        sheher: formData.get("pronouns_sheher") ? true : false,
+        hehim: formData.get("pronouns_hehim") ? true : false,
+        theythem: formData.get("pronouns_theythem") ? true : false,
+        none: formData.get("pronouns_none") ? true : false,
+        other: formData.get("pronouns_other") ? true : false,
+        other_desc: formData.get("pronouns_otherdesc"),
       }
     }
     mutation.mutate(updates);
   }
 
   console.log("status", isLoading, data);
-  const profile = (data as ProfileInterface);
-  if (data) {
-    const profile = (data as ProfileInterface);
-    if (profile.pronouns?.other) {
-      pronouns_otherstate.current = (profile.pronouns?.other as boolean)
-    }
-    
+  
+  if (profile) {
     return (
-      <form className={styles.accountForm} onSubmit={submitForm}>
+      <form className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>
         <p>
           <Link href="/account/profile/edit"><a>Back to Profile</a></Link>
         </p>
         <div className={styles.accountFields}>
           <label>Email</label>&emsp;
-          <input type="email" defaultValue={data.email} ref={email} />
+          <input name="email" type="email" defaultValue={profile.email} />
         </div>
         <div className={styles.accountFields}>
           <label>Phone Number</label>&emsp;
-          <input type="text" defaultValue={data.phone_number} ref={phone_number} />
+          <input name="phone_number" type="text" defaultValue={profile.phone_number} />
         </div>
         <div className={styles.accountFields}>
           <label>Pronouns:</label>&emsp;
@@ -96,38 +84,36 @@ const FormHandler = () => {
             <li>
                 <label>
                 <input type="checkbox" name="pronouns_sheher" value="she/her" 
-                defaultChecked={data.pronouns?.sheher ? true : false} ref={pronouns_sheher} />
+                defaultChecked={profile.pronouns?.sheher ? true : false} />
                 &emsp;She/Her</label>
             </li>
             <li>
                 <label>
                 <input type="checkbox" name="pronouns_hehim" value="he/him" 
-                defaultChecked={data.pronouns?.hehim ? true : false} ref={pronouns_hehim} />
+                defaultChecked={profile.pronouns?.hehim ? true : false} />
                 &emsp;He/Him</label>
             </li>
             <li>
                 <label>
                 <input type="checkbox" name="pronouns_theythem" value="they/them" 
-                defaultChecked={data.pronouns?.theythem ? true : false} ref={pronouns_theythem} />
+                defaultChecked={profile.pronouns?.theythem ? true : false} />
                 &emsp;They/Them</label>
             </li>
             <li>
                 <label>
                 <input type="checkbox" name="pronouns_none" value="no preference" 
-                defaultChecked={data.pronouns?.none ? true : false} ref={pronouns_none} />
+                defaultChecked={profile.pronouns?.none ? true : false} />
                 &emsp;No Preference</label>
             </li>
             <li>
                 <label>
                 <input type="checkbox" name="pronouns_other" value="other" 
-                defaultChecked={data.pronouns?.other ? true : false} ref={pronouns_other} 
-                onChange={(e) => {
-                  console.log(pronouns_otherstate);
-                  pronouns_otherstate.current = e.target.checked;
-                  pronouns_otherdesc.current.hidden = !pronouns_otherstate}} />
+                defaultChecked={profile.pronouns?.other ? true : false}
+                onChange={(e) => {setOtherDesc(!e.target.checked)}} />
                 &emsp;Other:</label>
-                <input type="text" hidden={!pronouns_otherstate.current}
-                defaultValue={data.pronouns?.other_desc} ref={pronouns_otherdesc} />
+                <input type="text" name="pronouns_otherdesc"
+                hidden={otherdesc}
+                defaultValue={profile.pronouns?.other_desc} />
             </li>
           </ul>
         </div>
@@ -142,6 +128,7 @@ const FormHandler = () => {
 }
 
 const Account_Profile_Contact: NextPage = (props: any) => {
+  console.log("Account_Profile_Contact");
   // console.log("session_user", props.session_user);
   const { data: session } = useSession();
 

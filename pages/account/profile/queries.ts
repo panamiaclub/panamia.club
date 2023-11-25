@@ -26,7 +26,7 @@ export async function fetchProfile() {
 export const getProfile = () => {
     return useQuery<ProfileInterface, Error>({
         queryKey: ['profile'],
-        queryFn: () => fetchProfile()
+        queryFn: () => fetchProfile(),
     });
 };
 

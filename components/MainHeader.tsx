@@ -35,6 +35,7 @@ interface IconProps {
 }
 
 export default function MainHeader() {
+    console.log("MainHeader");
     const { data: session, status } = useSession();
     const handleSignOut = () => signOut({ redirect: true, callbackUrl: '/' });
     const [menu_active, setMenuActive] = useState(false);
