@@ -10,39 +10,45 @@ import { useQueryClient, dehydrate, QueryClient } from '@tanstack/react-query';
 import { authOptions } from "../../api/auth/[...nextauth]";
 import styles from '@/styles/account/Account.module.css';
 import PageMeta from '@/components/PageMeta';
-import { getUserSession } from '@/lib/user_management';
 import { ProfileInterface  } from '@/lib/interfaces';
 import Status401_Unauthorized from '@/components/Page/Status401_Unauthorized';
 import PanaButton from '@/components/PanaButton';
-import { getProfile, mutateProfileContact, fetchProfile  } from './queries';
+import { profileQueryKey, useProfile, mutateProfileContact, fetchProfile  } from '@/lib/query/profile';
 import Spinner from '@/components/Spinner';
+import { serialize } from '@/lib/standardized';
+import FullPage from '@/components/Page/FullPage';
 
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   const queryClient = new QueryClient()
-  await queryClient.prefetchQuery({queryKey: ['profile'], queryFn: () => fetchProfile()})
-
+  const session = await getServerSession( context.req, context.res, authOptions );
+  const userLib = await import("@/lib/server/user");
+  const session_user = (session) ? serialize(await userLib.getUser(session.user.email)) : null;
+  const profileLib = await import("@/lib/server/profile");
+  await queryClient.prefetchQuery({
+      queryKey: profileQueryKey,
+      initialData: serialize(await profileLib.getProfile(session.user.email)),
+  });
   return {
     props: {
-      session: await getServerSession(
-        context.req,
-        context.res,
-        authOptions
-      ),
-      session_user: await getUserSession(),
+      session: session,
+      session_user: session_user,
       dehydratedState: dehydrate(queryClient),
     },
   }
 }
 
-const FormHandler = () => {
-  console.log("FormHandler");
+const Account_Profile_Contact: NextPage = (props: any) => {
+  console.log("Account_Profile_Contact");
+  // console.log("session_user", props.session_user);
+  const { data: session } = useSession();
+
   const queryClient = useQueryClient();
   
   const mutation = mutateProfileContact();
-  const { data, isLoading, isError } = getProfile();
+  const { data, isLoading, isError } = useProfile();
   const profile = (data as ProfileInterface);
-  const [otherdesc, setOtherDesc] = useState(profile.pronouns?.other);
+  const [otherdesc, setOtherDesc] = useState(profile?.pronouns?.other);
 
   const submitForm = (e: FormEvent, formData: FormData) => {
     e.preventDefault();
@@ -63,9 +69,20 @@ const FormHandler = () => {
   }
 
   console.log("status", isLoading, data);
-  
-  if (profile) {
-    return (
+
+  if (!session) {
+    return ( <Status401_Unauthorized /> )
+  }
+
+  if (!profile) {
+    return ( <FullPage><Spinner /></FullPage> );
+  }
+
+  return (
+    <main className={styles.app}>
+    <PageMeta title="Contact Information | Edit Profile" desc="" />
+    <div className={styles.main}>
+      <h2 className={styles.accountTitle}>Profile - Edit Contact Info</h2>
       <form className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>
         <p>
           <Link href="/account/profile/edit"><a>Back to Profile</a></Link>
@@ -118,34 +135,13 @@ const FormHandler = () => {
           </ul>
         </div>
         <div className={styles.accountFields}>
-          <PanaButton color="blue" submit={true}>Update</PanaButton>
+          <PanaButton color="blue" submit={true} disabled={isLoading}>Update</PanaButton>
         </div>
       </form>
-    )
-  }
-  return ( <div><Spinner /></div> );
-
-}
-
-const Account_Profile_Contact: NextPage = (props: any) => {
-  console.log("Account_Profile_Contact");
-  // console.log("session_user", props.session_user);
-  const { data: session } = useSession();
-
-  if (session) {
-    return (
-      <main className={styles.app}>
-        <PageMeta title="Contact Information | Edit Profile" desc="" />
-        <div className={styles.main}>
-          <h2 className={styles.accountTitle}>Profile - Edit Contact Info</h2>
-          <FormHandler />
-        </div>
-      </main>
-    )
-  }
-  return (
-    <Status401_Unauthorized />
+      </div>
+    </main>
   )
+
 }
 
 export default Account_Profile_Contact;

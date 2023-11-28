@@ -7,7 +7,7 @@ import axios from 'axios';
 
 import styles from './MainHeader.module.css';
 import CallToActionBar from './CallToActionBar';
-import { getUserSession } from '../lib/user_management';
+import { getUserSession } from '../lib/user';
 import PanaLogo from './PanaLogo';
 
 // https://www.a11ymatters.com/pattern/mobile-nav/
@@ -53,6 +53,10 @@ export default function MainHeader() {
     const [navStyle, setNavStyle] = useState<NavStyle>({});
     const [logoStyle, setLogoStyle] = useState<LogoStyle>({});
 
+    /*
+    We're setting this value but not using it. This script is causing the header
+    element to re-render on every scroll. If we need this we could maybe look
+    a non use-effect solution.
     useEffect(() => {
         const handleScroll = () => {
             const newScrollPosition = window.scrollY;
@@ -65,6 +69,7 @@ export default function MainHeader() {
           window.removeEventListener('scroll', handleScroll);
         };
       }, [scrollPosition]);
+      */
 
     function onBurgerClick() {
         const burger = (document.getElementById('mainheader-toggle') as Element);

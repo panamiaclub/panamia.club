@@ -10,7 +10,7 @@ import Link from 'next/link';
 
 import styles from '@/styles/account/Account.module.css';
 import PageMeta from '@/components/PageMeta';
-import { getUserSession, saveUserSession } from '@/lib/user_management';
+import { getUserSession, saveUserSession } from '@/lib/user';
 import PanaButton from '@/components/PanaButton';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {

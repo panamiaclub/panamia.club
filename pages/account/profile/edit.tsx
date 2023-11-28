@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { authOptions } from "../../api/auth/[...nextauth]";
 import styles from '@/styles/account/Account.module.css';
 import PageMeta from '@/components/PageMeta';
-import { getUserSession, saveUserSession } from '@/lib/user_management';
+import { getUserSession, saveUserSession } from '@/lib/user';
 import { ProfileInterface } from '@/lib/interfaces';
 import { displayPronouns } from '@/lib/standardized';
 import Status401_Unauthorized from '@/components/Page/Status401_Unauthorized';
@@ -114,11 +114,22 @@ const Account_Profile: NextPage = (session_user) => {
         <PageMeta title="Edit Profile" desc="" />
         <div className={styles.main}>
           <h2 className={styles.accountTitle}>Your Pana Profile</h2>
-          <p>Status: {profile_status} {profile_status_date}</p>
+          <fieldset className={styles.profileFieldset}>
+            <legend>Profile Status</legend>
+            <div className={styles.profileEditLink}>
+              { profile_data.slug && 
+              <Link href={`/profile/${profile_data.slug}`}><a><IconExternalLink height="20" /> View</a></Link>
+              }
+            </div>
+            <div className={styles.profileFields}>
+              <label>Status:</label>&emsp;<span>{profile_status} {profile_status_date}</span>
+            </div>
+          </fieldset>
           <fieldset className={styles.profileFieldset}>
             <legend><IconUser /> Contact Info</legend>
             <div className={styles.profileEditLink}>
-              <Link href="/account/profile/contact"><a><IconEdit height="20" /> Edit</a></Link></div>
+              <Link href="/account/profile/contact"><a><IconEdit height="20" /> Edit</a></Link>
+            </div>
             <div className={styles.profileFields}>
               <label>Email:</label>&emsp;<span>{profile_data?.email}</span>
             </div>
@@ -132,19 +143,20 @@ const Account_Profile: NextPage = (session_user) => {
 
           <fieldset className={styles.profileFieldset}>
             <legend><IconUserCircle /> Profile Descriptions</legend>
-            
+            <div className={styles.profileEditLink}>
+              <Link href="/account/profile/desc"><a><IconEdit height="20" /> Edit</a></Link>
+            </div>
             <div className={styles.profileFields}>
               <label>Name:</label>&emsp;<span>{profile_data?.name}</span>
+            </div>
+            <div className={styles.profileFields}>
+              <label>Five Words:</label>&emsp;<span>{profile_data?.five_words}</span>
             </div>
             <div className={styles.profileFields}>
               <label>Details:</label>&emsp;<span>{profile_data?.details}</span>
             </div>
             <div className={styles.profileFields}>
               <label>Background:</label>&emsp;<span>{profile_data?.background}</span>
-            </div>
-            
-            <div className={styles.profileFields}>
-              <label>Five Words:</label>&emsp;<span>{profile_data?.five_words}</span>
             </div>
             <div className={styles.profileFields}>
               <label>Tags:</label>&emsp;
@@ -161,6 +173,9 @@ const Account_Profile: NextPage = (session_user) => {
           </fieldset>
           <fieldset className={styles.profileFieldset}>
             <legend><IconExternalLink /> Links and Socials</legend>
+            <div className={styles.profileEditLink}>
+              <Link href="/account/profile/social"><a><IconEdit height="20" /> Edit</a></Link>
+            </div>
             <div className={styles.profileFields}>
               <label>Socials:</label><br />
               <ul>
@@ -175,6 +190,9 @@ const Account_Profile: NextPage = (session_user) => {
           </fieldset>
           <fieldset className={styles.profileFieldset}>
             <legend><IconMapPin /> Address and GeoLocation</legend>
+            <div className={styles.profileEditLink}>
+              <Link href="/account/profile/address"><a><IconEdit height="20" /> Edit</a></Link>
+            </div>
             <div className={styles.profileFields}>
               <label>Address:</label><br />
               <ul>
@@ -217,6 +235,19 @@ const Account_Profile: NextPage = (session_user) => {
               </ul>
             </div>
             <div className={styles.profileFields}>
+              <label>Geo Coordinates:</label><br />
+              <ul>
+                <li>
+                  <span>Latitude:</span>&emsp;
+                  <span className={styles.profileFieldBlank}>blank</span>
+                </li>
+                <li>
+                  <span>Longitude:</span>&emsp;
+                  <span className={styles.profileFieldBlank}>blank</span>
+                </li>
+              </ul>
+            </div>
+            <div className={styles.profileFields}>
               <label>Counties:</label><br />
               <ul>
                 <li>
@@ -239,22 +270,12 @@ const Account_Profile: NextPage = (session_user) => {
                 </li>
               </ul>
             </div>
-            <div className={styles.profileFields}>
-              <label>Geo Coordinates:</label><br />
-              <ul>
-                <li>
-                  <span>Latitude:</span>&emsp;
-                  <span className={styles.profileFieldBlank}>blank</span>
-                </li>
-                <li>
-                  <span>Longitude:</span>&emsp;
-                  <span className={styles.profileFieldBlank}>blank</span>
-                </li>
-              </ul>
-            </div>
           </fieldset>
           <fieldset className={styles.profileFieldset}>
             <legend><IconCategory /> Categories</legend>
+            <div className={styles.profileEditLink}>
+              <Link href="/account/profile/categories"><a><IconEdit height="20" /> Edit</a></Link>
+            </div>
             <div className={styles.profileFields}>
               <label>Categories:</label><br />
               <ul>

@@ -41,18 +41,13 @@ export default async function handler(
       .json({ success: false, error: "No valid email" });
   }
 
-  const { phone_number, pronouns } = req.body;
-  console.log("phone_number", phone_number);
-  console.log("pronouns", pronouns);
+  const { socials } = req.body;
 
   const existingProfile = await getProfileByEmail(email);
   if (existingProfile) {
-    if (phone_number) {
-      existingProfile.phone_number = phone_number;
-    }
-    if (pronouns) {
-      existingProfile.pronouns = pronouns;
-    }
+    if (socials) {
+      existingProfile.socials = socials;
+    }    
     try {
       existingProfile.save()
     } catch(e) {

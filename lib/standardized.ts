@@ -9,6 +9,10 @@ export const standardizedFields = {
     },
 }
 
+export const serialize = (object: any) => {
+    return  JSON.parse(JSON.stringify(object));
+}
+
 export const standardizeDateTime = function (value: Date) {
     if (typeof value === "string") {
         value = new Date(value);

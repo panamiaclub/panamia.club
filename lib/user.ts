@@ -1,6 +1,4 @@
 import axios from "axios";
-import dbConnect from "pages/api/auth/lib/connectdb";
-import user from "pages/api/auth/lib/model/user";
 
 export const getUserSession = async (host?: String) => {
     const path = "/api/getSessionUser"
@@ -18,8 +16,8 @@ export const getUserSession = async (host?: String) => {
                 },
             }
         )
-        .catch((error) => {
-            console.log(error);
+        .catch((error: Error) => {
+            console.log(error.name, error.message, error.cause);
             return null;
         });
     if (userSession) {

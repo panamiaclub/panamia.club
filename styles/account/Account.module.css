@@ -11,7 +11,7 @@
 
 .accountTitle{
     text-align: center;
-    padding: 3rem 0;
+    padding: 3rem 0 1rem;
 }
 .accountProfileBar{
     display: flex;
@@ -60,6 +60,10 @@
     width:auto;
     padding: 0.5rem;
     transform: scale(1.5);
+}
+.accountFields textarea{
+    width: 100%;
+    padding: 0.5rem;
 }
 
 .accountFields ul{

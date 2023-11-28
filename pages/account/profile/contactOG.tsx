@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { authOptions } from "../../api/auth/[...nextauth]";
 import styles from '@/styles/account/Account.module.css';
 import PageMeta from '@/components/PageMeta';
-import { getUserSession, saveUserSession } from '@/lib/user_management';
+import { getUserSession, saveUserSession } from '@/lib/user';
 import { ProfileInterface, PronounsInterface  } from '@/lib/interfaces';
 import Status401_Unauthorized from '@/components/Page/Status401_Unauthorized';
 import PanaButton from '@/components/PanaButton';
