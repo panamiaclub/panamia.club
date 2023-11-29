@@ -13,7 +13,10 @@ export const serialize = (object: any) => {
     return  JSON.parse(JSON.stringify(object));
 }
 
-export const standardizeDateTime = function (value: Date) {
+export const standardizeDateTime = function (value: Date | undefined) {
+    if (value === undefined) {
+        return "";
+    }
     if (typeof value === "string") {
         value = new Date(value);
     }

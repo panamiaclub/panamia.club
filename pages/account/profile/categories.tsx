@@ -90,6 +90,10 @@ const Account_Profile_Categories: NextPage = (props: any) => {
           <Link href="/account/profile/edit"><a>Back to Profile</a></Link>
         </p>
         <div className={styles.accountFields}>
+          <p className={styles.accountNote}>Select the categories that best match your 
+          profile, these will help users find your profile.</p>
+        </div>
+        <div className={styles.accountFields}>
           <label>Categories:</label>&emsp;
           <ul>
             <li>

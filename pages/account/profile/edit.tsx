@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { useSession } from 'next-auth/react';
 import { useEffect, useState, FormEvent } from 'react';
 import axios from 'axios';
-import { IconCategory, IconCheck, IconEdit, IconExternalLink, IconMapPin, IconUser, IconUserCircle, IconX } from '@tabler/icons';
+import { IconCategory, IconCheck, IconCheckupList, IconEdit, IconExternalLink, IconMapPin, IconPhoto, IconUser, IconUserCircle, IconUsers, IconX } from '@tabler/icons';
 import Link from 'next/link';
 
 import { authOptions } from "../../api/auth/[...nextauth]";
@@ -12,7 +12,7 @@ import styles from '@/styles/account/Account.module.css';
 import PageMeta from '@/components/PageMeta';
 import { getUserSession, saveUserSession } from '@/lib/user';
 import { ProfileInterface } from '@/lib/interfaces';
-import { displayPronouns } from '@/lib/standardized';
+import { displayPronouns, standardizeDateTime } from '@/lib/standardized';
 import Status401_Unauthorized from '@/components/Page/Status401_Unauthorized';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
@@ -97,10 +97,10 @@ const Account_Profile: NextPage = (session_user) => {
         setHasProfile(true);
         setProfileData(profile);
         setProfileStatus("Submitted");
-        setProfileStatusDate(profile?.status?.submitted?.toString() || "");
+        setProfileStatusDate(standardizeDateTime(profile?.status?.submitted));
         if (profile?.status?.published && profile?.active) {
           setProfileStatus("Published");
-          setProfileStatusDate(profile?.status?.published?.toString() || "");
+          setProfileStatusDate(standardizeDateTime(profile?.status?.published));
         }
       }
       
@@ -115,7 +115,7 @@ const Account_Profile: NextPage = (session_user) => {
         <div className={styles.main}>
           <h2 className={styles.accountTitle}>Your Pana Profile</h2>
           <fieldset className={styles.profileFieldset}>
-            <legend>Profile Status</legend>
+            <legend><IconCheckupList /> Profile Status</legend>
             <div className={styles.profileEditLink}>
               { profile_data.slug && 
               <Link href={`/profile/${profile_data.slug}`}><a><IconExternalLink height="20" /> View</a></Link>
@@ -140,7 +140,6 @@ const Account_Profile: NextPage = (session_user) => {
               <label>Pronouns:</label>&emsp;<span>{displayPronouns(profile_data.pronouns)}</span>
             </div>
           </fieldset>
-
           <fieldset className={styles.profileFieldset}>
             <legend><IconUserCircle /> Profile Descriptions</legend>
             <div className={styles.profileEditLink}>
@@ -179,12 +178,42 @@ const Account_Profile: NextPage = (session_user) => {
             <div className={styles.profileFields}>
               <label>Socials:</label><br />
               <ul>
-                <li><span>Website:</span>&emsp;<span>{profile_data?.socials?.website}</span></li>
-                <li><span>Instagram:</span>&emsp;<span>{profile_data?.socials?.instagram}</span></li>
-                <li><span>Facebook:</span>&emsp;<span>{profile_data?.socials?.facebook}</span></li>
-                <li><span>TikTok:</span>&emsp;<span>{profile_data?.socials?.tiktok}</span></li>
-                <li><span>Twitter:</span>&emsp;<span>{profile_data?.socials?.twitter}</span></li>
-                <li><span>Spotify:</span>&emsp;<span>{profile_data?.socials?.spotify}</span></li>
+                <li>
+                  <span>Website:</span>&emsp;
+                  {profile_data?.socials?.website &&
+                  <span>{profile_data?.socials?.website}</span> ||
+                  <span className={styles.profileFieldBlank}>blank</span>}
+                </li>
+                <li>
+                  <span>Instagram:</span>&emsp;
+                  {profile_data?.socials?.instagram &&
+                  <span>{profile_data?.socials?.instagram}</span> ||
+                  <span className={styles.profileFieldBlank}>blank</span>}
+                  </li>
+                <li>
+                  <span>Facebook:</span>&emsp;
+                  {profile_data?.socials?.facebook &&
+                  <span>{profile_data?.socials?.facebook}</span> ||
+                  <span className={styles.profileFieldBlank}>blank</span>}
+                </li>
+                <li>
+                  <span>TikTok:</span>&emsp;
+                  {profile_data?.socials?.tiktok &&
+                  <span>{profile_data?.socials?.tiktok}</span> ||
+                  <span className={styles.profileFieldBlank}>blank</span>}
+                </li>
+                <li>
+                  <span>Twitter:</span>&emsp;
+                  {profile_data?.socials?.twitter &&
+                  <span>{profile_data?.socials?.twitter}</span> ||
+                  <span className={styles.profileFieldBlank}>blank</span>}
+                </li>
+                <li>
+                  <span>Spotify:</span>&emsp;
+                  {profile_data?.socials?.spotify &&
+                  <span>{profile_data?.socials?.spotify}</span> ||
+                  <span className={styles.profileFieldBlank}>blank</span>}
+                </li>
               </ul>
             </div>
           </fieldset>
@@ -194,7 +223,7 @@ const Account_Profile: NextPage = (session_user) => {
               <Link href="/account/profile/address"><a><IconEdit height="20" /> Edit</a></Link>
             </div>
             <div className={styles.profileFields}>
-              <label>Address:</label><br />
+              <label>Primary Address:</label><br />
               <ul>
                 <li>
                   <span>Street 1:</span>&emsp;
@@ -248,7 +277,7 @@ const Account_Profile: NextPage = (session_user) => {
               </ul>
             </div>
             <div className={styles.profileFields}>
-              <label>Counties:</label><br />
+              <label>Servicing Counties:</label><br />
               <ul>
                 <li>
                   <span>Palm Beach:</span>&emsp;
@@ -364,6 +393,18 @@ const Account_Profile: NextPage = (session_user) => {
                   <span className={styles.profileFieldBlank}>unselected</span>}
                 </li>
               </ul>
+            </div>
+          </fieldset>
+          <fieldset className={styles.profileFieldset}>
+            <legend><IconPhoto /> Images</legend>
+            <div className={styles.profileEditLink}>
+              <Link href="/account/profile/contact"><a><IconEdit height="20" /> Edit</a></Link>
+            </div>
+          </fieldset>
+          <fieldset className={styles.profileFieldset}>
+            <legend><IconUsers /> Linked Profiles</legend>
+            <div className={styles.profileEditLink}>
+              <Link href="/account/profile/contact"><a><IconEdit height="20" /> Edit</a></Link>
             </div>
           </fieldset>
         </div>

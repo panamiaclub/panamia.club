@@ -89,11 +89,13 @@ const Account_Profile_Contact: NextPage = (props: any) => {
         </p>
         <div className={styles.accountFields}>
           <label>Email</label>&emsp;
-          <input name="email" type="email" defaultValue={profile.email} />
+          <input name="email" type="email" defaultValue={profile.email} disabled />
+          <small>Used for contacting you, not displayed on profile</small>
         </div>
         <div className={styles.accountFields}>
           <label>Phone Number</label>&emsp;
           <input name="phone_number" type="text" defaultValue={profile.phone_number} />
+          <small>Used for contacting you, not displayed on profile</small>
         </div>
         <div className={styles.accountFields}>
           <label>Pronouns:</label>&emsp;

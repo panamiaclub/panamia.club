@@ -6,7 +6,9 @@ import { IconUserCircle, IconHeart, IconExternalLink, IconBrandInstagram,
    IconBrandFacebook, IconForms, IconSearch, IconStar, IconFilter,
   IconMap, 
   IconLocation,
-  IconCategory} from '@tabler/icons';
+  IconCategory,
+  IconMapPin,
+  IconCurrentLocation} from '@tabler/icons';
 
 import styles from '@/styles/Directory.module.css'
 import PanaButton from '@/components/PanaButton';
@@ -24,6 +26,7 @@ interface searchResultsInterface {
   slug: String,
   details: String,
   five_words: String,
+  primary_address?: { city?: String },
   socials: {},
 }
 
@@ -171,6 +174,9 @@ const SearchFormAndList = () => {
           <div className={styles.profileCardInfo}>
             <div className={styles.cardName}>{item.name}</div>
             <div className={styles.cardFiveWords}>{item.five_words}</div>
+            { item?.primary_address?.city && 
+              <div className={styles.cardLocation}><IconMapPin height="20" />{item.primary_address.city}</div>
+            }
             <div className={styles.cardDetails}>{item.details}</div>
             <div className={styles.cardActions}>
               <>
@@ -248,7 +254,7 @@ const SearchFormAndList = () => {
             <dialog id="dialog-search-filters" className={styles.filtersModal}>
               <div className={styles.filtersLocation}>
                 <strong><IconMap height="20" />&nbsp;Location</strong><br />
-                <label><input type="checkbox" value="mylocation" />&nbsp;Nearby <IconLocation height="20" /></label>
+                <label><input type="checkbox" value="mylocation" />&nbsp;Nearby <IconCurrentLocation height="20" /></label>
                 {countyList && 
                   countyList.map((item, index) => {
                     return (

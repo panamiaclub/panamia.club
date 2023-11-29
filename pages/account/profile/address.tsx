@@ -89,6 +89,11 @@ const Account_Profile_Address: NextPage = (props: any) => {
           <Link href="/account/profile/edit"><a>Back to Profile</a></Link>
         </p>
         <div className={styles.accountFields}>
+          <p className={styles.accountNote}>Your Primary Address is used for providing
+          directions on your profile. If you're not doing business out of a set location,
+          you don't need to provide this information.</p>
+        </div>
+        <div className={styles.accountFields}>
           <label>Street 1</label>&emsp;
           <input name="street1" type="text" defaultValue={profile.primary_address?.street1} />
         </div>
@@ -112,13 +117,27 @@ const Account_Profile_Address: NextPage = (props: any) => {
           <label>Hours</label>&emsp;
           <textarea name="hours" rows={4} maxLength={500} defaultValue={profile.primary_address?.hours}></textarea>
         </div>
+        <br />
+        <div className={styles.accountFields}>
+          <p className={styles.accountNote}>Your GeoLocation is used for mapping and
+          showing users their distance away from you. If you operate out of multiple areas,
+          choose a central point among those areas. You can find this information through
+          Google Maps, Apple Maps, or another mapping service.</p>
+        </div>
         <div className={styles.accountFields}>
           <label>Latitude</label>&emsp;
           <input name="latitude" type="text" defaultValue={profile.primary_address?.lat} />
+          <small>Example: 26.122582</small>
         </div>
         <div className={styles.accountFields}>
           <label>Longitude</label>&emsp;
           <input name="longitude" type="text" defaultValue={profile.primary_address?.lng} />
+          <small>Example: -80.137139</small>
+        </div>
+        <br />
+        <div className={styles.accountFields}>
+          <p className={styles.accountNote}>Counties can be selected if you operate or
+          service inside of these areas. If you're not sure, it is okay to select all counties.</p>
         </div>
         <div className={styles.accountFields}>
           <label>Counties:</label>&emsp;

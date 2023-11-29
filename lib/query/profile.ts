@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProfileInterface } from "@/lib/interfaces";
 
 export const profileQueryKey = ['profile'];
+export const profilePublicQueryKey = 'publicProfile';
 
 export async function fetchProfile() {
     console.log("fetchProfile")
@@ -24,6 +25,30 @@ export async function fetchProfile() {
         return profile.data.data;
     }
     return { data: { message: ""}};
+}
+
+export async function fetchPublicProfile(handle: string) {
+  console.log("fetchPublicProfile");
+
+  const params = new URLSearchParams();
+  params.append("handle", handle);
+  const profile = await axios
+  .get(
+      `/api/profile/public?${params}`,
+      {
+          headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+          },
+      }
+  )
+  .catch((error: Error) => {
+      console.log(error.name, error.message);
+  });
+  if (profile) {
+      return profile.data.data;
+  }
+  return { data: { message: ""}};
 }
 
 export const useProfile = () => {

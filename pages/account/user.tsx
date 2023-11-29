@@ -12,6 +12,7 @@ import styles from '@/styles/account/Account.module.css';
 import PageMeta from '@/components/PageMeta';
 import { getUserSession, saveUserSession } from '@/lib/user';
 import PanaButton from '@/components/PanaButton';
+import { standardizeDateTime } from '@/lib/standardized';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   return {
@@ -94,10 +95,10 @@ const Account_User: NextPage = () => {
         setHasProfile(true);
         setProfileName(profile.name)
         setProfileStatus("Submitted");
-        setProfileStatusDate(profile?.status?.submitted);
+        setProfileStatusDate(standardizeDateTime(profile?.status?.submitted));
         if (profile?.status?.published && profile?.active) {
           setProfileStatus("Published");
-          setProfileStatusDate(profile?.status?.published);
+          setProfileStatusDate(standardizeDateTime(profile?.status?.published));
         }
       }
       

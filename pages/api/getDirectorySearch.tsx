@@ -103,6 +103,7 @@ export default async function handler(
             'socials': 1, 
             'five_words': 1, 
             'details': 1, 
+            'primary_address.city': 1,
             'score': {
               '$meta': 'searchScore'
             }
@@ -112,6 +113,7 @@ export default async function handler(
         }
     ]);
     if (aggregateList) {
+      console.log(aggregateList);
       return res.status(200).json({ success: true, data: aggregateList, pagination: pagination }) 
     }
     return res.status(200).json({ success: true, data: [], pagination: pagination });

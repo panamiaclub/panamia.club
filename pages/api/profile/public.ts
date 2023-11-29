@@ -1,10 +1,10 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth";
-import { authOptions } from "./auth/[...nextauth]";
+import { authOptions } from "../auth/[...nextauth]";
 
-import dbConnect from "./auth/lib/connectdb";
-import profile from "./auth/lib/model/profile";
+import dbConnect from "../auth/lib/connectdb";
+import profile from "../auth/lib/model/profile";
 
 interface ResponseData {
   error?: string;

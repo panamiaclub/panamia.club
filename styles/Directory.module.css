@@ -168,6 +168,10 @@
     background-color: #EEE;
 }
 
+.cardLocation{
+    font-style: italic;
+}
+
 .cardDetails{
     padding: 0.5rem 0;
 }
