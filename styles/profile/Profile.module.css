@@ -9,6 +9,7 @@
     margin: auto;
     border:1px solid #EEE;
     border-radius: 12px;
+    margin-bottom: 1rem;
 }
 .profileHeader{
     position: relative;
@@ -56,8 +57,24 @@
 
 .profileInfo{
     position: relative;
+    line-height: 1.5rem;
 }
 
 .profileInfo label{
     color: #777;
+}
+
+.profileInfoSplit{
+    display: flex;
+    gap: 2rem;
+}
+
+.profileInfo a{
+    color:var(--color-pana-pink);
+    display: inline-block;
+    margin:0 0.25rem;
+}
+.profileGalleryImage img{
+    max-width: 100%;
+    max-height: 600px;
 }

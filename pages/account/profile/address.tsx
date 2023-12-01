@@ -12,7 +12,7 @@ import PageMeta from '@/components/PageMeta';
 import { ProfileInterface  } from '@/lib/interfaces';
 import Status401_Unauthorized from '@/components/Page/Status401_Unauthorized';
 import PanaButton from '@/components/PanaButton';
-import { profileQueryKey, useProfile, mutateProfileAddress  } from '@/lib/query/profile';
+import { profileQueryKey, useProfile, useMutateProfileAddress  } from '@/lib/query/profile';
 import Spinner from '@/components/Spinner';
 import { serialize } from '@/lib/standardized';
 import FullPage from '@/components/Page/FullPage';
@@ -42,7 +42,7 @@ const Account_Profile_Address: NextPage = (props: any) => {
   // console.log("session_user", props.session_user);
   const { data: session } = useSession();
   
-  const mutation = mutateProfileAddress();
+  const mutation = useMutateProfileAddress();
   const { data, isLoading, isError } = useProfile();
   const profile = (data as ProfileInterface);
 

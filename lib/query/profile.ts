@@ -58,7 +58,7 @@ export const useProfile = () => {
     });
 };
 
-export const mutateProfileContact = () => {
+export const useMutateProfileContact = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (updates: any) => {
@@ -77,7 +77,7 @@ export const mutateProfileContact = () => {
       })
 }
 
-export const mutateProfileDesc = () => {
+export const useMutateProfileDesc = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (updates: any) => {
@@ -96,7 +96,7 @@ export const mutateProfileDesc = () => {
       })
 }
 
-export const mutateProfileSocial = () => {
+export const useMutateProfileSocial = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (updates: any) => {
@@ -115,7 +115,7 @@ export const mutateProfileSocial = () => {
       })
 }
 
-export const mutateProfileAddress = () => {
+export const useMutateProfileAddress = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (updates: any) => {
@@ -134,7 +134,7 @@ export const mutateProfileAddress = () => {
       })
 }
 
-export const mutateProfileCategories = () => {
+export const useMutateProfileCategories = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (updates: any) => {

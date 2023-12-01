@@ -12,7 +12,7 @@ import PageMeta from '@/components/PageMeta';
 import { ProfileInterface  } from '@/lib/interfaces';
 import Status401_Unauthorized from '@/components/Page/Status401_Unauthorized';
 import PanaButton from '@/components/PanaButton';
-import { profileQueryKey, useProfile, mutateProfileAddress  } from '@/lib/query/profile';
+import { profileQueryKey, useProfile, useMutateProfileAddress  } from '@/lib/query/profile';
 import Spinner from '@/components/Spinner';
 import { serialize } from '@/lib/standardized';
 import FullPage from '@/components/Page/FullPage';
