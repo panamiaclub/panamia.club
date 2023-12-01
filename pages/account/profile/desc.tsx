@@ -71,9 +71,9 @@ const Account_Profile_Desc: NextPage = (props: any) => {
 
   return (
     <main className={styles.app}>
-    <PageMeta title="Profile Description | Edit Profile" desc="" />
+    <PageMeta title="Description | Edit Profile" desc="" />
     <div className={styles.main}>
-      <h2 className={styles.accountTitle}>Profile - Edit Profile Description</h2>
+      <h2 className={styles.accountTitle}>Profile - Edit Description</h2>
       <form className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>
         <p>
           <Link href="/account/profile/edit"><a>Back to Profile</a></Link>

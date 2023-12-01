@@ -80,7 +80,7 @@ const Account_Profile_Contact: NextPage = (props: any) => {
 
   return (
     <main className={styles.app}>
-    <PageMeta title="Contact Information | Edit Profile" desc="" />
+    <PageMeta title="Contact Info | Edit Profile" desc="" />
     <div className={styles.main}>
       <h2 className={styles.accountTitle}>Profile - Edit Contact Info</h2>
       <form className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>

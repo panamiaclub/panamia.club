@@ -42,6 +42,17 @@ export interface CountyInterface {
     miami_dade: Boolean,
 }
 
+export interface ProfileImagesInterface {
+    primary?: string,
+    primaryCDN?: string,
+    gallery1?: string,
+    gallery1CDN?: string,
+    gallery2?: string,
+    gallery2CDN?: string,
+    gallery3?: string,
+    gallery3CDN?: string,
+}
+
 export interface CategoryInterface {
     products: Boolean,
     services: Boolean,
@@ -78,7 +89,7 @@ export interface ProfileInterface {
     categories: CategoryInterface,
     primary_address: AddressInterface,
     locations: [],
-    images?: {},
+    images?: ProfileImagesInterface,
     linked_profiles: [],
 }
 

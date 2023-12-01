@@ -171,6 +171,40 @@ const Account_Profile: NextPage = (session_user) => {
             </div>
           </fieldset>
           <fieldset className={styles.profileFieldset}>
+            <legend><IconPhoto /> Images</legend>
+            <div className={styles.profileEditLink}>
+              <Link href="/account/profile/images"><a><IconEdit height="20" /> Edit</a></Link>
+            </div>
+            <div className={styles.profileFields}>
+              <div className={styles.profileImageContainer}>
+                { profile_data?.images?.primaryCDN &&
+                <div className={styles.profileImageBox}>
+                  <img src={profile_data.images.primaryCDN} />
+                  <small>Profile Image</small>
+                </div>
+                }
+                { profile_data?.images?.gallery1CDN &&
+                <div className={styles.profileImageBox}>
+                  <img src={profile_data.images.gallery1CDN} />
+                  <small>Gallery</small>
+                </div>
+                }
+                { profile_data?.images?.gallery2CDN &&
+                <div className={styles.profileImageBox}>
+                  <img src={profile_data.images.gallery2CDN} />
+                  <small>Gallery</small>
+                </div>
+                }
+                { profile_data?.images?.gallery3CDN &&
+                <div className={styles.profileImageBox}>
+                  <img src={profile_data.images.gallery3CDN} />
+                  <small>Gallery</small>
+                </div>
+                }
+              </div>
+            </div>
+          </fieldset>
+          <fieldset className={styles.profileFieldset}>
             <legend><IconExternalLink /> Links and Socials</legend>
             <div className={styles.profileEditLink}>
               <Link href="/account/profile/social"><a><IconEdit height="20" /> Edit</a></Link>
@@ -393,12 +427,6 @@ const Account_Profile: NextPage = (session_user) => {
                   <span className={styles.profileFieldBlank}>unselected</span>}
                 </li>
               </ul>
-            </div>
-          </fieldset>
-          <fieldset className={styles.profileFieldset}>
-            <legend><IconPhoto /> Images</legend>
-            <div className={styles.profileEditLink}>
-              <Link href="/account/profile/contact"><a><IconEdit height="20" /> Edit</a></Link>
             </div>
           </fieldset>
           <fieldset className={styles.profileFieldset}>

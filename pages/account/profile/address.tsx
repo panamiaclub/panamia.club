@@ -81,7 +81,7 @@ const Account_Profile_Address: NextPage = (props: any) => {
 
   return (
     <main className={styles.app}>
-    <PageMeta title="Profile Address | Edit Profile" desc="" />
+    <PageMeta title="Address | Edit Profile" desc="" />
     <div className={styles.main}>
       <h2 className={styles.accountTitle}>Profile - Edit Address and Geolocation</h2>
       <form className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>
