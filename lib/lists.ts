@@ -1,7 +1,7 @@
 export const countyList = [
-    {"desc": "Palm Beach", "value": "palm-beach"},
+    {"desc": "Palm Beach", "value": "palm_beach"},
     {"desc": "Broward/Ft Lauderdale", "value": "broward"},
-    {"desc": "Miami Dade", "value": "miami-dade"},
+    {"desc": "Miami Dade", "value": "miami_dade"},
 ]
 
 export const profileCategoryList = [
@@ -13,10 +13,10 @@ export const profileCategoryList = [
     {"desc": "Clothing", "value": "clothing"},
     {"desc": "Accessories", "value": "accessories"},
     {"desc": "Art", "value": "art"},
-    {"desc": "Digital Art", "value": "digital-art"},
+    {"desc": "Digital Art", "value": "digital_art"},
     {"desc": "Tech", "value": "tech"},
-    {"desc": "Health & Beauty", "value": "health-beauty"},
+    {"desc": "Health & Beauty", "value": "health_beauty"},
     {"desc": "Spiritual", "value": "spiritual"},
-    {"desc": "Non-Profit", "value": "non-profit"},
+    {"desc": "Non-Profit", "value": "non_profit"},
     {"desc": "Homemade", "value": "homemade"},
 ]

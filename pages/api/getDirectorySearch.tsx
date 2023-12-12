@@ -6,6 +6,8 @@ import { authOptions } from "./auth/[...nextauth]";
 import dbConnect from "./auth/lib/connectdb";
 import user from "./auth/lib/model/user";
 import profile from "./auth/lib/model/profile";
+import { forceInt, forceString } from "@/lib/standardized";
+import { getSearch } from "@/lib/server/directory";
 
 interface ResponseData {
   error?: string,
@@ -37,94 +39,30 @@ export default async function handler(
       .json({ error: "This API call only accepts GET methods" });
   }
 
-  let page_number = 1;
-  if (req.query.page_number) {
-    page_number = parseInt(req.query.page_number.toString());
-    if (page_number < 1) {
-      page_number = 1;
-    }
+  const rq = req.query;
+  const pageNum = forceInt(forceString(rq?.page, "1"), 1);
+  const pageLimit = forceInt(forceString(rq?.limit, "20"), 20);
+  const searchTerm = forceString(rq?.q, "20");
+  const random = forceString(rq?.random, "") ? true : false;
+  const filterLocations = forceString(rq?.floc, "");
+  const filterCategories = forceString(rq?.floc, "");
+  
+  if (!searchTerm && !random) {
+    return res.status(200).json({ success: true, data: [], pagination: {} });
   }
 
-  if (req.query.q) {
-    const search_string = req.query.q;
-    const per_page = 20;
-    const offset = (per_page * page_number) - per_page;
+  if (searchTerm) {
+    const params = { pageNum, pageLimit, searchTerm, 
+      filterLocations, filterCategories, random}
+    const offset = (pageLimit * pageNum) - pageLimit;
 
-    const listCount = await profile.count();
-    const pagination = {
-      count: listCount,
-      per_page: per_page,
-      offset: offset,
-      page_number: page_number,
-      total_pages: (listCount > 0 ? Math.ceil(listCount / per_page) : 1),
+    const apiResponse = await getSearch(params)
+    if (apiResponse) {
+      console.log(apiResponse);
+      return res.status(200).json(apiResponse) 
     }
-
-    const aggregateList = await profile.aggregate([
-        {
-          '$search': {
-            'index': 'profiles-search', 
-            'compound': {
-              'should': [
-                {
-                  'text': {
-                    'query': search_string, 
-                    'path': 'name', 
-                    'score': {
-                      'boost': {
-                        'value': 5
-                      }
-                    }
-                  }
-                }, {
-                  'text': {
-                    'query': search_string, 
-                    'path': ['five_words','tags'], 
-                    'score': {
-                      'boost': {
-                        'value': 3
-                      }
-                    }
-                  }
-                }, {
-                  'text': {
-                    'query': search_string, 
-                    'path': [
-                      'details', 'background'
-                    ]
-                  }
-                }
-              ]
-            }
-          }
-        }, {
-          '$project': {
-            'name': 1,
-            'slug': 1, 
-            'socials': 1, 
-            'five_words': 1, 
-            'details': 1, 
-            'primary_address.city': 1,
-            'score': {
-              '$meta': 'searchScore'
-            }
-          }
-        }, {
-          '$limit': per_page
-        }
-    ]);
-    if (aggregateList) {
-      console.log(aggregateList);
-      return res.status(200).json({ success: true, data: aggregateList, pagination: pagination }) 
-    }
-    return res.status(200).json({ success: true, data: [], pagination: pagination });
+    return res.status(200).json({ success: true, data: [], pagination: {} });
   }
-  const randomList = await profile.aggregate([{ '$sample': { 'size': 20 } }]);
-  return res.status(200).json({
-    success: true,
-    data: randomList,
-    pagination: {},
-    msg: "No Search Term",
-  });
 }
 
 export const config = {

@@ -13,6 +13,26 @@ export const serialize = (object: any) => {
     return  JSON.parse(JSON.stringify(object));
 }
 
+export const forceInt = (value: string | undefined, ifNaN: number) => {
+    if (value === undefined) {
+        return ifNaN;
+    }
+    if (Number.isNaN(parseInt(value))) {
+        return ifNaN;
+    }
+    return parseInt(value);
+}
+
+export const forceString = (value: string | string[] | undefined, ifNaS: string) => {
+    if (value === undefined) {
+        return ifNaS;
+    }
+    if (!value) {
+        return ifNaS;
+    }
+    return value.toString(); 
+}
+
 export const standardizeDateTime = function (value: Date | undefined) {
     if (value === undefined) {
         return "";

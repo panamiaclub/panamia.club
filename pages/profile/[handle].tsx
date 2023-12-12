@@ -39,15 +39,15 @@ const Profile_Public: NextPage = () => {
   });
 
   function hasAddress(address: AddressInterface) {
-    if (address.street1 || address.street2 || address.city ||
-      address.state || address.zipcode) {
+    if (address?.street1 || address?.street2 || address?.city ||
+      address?.state || address?.zipcode) {
       return true;
     }
     return false;
   }
   function hasSocials(socials: ProfileSocialsInterface) {
-    if (socials.website || socials.facebook || socials.instagram ||
-      socials.tiktok || socials.twitter || socials.spotify) {
+    if (socials?.website || socials?.facebook || socials?.instagram ||
+      socials?.tiktok || socials?.twitter || socials?.spotify) {
       return true;
     }
     return false;
@@ -58,6 +58,16 @@ const Profile_Public: NextPage = () => {
       return true;
     }
     return false;
+  }
+
+  function showGalleryDialog(id: string) {
+    const dialog = document.getElementById(id) as HTMLDialogElement;
+    dialog.showModal();
+  }
+
+  function closeGalleryDialog(id: string) {
+    const dialog = document.getElementById(id) as HTMLDialogElement;
+    dialog.close();
   }
 
 
@@ -152,8 +162,8 @@ const Profile_Public: NextPage = () => {
               <div className={styles.profileInfo}>
                 <div>
                   <label>Address</label>
-                  <div>{data.primary_address.street1} {data.primary_address.street2}</div>
-                  <div>{data.primary_address.city} {data.primary_address.state} {data.primary_address.zipcode}</div>
+                  <div>{data.primary_address?.street1} {data.primary_address?.street2}</div>
+                  <div>{data.primary_address?.city} {data.primary_address?.state} {data.primary_address?.zipcode}</div>
                   <Link href={directionsFromAddress(data.primary_address)}><a><IconMap2 height="20" /> Get Directions</a></Link>
                 </div>
               </div>
@@ -169,20 +179,39 @@ const Profile_Public: NextPage = () => {
           { hasGallery(data.images) &&
           <div className={styles.profileCard}>
             <h3>Gallery</h3>
+            <small>Click to see full-size image</small>
             <div className={styles.profileInfo}>
               { data.images?.gallery1CDN &&
               <div className={styles.profileGalleryImage}>
-                <img src={data.images?.gallery1CDN} /> <br />
+                <img src={data.images?.gallery1CDN} onClick={(e) => {showGalleryDialog("dialog-gallery-1")}} /><br />
+                <dialog id="dialog-gallery-1">
+                  <small>Click to dismiss</small>
+                  <a onClick={(e) => {closeGalleryDialog("dialog-gallery-1")}}>
+                    <img src={data.images?.gallery1CDN} loading="lazy" />
+                  </a>
+                </dialog>
               </div>
               }
               { data.images?.gallery2CDN &&
               <div className={styles.profileGalleryImage}>
-                <img src={data.images?.gallery2CDN} /> <br />
+                <img src={data.images?.gallery2CDN} onClick={(e) => {showGalleryDialog("dialog-gallery-2")}} /><br />
+                <dialog id="dialog-gallery-2">
+                  <small>Click to dismiss</small>
+                  <a onClick={(e) => {closeGalleryDialog("dialog-gallery-2")}}>
+                    <img src={data.images?.gallery2CDN} loading="lazy" />
+                  </a>
+                </dialog>
               </div>
               }
               { data.images?.gallery3CDN &&
               <div className={styles.profileGalleryImage}>
-                <img src={data.images?.gallery3CDN} /> <br />
+                <img src={data.images?.gallery3CDN} onClick={(e) => {showGalleryDialog("dialog-gallery-3")}} /><br />
+                <dialog id="dialog-gallery-3">
+                  <small>Click to dismiss</small>
+                  <a onClick={(e) => {closeGalleryDialog("dialog-gallery-3")}}>
+                    <img src={data.images?.gallery3CDN} loading="lazy" />
+                  </a>
+                </dialog>
               </div>
               }
             </div>

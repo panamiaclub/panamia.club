@@ -43,6 +43,10 @@ export default async function handler(
 
   const { categories } = req.body;
 
+  categories.forEach(() => {
+
+  })
+
   const existingProfile = await getProfileByEmail(email);
   if (existingProfile) {
     existingProfile.categories = categories;

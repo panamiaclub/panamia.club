@@ -50,7 +50,7 @@ const Account_Profile_Social: NextPage = (props: any) => {
     e.preventDefault();
     formData.forEach((value, key) => console.log(key, value));
     const updates = {
-      social: {
+      socials: {
         website: formData.get("website"),
         facebook: formData.get("facebook"),
         instagram: formData.get("instagram"),

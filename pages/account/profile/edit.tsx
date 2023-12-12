@@ -302,11 +302,15 @@ const Account_Profile: NextPage = (session_user) => {
               <ul>
                 <li>
                   <span>Latitude:</span>&emsp;
-                  <span className={styles.profileFieldBlank}>blank</span>
+                  {profile_data?.primary_address?.lat &&
+                  <span>{profile_data?.primary_address?.lat}</span> ||
+                  <span className={styles.profileFieldBlank}>blank</span>}
                 </li>
                 <li>
                   <span>Longitude:</span>&emsp;
-                  <span className={styles.profileFieldBlank}>blank</span>
+                  {profile_data?.primary_address?.lng &&
+                  <span>{profile_data?.primary_address?.lng}</span> ||
+                  <span className={styles.profileFieldBlank}>blank</span>}
                 </li>
               </ul>
             </div>

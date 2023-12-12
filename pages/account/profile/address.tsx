@@ -57,8 +57,8 @@ const Account_Profile_Address: NextPage = (props: any) => {
         "state": formData.get("state"),
         "zipcode": formData.get("zipcode"),
         "hours": formData.get("hours"),
-        "lat": formData.get("latitude"),
-        "lng": formData.get("longitude"),
+        "lat": formData.get("lat"),
+        "lng": formData.get("lng"),
       },
       counties: {
         "palm_beach": formData.get("county_palmbeach") ? true : false,
@@ -126,12 +126,12 @@ const Account_Profile_Address: NextPage = (props: any) => {
         </div>
         <div className={styles.accountFields}>
           <label>Latitude</label>&emsp;
-          <input name="latitude" type="text" defaultValue={profile.primary_address?.lat} />
+          <input name="lat" type="text" defaultValue={profile.primary_address?.lat} />
           <small>Example: 26.122582</small>
         </div>
         <div className={styles.accountFields}>
           <label>Longitude</label>&emsp;
-          <input name="longitude" type="text" defaultValue={profile.primary_address?.lng} />
+          <input name="lng" type="text" defaultValue={profile.primary_address?.lng} />
           <small>Example: -80.137139</small>
         </div>
         <br />
