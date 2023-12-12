@@ -1,0 +1,243 @@
+.app {
+  min-height: 80vh;
+  padding: 40px 10px;
+}
+
+.app p {
+  margin: 0;
+}
+
+.app ul {
+  text-align: start;
+}
+
+.app td > * {
+  margin-bottom: 10px;
+}
+
+.header h2 {
+  color: var(--color-pana-pink, #fc2070);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.donationsContent {
+  display: flex;
+  justify-content: center;
+}
+
+.donateForm {
+  display: block;
+  flex: auto;
+  max-width: 810px;
+  padding: 20px;
+  background: #f7f7f7;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.donateForm h3 {
+  text-align: center;
+}
+
+.verticalBanner {
+  display: none; /*For now*/
+  max-width: 300px;
+  background-color: #f7f7f7;
+  margin-left: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.verticalBanner div {
+  width: fit-content;
+  margin: auto;
+}
+
+/*Mobile Tiers Table*/
+
+.mobileSubsTiers {
+  border-collapse: separate;
+  width: 100%;
+  margin-top: 20px;
+  border-spacing: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  color: white;
+  display: none;
+}
+
+.mobileSubsTiers td {
+  padding: 10px;
+  text-align: center;
+}
+
+.mobileSubsTiers tr:nth-of-type(1) {
+  background-color: var(--color-pana-blue);
+}
+
+.mobileSubsTiers tr:nth-of-type(2) {
+  background-color: var(--color-pana-yellow);
+}
+
+.mobileSubsTiers tr:nth-of-type(3) {
+  background-color: var(--color-pana-pink);
+}
+
+.mobileSubsTiers tr:nth-of-type(1) td {
+  border-radius: 10px 10px 0 0;
+}
+
+.mobileSubsTiers tr:nth-of-type(3) td {
+  border-radius: 0 0 10px 10px;
+}
+
+/* Desktop Tiers Table */
+
+.app td {
+  vertical-align: top;
+}
+
+.desktopSubsTiers {
+    border-collapse: separate;
+    text-align: center;
+    width: 100%;
+    border-spacing: 0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.desktopSubsTiers td:nth-of-type(1) {
+  border: 3px solid var(--color-pana-blue);
+  border-radius: 10px;
+  margin: 10px;
+}
+
+.desktopSubsTiers td:nth-of-type(2) {
+  border: 3px solid var(--color-pana-yellow);
+  border-radius: 10px;
+}
+
+.desktopSubsTiers td:nth-of-type(3) {
+  border: 3px solid var(--color-pana-pink);
+  border-radius: 10px;
+}
+
+.desktopSubsTiers td {
+  margin: 10px;
+  width: 33%;
+}
+
+.donationIntro {
+  display: flex;
+  align-items: center;
+}
+
+.donationIntro svg {
+  height: 32px;
+}
+
+.oneTime button, .submit button {
+  display: block;
+  margin: auto;
+}
+
+.submit button:hover {
+  border: solid 2px var(--hover-color);
+}
+
+.buttonGroup {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  overflow-wrap: anywhere;
+}
+
+.buttonGroup button {
+  width: 100%;
+  padding: 5px !important;
+}
+
+.donateButton {
+  background-color: #b5b5b5;
+  color: white;
+  width: 48%;
+  padding: 10px !important;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.donateButton:hover,
+.donateButtonActive {
+  background-color: var(--color-pana-navy);
+  color: white;
+  width: 48%;
+  padding: 10px !important;
+
+}
+
+.formGroup {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 15px;
+}
+
+.formGroup label {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+}
+
+.formGroup input,
+.formGroup textarea, .selectInput {
+  font-size: var(--base-font-size);
+  font-family: "Verdana", "sans-serif";
+  width: 100%;
+  margin: 0 5px;
+  padding: 0px;
+  padding-top: 10px !important;
+  padding-left: 10px;
+  background-color: transparent;
+  border: 0;
+  border-bottom: 2px solid var(--color-pana-pink, #fc2070);
+  color: #777;
+}
+
+.formGroup textarea {
+  width: 100%;
+}
+
+.formGroup input[type="checkbox"] {
+  width: fit-content;
+}
+
+.customAmountWrapper span {
+  margin-right: -20px;
+}
+
+@media only screen and (max-width: 678px) {
+  .donationsContent {
+    flex-wrap: wrap;
+  }
+
+  .mobileSubsTiers {
+    display: contents;
+  }
+
+  .desktopSubsTiers {
+    display: none;
+  }
+
+  .verticalBanner p {
+    max-width: 500px;
+    margin: 20px 0;
+  }
+
+  .buttonGroup {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
