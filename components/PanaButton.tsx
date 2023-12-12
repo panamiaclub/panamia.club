@@ -2,35 +2,41 @@ import Link from 'next/link';
 import styles from './PanaButton.module.css';
 
 interface PanaButtonProps {
-    text: string,
-    color?: string,
-    onClick?: Function,
-    href?: string
+    text: string;
+    color?: 'blue' | 'pink' | 'yellow' | 'navy' | 'gray';
+    hoverColor?: 'blue' | 'pink' | 'yellow' | 'navy' | 'gray';
+    onClick?: () => void;
+    href?: string;
+    type?: 'button' | 'submit' | 'reset';
+    disabled?: boolean;
+}
+interface CustomCSSProperties extends React.CSSProperties {
+    '--main-color'?: string;
+    '--hover-color'?: string;
 }
 
 export default function PanaButton(props: PanaButtonProps) {
+
     function handleClick() {
         if (props.onClick) {
             props.onClick()
         }
     }
+
+    const buttonColors: CustomCSSProperties = {
+        '--main-color': props.color ? `var(--color-pana-${props.color})` : "var(--color-pana-pink)",
+        '--hover-color': props.hoverColor ? `var(--color-pana-${props.hoverColor})` : "var(--color-pana-navy)",
+    };
+
     let button_class = styles.panaButton;
-    if (props.color === "blue") {
-        button_class = styles.panaButtonBlue;
-    }
-    if (props.color === "pink") {
-        button_class = styles.panaButtonPink;
-    }
-    if (props.color === "yellow") {
-        button_class = styles.panaButtonYellow;
-    }
+
     if (props.href) {
         return (
-            <Link href={props.href}><button className={button_class} onClick={handleClick}>{props.text}</button></Link>
+            <Link href={props.href}><button className={button_class} style={buttonColors} disabled={props.disabled} onClick={handleClick}>{props.text}</button></Link>
         );
     }
     return (
-        <button className={button_class} onClick={handleClick}>{props.text}</button>
+        <button type={props.type} className={button_class} style={buttonColors} disabled={props.disabled} onClick={handleClick}>{props.text}</button>
     );
 
 }

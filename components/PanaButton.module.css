@@ -1,40 +1,25 @@
-.panaButton, .panaButtonBlue, .panaButtonPink, .panaButtonYellow{
+.panaButton {
     margin: 0 .5rem;
     font-size: var(--base-font-size);
     letter-spacing: 1px;
     padding:.5rem 1.5rem;
-    background-color: black;
+    background: linear-gradient(90deg, var(--main-color) 0%, var(--main-color) 100%);
     color: white;
     font-weight: 700;
     border-radius: 2rem;
-    border:2px solid black;
+    border: 2px solid black;
+    border: 2px solid var(--main-color);
     cursor: pointer;
 }
 
-.panaButtonBlue{
-    background-color: var(--color-pana-blue);
-    border-color: var(--color-pana-blue);
-    background: linear-gradient(90deg, var(--color-pana-blue) 0%, var(--color-pana-blue) 100%);
+.panaButton:hover {
+    background: linear-gradient(90deg, var(--hover-color) 0%, var(--hover-color) 100%);
+    background-color: var(--hover-color);
+    border: 2px solid white;
 }
-.panaButtonPink{
-    background-color: var(--color-pana-pink);
-    border-color: var(--color-pana-pink);
-    background: linear-gradient(90deg, var(--color-pana-pink) 0%, var(--color-pana-pink) 100%);
-    background-size: 300% 300%;
-}
-.panaButtonYellow{
-    background-color: var(--color-pana-yellow);
-    border-color: var(--color-pana-yellow);
-    background: linear-gradient(90deg, var(--color-pana-yellow) 0%, var(--color-pana-yellow) 100%);
-}
-
-.panaButtonBlue:hover, .panaButtonPink:hover, .panaButtonYellow:hover{
-    border-color: white;
-}
-
 
 @media only screen and (max-width: 600px) {
-    .panaButton, .panaButtonBlue, .panaButtonPink, .panaButtonYellow{
+    .panaButton{
         font-size: var(--mobile-font-size);
     }
 }

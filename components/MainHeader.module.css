@@ -4,6 +4,10 @@
     display: contents;
 }
 
+.panaButton button {
+    order: 3 !important;
+}
+
 .burger {
     display: none;
     /* border: 2px solid #fff; */
@@ -135,7 +139,7 @@
     border:2px solid #444;
     border-radius:4px;
     padding: 1rem;
-    background-color: var(--color-bg-light);
+    background-color: var(--color-pana-light);
     color: #444;
     font-size: var(--mobile-font-size);
 }

@@ -9,6 +9,7 @@ import styles from './MainHeader.module.css';
 import CallToActionBar from './CallToActionBar';
 import { getUserSession } from '../lib/user_management';
 import PanaLogo from './PanaLogo';
+import PanaButton from './PanaButton';
 
 // https://www.a11ymatters.com/pattern/mobile-nav/
 
@@ -163,7 +164,11 @@ export default function MainHeader() {
                     }
                     {!session &&
                         <div className={styles.sessionButton}>
-                            <Link href="/api/auth/signin">Sign In</Link>
+                            <PanaButton
+                        text="Sign In"
+                        color="blue"
+                        hoverColor='blue'
+                        href="/api/auth/signin" />
                         </div>
                     }
                 </nav>
