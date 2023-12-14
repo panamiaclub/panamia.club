@@ -2,7 +2,8 @@ import Link from 'next/link';
 import styles from './PanaButton.module.css';
 
 interface PanaButtonProps {
-    text: string;
+    children?: React.ReactNode,
+    text?: string;
     color?: 'blue' | 'pink' | 'yellow' | 'navy' | 'gray';
     hoverColor?: 'blue' | 'pink' | 'yellow' | 'navy' | 'gray';
     onClick?: () => void;
@@ -32,11 +33,11 @@ export default function PanaButton(props: PanaButtonProps) {
 
     if (props.href) {
         return (
-            <Link href={props.href}><button className={button_class} style={buttonColors} disabled={props.disabled} onClick={handleClick}>{props.text}</button></Link>
+            <Link href={props.href}><button className={button_class} style={buttonColors} disabled={props.disabled} onClick={handleClick}>{props.text}{props.children}</button></Link>
         );
     }
     return (
-        <button type={props.type} className={button_class} style={buttonColors} disabled={props.disabled} onClick={handleClick}>{props.text}</button>
+        <button type={props.type} className={button_class} style={buttonColors} disabled={props.disabled} onClick={handleClick}>{props.text}{props.children}</button>
     );
 
 }

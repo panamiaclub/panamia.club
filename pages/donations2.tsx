@@ -94,11 +94,20 @@ const DonatePage: React.FC = () => {
           <div className={styles.donationsContent}>
             <form onSubmit={handleSubmit} className={styles.donateForm}>
               <div>
-                <h3>BECOME A GENTE DE PANA!</h3>
+                <h3>Support Our Club</h3>
                 <div className={styles.donationIntro}>
-                  <IconPlant size={40} stroke={1.5} />
-                  <span>Empower youth & nourish community with your monthly gift of:</span>
+                  <p>Pana MIA Club works hard towards our vision for a unified 
+                    local SoFlo community everyday. We know we can do it with your help! You can 
+                    support us by funding our mission with a one-time donation or by joining our 
+                    community of supporters called Gente dePana! Our Gente dePana subscribers are 
+                    the foundation of Pana MIA's sustainability, monthly contributions allow us 
+                    to make bigger strides in our projects to support the local community. In 
+                    return, our Gente are rewarded with so many benefits, discounts and perks 
+                    that give you special access to all things Pana!</p>
                 </div>
+                <br />
+                <p><strong>If you're committed to supporting the local South Florida community, 
+                    become a Gente de Pana!</strong></p>
               </div>
               <br />
               <table className={styles.mobileSubsTiers}>
@@ -115,9 +124,10 @@ const DonatePage: React.FC = () => {
                         type="button"
                         dropdown={
                           <ul>
-                            <li>Access to exclusive content (video + newsletter)</li>
-                            <li>5% discount on events</li>
-                            <li>10% discount on merch</li>
+                            <li>Access to exclusive video + newsletter content (PanaVizión & LeoLero)</li>
+                            <li>Access to PanaPro features on Pana MIA's website</li>
+                            <li>5% discount on Pana MIA and affiliated events</li>
+                            <li>10% discount on Pana MIA merch</li>
                           </ul>
                         }
                         onClick={() => { setAmount(10); setIsRecurring(true); }}
@@ -136,9 +146,11 @@ const DonatePage: React.FC = () => {
                         type="button"
                         dropdown={
                           <ul>
-                            <li>Access to exclusive content (video + newsletter)</li>
-                            <li>10% discount on merch</li>
-                            <li>10% discount on merch</li>
+                            <li>Access to exclusive video + newsletter content (PanaVizión & LeoLero)</li>
+                            <li>Access to PanaPro features on Pana MIA's website</li>
+                            <li>Gente dePana Card (discounts/special access to local goods,services,events)</li>
+                            <li>10% discount on Pana MIA and affiliated events</li>
+                            <li>10% discount on Pana MIA merch</li>
                           </ul>
                         }
                         onClick={() => { setAmount(15); setIsRecurring(true); }}
@@ -156,12 +168,14 @@ const DonatePage: React.FC = () => {
                         type="button"
                         dropdown={
                           <ul>
-                            <li>Access to exclusive content (video + newsletter)</li>
-                            <li>1st access to new developments in our organization</li>
-                            <li>Focus Group pool</li>
-                            <li>1 free ticket a month</li>
-                            <li>10% discount on merch</li>
-                            <li>Free stickers?</li>
+                            <li>Access to exclusive video + newsletter content (PanaVizión & LeoLero)</li>
+                            <li>Access to PanaPro features on Pana MIA's website</li>
+                            <li>Gente dePana Card (discounts/special access to local goods,services,events)</li>
+                            <li>First to know about Pana MIA developments</li>
+                            <li>Invited into our Focus group pool to test new products</li>
+                            <li>1 free ticket a month to select Pana MIA and affiliated events</li>
+                            <li>10% discount on Pana MIA and affiliated events</li>
+                            <li>10% discount on Pana MIA merch</li>
                           </ul>
                         }
                         onClick={() => { setAmount(25); setIsRecurring(true); }}
@@ -176,9 +190,8 @@ const DonatePage: React.FC = () => {
                   <tr>
                     <td>
                       <IconMedal size={64} stroke={1.5} color={'#4ab3ea'} />
-                      <p><b>TIER 1</b></p>
+                      <p><b>dePana</b></p>
                       <hr style={{ border: 'none', height: '1px', backgroundColor: '#4ab3ea' }} />
-                      <p>Sponsor a kid for a FunkyTown field trip.</p><br />
                       <PanaButton
                         text="Donate $10/mo"
                         color={(monthlyTier == 1 && isRecurring) ? "navy" : "gray"}
@@ -187,16 +200,16 @@ const DonatePage: React.FC = () => {
                         onClick={() => { setAmount(10); setIsRecurring(true); }}
                       />
                       <ul>
-                        <li>Access to exclusive content (video + newsletter)</li>
-                        <li>5% discount on events</li>
-                        <li>10% discount on merch</li>
+                        <li>Access to exclusive video + newsletter content (PanaVizión & LeoLero)</li>
+                        <li>Access to PanaPro features on Pana MIA's website</li>
+                        <li>5% discount on Pana MIA and affiliated events</li>
+                        <li>10% discount on Pana MIA merch</li>
                       </ul>
                     </td>
                     <td>
                       <IconTrophy size={64} stroke={1.5} color='#fab22c' />
-                      <p><b>TIER 2</b></p>
+                      <p><b>Pana Confiado</b></p>
                       <hr style={{ border: 'none', height: '1px', backgroundColor: '#fab22c' }} />
-                      <p>Cover the cost of one family to participate in a cooking workshop.</p>
                       <PanaButton
                         text="Donate $15/mo"
                         color={(monthlyTier == 2 && isRecurring) ? "navy" : "gray"}
@@ -205,16 +218,17 @@ const DonatePage: React.FC = () => {
                         onClick={() => { setAmount(15); setIsRecurring(true); }}
                       />
                       <ul>
-                        <li>Access to exclusive content (video + newsletter)</li>
-                        <li>10% discount on merch</li>
-                        <li>10% discount on merch</li>
+                        <li>Access to exclusive video + newsletter content (PanaVizión & LeoLero)</li>
+                        <li>Access to PanaPro features on Pana MIA's website</li>
+                        <li>Gente dePana Card (discounts/special access to local goods,services,events)</li>
+                        <li>10% discount on Pana MIA and affiliated events</li>
+                        <li>10% discount on Pana MIA merch</li>
                       </ul>
                     </td>
                     <td>
                       <IconCrown size={64} stroke={1.5} color='#fc2070' />
-                      <p><b>TIER 3</b></p>
+                      <p><b>Pana Real</b></p>
                       <hr style={{ border: 'none', height: '1px', backgroundColor: '#fc2070' }} />
-                      <p>Host a Community Chef Cooking Demo at the Cowtown Farmer's Market.</p>
                       <PanaButton
                         text="Donate $25/mo"
                         color={(monthlyTier == 3 && isRecurring) ? "navy" : "gray"}
@@ -223,12 +237,14 @@ const DonatePage: React.FC = () => {
                         onClick={() => { setAmount(25); setIsRecurring(true); }}
                       />
                       <ul>
-                        <li>Access to exclusive content (video + newsletter)</li>
-                        <li>1st access to new developments in our organization</li>
-                        <li>Focus Group pool</li>
-                        <li>1 free ticket a month</li>
-                        <li>10% discount on merch</li>
-                        <li>Free stickers?</li>
+                        <li>Access to exclusive video + newsletter content (PanaVizión & LeoLero)</li>
+                        <li>Access to PanaPro features on Pana MIA's website</li>
+                        <li>Gente dePana Card (discounts/special access to local goods,services,events)</li>
+                        <li>First to know about Pana MIA developments</li>
+                        <li>Invited into our Focus group pool to test new products</li>
+                        <li>1 free ticket a month to select Pana MIA and affiliated events</li>
+                        <li>10% discount on Pana MIA and affiliated events</li>
+                        <li>10% discount on Pana MIA merch</li>
                       </ul>
                     </td>
                   </tr>

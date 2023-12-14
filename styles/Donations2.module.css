@@ -241,3 +241,109 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+
+.gridCheck{
+  display: inline-block;
+  transform: scale(2);
+}
+
+.gridNotCheck{
+  display: inline-block;
+  transform: scale(1.5);
+}
+
+.donationCompareTable{
+  font-size: 16px;
+}
+.donationCompareTable th{
+  text-align: center;
+  text-wrap: nowrap;
+  padding: 1rem;
+  border-radius: 1rem 1rem 0 0;
+}
+.donationCompareTable td{
+  padding: 1rem 0.5rem;
+  border: 0;
+}
+.donationCompareTable tbody{
+  border-collapse: separate;
+  border: 2px solid #777;
+}
+.donationCompareTable tbody tr:first-child td{
+  border-top: 2px solid #777;
+}
+.donationCompareTable tbody tr:last-child td{
+  border-bottom: 2px solid #777;
+}
+.donationCompareTable tbody td:first-child{
+  border-left: 2px solid #777;
+}
+.donationCompareTable tbody td:last-child{
+  border-right: 2px solid #777;
+}
+.donationCompareTable td:nth-child(1){
+  border-bottom: 1px solid #EEE;
+}
+
+.donationCompareTable td:nth-child(2), .donationCompareTable th:nth-child(2){
+  text-align: center;
+  color: white;
+  background-color: var(--color-pana-blue);
+}
+
+.donationCompareTable td:nth-child(3), .donationCompareTable th:nth-child(3){
+  text-align: center;
+  color: white;
+  background-color: var(--color-pana-yellow);
+}
+.donationCompareTable td:nth-child(4), .donationCompareTable th:nth-child(4){
+  text-align: center;
+  color: white;
+  background-color: var(--color-pana-pink);
+}
+.formAmountFields{
+  display: flex;
+  justify-content: space-between;
+}
+.donationForm small{
+  color: #777;
+}
+.donationForm input[type="number"]{
+  width:100%;
+  padding: 0.5rem;
+  font-size: 24px;
+}
+.donationForm input[type="text"], .donationForm input[type="email"]{
+  width:100%;
+  padding: 0.5rem;
+  font-size: var(--base-font-size);
+}
+.donationForm [type="radio"]{
+  transform: scale(1.5);
+}
+.donationForm [type="checkbox"]{
+  transform: scale(1.5);
+}
+.donationForm textarea, .donationForm select{
+  width:100%;
+  padding: 0.5rem;
+  font-size: var(--base-font-size);
+}
+.tierBadge span{
+  color: white;
+  font-weight: 700;
+  padding: 0.5rem;
+  display: block;
+  margin: auto;
+  border-radius: 14px;
+}
+.tier1Badge{
+  background-color: var(--color-pana-blue);
+}
+.tier2Badge{
+  background-color: var(--color-pana-yellow);
+}
+.tier3Badge{
+  background-color: var(--color-pana-pink);
+}

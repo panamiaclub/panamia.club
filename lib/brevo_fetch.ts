@@ -2,7 +2,7 @@ const apiKey = process.env.BREVO_APIKEY || ""
 const base_url = "https://api.brevo.com/v3"
 const sender_email = process.env.BREVO_SENDEREMAIL || ""
 const sender_name = process.env.BREVO_SENDERNAME || "PanaMia Club"
-const test_receiver = 'jeremy.l.downs@gmail.com'
+const test_receiver = 'hola@panamia.club'
 
 // JDowns: The official SDK triggered lots of errors so I
 // uninstalled and am fetching the API directly
