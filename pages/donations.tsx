@@ -7,7 +7,6 @@ import DropDownBtn from '../components/DropDownBtn';
 import PanaButton from '../components/PanaButton';
 
 const stripePublicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 const preAmounts = [25, 40, 100, 250, 500, 1000, 2500];
 const monthPreAmounts = [10, 15, 25];
 
@@ -93,6 +92,7 @@ const DonatePage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
     if (!stripePromise) {
       console.error('Stripe is not properly initialized');
       return;
@@ -151,71 +151,41 @@ const DonatePage: React.FC = () => {
                   <tr>
                     <td>
                       <IconMedal size={64} stroke={1.5} />
-                      <p><b>TIER 1</b></p>
-                      <p>Sponsor a kid for a FunkyTown field trip.</p>
-                      <DropDownBtn
-                        title="Donate $10/mo"
-                        color={(monthlyTier == 1 && isRecurring) ? "navy" : "gray"}
-                        hoverColor="navy"
-                        type="button"
-                        dropdown={
-                          <ul>
-                            <li>Access to exclusive video + newsletter content (PanaVizión & LeoLero)</li>
-                            <li>Access to PanaPro features on Pana MIA's website</li>
-                            <li>5% discount on Pana MIA and affiliated events</li>
-                            <li>10% discount on Pana MIA merch</li>
-                          </ul>
-                        }
-                        onClick={() => { setAmount(10); setIsRecurring(true); }}
-                      />
+                      <p><b>dePana</b></p>
+                      <ul>
+                        <li>Access to exclusive video + newsletter content (PanaVizión & LeoLero)</li>
+                        <li>Access to PanaPro features on Pana MIA's website</li>
+                        <li>5% discount on Pana MIA and affiliated events</li>
+                        <li>10% discount on Pana MIA merch</li>
+                      </ul>
                     </td>
                   </tr>
                   <tr>
                     <td>
                       <IconTrophy size={64} stroke={1.5} />
-                      <p><b>TIER 2</b></p>
-                      <p>Cover the cost of one family to participate in a cooking workshop.</p>
-                      <DropDownBtn
-                        title="Donate $15/mo"
-                        color={(monthlyTier == 2 && isRecurring) ? "navy" : "gray"}
-                        hoverColor="navy"
-                        type="button"
-                        dropdown={
-                          <ul>
-                            <li>Access to exclusive video + newsletter content (PanaVizión & LeoLero)</li>
-                            <li>Access to PanaPro features on Pana MIA's website</li>
-                            <li>Gente dePana Card (discounts/special access to local goods,services,events)</li>
-                            <li>10% discount on Pana MIA and affiliated events</li>
-                            <li>10% discount on Pana MIA merch</li>
-                          </ul>
-                        }
-                        onClick={() => { setAmount(15); setIsRecurring(true); }}
-                      />
+                      <p><b>Pana Confiado</b></p>
+                      <ul className={styles.mobileTierDetails}>
+                        <li>Access to exclusive video + newsletter content (PanaVizión & LeoLero)</li>
+                        <li>Access to PanaPro features on Pana MIA's website</li>
+                        <li>Gente dePana Card (discounts/special access to local goods,services,events)</li>
+                        <li>10% discount on Pana MIA and affiliated events</li>
+                        <li>10% discount on Pana MIA merch</li>
+                      </ul>
                     </td>
                   </tr><tr>
                     <td>
                       <IconCrown size={64} stroke={1.5} />
-                      <p><b>TIER 3</b></p>
-                      <p>Host a Community Chef Cooking Demo at the Cowtown Farmer's Market.</p>
-                      <DropDownBtn
-                        title="Donate $25/mo"
-                        color={(monthlyTier == 3 && isRecurring) ? "navy" : "gray"}
-                        hoverColor="navy"
-                        type="button"
-                        dropdown={
-                          <ul>
-                            <li>Access to exclusive video + newsletter content (PanaVizión & LeoLero)</li>
-                            <li>Access to PanaPro features on Pana MIA's website</li>
-                            <li>Gente dePana Card (discounts/special access to local goods,services,events)</li>
-                            <li>First to know about Pana MIA developments</li>
-                            <li>Invited into our Focus group pool to test new products</li>
-                            <li>1 free ticket a month to select Pana MIA and affiliated events</li>
-                            <li>10% discount on Pana MIA and affiliated events</li>
-                            <li>10% discount on Pana MIA merch</li>
-                          </ul>
-                        }
-                        onClick={() => { setAmount(25); setIsRecurring(true); }}
-                      />
+                      <p><b>Pana Real</b></p>
+                      <ul>
+                        <li>Access to exclusive video + newsletter content (PanaVizión & LeoLero)</li>
+                        <li>Access to PanaPro features on Pana MIA's website</li>
+                        <li>Gente dePana Card (discounts/special access to local goods,services,events)</li>
+                        <li>First to know about Pana MIA developments</li>
+                        <li>Invited into our Focus group pool to test new products</li>
+                        <li>1 free ticket a month to select Pana MIA and affiliated events</li>
+                        <li>10% discount on Pana MIA and affiliated events</li>
+                        <li>10% discount on Pana MIA merch</li>
+                      </ul>
                     </td>
                   </tr>
                 </tbody>
@@ -290,58 +260,58 @@ const DonatePage: React.FC = () => {
                   </tr>
                 </tbody>
               </table>
-              <br /><br />
-              <h3>Select Your Donation</h3>
-              <p style={{textAlign: "center"}}>
-                Select an option below or enter a custom donation amount
-              </p>
-              <div>
-                <br />
-                <p><strong>Recurring Donation</strong></p>
-                <br />
-                <PanaButton
-                    color={(monthlyTier == 1 && isRecurring) ? "blue" : "blue"}
-                    hoverColor="navy"
-                    onClick={() => { setAmount(10); setIsRecurring(true); }}
-                  ><IconMedal size="20" /> $10/monthly</PanaButton>
-                <PanaButton
-                    color={(monthlyTier == 1 && isRecurring) ? "yellow" : "yellow"}
-                    hoverColor="navy"
-                    onClick={() => { setAmount(15); setIsRecurring(true); }}
-                  ><IconTrophy size="20" /> $15/monthly</PanaButton>
-                <PanaButton
-                    color={(monthlyTier == 1 && isRecurring) ? "pink" : "pink"}
-                    hoverColor="navy"
-                    onClick={() => { setAmount(25); setIsRecurring(true); }}
-                  ><IconCrown size="20" /> $25/monthly</PanaButton>
-              </div>
-              <div>
-                <br />
-                <p><strong>One-Time Donation</strong></p>
-                <br />
-                {preAmounts.map((presetAmount) => (
+              
+              <div className={styles.formAmountSelections}>
+                <h3>Select Your Donation</h3>
+                <p style={{textAlign: "center"}}>
+                  Select an option below or enter a custom donation amount
+                </p>
+                <div>
+                  <br />
+                  <p><strong>Recurring Donation</strong></p>
+                  <br />
+                  <PanaButton
+                      color={(monthlyTier == 1 && isRecurring) ? "navy" : "navy"}
+                      hoverColor="navy"
+                      onClick={() => { setAmount(10); setIsRecurring(true); }}
+                    ><span className={styles.buttonBadgeBlue}><IconMedal size="18" /></span>&nbsp;$10/month</PanaButton>
+                  <PanaButton
+                      color={(monthlyTier == 2 && isRecurring) ? "navy" : "navy"}
+                      hoverColor="navy"
+                      onClick={() => { setAmount(15); setIsRecurring(true); }}
+                    ><span className={styles.buttonBadgeYellow}><IconTrophy size="18" /></span>&nbsp;$15/month</PanaButton>
+                  <PanaButton
+                      color={(monthlyTier == 3 && isRecurring) ? "navy" : "navy"}
+                      hoverColor="navy"
+                      onClick={() => { setAmount(25); setIsRecurring(true); }}
+                    ><span className={styles.buttonBadgePink}><IconCrown size="18" /></span>&nbsp;$25/month</PanaButton>
+                </div>
+                <div>
+                  <br />
+                  <p><strong>One-Time Donation</strong></p>
+                  <br />
+                  {preAmounts.map((presetAmount) => (
+                      <PanaButton
+                        text={"$" + presetAmount}
+                        key={presetAmount}
+                        color="navy"
+                        hoverColor="navy"
+                        type="button"
+                        onClick={() => {setAmount(presetAmount);setIsRecurring(false)}}
+                      />
+                    ))} 
                     <PanaButton
-                      text={"$" + presetAmount}
-                      key={presetAmount}
-                      color="navy"
+                      text="Custom"
+                      color="gray"
                       hoverColor="navy"
                       type="button"
-                      onClick={() => {setAmount(presetAmount);setIsRecurring(false)}}
+                      onClick={() => {focusCustomAmountInput();setIsRecurring(false)}}
                     />
-                  ))}
-                  <br /><br />
-                  <PanaButton
-                    text="Other"
-                    color="gray"
-                    hoverColor="navy"
-                    type="button"
-                    onClick={focusCustomAmountInput}
-                  />
+                </div>
               </div>
-              <br /><br />
               <div className={styles.donationForm}>
                 <div className={styles.formAmountFields}>
-                  <div>
+                  <div style={{maxWidth: "125px"}}>
                     <label>Amount:</label>
                     <input
                       ref={customAmountInputRef}
@@ -362,8 +332,8 @@ const DonatePage: React.FC = () => {
                       onChange={(e) => setIsRecurring(e.target.checked)}
                       />
                   </div>
-                  <div>
-                  <label>Subscription</label><br />
+                  <div style={{width: "200px"}}>
+                    <label>Subscription</label><br />
                     <TierBadge tier={monthlyTier} />
                   </div>
                 </div>
@@ -387,10 +357,9 @@ const DonatePage: React.FC = () => {
                     defaultValue=""
                     onChange={(e) => setDedicate(e.target.value)}
                   >
-                    <option value="">-- No Dedication --</option>
-                    <option value="PanaVisión">PanaVisión</option>
+                    <option value="">- No Dedication -</option>
                     <option value="Directory">Directory</option>
-                    <option value="Merch Shop">Merch Shop</option>
+                    <option value="Other">Other (please describe)</option>
                   </select>
                   </div>
                   <br />

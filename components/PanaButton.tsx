@@ -37,7 +37,7 @@ export default function PanaButton(props: PanaButtonProps) {
         );
     }
     return (
-        <button type={props.type} className={button_class} style={buttonColors} disabled={props.disabled} onClick={handleClick}>{props.text}{props.children}</button>
+        <button type={props.type ? props.type : "button"} className={button_class} style={buttonColors} disabled={props.disabled} onClick={handleClick}>{props.text}{props.children}</button>
     );
 
 }
