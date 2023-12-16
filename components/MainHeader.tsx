@@ -17,7 +17,7 @@ const menu_items = [
     {id:"home", link: "/", label: "Home", icon: "" },
     {id:"about", link: "/about-us", label: "About"},
     {id:"links", link: "/links", label: "Links"},
-    {id:"donations", link: "/donations", label: "Donate", special: false},
+    {id:"donations", link: "/donate", label: "Donate", special: false},
 ];
 
 // {id:"event", link: "https://shotgun.live/events/serotonin-dipity-mini-fest", label: "EVENT!", special: true},

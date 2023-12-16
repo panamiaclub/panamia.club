@@ -39,7 +39,7 @@
     "react-responsive-carousel": "^3.2.23",
     "react-spinners": "^0.13.8",
     "react-svg": "^15.1.16",
-    "stripe": "^14.5.0",
+    "stripe": "^14.9.0",
     "yarn": "^1.22.19"
   },
   "devDependencies": {

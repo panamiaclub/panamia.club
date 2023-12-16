@@ -8,7 +8,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export default async function createCheckoutSession(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     try {
-      const { amount, isRecurring, customerEmail, comment } = req.body;
+      const { amount, isRecurring, customerEmail, comment, dedicate, monthlyTier } = req.body;
+      const tier = monthlyTier ? monthlyTier : 0;
+      const dedicated_to = dedicate ? dedicate : "";
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [{
@@ -23,11 +25,13 @@ export default async function createCheckoutSession(req: NextApiRequest, res: Ne
           quantity: 1,
         }],
         mode: isRecurring ? 'subscription' : 'payment',
-        success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${req.headers.origin}/donations2`,
+        success_url: `${req.headers.origin}/donation/confirmation?tier=${tier}&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${req.headers.origin}/donate`,
         customer_email: customerEmail,
         metadata: {
           comment: comment,
+          dedicated_to: dedicated_to,
+          membership: tier,
         },
       });
 

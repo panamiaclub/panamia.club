@@ -106,7 +106,9 @@ const DonatePage: React.FC = () => {
         amount: amount * 100,
         isRecurring,
         customerEmail: email,
+        dedicate,
         comment,
+        monthlyTier
       }),
     });
     const { sessionId } = await response.json();
@@ -141,11 +143,9 @@ const DonatePage: React.FC = () => {
                     return, our Gente are rewarded with so many benefits, discounts and perks 
                     that give you special access to all things Pana!</p>
                 </div>
-                <br />
                 <p><strong>If you're committed to supporting the local South Florida community, 
                     become a Gente de Pana!</strong></p>
               </div>
-              <br />
               <table className={styles.mobileSubsTiers}>
                 <tbody>
                   <tr>
@@ -267,9 +267,7 @@ const DonatePage: React.FC = () => {
                   Select an option below or enter a custom donation amount
                 </p>
                 <div>
-                  <br />
                   <p><strong>Recurring Donation</strong></p>
-                  <br />
                   <PanaButton
                       color={(monthlyTier == 1 && isRecurring) ? "navy" : "navy"}
                       hoverColor="navy"
@@ -287,9 +285,7 @@ const DonatePage: React.FC = () => {
                     ><span className={styles.buttonBadgePink}><IconCrown size="18" /></span>&nbsp;$25/month</PanaButton>
                 </div>
                 <div>
-                  <br />
                   <p><strong>One-Time Donation</strong></p>
-                  <br />
                   {preAmounts.map((presetAmount) => (
                       <PanaButton
                         text={"$" + presetAmount}
