@@ -123,6 +123,11 @@ export interface UserInterface {
     email: String,
     name?: String,
     status?: UserStatusInterface,
+    affiliate: {
+        code: string,
+        tier: number,
+        points: number,
+    }
     alternate_emails?: [],
     createdAt: Date,
     updatedAt: Date,

@@ -33,6 +33,17 @@ export const forceString = (value: string | string[] | undefined, ifNaS: string)
     return value.toString(); 
 }
 
+export const randomFromItem = (item: any) => {
+    return item[Math.floor(Math.random()*item.length)];
+}
+
+export const generateAffiliateCode = () => {
+    const charList = "123456789ABCDEFGHJKMNPQRSTUVWXYZ" // no 0, O, I, L
+    let code = "";
+    Array.from(Array(10)).forEach(() => {code = `${code}${randomFromItem(charList)}`});
+    return code;
+}
+
 export const standardizeDateTime = function (value: Date | undefined) {
     if (value === undefined) {
         return "";

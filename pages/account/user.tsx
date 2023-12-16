@@ -13,6 +13,7 @@ import PageMeta from '@/components/PageMeta';
 import { getUserSession, saveUserSession } from '@/lib/user';
 import PanaButton from '@/components/PanaButton';
 import { standardizeDateTime } from '@/lib/standardized';
+import { UserInterface } from '@/lib/interfaces';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   return {
@@ -32,6 +33,7 @@ const Account_User: NextPage = () => {
   const [session_email, setSessionEmail] = useState("");
   const [session_zipCode, setSessionZipCode] = useState("");
   const [session_name, setSessionName] = useState("");
+  const [userData, setUserData] = useState({} as UserInterface);
   // from profile
   const [has_profile, setHasProfile] = useState(false);
   const [profile_name, setProfileName] = useState("");
@@ -44,6 +46,7 @@ const Account_User: NextPage = () => {
       setSessionEmail(userSession.email == null ? '' : userSession.email);
       setSessionZipCode(userSession.zip_code == null ? '' : userSession.zip_code);
       setSessionName(userSession.name == null ? '' : userSession.name);
+      setUserData(userSession);
     }
   }
 
@@ -156,6 +159,7 @@ const Account_User: NextPage = () => {
               <small>Used to personalize search results and site features.</small>
             </div>
             <PanaButton onClick={onUpdateClick} text="Update" color="blue" />
+            <div hidden>Affiliate Code: {userData?.affiliate?.code}</div>
           </div>
         </div>
       </main>

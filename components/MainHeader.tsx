@@ -180,7 +180,9 @@ export default function MainHeader() {
                             <span className={styles.userModalUser}>{session.user.email}</span>
                             <hr />
                             <ul>
-                                <li className={styles.adminLink} hidden={!isAdmin}><Link href="/account/admin"><a><IconAlien height="16" width="16" />&nbsp;ADMIN</a></Link></li>
+                                { isAdmin &&
+                                <li className={styles.adminLink}><Link href="/account/admin"><a><IconAlien height="16" width="16" />&nbsp;ADMIN</a></Link></li>
+                                }
                                 <li><Link href="/account/user"><a><IconSettings height="16" width="16" />&nbsp;Account</a></Link></li>
                                 <li><Link href="/api/auth/signout"><a><IconLogout height="16" width="16" />&nbsp;Sign Out</a></Link></li>
                             </ul>

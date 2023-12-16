@@ -6,6 +6,7 @@ import { authOptions } from "./auth/[...nextauth]";
 
 import dbConnect from "./auth/lib/connectdb";
 import user from "./auth/lib/model/user";
+import { uniqueAffiliateCode } from "@/lib/server/user";
 
 interface ResponseData {
   error?: string;
@@ -51,6 +52,11 @@ export default async function handler(
         role: "user",
         locked: null,
       },
+      affiliate: {
+        code: await uniqueAffiliateCode(),
+        tier: 0,
+        points: 0,
+      },
       alternate_emails: [],
       zipCode: null,
     })
@@ -58,6 +64,16 @@ export default async function handler(
     .then(() =>
       { return res.status(200).json({ success: true, data: newUser }) }
     )
+  }
+  if (existingUser.affiliate && Object.keys(existingUser.affiliate).length === 0) {
+    existingUser.set("affiliate", {
+      code: await uniqueAffiliateCode(),
+      tier: 0,
+      points: 0,
+    }, { strict: false });
+    console.log("existingUser", existingUser)
+    await existingUser.save();
+    console.log("existingUser.save()", existingUser)
   }
   return res.status(200).json({ success: true, data: existingUser });
 }
