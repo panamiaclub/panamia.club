@@ -307,7 +307,7 @@ const DonatePage: React.FC = () => {
               </div>
               <div className={styles.donationForm}>
                 <div className={styles.formAmountFields}>
-                  <div style={{maxWidth: "125px"}}>
+                  <div>
                     <label>Amount:</label>
                     <input
                       ref={customAmountInputRef}
@@ -328,7 +328,7 @@ const DonatePage: React.FC = () => {
                       onChange={(e) => setIsRecurring(e.target.checked)}
                       />
                   </div>
-                  <div style={{width: "200px"}}>
+                  <div>
                     <label>Subscription</label><br />
                     <TierBadge tier={monthlyTier} />
                   </div>

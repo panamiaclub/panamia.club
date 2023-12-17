@@ -322,13 +322,9 @@
 .formAmountFields{
   display: flex;
   justify-content: space-between;
-  flex-basis: 250px auto 250px;
+  flex-basis: fit-content;
 }
-@media only screen and (max-width: 600px) {
-  .formAmountFields{
-    flex-basis: 125px auto 250px;
-  }
-}
+
 .donationForm small{
   color: #777;
 }
@@ -393,6 +389,16 @@
   transform: scale(2) translateX(-0.5rem);
   border-radius: 1rem 0 0 1rem;
   padding: 0 0.25rem 0 0.5rem;
+}
+@media only screen and (max-width: 600px) {
+  .formAmountFields{
+    flex-basis: auto;
+    flex-wrap: wrap;
+  }
+  .formAmountFields input[type="number"]{
+    width: 125px;
+    margin-bottom: 1rem;
+  }
 }
 
 .confirmationHeader{
