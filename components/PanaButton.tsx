@@ -3,20 +3,33 @@ import styles from './PanaButton.module.css';
 
 interface PanaButtonProps {
     children?: React.ReactNode,
-    text?: string,
-    color?: string,
-    onClick?: Function,
-    href?: string,
-    disabled?: Boolean,
-    submit?: Boolean,
+    
+    text?: string;
+    color?: 'blue' | 'pink' | 'yellow' | 'navy' | 'gray' | 'light';
+    hoverColor?: 'blue' | 'pink' | 'yellow' | 'navy' | 'gray';
+    onClick?: Function;
+    href?: string;
+    type?: 'button' | 'submit' | 'reset';
+    disabled?: boolean;
+}
+interface CustomCSSProperties extends React.CSSProperties {
+    '--main-color'?: string;
+    '--hover-color'?: string;
 }
 
 export default function PanaButton(props: PanaButtonProps) {
+
     function handleClick() {
         if (props.onClick) {
             props.onClick()
         }
     }
+
+    const buttonColors: CustomCSSProperties = {
+        '--main-color': props.color ? `var(--color-pana-${props.color})` : "var(--color-pana-pink)",
+        '--hover-color': props.hoverColor ? `var(--color-pana-${props.hoverColor})` : "var(--color-pana-navy)",
+    };
+
     let button_class = styles.panaButton;
     if (props.color === "blue") {
         button_class = styles.panaButtonBlue;
@@ -45,11 +58,10 @@ export default function PanaButton(props: PanaButtonProps) {
     return (
         <button 
             className={button_class} 
-            type={props.submit ? "submit" : "button"}
+            type={props.type ? props.type : "button"}
             disabled={props.disabled ? true : false}
             onClick={handleClick}>
             {props.text}{props.children}
         </button>
-    );
-
+    )
 }
