@@ -128,7 +128,7 @@ const Account_User: NextPage = () => {
           { !has_profile &&
           <div id="pana-signup-bar">
             <div className={styles.accountProfileSignup}>
-              <p>Ready to Become a Pana? <Link href="/form/become-a-pana/">Create your profile</Link> to showcase your creative talents or business!</p>
+              <p>Ready to Become a Pana? <span style={{color:"#FA2F60 !important"}}><Link href="/form/become-a-pana/">Create your profile</Link></span> to showcase your creative talents or business!</p>
             </div>
           </div>
           }
