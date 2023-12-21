@@ -31,23 +31,12 @@ export default function PanaButton(props: PanaButtonProps) {
     };
 
     let button_class = styles.panaButton;
-    if (props.color === "blue") {
-        button_class = styles.panaButtonBlue;
-    }
-    if (props.color === "pink") {
-        button_class = styles.panaButtonPink;
-    }
-    if (props.color === "yellow") {
-        button_class = styles.panaButtonYellow;
-    }
-    if (props.color === "light") {
-        button_class = styles.panaButtonLight;
-    }
     if (props.href) {
         return (
             <Link href={props.href}>
                 <button 
-                    className={button_class} 
+                    className={button_class}
+                    style={buttonColors} 
                     disabled={props.disabled ? true : false}
                     onClick={handleClick}>
                     {props.text}{props.children}
@@ -58,6 +47,7 @@ export default function PanaButton(props: PanaButtonProps) {
     return (
         <button 
             className={button_class} 
+            style={buttonColors} 
             type={props.type ? props.type : "button"}
             disabled={props.disabled ? true : false}
             onClick={handleClick}>

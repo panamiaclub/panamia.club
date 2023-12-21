@@ -122,10 +122,6 @@ export const slugify = (value: string) => {
         .replace(/\s+/g, '-');
 }
 
-export const persistLocal = (key: string, value: any) => {
+export const truncateWithEllipsis = (value: string) => {
 
-}
-
-export const yieldLocal = (key: string) => {
-    
 }

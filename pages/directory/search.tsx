@@ -93,7 +93,7 @@ function SearchResults({data, isLoading}: {data: SearchResultsInterface[], isLoa
           <div className={styles.cardActions}>
             <>
             <Link href={`/profile/${item.slug}`}><a><IconUserCircle height="20" />View Profile</a></Link>&emsp;
-            <a href=""><IconHeart height="20" />Add to Favorites</a>
+            <a href=""><IconHeart height="20" />Follow</a>
             </>
             <div className={styles.cardlinks}>
               { socials?.website && 
@@ -317,7 +317,7 @@ const Directory_Search: NextPage = (props: any) => {
               </div>
             </article>
             <div className={styles.searchLoginCallout}>
-              <Link href="/signin"><a>Sign In</a></Link> to save <IconHeart height="20" color="red" fill="red" /> favorites and follow their updates! 
+              <Link href="/signin"><a>Sign In</a></Link> to follow <IconHeart height="20" color="red" fill="red" /> your favorite profiles and get notified about their updates! 
             </div>
           </section>
           <section className={styles.directoryReferrals}>
