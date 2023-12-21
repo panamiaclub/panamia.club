@@ -242,7 +242,7 @@ const Form_BecomeAPana: NextPage = () => {
                                 <PanaButton color="light" onClick={(e:any) => {setActivePage(2)}}>Previous</PanaButton>
                             </div>
                             <div className={styles.formPageActionsNext}>
-                                <PanaButton color="pink" >Next</PanaButton>
+                                <PanaButton color="pink" submit={true}>Next</PanaButton>
                             </div>
                         </div>
                     </form>
