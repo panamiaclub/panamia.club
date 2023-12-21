@@ -208,7 +208,7 @@ const Form_BecomeAPana: NextPage = () => {
                                 <PanaButton color="light" onClick={(e:any) => {setActivePage(1)}}>Previous</PanaButton>
                             </div>
                             <div className={styles.formPageActionsNext}>
-                                <PanaButton color="pink" submit={true}>Next</PanaButton>
+                                <PanaButton color="pink" type="submit">Next</PanaButton>
                             </div>
                         </div>
                     </form>
@@ -242,7 +242,7 @@ const Form_BecomeAPana: NextPage = () => {
                                 <PanaButton color="light" onClick={(e:any) => {setActivePage(2)}}>Previous</PanaButton>
                             </div>
                             <div className={styles.formPageActionsNext}>
-                                <PanaButton color="pink" submit={true}>Next</PanaButton>
+                                <PanaButton color="pink" type="submit">Next</PanaButton>
                             </div>
                         </div>
                     </form>
@@ -381,7 +381,7 @@ const Form_BecomeAPana: NextPage = () => {
                                 <PanaButton color="light" onClick={(e:any) => {setActivePage(5)}}>Previous</PanaButton>
                             </div>
                             <div className={styles.formPageActionsNext}>
-                                <PanaButton color="pink" submit={true}>Submit Form</PanaButton>
+                                <PanaButton color="pink" type="submit">Submit Form</PanaButton>
                             </div>
                         </div>
                     </form>

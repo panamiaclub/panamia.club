@@ -91,7 +91,7 @@ const Account_Profile_Address: NextPage = (props: any) => {
       <form className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>
         <div className={styles.accountFormActions}>
           <PanaButton href="/account/profile/edit"><IconArrowBackUp /> Back To Profile</PanaButton>
-          <PanaButton color="blue" submit={true} disabled={isLoading}><IconDeviceFloppy /> Save Changes</PanaButton>
+          <PanaButton color="blue" type="submit" disabled={isLoading}><IconDeviceFloppy /> Save Changes</PanaButton>
         </div>
         <fieldset className={styles.profileFieldset}>
           <legend>Primary Picture</legend>

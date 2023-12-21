@@ -280,7 +280,7 @@ const Form_BecomeAPana: NextPage = () => {
                     <small>Example (The Dancing Elephant): Spiritual/Metaphysical, Books, Bookstore, Retail Shop</small>
                 </p>
                 <p className={styles.formSubmitFields}>
-                    <PanaButton text="&emsp;Submit Form&emsp;" color="pink" submit={true} />
+                    <PanaButton text="&emsp;Submit Form&emsp;" color="pink" type="submit" />
                 </p>
             </form>
         </section>

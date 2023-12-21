@@ -174,7 +174,7 @@ const Account_Profile_Contact: NextPage = (session_user) => {
               </ul>
             </div>
             <div className={styles.accountFields}>
-              <PanaButton color="blue" submit={true}>Update</PanaButton>
+              <PanaButton color="blue" type="submit">Update</PanaButton>
             </div>
           </form>
         </div>

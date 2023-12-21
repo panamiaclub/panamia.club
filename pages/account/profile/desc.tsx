@@ -100,7 +100,7 @@ const Account_Profile_Desc: NextPage = (props: any) => {
         </div>
         
         <div className={styles.accountFields}>
-          <PanaButton color="blue" submit={true} disabled={isLoading}>Update</PanaButton>
+          <PanaButton color="blue" type="submit" disabled={isLoading}>Update</PanaButton>
         </div>
       </form>
       </div>

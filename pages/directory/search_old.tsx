@@ -231,7 +231,7 @@ const SearchFormAndList = () => {
             className={styles.searchField}
             placeholder="Search Pana Mia" role="searchbox" />
             <div className={styles.searchButton} title="Click to search!">
-              <PanaButton color="blue" submit={true}><span className="sr-only">Click to Search</span><IconSearch height="20" /></PanaButton>
+              <PanaButton color="blue" type="submit"><span className="sr-only">Click to Search</span><IconSearch height="20" /></PanaButton>
             </div>
           </fieldset>
         </form>

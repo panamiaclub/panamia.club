@@ -98,7 +98,7 @@ const Form_ContactUs: NextPage = () => {
                     <br />
                 </p>
                 <p className={styles.formSubmitFields}>
-                    <PanaButton text="&emsp;Submit Form&emsp;" color="pink" submit={true} />
+                    <PanaButton text="&emsp;Submit Form&emsp;" color="pink" type="submit"/>
                 </p>
             </form>
           </section>

@@ -183,7 +183,7 @@ const Account_Profile_Categories: NextPage = (props: any) => {
           </ul>
         </div>
         <div className={styles.accountFields}>
-          <PanaButton color="blue" submit={true} disabled={isLoading}>Update</PanaButton>
+          <PanaButton color="blue" type="submit" disabled={isLoading}>Update</PanaButton>
         </div>
       </form>
       </div>
