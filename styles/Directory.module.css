@@ -94,12 +94,13 @@
     justify-content: center;
 }
 .searchField{
-    padding: 0.5rem 1rem;
+    padding: 0.7rem 1rem;
     border-radius: 2rem;
     width: 100%;
 }
 .searchButton{
     margin-left: -5rem;
+    margin-top: 0.4rem;
 }
 .searchBody{
     min-height:75vh;
