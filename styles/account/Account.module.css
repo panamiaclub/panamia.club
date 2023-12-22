@@ -39,6 +39,33 @@
     margin-bottom: 1rem;
 }
 
+
+.affiliateBar{
+    display: flex;
+    border: 1px solid var(--color-pana-orange);
+}
+.affiliateBarHighlight{
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: white;
+    background: linear-gradient(60deg, var(--color-pana-yellow) 0%, var(--color-pana-orange) 45%, var(--color-pana-yellow) 100%);
+}
+.affiliateBarCode{
+    padding: 0.5rem 1rem;
+}
+.affiliateBarPoints{
+    padding: 0.5rem 1rem;
+    margin-left: auto;
+}
+.affiliateBarStatus{
+    display: block;
+    text-align: right;
+    color: #777;
+    padding: 0.25rem 0;
+    margin-bottom: 1rem;
+}
+
 .accountFormActions{
     display: flex;
     justify-content: space-between;

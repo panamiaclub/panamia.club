@@ -123,8 +123,11 @@ export interface UserInterface {
     email: String,
     name?: String,
     status?: UserStatusInterface,
+    zip_code?: String,
     affiliate: {
+        activated: boolean,
         code: string,
+        accepted_tos: Date,
         tier: number,
         points: number,
     }

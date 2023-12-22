@@ -44,7 +44,7 @@ export default async function handler(
   }
   const existingUser = await getUserByEmail(email);
   if (!existingUser) {
-    // console.log("getSessionUser:existingUser", existingUser);
+    console.log("getSessionUser:newUser");
     const newUser =  new user({
       email: email,
       name: session.user?.name,
@@ -53,7 +53,9 @@ export default async function handler(
         locked: null,
       },
       affiliate: {
+        activated: false,
         code: await uniqueAffiliateCode(),
+        accepted_tos: null,
         tier: 0,
         points: 0,
       },
@@ -65,15 +67,18 @@ export default async function handler(
       { return res.status(200).json({ success: true, data: newUser }) }
     )
   }
-  if (existingUser.affiliate && Object.keys(existingUser.affiliate).length === 0) {
+  
+  if (existingUser && 
+    (typeof existingUser.affiliate === "undefined" || Object.keys(existingUser.affiliate).length === 0)
+    ) {
     existingUser.set("affiliate", {
+      activated: false,
       code: await uniqueAffiliateCode(),
+      accepted_tos: null,
       tier: 0,
       points: 0,
     }, { strict: false });
-    console.log("existingUser", existingUser)
     await existingUser.save();
-    console.log("existingUser.save()", existingUser)
   }
   return res.status(200).json({ success: true, data: existingUser });
 }

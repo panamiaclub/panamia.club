@@ -41,7 +41,7 @@ export const generateAffiliateCode = () => {
     const charList = "123456789ABCDEFGHJKMNPQRSTUVWXYZ" // no 0, O, I, L
     let code = "";
     Array.from(Array(10)).forEach(() => {code = `${code}${randomFromItem(charList)}`});
-    return code;
+    return `CP${code}`;
 }
 
 export const standardizeDateTime = function (value: Date | undefined) {

@@ -5,7 +5,7 @@ import { authOptions } from "../api/auth/[...nextauth]";
 import { useSession } from 'next-auth/react';
 import { useEffect, useState, FormEvent } from 'react';
 import axios from 'axios';
-import { IconEdit } from '@tabler/icons';
+import { IconCopy, IconEdit, IconUser } from '@tabler/icons';
 import Link from 'next/link';
 
 import styles from '@/styles/account/Account.module.css';
@@ -27,6 +27,16 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
   }
 }
 
+function copyAffiliateLink(code: string) {
+  const permissionName = "clipboard-write" as PermissionName;
+  navigator.permissions.query({name: permissionName}).then((result) => {
+    if (result.state === "granted" || result.state === "prompt") {
+      navigator.clipboard.writeText(`https://panamia.club/affiliate?code=${code}`);
+      alert('Copied to clipboard');
+    }
+  });
+}
+
 const Account_User: NextPage = () => {
   const { data: session } = useSession();
   // from session
@@ -36,6 +46,7 @@ const Account_User: NextPage = () => {
   const [userData, setUserData] = useState({} as UserInterface);
   // from profile
   const [has_profile, setHasProfile] = useState(false);
+  const [has_affiliate, setHasAffilate] = useState(false);
   const [profile_name, setProfileName] = useState("");
   const [profile_status, setProfileStatus] = useState("");
   const [profile_status_date, setProfileStatusDate] = useState("");
@@ -47,29 +58,10 @@ const Account_User: NextPage = () => {
       setSessionZipCode(userSession.zip_code == null ? '' : userSession.zip_code);
       setSessionName(userSession.name == null ? '' : userSession.name);
       setUserData(userSession);
+      if (userData?.affiliate?.activated) {
+        setHasAffilate(true);
+      }
     }
-  }
-
-  const updateUserSession = async() => {
-    const response = await saveUserSession({
-      name: session_name,
-      zip_code: session_zipCode,
-    });
-    console.log("updateUserSession:response", response);
-  }
-
-  function onZipCodeChange(e: FormEvent) {
-    const zipCodeChange = (e.target as HTMLInputElement).value
-    if (e.target) setSessionZipCode(zipCodeChange);
-  }
-
-  function onNameChange(e: FormEvent) {
-    const nameChange = (e.target as HTMLInputElement).value
-    if (e.target) setSessionName(nameChange);
-  }
-
-  function onUpdateClick(e: FormEvent) {
-    updateUserSession();
   }
 
   async function loadProfile() {
@@ -114,7 +106,23 @@ const Account_User: NextPage = () => {
       <main className={styles.app}>
         <PageMeta title="User Account Settings" desc="" />
         <div className={styles.main}>
-          <h2 className={styles.accountTitle}>Update Your Account Settings</h2>
+          <h2 className={styles.accountTitle}>User Account</h2>
+          <br />
+          <fieldset className={styles.profileFieldset}>
+            <legend><IconUser /> Account Info</legend>
+            <div className={styles.profileEditLink}>
+              <Link href="/account/user/edit"><a><IconEdit height="20" /> Edit</a></Link>
+            </div>
+            <div className={styles.profileFields}>
+              <label>Email:</label>&emsp;<span>{userData?.email}</span>
+            </div>
+            <div className={styles.profileFields}>
+              <label>Name/Nickname:</label>&emsp;<span>{userData?.name}</span>
+            </div>
+            <div className={styles.profileFields}>
+              <label>Zip Code:</label>&emsp;<span>{userData?.zip_code}</span>
+            </div>
+          </fieldset>
           { has_profile &&
           <div id="pana-profile-bar">
             <div className={styles.accountProfileBar}>
@@ -132,35 +140,21 @@ const Account_User: NextPage = () => {
             </div>
           </div>
           }
-          <div className={styles.accountForm}>
-            <div className={styles.accountFields}>
-              <label>Email:</label><br />
-              <input type="text" value={session_email} readOnly disabled />
-              <small>You can't change your signed-in email address.</small>
+          { userData?.affiliate?.activated &&
+          <div id="pana-affiliate-bar">
+            <div className={styles.affiliateBar}>
+              <div className={styles.affiliateBarHighlight}>ComPana</div>
+              <div className={styles.affiliateBarCode}>{userData?.affiliate?.code}&nbsp;
+                <button onClick={(e) => {copyAffiliateLink(userData.affiliate.code)}}>
+                  <IconCopy height="18" />Share Link
+                </button>
+              </div>
+              <div className={styles.affiliateBarPoints}>{userData?.affiliate?.points ? userData.affiliate.points : "0"}&nbsp;points</div>
+              <div className={styles.affiliateBarView}></div>
             </div>
-            <div className={styles.accountFields}>
-              <label>Name/Nickname:</label><br />
-              <input 
-                type="text" 
-                value={session_name} 
-                maxLength={60}
-                autoComplete='name'
-                onChange={onNameChange} />
-              <small>Used for contact emails and notices.</small>
-            </div>
-            <div className={styles.accountFields}>
-              <label>Zip Code:</label><br />
-              <input 
-                type="text" 
-                value={session_zipCode} 
-                maxLength={10}
-                autoComplete='postal-code'
-                onChange={onZipCodeChange} />
-              <small>Used to personalize search results and site features.</small>
-            </div>
-            <PanaButton onClick={onUpdateClick} text="Update" color="blue" />
-            <div hidden>Affiliate Code: {userData?.affiliate?.code}</div>
           </div>
+          }
+          
         </div>
       </main>
     )
