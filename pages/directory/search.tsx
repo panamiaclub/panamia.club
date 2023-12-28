@@ -14,7 +14,7 @@ import { forceInt, serialize } from '@/lib/standardized';
 import PageMeta from '@/components/PageMeta';
 import { countyList, profileCategoryList } from '@/lib/lists';
 import { directorySearchKey, useSearch, SearchResultsInterface } from '@/lib/query/directory';
-import { getGeoPosition } from '@/lib/geolocation';
+import { calcDistance, getGeoPosition } from '@/lib/geolocation';
 
 function getSearchParams(q: any) {
   const pageNum = q.p ? forceInt(q.p as string, 1) : 1;
@@ -54,7 +54,7 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
   }
 }
 
-function SearchResults({data, isLoading}: {data: SearchResultsInterface[], isLoading: boolean}) {
+function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[], isLoading: boolean, params: any}) {
   console.log("data", data, "isLoading", isLoading)
   if (isLoading === true) {
     return (
@@ -81,6 +81,13 @@ function SearchResults({data, isLoading}: {data: SearchResultsInterface[], isLoa
 
   const searchResults = data.map((item: SearchResultsInterface, index: number) => {
     const socials = item.socials as ProfileSocialsInterface;
+    const lat = (item?.geo?.coordinates) ? item.geo.coordinates[1] : null;
+    const lng = (item?.geo?.coordinates) ? item.geo.coordinates[0] : null;
+    let distance = 0;
+    if (params?.geolat && params?.geolng && lat && lng) {
+      distance = calcDistance(params.geolat, params.geolng, lat, lng);
+    }
+
     return (
       <article key={index} className={styles.profileCard}>
         <div className={styles.profileCardImage}>
@@ -90,7 +97,12 @@ function SearchResults({data, isLoading}: {data: SearchResultsInterface[], isLoa
           <div className={styles.cardName}>{item.name}</div>
           <div className={styles.cardFiveWords}>{item.five_words}</div>
           { item?.primary_address?.city && 
-            <div className={styles.cardLocation}><IconMapPin height="20" />{item.primary_address.city}</div>
+            <div className={styles.cardLocation}>
+              <IconMapPin height="20" />{item.primary_address.city}
+              { distance > 0 && 
+                <small>&nbsp;{distance.toFixed(2)} miles away</small>
+              }
+              </div>
           }
           <div className={styles.cardDetails}>{item.details}</div>
           <div className={styles.cardActions}>
@@ -321,7 +333,7 @@ const Directory_Search: NextPage = (props: any) => {
               </div>
           </section>
           <section className={styles.searchBody}>
-            <SearchResults data={data ? data : []} isLoading={isLoading} />
+            <SearchResults data={data ? data : []} isLoading={isLoading} params={params} />
     
             <article className={styles.profileCardSignup}>
               <div className={styles.profileCardImage}>

@@ -19,6 +19,9 @@ export interface SearchResultsInterface {
     slug: String,
     details: String,
     five_words: String,
+    geo: {
+        coordinates?: Array<2>
+    },
     primary_address?: { city?: String },
     socials: {},
 }

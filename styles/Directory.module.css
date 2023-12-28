@@ -172,6 +172,9 @@
 .cardLocation{
     font-style: italic;
 }
+.cardLocation small{
+    color: #777;
+}
 
 .cardDetails{
     padding: 0.5rem 0;

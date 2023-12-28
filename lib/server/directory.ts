@@ -39,6 +39,16 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
           "path": "geo"
         }
       }
+      geoFilter = {} // Avoid GeoWithin for now
+      const geoFilter2 = {
+        '$geoNear' : {
+          key: 'geo',
+          near: { type: 'Point', coordinates: [ lng, lat ] },
+          distanceField: 'geonear.distance',
+          maxDistance: 1610 * 50, // metersinmile x miles
+          includeLocs: 'geonear.location',
+        }
+      }
     }
     // console.log("geoFilter", geoFilter)
 
@@ -142,6 +152,8 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
             }
           }
         }, {
+          '$limit': pageLimit
+        }, {
           '$project': {
             'name': 1,
             'slug': 1, 
@@ -149,12 +161,11 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
             'five_words': 1, 
             'details': 1, 
             'primary_address.city': 1,
+            'geo': 1,
             'score': {
               '$meta': 'searchScore'
             }
           }
-        }, {
-          '$limit': pageLimit
         }
         ];
 
