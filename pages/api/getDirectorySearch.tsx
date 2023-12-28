@@ -4,8 +4,6 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "./auth/[...nextauth]";
 
 import dbConnect from "./auth/lib/connectdb";
-import user from "./auth/lib/model/user";
-import profile from "./auth/lib/model/profile";
 import { forceInt, forceString } from "@/lib/standardized";
 import { getSearch } from "@/lib/server/directory";
 
@@ -46,6 +44,8 @@ export default async function handler(
   const random = forceString(rq?.random, "") ? true : false;
   const filterLocations = forceString(rq?.floc, "");
   const filterCategories = forceString(rq?.floc, "");
+  const geolat = forceString(rq?.geolat, "");
+  const geolng = forceString(rq?.geolng, "");
   
   if (!searchTerm && !random) {
     return res.status(200).json({ success: true, data: [], pagination: {} });
@@ -53,7 +53,7 @@ export default async function handler(
 
   if (searchTerm) {
     const params = { pageNum, pageLimit, searchTerm, 
-      filterLocations, filterCategories, random}
+      filterLocations, filterCategories, random, geolat, geolng}
     const offset = (pageLimit * pageNum) - pageLimit;
 
     const apiResponse = await getSearch(params)

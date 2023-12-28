@@ -45,6 +45,15 @@ export default async function handler(
 
   const existingProfile = await getProfileByEmail(email);
   if (existingProfile) {
+    if (primary_address.lat && primary_address.lng) {
+      // https://www.mongodb.com/docs/manual/geospatial-queries/#std-label-geospatial-geojson
+      // MongoDB requires Longitude then Latitude in float
+      existingProfile.set(
+        "geo",
+        { type: "Point", coordinates: [ parseFloat(primary_address.lng), parseFloat(primary_address.lat) ] },
+        { strict: false }
+      );
+    }
     existingProfile.primary_address = primary_address;
     existingProfile.counties = counties;
     try {

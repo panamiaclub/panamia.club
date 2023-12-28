@@ -32,6 +32,7 @@ const profileSchema = new Schema(
         counties: {},
         categories: {},
         primary_address: {},
+        geo: {},
         locations: [],
         images: {},
         linked_profiles: [],

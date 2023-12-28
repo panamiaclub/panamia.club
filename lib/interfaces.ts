@@ -88,6 +88,7 @@ export interface ProfileInterface {
     counties: CountyInterface,
     categories: CategoryInterface,
     primary_address: AddressInterface,
+    geo: {},
     locations: [],
     images?: ProfileImagesInterface,
     linked_profiles: [],

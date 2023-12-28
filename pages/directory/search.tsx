@@ -14,17 +14,19 @@ import { forceInt, serialize } from '@/lib/standardized';
 import PageMeta from '@/components/PageMeta';
 import { countyList, profileCategoryList } from '@/lib/lists';
 import { directorySearchKey, useSearch, SearchResultsInterface } from '@/lib/query/directory';
+import { getGeoPosition } from '@/lib/geolocation';
 
 function getSearchParams(q: any) {
   const pageNum = q.p ? forceInt(q.p as string, 1) : 1;
   const pageLimit = q.l ? forceInt(q.l as string, 20) : 20;
   const searchTerm = q.q ? q.q as string : "";
   const random = q.random ? true : false;
-  const geo =  q.geo ? true : false;
+  const geolat =  q.geolat ? q.geolat : null;
+  const geolng =  q.geolng ? q.geolng : null;
   const filterLocations = q.floc ? q.floc as string : "";
   const filterCategories = q.fcat ? q.fcat as string : "";
 
-  return { pageNum, pageLimit, searchTerm, geo,
+  return { pageNum, pageLimit, searchTerm, geolat, geolng,
     filterLocations, filterCategories, random}
 }
 
@@ -129,6 +131,7 @@ const Directory_Search: NextPage = (props: any) => {
   const router = useRouter();
   const params = getSearchParams(router.query);
   console.log("client:params", params);
+  const geo_toggle = (params.geolat && params.geolng) ? true : false;
   const { data, isLoading, refetch } = useSearch(params);
 
   function submitSearchForm(e: FormEvent, formData: FormData) {
@@ -165,12 +168,20 @@ const Directory_Search: NextPage = (props: any) => {
     // console.log(window.location.search);
   }
 
-  function applyGeo(e: FormEvent, formData: FormData) {
+  const applyGeo = async (e: FormEvent) => {
     e.preventDefault();
-    const geo_toggle = formData.get("geo_toggle") ? "1" : "0";
+    const geo_toggle = document.getElementById('geo_toggle') as HTMLInputElement;
     const params = new URLSearchParams(window.location.search);
-    params.set("geo", geo_toggle);
-    router.push(`/directory/search/?${params}`);
+    if (geo_toggle.checked) {
+      const location = await getGeoPosition();
+      params.set("geolat", location.coords.latitude);
+      params.set("geolng", location.coords.longitude);
+      router.push(`/directory/search/?${params}`);
+    } else {
+      params.delete("geolat");
+      params.delete("geolng");
+      router.push(`/directory/search/?${params}`);
+    }
   }
 
   function useFiltersModal(e:any) {
@@ -266,9 +277,11 @@ const Directory_Search: NextPage = (props: any) => {
                   <small><FiltersStatus /></small>
                 </button>
                 <dialog id="dialog-search-filters" className={styles.filtersModal}>
-                  <form onSubmit={(e) => {applyFilters(e, new FormData(e.currentTarget))}}>
                   <div className={styles.filtersLocation}>
-                    <label><input type="checkbox" name="geo_toggle" /><IconCurrentLocation height="20" />&nbsp;Use my Location</label>
+                    <label>
+                      <input id="geo_toggle" type="checkbox" checked={geo_toggle} onChange={(e: any) => {applyGeo(e)}} />
+                      <IconCurrentLocation height="20" />&nbsp;Use my Location
+                    </label>
                     <br /><br />
                     <strong><IconMap height="20" />&nbsp;Location</strong><br />
                     {countyList && 
@@ -281,6 +294,7 @@ const Directory_Search: NextPage = (props: any) => {
                       })
                     }
                   </div>
+                  <form onSubmit={(e) => {applyFilters(e, new FormData(e.currentTarget))}}>
                   <div className={styles.filtersCategory}>
                     <strong><IconCategory height="20" />&nbsp;Category</strong><br />
                     {profileCategoryList && 

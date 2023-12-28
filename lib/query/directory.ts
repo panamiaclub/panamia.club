@@ -8,6 +8,8 @@ interface SearchInterface {
     filterLocations: string,
     filterCategories: string,
     random: boolean,
+    geolat: number,
+    geolng: number,
 }
 
 export interface SearchResultsInterface {

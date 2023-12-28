@@ -9,12 +9,38 @@ interface SearchInterface {
     filterLocations: string,
     filterCategories: string,
     random: boolean,
+    geolat: string,
+    geolng: string,
 }
 
 export const getSearch = async ({ pageNum, pageLimit, searchTerm, 
-    filterLocations, filterCategories, random}: SearchInterface) => {
-        console.log("getSearch");
+    filterLocations, filterCategories, random, geolat, geolng}: SearchInterface) => {
+    
+    console.log("getSearch");
     await dbConnect();
+    console.log("geolat", geolat);
+    console.log("geolng", geolng);
+
+    // https://www.mongodb.com/docs/manual/reference/operator/aggregation/geoNear/
+    // https://www.mongodb.com/docs/manual/geospatial-queries/#std-label-geospatial-geojson
+    let geoFilter = {};
+    if (geolat && geolng) {
+      const lat = parseFloat(geolat);
+      const lng = parseFloat(geolng);
+      geoFilter = {
+        "geoWithin": {
+          "circle": {
+            "center": {
+              "type": "Point",
+              "coordinates": [ lng, lat ]
+            },
+            "radius": 1610 * 25, // metersinmile x miles
+          },
+          "path": "geo"
+        }
+      }
+    }
+    // console.log("geoFilter", geoFilter)
 
     if (random) {
         const randomList = await profile.aggregate([{ '$sample': { 'size': pageLimit } }]);
@@ -79,6 +105,7 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
               'should': [
                 ...(Object.keys(locsFilter).length !== 0 ? [locsFilter] : []),
                 ...(Object.keys(catsFilter).length !== 0 ? [catsFilter] : []),
+                ...(Object.keys(geoFilter).length !== 0 ? [geoFilter] : []),
                 {
                   'text': {
                     'query': searchTerm, 
@@ -131,7 +158,7 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
         }
         ];
 
-      // console.log(aggregateQuery[0]['$search']['compound']);
+      console.log(aggregateQuery[0]);
       const aggregateList = await profile.aggregate(aggregateQuery);
       if (aggregateList) {
         // console.log(aggregateList);
