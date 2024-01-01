@@ -34,8 +34,8 @@ const Profile_Public: NextPage = () => {
   const router = useRouter();
   const handle = router.query.handle as string;
   const queryClient = useQueryClient();
-  const [coords, setCoords] = useState<[number, number]>();
   const defaultCoords:[number, number] = [25.761681, -80.191788];
+  const [coords, setCoords] = useState<[number, number]>(defaultCoords);
 
   const { data, isLoading } = useQuery({
     queryKey: [ profilePublicQueryKey, { handle }],
@@ -94,21 +94,20 @@ const Profile_Public: NextPage = () => {
 
   const getCoords = async(address: string) => {
     if(!data.geo.coordinates){
-      //  const url = "https://geocode.maps.co/search?q=" + address + "&api_key=" + process.env.NEXT_PUBLIC_GEOCODING_API_KEY;
-      //  const res = await fetch(url);
+       const url = "https://geocode.maps.co/search?q=" + address + "&api_key=" + process.env.NEXT_PUBLIC_GEOCODING_API_KEY;
+       const res = await fetch(url);
 
-      // if (!res.ok) {
-      //   console.error("something went wrong, check your console.");
-      //   return;
-      // }
+      if (!res.ok) {
+        console.error("something went wrong, check your console.");
+        return;
+      }
 
-      // const response = await res.json();
-      // console.log(response);
+      const response = await res.json();
+      console.log(response);
     }else{
       console.log(data.geo.coordinates[1], data.geo.coordinates[0]);
       console.log('geo coords')
-  
-      return ([data.geo.coordinates[1], data.geo.coordinates[0]]);
+      setCoords([data.geo.coordinates[1], data.geo.coordinates[0]])
     }
   }
 
@@ -117,7 +116,8 @@ const Profile_Public: NextPage = () => {
       const addr = getHumanReadableAddress(data.primary_address);
       getCoords(addr);
     }
-  }, [coords])
+  }, [])
+
 
 
   if (!data) {
