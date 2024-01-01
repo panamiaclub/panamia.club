@@ -10,6 +10,8 @@ import { fetchPublicProfile, profilePublicQueryKey } from '@/lib/query/profile';
 import { serialize } from '@/lib/standardized';
 import { AddressInterface, ProfileImagesInterface, ProfileSocialsInterface } from '@/lib/interfaces';
 import Link from 'next/link';
+import { GeoJson, Map, Marker } from "pigeon-maps"
+import { useState, useEffect } from 'react';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   const handle = context.query.handle as string;
@@ -32,6 +34,8 @@ const Profile_Public: NextPage = () => {
   const router = useRouter();
   const handle = router.query.handle as string;
   const queryClient = useQueryClient();
+  const [coords, setCoords] = useState<[number, number]>();
+  const defaultCoords:[number, number] = [25.761681, -80.191788];
 
   const { data, isLoading } = useQuery({
     queryKey: [ profilePublicQueryKey, { handle }],
@@ -80,6 +84,41 @@ const Profile_Public: NextPage = () => {
     const address = `${a.street1}+${a.street2}+${a.city}+${a.state}+${a.zipcode}`
     return `${baseUrl}${plus(address)}`
   }
+
+  const getHumanReadableAddress = (a: AddressInterface) => {
+    console.log('address:');
+    console.log(a);
+    const address = `${a.street1}+${a.street2}+${a.city}+${a.state}+${a.zipcode}`
+    return address;
+  }
+
+  const getCoords = async(address: string) => {
+    if(!data.geo.coordinates){
+      //  const url = "https://geocode.maps.co/search?q=" + address + "&api_key=" + process.env.NEXT_PUBLIC_GEOCODING_API_KEY;
+      //  const res = await fetch(url);
+
+      // if (!res.ok) {
+      //   console.error("something went wrong, check your console.");
+      //   return;
+      // }
+
+      // const response = await res.json();
+      // console.log(response);
+    }else{
+      console.log(data.geo.coordinates[1], data.geo.coordinates[0]);
+      console.log('geo coords')
+  
+      return ([data.geo.coordinates[1], data.geo.coordinates[0]]);
+    }
+  }
+
+  useEffect( () => {
+    if(data && data.primary_address){
+      const addr = getHumanReadableAddress(data.primary_address);
+      getCoords(addr);
+    }
+  }, [coords])
+
 
   if (!data) {
     return (
@@ -159,18 +198,28 @@ const Profile_Public: NextPage = () => {
           <div className={styles.profileCard}>
             <h3>Location</h3>
             <div className={styles.profileInfoSplit}>
-              <div className={styles.profileInfo}>
+              <div className={styles.profileInfo} style={{width:"30%"}}>
                 <div>
-                  <label>Address</label>
-                  <div>{data.primary_address?.street1} {data.primary_address?.street2}</div>
-                  <div>{data.primary_address?.city} {data.primary_address?.state} {data.primary_address?.zipcode}</div>
-                  <Link href={directionsFromAddress(data.primary_address)}><a><IconMap2 height="20" /> Get Directions</a></Link>
-                </div>
+                    <label>Hours</label>
+                    <div>{data.primary_address?.hours}</div>
+                  </div>
               </div>
-              <div className={styles.profileInfo}>
+              <div className={styles.profileInfo}  style={{width:"70%"}}>
                 <div>
-                  <label>Hours</label>
-                  <div>{data.primary_address?.hours}</div>
+                  <div style={{display:"flex"}}>
+                    <div style={{width:"50%"}}>
+                      <label style={{display:"block"}}>Address</label>
+                      <span>{data.primary_address?.street1} {data.primary_address?.street2}</span>
+                      <div>{data.primary_address?.city} {data.primary_address?.state} {data.primary_address?.zipcode}</div>
+                    </div>
+
+                    <div style={{width:"50%"}}>
+                      <Link href={directionsFromAddress(data.primary_address)}><a><IconMap2 height="20" /> Get Directions</a></Link>
+                    </div>
+                  </div>
+                  <Map height={300} defaultCenter={coords} defaultZoom={11}>
+                    <Marker width={50} anchor={coords} />
+                  </Map>
                 </div>
               </div>
             </div>
