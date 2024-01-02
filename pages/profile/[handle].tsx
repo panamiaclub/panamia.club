@@ -10,7 +10,7 @@ import { fetchPublicProfile, profilePublicQueryKey } from '@/lib/query/profile';
 import { serialize } from '@/lib/standardized';
 import { AddressInterface, ProfileImagesInterface, ProfileSocialsInterface } from '@/lib/interfaces';
 import Link from 'next/link';
-import { GeoJson, Map, Marker, ZoomControl } from "pigeon-maps"
+import { Map, Marker, ZoomControl } from "pigeon-maps"
 import { useState, useEffect } from 'react';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {

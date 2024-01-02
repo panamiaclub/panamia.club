@@ -48,7 +48,7 @@ const Account_Profile_Address: NextPage = (props: any) => {
 
   const clickSetCoordsFromAddress = async () => {
     console.log("clickSetCoordsFromAddress");
-    const AddressFormData = new FormData(document.getElementById('form_address') as HTMLFormElement);
+    const AddressFormData = new FormData(document.getElementById('address_form') as HTMLFormElement);
     const a = {
       "street1": AddressFormData.get("street1"),
       "street2": AddressFormData.get("street2"),
@@ -60,17 +60,35 @@ const Account_Profile_Address: NextPage = (props: any) => {
       alert("Please fill out a Street, City, State and Zipcode");
       return false;
     }
-    const address = `${a.street1}+${a.street2}+${a.city}+${a.state}+${a.zipcode}`
-    const url = `https://geocode.maps.co/search?q=${address}&api_key=${process.env.NEXT_PUBLIC_GEOCODING_API_KEY}`;
+    const address = `${a.street1} ${a.street2} ${a.city}, ${a.state} ${a.zipcode}`;
+    const apikey = process.env.NEXT_PUBLIC_POSITIONSTACK_APIKEY;
+    
+    const url = `http://api.positionstack.com/v1/forward?access_key=${apikey}&query=${address}`;
+    // const url = `https://geocode.maps.co/search?q=${address}&api_key=${process.env.NEXT_PUBLIC_GEOCODING_API_KEY}`;
     const res = await fetch(url);
 
     if (!res.ok) {
-      alert("We couldn't get your GeoLocation, check your address and try again")
+      alert("We couldn't get your GeoLocation, check your address and try again");
       return false;
     }
 
-    const geodata = await res.json();
+    const georesponse = await res.json();
+    const geodata = georesponse.data as Array<any>;
     console.log(geodata);
+    if (geodata.length == 0) {
+      alert("We couldn't find results for the address you entered");
+    }
+    const firstAddress = geodata[0];
+    if (firstAddress?.latitude && firstAddress.longitude) {
+      const latInput = document.getElementById('geo_lat') as HTMLInputElement;
+      latInput.value = firstAddress.latitude;
+      const lngInput = document.getElementById('geo_lng') as HTMLInputElement;
+      lngInput.value = firstAddress.longitude;
+      alert("Your Latitude and Longitude have been set, please save");
+      return true;
+    }
+    console.log("firstAddress", firstAddress);
+    alert("We couldn't find results for the address you entered [2]");
   }
 
   const submitForm = (e: FormEvent, formData: FormData) => {
