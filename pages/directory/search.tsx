@@ -3,9 +3,10 @@ import { NextRouter, useRouter } from 'next/router';
 import Link from 'next/link';
 import { IconUserCircle, IconHeart, IconExternalLink, IconBrandInstagram,
    IconBrandFacebook, IconForms, IconSearch, IconStar, IconFilter,
-  IconMap, IconLocation, IconCategory, IconMapPin, IconCurrentLocation} from '@tabler/icons';
+  IconMap, IconLocation, IconCategory, IconMapPin, IconCurrentLocation, IconList, IconSortDescending} from '@tabler/icons';
 import { QueryClient, dehydrate } from '@tanstack/react-query';
 import { FormEvent } from 'react';
+import classNames from 'classnames';
 
 import styles from '@/styles/Directory.module.css'
 import PanaButton from '@/components/PanaButton';
@@ -25,9 +26,10 @@ function getSearchParams(q: any) {
   const geolng =  q.geolng ? q.geolng : null;
   const filterLocations = q.floc ? q.floc as string : "";
   const filterCategories = q.fcat ? q.fcat as string : "";
+  const resultsView = q.v ? q.v as string : "list";
 
   return { pageNum, pageLimit, searchTerm, geolat, geolng,
-    filterLocations, filterCategories, random}
+    filterLocations, filterCategories, random, resultsView}
 }
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
@@ -155,6 +157,10 @@ const Directory_Search: NextPage = (props: any) => {
     router.push(`/directory/search/?${qs}`);
   }
 
+  function applyView(e: FormEvent) {
+
+  }
+
   function applyFilters(e: FormEvent, formData: FormData) {
     e.preventDefault();
     let selectedLoc: string[] = [];
@@ -275,12 +281,31 @@ const Directory_Search: NextPage = (props: any) => {
         </section>
         <div className={styles.allSearch}>
           <section className={styles.searchFilters}>
-            <div title="Click to get random results!">
+            <div className={styles.viewButtonGroup}>
+              <button className={params.resultsView == "list" ? classNames(styles.viewListButton, "active") : styles.viewListButton } 
+                title="Select to view search results as a List">
+                <IconList height="20" />
+              </button>
+              <button className={params.resultsView == "list" ? classNames(styles.viewMapButton, "active") : styles.viewMapButton }
+                title="Select to view search results as a Map">
+                <IconMap height="20" />
+              </button>
+              <button className={styles.nearbyButton}>
+                <IconCurrentLocation height="20" />
+                <span>Location:&nbsp;</span>
+                <small>off</small>
+              </button>
+            </div>
+            <div title="Click to get random results!" hidden>
               <PanaButton color="yellow" onClick={searchRandom}>
                 <IconStar height="20" />
                 <span className="sr-only">Click to get random results</span>
               </PanaButton>
             </div>
+            <label hidden>
+              <input id="geo_toggle" type="checkbox" checked={geo_toggle} onChange={(e: any) => {applyGeo(e)}} />
+              <IconCurrentLocation height="20" />&nbsp;Use my Location
+            </label>
             <div>
                 <button className={styles.filtersButton}
                 onClick={useFiltersModal}>
@@ -290,10 +315,7 @@ const Directory_Search: NextPage = (props: any) => {
                 </button>
                 <dialog id="dialog-search-filters" className={styles.filtersModal}>
                   <div className={styles.filtersLocation}>
-                    <label>
-                      <input id="geo_toggle" type="checkbox" checked={geo_toggle} onChange={(e: any) => {applyGeo(e)}} />
-                      <IconCurrentLocation height="20" />&nbsp;Use my Location
-                    </label>
+                    
                     <br /><br />
                     <strong><IconMap height="20" />&nbsp;Location</strong><br />
                     {countyList && 
@@ -323,13 +345,15 @@ const Directory_Search: NextPage = (props: any) => {
                   <PanaButton onClick={useFiltersModal}>Close</PanaButton>
                   </form>
                 </dialog>
-              </div>
-              <div hidden>
-                <button className={styles.filtersButton}>
-                  <IconCurrentLocation height="20" />
-                  <span>Nearby:&nbsp;</span>
-                  <small>off</small>
+                <button className={styles.filtersButton}
+                  onClick={useFiltersModal}>
+                  <IconSortDescending height="20" />
+                  <span>Sort:&nbsp;</span>
+                  <small></small>
                 </button>
+              </div>
+              <div>
+
               </div>
           </section>
           <section className={styles.searchBody}>

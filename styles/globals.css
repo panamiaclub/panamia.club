@@ -51,12 +51,6 @@ a:hover{
   background-color: #fc207063;
 }
 
-button {
-  padding: .5rem 1.25rem;
-  border-radius: 25px;
-  border: none;
-}
-
 .glass {
   backdrop-filter: blur( 3px );
 }

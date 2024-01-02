@@ -38,6 +38,24 @@
     display: flex;
     justify-content: space-between;
 }
+.viewListButton{
+    margin-right: 0;
+    border-radius: 25px 0 0 25px;
+    padding-right: 0.5rem;
+}
+.viewMapButton{
+    margin-left: 0;
+    border-radius: 0 25px 25px 0;
+    padding-left: 0.5rem;
+}
+.viewListButton:hover, .viewMapButton:hover{
+    cursor: pointer;
+    background-color: #444;
+    color: white;
+}
+.viewListButton.active, .viewMapButton.active{
+    background-color: var(--color-pana-blue);
+}
 
 .filtersButton{
     display: inline-block;

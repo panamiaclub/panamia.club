@@ -46,6 +46,33 @@ const Account_Profile_Address: NextPage = (props: any) => {
   const { data, isLoading, isError } = useProfile();
   const profile = (data as ProfileInterface);
 
+  const clickSetCoordsFromAddress = async () => {
+    console.log("clickSetCoordsFromAddress");
+    const AddressFormData = new FormData(document.getElementById('form_address') as HTMLFormElement);
+    const a = {
+      "street1": AddressFormData.get("street1"),
+      "street2": AddressFormData.get("street2"),
+      "city": AddressFormData.get("city"),
+      "state": AddressFormData.get("state"),
+      "zipcode": AddressFormData.get("zipcode"),
+    }
+    if (!(a.street1 && a.city && a.state && a.zipcode)) {
+      alert("Please fill out a Street, City, State and Zipcode");
+      return false;
+    }
+    const address = `${a.street1}+${a.street2}+${a.city}+${a.state}+${a.zipcode}`
+    const url = `https://geocode.maps.co/search?q=${address}&api_key=${process.env.NEXT_PUBLIC_GEOCODING_API_KEY}`;
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      alert("We couldn't get your GeoLocation, check your address and try again")
+      return false;
+    }
+
+    const geodata = await res.json();
+    console.log(geodata);
+  }
+
   const submitForm = (e: FormEvent, formData: FormData) => {
     e.preventDefault();
     formData.forEach((value, key) => console.log(key, value));
@@ -84,7 +111,7 @@ const Account_Profile_Address: NextPage = (props: any) => {
     <PageMeta title="Address | Edit Profile" desc="" />
     <div className={styles.main}>
       <h2 className={styles.accountTitle}>Profile - Edit Address and Geolocation</h2>
-      <form className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>
+      <form id="address_form" className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>
         <p>
           <Link href="/account/profile/edit"><a>Back to Profile</a></Link>
         </p>
@@ -123,15 +150,16 @@ const Account_Profile_Address: NextPage = (props: any) => {
           showing users their distance away from you. If you operate out of multiple areas,
           choose a central point among those areas. You can find this information through
           Google Maps, Apple Maps, or another mapping service.</p>
+          <a onClick={clickSetCoordsFromAddress}>Get GeoLocation using my address</a>
         </div>
         <div className={styles.accountFields}>
           <label>Latitude</label>&emsp;
-          <input name="lat" type="text" defaultValue={profile.primary_address?.lat} />
+          <input id="geo_lat" name="lat" type="text" defaultValue={profile.primary_address?.lat} />
           <small>Example: 26.122582</small>
         </div>
         <div className={styles.accountFields}>
           <label>Longitude</label>&emsp;
-          <input name="lng" type="text" defaultValue={profile.primary_address?.lng} />
+          <input id="geo_lng" name="lng" type="text" defaultValue={profile.primary_address?.lng} />
           <small>Example: -80.137139</small>
         </div>
         <br />

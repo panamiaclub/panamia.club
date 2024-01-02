@@ -10,7 +10,7 @@ import { fetchPublicProfile, profilePublicQueryKey } from '@/lib/query/profile';
 import { serialize } from '@/lib/standardized';
 import { AddressInterface, ProfileImagesInterface, ProfileSocialsInterface } from '@/lib/interfaces';
 import Link from 'next/link';
-import { GeoJson, Map, Marker } from "pigeon-maps"
+import { GeoJson, Map, Marker, ZoomControl } from "pigeon-maps"
 import { useState, useEffect } from 'react';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
@@ -41,6 +41,8 @@ const Profile_Public: NextPage = () => {
     queryKey: [ profilePublicQueryKey, { handle }],
     queryFn: () => fetchPublicProfile(handle),
   });
+
+  const profileCoords = data?.geo ? [data.geo.coordinates[1], data.geo.coordinates[0]] as [number, number] : null;
 
   function hasAddress(address: AddressInterface) {
     if (address?.street1 || address?.street2 || address?.city ||
@@ -74,7 +76,6 @@ const Profile_Public: NextPage = () => {
     dialog.close();
   }
 
-
   const plus = (s: string) => {
     return s.trim().replaceAll(" ","+");
   }
@@ -85,40 +86,9 @@ const Profile_Public: NextPage = () => {
     return `${baseUrl}${plus(address)}`
   }
 
-  const getHumanReadableAddress = (a: AddressInterface) => {
-    console.log('address:');
-    console.log(a);
-    const address = `${a.street1}+${a.street2}+${a.city}+${a.state}+${a.zipcode}`
-    return address;
+  const clickMarker = () => {
+    window.open(directionsFromAddress(data.primary_address));
   }
-
-  const getCoords = async(address: string) => {
-    if(!data.geo.coordinates){
-       const url = "https://geocode.maps.co/search?q=" + address + "&api_key=" + process.env.NEXT_PUBLIC_GEOCODING_API_KEY;
-       const res = await fetch(url);
-
-      if (!res.ok) {
-        console.error("something went wrong, check your console.");
-        return;
-      }
-
-      const response = await res.json();
-      console.log(response);
-    }else{
-      console.log(data.geo.coordinates[1], data.geo.coordinates[0]);
-      console.log('geo coords')
-      setCoords([data.geo.coordinates[1], data.geo.coordinates[0]])
-    }
-  }
-
-  useEffect( () => {
-    if(data && data.primary_address){
-      const addr = getHumanReadableAddress(data.primary_address);
-      getCoords(addr);
-    }
-  }, [])
-
-
 
   if (!data) {
     return (
@@ -217,12 +187,18 @@ const Profile_Public: NextPage = () => {
                       <Link href={directionsFromAddress(data.primary_address)}><a><IconMap2 height="20" /> Get Directions</a></Link>
                     </div>
                   </div>
-                  <Map height={300} defaultCenter={coords} defaultZoom={11}>
-                    <Marker width={50} anchor={coords} />
-                  </Map>
                 </div>
               </div>
             </div>
+            { profileCoords && 
+              <Map height={300} defaultCenter={profileCoords} defaultZoom={12}>
+                <ZoomControl />
+                <Marker width={40}
+                  anchor={profileCoords}
+                  color="#ff8100" 
+                  onClick={clickMarker} />
+              </Map>
+            }
           </div>
           }
           { hasGallery(data.images) &&
