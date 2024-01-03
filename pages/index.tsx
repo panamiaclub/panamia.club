@@ -51,7 +51,7 @@ const Home: NextPage = () => {
         <div className={styles.becomePanaBar}>
           <div>Join our free Locals Directory today!</div>
           <div>
-            <PanaButton href="/become-a-pana" text="Become A Pana" color="yellow" hoverColor="yellow" />
+            <PanaButton href="/form/become-a-pana" text="Become A Pana" color="yellow" hoverColor="yellow" />
           </div>
         </div>
       </section>
