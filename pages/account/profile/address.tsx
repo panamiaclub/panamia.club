@@ -62,7 +62,6 @@ const Account_Profile_Address: NextPage = (props: any) => {
     }
     const address = `${a.street1} ${a.street2} ${a.city}, ${a.state} ${a.zipcode}`;
     const apikey = process.env.NEXT_PUBLIC_POSITIONSTACK_APIKEY;
-    
     const url = `http://api.positionstack.com/v1/forward?access_key=${apikey}&query=${address}`;
     // const url = `https://geocode.maps.co/search?q=${address}&api_key=${process.env.NEXT_PUBLIC_GEOCODING_API_KEY}`;
     const res = await fetch(url);
@@ -74,7 +73,7 @@ const Account_Profile_Address: NextPage = (props: any) => {
 
     const georesponse = await res.json();
     const geodata = georesponse.data as Array<any>;
-    console.log(geodata);
+    // console.log(geodata);
     if (geodata.length == 0) {
       alert("We couldn't find results for the address you entered");
     }
@@ -87,7 +86,6 @@ const Account_Profile_Address: NextPage = (props: any) => {
       alert("Your Latitude and Longitude have been set, please save");
       return true;
     }
-    console.log("firstAddress", firstAddress);
     alert("We couldn't find results for the address you entered [2]");
   }
 

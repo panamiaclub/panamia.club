@@ -306,14 +306,15 @@ const Form_BecomeAPana: NextPage = () => {
                             <br /></label><br />
                             <textarea name="details" maxLength={500} placeholder="Project Details" required rows={4}
                                 value={details} onChange={(e:any) => setDetails(e.target.value)} />
-                                <small>This will be your intro to our users! Please include where you are based in SoFlo :)</small>
+                            <small>This will be your intro to our users! A trimmed snippet of this will show 
+                                on the Directory Search. Please include where you are based in SoFlo :)</small>
                         </p>
                         <p className={styles.formFields}>
                         <label className={styles.label__field}>Give us five words that describes your business/services: <Required /></label><br />
                         <input type="text" name="five_words" maxLength={100} placeholder="" required
                             value={five_words} onChange={(e:any) => setFiveWords(e.target.value)} />
                         </p>
-                        <p className={styles.formFields}>
+                        <p className={styles.formFields} hidden>
                             <label className={styles.label__field}>What is your background?</label>
                             <textarea name="background" maxLength={500} placeholder="Background" rows={4}
                                 value={background} onChange={(e:any) => setBackground(e.target.value)} />
