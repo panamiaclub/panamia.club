@@ -43,6 +43,7 @@
     "react-spinners": "^0.13.8",
     "react-svg": "^15.1.16",
     "stripe": "^14.9.0",
+    "xlsx": "^0.18.5",
     "yarn": "^1.22.19"
   },
   "devDependencies": {
