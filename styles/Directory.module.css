@@ -58,6 +58,7 @@
 }
 
 .filtersButton{
+    cursor: pointer;
     display: inline-block;
     margin: 0 0.5rem;
     font-size: var(--base-font-size);
@@ -68,6 +69,10 @@
     font-weight: 700;
     border-radius: 2rem;
     border: 2px solid black;
+}
+
+.filtersButton:hover{
+    background-color: var(--color-bg-gray);
 }
 
 .filtersModal{

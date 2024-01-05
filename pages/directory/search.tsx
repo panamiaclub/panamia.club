@@ -2,11 +2,11 @@ import type { GetServerSideProps, NextPage } from 'next'
 import { NextRouter, useRouter } from 'next/router';
 import Link from 'next/link';
 import { IconUserCircle, IconHeart, IconExternalLink, IconBrandInstagram,
-   IconBrandFacebook, IconForms, IconSearch, IconStar, IconFilter,
-  IconMap, IconLocation, IconCategory, IconMapPin, IconCurrentLocation, IconList, IconSortDescending} from '@tabler/icons';
+  IconBrandFacebook, IconForms, IconSearch, IconStar, IconFilter,
+  IconMap, IconCategory, IconMapPin, IconCurrentLocation, IconList, 
+  IconSortDescending, IconMapPins} from '@tabler/icons';
 import { QueryClient, dehydrate } from '@tanstack/react-query';
 import { FormEvent } from 'react';
-import classNames from 'classnames';
 
 import styles from '@/styles/Directory.module.css'
 import PanaButton from '@/components/PanaButton';
@@ -93,7 +93,10 @@ function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[
     return (
       <article key={index} className={styles.profileCard}>
         <div className={styles.profileCardImage}>
+          { item?.images?.primaryCDN && 
+          <img src={item.images.primaryCDN} /> ||
           <img src="/img/bg_coconut_blue.jpg" />
+          }
         </div>
         <div className={styles.profileCardInfo}>
           <div className={styles.cardName}>{item.name}</div>
@@ -146,6 +149,7 @@ const Directory_Search: NextPage = (props: any) => {
   const params = getSearchParams(router.query);
   console.log("client:params", params);
   const geo_toggle = (params.geolat && params.geolng) ? true : false;
+  // const sortby = params.s ? params.s : "score";
   const { data, isLoading, refetch } = useSearch(params);
 
   function submitSearchForm(e: FormEvent, formData: FormData) {
@@ -190,20 +194,29 @@ const Directory_Search: NextPage = (props: any) => {
     e.preventDefault();
     const geo_toggle = document.getElementById('geo_toggle') as HTMLInputElement;
     const params = new URLSearchParams(window.location.search);
-    if (geo_toggle.checked) {
+    if (params.get("geolng") && params.get("geolat")) {
+      params.delete("geolat");
+      params.delete("geolng");
+      router.push(`/directory/search/?${params}`);
+    } else {
       const location = await getGeoPosition();
       params.set("geolat", location.coords.latitude);
       params.set("geolng", location.coords.longitude);
-      router.push(`/directory/search/?${params}`);
-    } else {
-      params.delete("geolat");
-      params.delete("geolng");
       router.push(`/directory/search/?${params}`);
     }
   }
 
   function useFiltersModal(e:any) {
     const dialog = (document.getElementById('dialog-search-filters') as HTMLDialogElement)
+    if (dialog.open) {
+      dialog.close();
+    } else {
+      dialog.show();
+    }
+  }
+
+  function useSortModal(e:any) {
+    const dialog = (document.getElementById('dialog-search-sort') as HTMLDialogElement)
     if (dialog.open) {
       dialog.close();
     } else {
@@ -282,19 +295,19 @@ const Directory_Search: NextPage = (props: any) => {
         <div className={styles.allSearch}>
           <section className={styles.searchFilters}>
             <div className={styles.viewButtonGroup}>
-              <button className={params.resultsView == "list" ? classNames(styles.viewListButton, "active") : styles.viewListButton } 
+              <PanaButton color="gray" compact={true} group="left"
                 title="Select to view search results as a List">
                 <IconList height="20" />
-              </button>
-              <button className={params.resultsView == "list" ? classNames(styles.viewMapButton, "active") : styles.viewMapButton }
+              </PanaButton>
+              <PanaButton color="gray" compact={true} group="right"
                 title="Select to view search results as a Map">
                 <IconMap height="20" />
-              </button>
-              <button className={styles.nearbyButton}>
+              </PanaButton>
+              <PanaButton color="blue" compact={true} onClick={(e: any) => {applyGeo(e)}}>
                 <IconCurrentLocation height="20" />
                 <span>Location:&nbsp;</span>
-                <small>off</small>
-              </button>
+                <small>{geo_toggle ? "on" : "off"}</small>
+              </PanaButton>
             </div>
             <div title="Click to get random results!" hidden>
               <PanaButton color="yellow" onClick={searchRandom}>
@@ -303,7 +316,7 @@ const Directory_Search: NextPage = (props: any) => {
               </PanaButton>
             </div>
             <label hidden>
-              <input id="geo_toggle" type="checkbox" checked={geo_toggle} onChange={(e: any) => {applyGeo(e)}} />
+              <input id="geo_toggle" type="checkbox" checked={geo_toggle}  />
               <IconCurrentLocation height="20" />&nbsp;Use my Location
             </label>
             <div>
@@ -314,46 +327,50 @@ const Directory_Search: NextPage = (props: any) => {
                   <small><FiltersStatus /></small>
                 </button>
                 <dialog id="dialog-search-filters" className={styles.filtersModal}>
-                  <div className={styles.filtersLocation}>
-                    
-                    <br /><br />
-                    <strong><IconMap height="20" />&nbsp;Location</strong><br />
-                    {countyList && 
-                      countyList.map((item, index) => {
-                        return (
-                          <label key={index}>
-                            <input type="checkbox" name={`loc_${item.value}`} value={item.value}/>&nbsp;{item.desc}
-                          </label>
-                        )
-                      })
-                    }
-                  </div>
                   <form onSubmit={(e) => {applyFilters(e, new FormData(e.currentTarget))}}>
-                  <div className={styles.filtersCategory}>
-                    <strong><IconCategory height="20" />&nbsp;Category</strong><br />
-                    {profileCategoryList && 
-                      profileCategoryList.map((item, index) => {
-                        return (
-                          <label key={index}>
-                            <input type="checkbox" name={`cat_${item.value}`} value={item.value}/>&nbsp;{item.desc}
+                    <div className={styles.filtersCategory}>
+                      <strong><IconCategory height="20" />&nbsp;Category</strong><br />
+                      {profileCategoryList && 
+                        profileCategoryList.map((item, index) => {
+                          return (
+                            <label key={index}>
+                              <input type="checkbox" name={`cat_${item.value}`} value={item.value}/>&nbsp;{item.desc}
+                              </label>
+                          )
+                        })
+                      }
+                    </div>
+                    <div className={styles.filtersLocation}>
+                      <strong><IconMap height="20" />&nbsp;Location</strong><br />
+                      {countyList && 
+                        countyList.map((item, index) => {
+                          return (
+                            <label key={index}>
+                              <input type="checkbox" name={`loc_${item.value}`} value={item.value}/>&nbsp;{item.desc}
                             </label>
-                        )
-                      })
-                    }
-                  </div>
-                  <PanaButton type="submit">Apply</PanaButton>
-                  <PanaButton onClick={useFiltersModal}>Close</PanaButton>
+                          )
+                        })
+                      }
+                    </div>
+                    <PanaButton type="submit">Apply</PanaButton>
+                    <PanaButton onClick={useFiltersModal}>Close</PanaButton>
                   </form>
                 </dialog>
                 <button className={styles.filtersButton}
-                  onClick={useFiltersModal}>
+                  onClick={useSortModal}>
                   <IconSortDescending height="20" />
                   <span>Sort:&nbsp;</span>
                   <small></small>
                 </button>
-              </div>
-              <div>
-
+                <dialog id="dialog-search-sort" className={styles.filtersModal}>
+                  <form>
+                      <ul>
+                        <li><IconStar />&nbsp;Best Match</li>
+                        <li><IconMapPins />&nbsp;Distance</li>
+                        <li><IconHeart />&nbsp;Most Popular</li>
+                      </ul>
+                  </form>
+                </dialog>
               </div>
           </section>
           <section className={styles.searchBody}>

@@ -4,10 +4,10 @@
   --color-pana-yellow: #fab22c;
   --color-pana-orange: #ff8100;
   --color-bg-light: #f8f8f8;
+  --color-bg-dark: #444;
   --color-bg-navy: #181c3d;
-  --color-pana-light: #f8f8f8;
-  --color-pana-navy: #181c3d;
-  --color-pana-gray: #b5b5b5;
+  --color-navy: #181c3d;
+  --color-gray: #b5b5b5;
   --base-font-size: 18px;
   --mobile-font-size: 16px;
   --title-font-size: 32px;

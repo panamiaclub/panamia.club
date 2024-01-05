@@ -22,6 +22,9 @@ export interface SearchResultsInterface {
     geo: {
         coordinates?: Array<2>
     },
+    images: {
+        primaryCDN: string,
+    }
     primary_address?: { city?: String },
     socials: {},
 }

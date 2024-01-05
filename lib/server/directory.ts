@@ -11,42 +11,57 @@ interface SearchInterface {
     random: boolean,
     geolat: string,
     geolng: string,
+    resultsView: string,
+}
+
+const mileInMeters = 1609.344;
+
+const getPivotValue = () => {
+  // PIVOT Calculation: score = pivot / (pivot + distance);
+  return mileInMeters * 50;
 }
 
 export const getSearch = async ({ pageNum, pageLimit, searchTerm, 
-    filterLocations, filterCategories, random, geolat, geolng}: SearchInterface) => {
+    filterLocations, filterCategories, random, geolat, geolng, resultsView}: SearchInterface) => {
+      const view = resultsView ? resultsView : "list";
     
     console.log("getSearch");
     await dbConnect();
     console.log("geolat", geolat);
     console.log("geolng", geolng);
-
-    // https://www.mongodb.com/docs/manual/reference/operator/aggregation/geoNear/
-    // https://www.mongodb.com/docs/manual/geospatial-queries/#std-label-geospatial-geojson
+    // DOCS: https://www.mongodb.com/docs/manual/geospatial-queries/#std-label-geospatial-geojson
     let geoFilter = {};
     if (geolat && geolng) {
       const lat = parseFloat(geolat);
       const lng = parseFloat(geolng);
-      geoFilter = {
-        "geoWithin": {
-          "circle": {
-            "center": {
-              "type": "Point",
-              "coordinates": [ lng, lat ]
+      if (view == "map") {
+        // DOCS: https://www.mongodb.com/docs/atlas/atlas-search/geoWithin/#syntax
+        geoFilter = {
+          "geoWithin": {
+            "circle": {
+              "center": {
+                "type": "Point",
+                "coordinates": [ lng, lat ]
+              },
+              "radius": 1610 * 25, // metersinmile x miles
             },
-            "radius": 1610 * 25, // metersinmile x miles
-          },
-          "path": "geo"
+            "path": "geo"
+          }
         }
       }
-      geoFilter = {} // Avoid GeoWithin for now
-      const geoFilter2 = {
-        '$geoNear' : {
-          key: 'geo',
-          near: { type: 'Point', coordinates: [ lng, lat ] },
-          distanceField: 'geonear.distance',
-          maxDistance: 1610 * 50, // metersinmile x miles
-          includeLocs: 'geonear.location',
+      if (view == "list") {
+        // DOCS: https://www.mongodb.com/docs/atlas/atlas-search/near/#syntax
+        geoFilter = {
+          "near": {
+            "origin": { type: 'Point', coordinates: [ lng, lat ] },
+            "pivot": getPivotValue(),
+            "path": "geo",
+            'score': {
+              'boost': {
+                'value': 10
+              }
+            }
+          }
         }
       }
     }
@@ -115,7 +130,6 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
               'should': [
                 ...(Object.keys(locsFilter).length !== 0 ? [locsFilter] : []),
                 ...(Object.keys(catsFilter).length !== 0 ? [catsFilter] : []),
-                ...(Object.keys(geoFilter).length !== 0 ? [geoFilter] : []),
                 {
                   'text': {
                     'query': searchTerm, 
@@ -147,7 +161,8 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
                       'details', 'background'
                     ]
                   }
-                }
+                },
+                ...(Object.keys(geoFilter).length !== 0 ? [geoFilter] : []),
               ]
             }
           }
@@ -159,7 +174,8 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
             'slug': 1, 
             'socials': 1, 
             'five_words': 1, 
-            'details': 1, 
+            'details': 1,
+            'images.primaryCDN': 1,
             'primary_address.city': 1,
             'geo': 1,
             'score': {
