@@ -22,10 +22,6 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
 ) {
-  const session = await getServerSession(req, res, authOptions);
-  if (!session) {
-    return res.status(401).json({ error: "No user session available" });
-  }
 
   if (req.method !== "GET") {
     return res
