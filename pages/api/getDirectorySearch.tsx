@@ -46,6 +46,7 @@ export default async function handler(
   const filterCategories = forceString(rq?.floc, "");
   const geolat = forceString(rq?.geolat, "");
   const geolng = forceString(rq?.geolng, "");
+  const resultsView = forceString(rq?.v, "");
   
   if (!searchTerm && !random) {
     return res.status(200).json({ success: true, data: [], pagination: {} });
@@ -53,10 +54,10 @@ export default async function handler(
 
   if (searchTerm) {
     const params = { pageNum, pageLimit, searchTerm, 
-      filterLocations, filterCategories, random, geolat, geolng}
+      filterLocations, filterCategories, random, geolat, geolng, resultsView}
     const offset = (pageLimit * pageNum) - pageLimit;
 
-    const apiResponse = await getSearch(params)
+    const apiResponse = await getSearch(params);
     if (apiResponse) {
       console.log(apiResponse);
       return res.status(200).json(apiResponse) 
