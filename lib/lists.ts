@@ -20,3 +20,4 @@ export const profileCategoryList = [
     {"desc": "Non-Profit", "value": "non_profit"},
     {"desc": "Homemade", "value": "homemade"},
 ]
+// TODO: New options - Education

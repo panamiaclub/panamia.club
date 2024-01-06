@@ -125,7 +125,7 @@
 }
 
 .becomePanaContainer{
-    background-color: var(--color-pana-light);
+    background-color: var(--color-bg-light);
 }
 
 .becomePanaBar{
@@ -146,7 +146,7 @@
 
 
 .queTalContainer{
-    background-color: var(--color-pana-navy);
+    background-color: var(--color-navy);
 }
 
 .queTalHero{
@@ -219,7 +219,7 @@
 /* FAQ section */
 .faqContainer{
     width:100%;
-    background-color: var(--color-pana-light);
+    background-color: var(--color-bg-light);
 }
 
 .faqHero{

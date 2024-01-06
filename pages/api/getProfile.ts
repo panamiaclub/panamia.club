@@ -32,7 +32,7 @@ export default async function handler(
       .status(200)
       .json({ error: "This API call only accepts GET methods" });
   }
-  const email = session.user?.email;
+  const email = session.user?.email ? (session.user?.email as string).toLowerCase() : null;
   if (!email) {
     return res
       .status(200)

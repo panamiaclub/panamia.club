@@ -91,7 +91,7 @@ function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[
     }
 
     return (
-      <article key={index} className={styles.profileCard}>
+      <article key={index} className={styles.profileCard} data-score={item.score}>
         <div className={styles.profileCardImage}>
           { item?.images?.primaryCDN && 
           <img src={item.images.primaryCDN} /> ||

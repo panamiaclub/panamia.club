@@ -15,6 +15,7 @@ interface SearchInterface {
 export interface SearchResultsInterface {
     _id: String,
     score: number,
+    score_details: {},
     name: String,
     slug: String,
     details: String,

@@ -1,7 +1,5 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]";
 
 import dbConnect from "../auth/lib/connectdb";
 import profile from "../auth/lib/model/profile";
@@ -30,7 +28,7 @@ export default async function handler(
   }
 
   if (req.query.handle) {
-    const handle = req.query.handle.toString();
+    const handle = req.query.handle.toString().toLowerCase();
     const existingProfile = await getProfile(handle);
     if (existingProfile) {
       return res.status(200).json({ success: true, data: existingProfile });

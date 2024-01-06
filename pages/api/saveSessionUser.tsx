@@ -57,7 +57,7 @@ export default async function handler(
       .status(200)
       .json({ error: "This API call only accepts POST methods" });
   }
-  const email = session.user?.email;
+  const email = session.user?.email ? (session.user?.email as string).toLowerCase() : null;
   // console.log("email", `'${email}'`);
   const { name, zip_code } = req.body;
   // console.log("zip_code", zip_code);

@@ -122,6 +122,7 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
         }
       }
 
+      // TODO: Filter by ACTIVE Profiles
       const aggregateQuery = [
         {
           '$search': {
@@ -164,7 +165,7 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
                 },
                 ...(Object.keys(geoFilter).length !== 0 ? [geoFilter] : []),
               ]
-            }
+            },
           }
         }, {
           '$limit': pageLimit
@@ -178,12 +179,12 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
             'images.primaryCDN': 1,
             'primary_address.city': 1,
             'geo': 1,
-            'score': {
-              '$meta': 'searchScore'
-            }
+            'score': {'$meta': 'searchScore'},
           }
         }
         ];
+
+        //DOCS: https://www.mongodb.com/docs/atlas/atlas-search/score/get-details/#syntax
 
       console.log(aggregateQuery[0]);
       const aggregateList = await profile.aggregate(aggregateQuery);
