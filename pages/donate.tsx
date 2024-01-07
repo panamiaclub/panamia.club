@@ -3,7 +3,6 @@ import { loadStripe } from '@stripe/stripe-js';
 import styles from '../styles/Donations2.module.css';
 import PageMeta from '../components/PageMeta';
 import { IconPlant, IconMedal, IconTrophy, IconCrown, IconUser, IconStar, IconCheck } from '@tabler/icons';
-import DropDownBtn from '../components/DropDownBtn';
 import PanaButton from '../components/PanaButton';
 
 const stripePublicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
@@ -21,29 +20,29 @@ const GridNotCheck = () => {
   )
 }
 
-const TierBadge = ({tier}: {tier: number}) => {
- if (tier === 1) {
-  return (
-    <div className={styles.tierBadge}>
-      <span className={styles.tier1Badge}><IconMedal size="20" /> dePana</span>
-    </div>
-  )
- }
- if (tier === 2) {
-  return (
-    <div className={styles.tierBadge}>
-      <span className={styles.tier2Badge}><IconTrophy size="20" /> Pana Confiado</span>
-    </div>
-  )
- }
- if (tier === 3) {
-  return (
-    <div className={styles.tierBadge}>
-      <span className={styles.tier3Badge}><IconCrown size="20" /> Pana Real</span>
-    </div>
-  )
- }
- return (<><small>None</small></>)
+const TierBadge = ({ tier }: { tier: number }) => {
+  if (tier === 1) {
+    return (
+      <div className={styles.tierBadge}>
+        <span className={styles.tier1Badge}><IconMedal size="20" /> dePana</span>
+      </div>
+    )
+  }
+  if (tier === 2) {
+    return (
+      <div className={styles.tierBadge}>
+        <span className={styles.tier2Badge}><IconTrophy size="20" /> Pana Confiado</span>
+      </div>
+    )
+  }
+  if (tier === 3) {
+    return (
+      <div className={styles.tierBadge}>
+        <span className={styles.tier3Badge}><IconCrown size="20" /> Pana Real</span>
+      </div>
+    )
+  }
+  return (<><small>None</small></>)
 }
 
 const DonatePage: React.FC = () => {
@@ -134,17 +133,17 @@ const DonatePage: React.FC = () => {
               <div>
                 <h3>Support Our Club</h3>
                 <div className={styles.donationIntro}>
-                  <p>Pana MIA Club works hard towards our vision for a unified 
-                    local SoFlo community everyday. We know we can do it with your help! You can 
-                    support us by funding our mission with a one-time donation or by joining our 
-                    community of supporters called Gente dePana! Our Gente dePana subscribers are 
-                    the foundation of Pana MIA's sustainability, monthly contributions allow us 
-                    to make bigger strides in our projects to support the local community. In 
-                    return, our Gente are rewarded with so many benefits, discounts and perks 
+                  <p>Pana MIA Club works hard towards our vision for a unified
+                    local SoFlo community everyday. We know we can do it with your help! You can
+                    support us by funding our mission with a one-time donation or by joining our
+                    community of supporters called Gente dePana! Our Gente dePana subscribers are
+                    the foundation of Pana MIA's sustainability, monthly contributions allow us
+                    to make bigger strides in our projects to support the local community. In
+                    return, our Gente are rewarded with so many benefits, discounts and perks
                     that give you special access to all things Pana!</p>
                 </div>
-                <p><strong>If you're committed to supporting the local South Florida community, 
-                    become a Gente de Pana!</strong></p>
+                <p><strong>If you're committed to supporting the local South Florida community,
+                  become a Gente de Pana!</strong></p>
               </div>
               <table className={styles.mobileSubsTiers}>
                 <tbody>
@@ -260,49 +259,49 @@ const DonatePage: React.FC = () => {
                   </tr>
                 </tbody>
               </table>
-              
+
               <div className={styles.formAmountSelections}>
                 <h3>Select Your Donation</h3>
-                <p style={{textAlign: "center"}}>
+                <p style={{ textAlign: "center" }}>
                   Select an option below or enter a custom donation amount
                 </p>
-                <div>
-                  <p><strong>Recurring Donation</strong></p>
+                <p><strong>Recurring Donation</strong></p>
+                <div className={styles.buttonGroupUneven}>
                   <PanaButton
-                      color={(monthlyTier == 1 && isRecurring) ? "navy" : "navy"}
-                      hoverColor="navy"
-                      onClick={() => { setAmount(10); setIsRecurring(true); }}
-                    ><span className={styles.buttonBadgeBlue}><IconMedal size="18" /></span>&nbsp;$10/month</PanaButton>
+                    color={(monthlyTier == 1 && isRecurring) ? "navy" : "navy"}
+                    hoverColor="navy"
+                    onClick={() => { setAmount(10); setIsRecurring(true); }}
+                  ><span className={styles.buttonBadgeBlue}><IconMedal size="18" /></span>&nbsp;$10/month<span className={styles.spacer}></span></PanaButton>
                   <PanaButton
-                      color={(monthlyTier == 2 && isRecurring) ? "navy" : "navy"}
-                      hoverColor="navy"
-                      onClick={() => { setAmount(15); setIsRecurring(true); }}
-                    ><span className={styles.buttonBadgeYellow}><IconTrophy size="18" /></span>&nbsp;$15/month</PanaButton>
+                    color={(monthlyTier == 2 && isRecurring) ? "navy" : "navy"}
+                    hoverColor="navy"
+                    onClick={() => { setAmount(15); setIsRecurring(true); }}
+                  ><span className={styles.buttonBadgeYellow}><IconTrophy size="18" /></span>&nbsp;$15/month<span className={styles.spacer}></span></PanaButton>
                   <PanaButton
-                      color={(monthlyTier == 3 && isRecurring) ? "navy" : "navy"}
-                      hoverColor="navy"
-                      onClick={() => { setAmount(25); setIsRecurring(true); }}
-                    ><span className={styles.buttonBadgePink}><IconCrown size="18" /></span>&nbsp;$25/month</PanaButton>
+                    color={(monthlyTier == 3 && isRecurring) ? "navy" : "navy"}
+                    hoverColor="navy"
+                    onClick={() => { setAmount(25); setIsRecurring(true); }}
+                  ><span className={styles.buttonBadgePink}><IconCrown size="18" /></span>&nbsp;$25/month<span className={styles.spacer}></span></PanaButton>
                 </div>
-                <div>
-                  <p><strong>One-Time Donation</strong></p>
+                <p><strong>One-Time Donation</strong></p>
+                <div className={styles.buttonGroupEven}>
                   {preAmounts.map((presetAmount) => (
-                      <PanaButton
-                        text={"$" + presetAmount}
-                        key={presetAmount}
-                        color="navy"
-                        hoverColor="navy"
-                        type="button"
-                        onClick={() => {setAmount(presetAmount);setIsRecurring(false)}}
-                      />
-                    ))} 
                     <PanaButton
-                      text="Custom"
-                      color="gray"
+                      text={"$" + presetAmount}
+                      key={presetAmount}
+                      color="navy"
                       hoverColor="navy"
                       type="button"
-                      onClick={() => {focusCustomAmountInput();setIsRecurring(false)}}
+                      onClick={() => { setAmount(presetAmount); setIsRecurring(false) }}
                     />
+                  ))}
+                  <PanaButton
+                    text="Custom"
+                    color="gray"
+                    hoverColor="navy"
+                    type="button"
+                    onClick={() => { focusCustomAmountInput(); setIsRecurring(false) }}
+                  />
                 </div>
               </div>
               <div className={styles.donationForm}>
@@ -321,12 +320,12 @@ const DonatePage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label>Recurring</label><br />
+                    <label>Recurring </label>
                     <input
                       type="checkbox"
                       checked={isRecurring}
                       onChange={(e) => setIsRecurring(e.target.checked)}
-                      />
+                    />
                   </div>
                   <div>
                     <label>Subscription</label><br />
@@ -348,15 +347,15 @@ const DonatePage: React.FC = () => {
                   </div>
                   <br />
                   <div>
-                  <label>Dedicate Donation To:</label>
-                  <select
-                    defaultValue=""
-                    onChange={(e) => setDedicate(e.target.value)}
-                  >
-                    <option value="">- No Dedication -</option>
-                    <option value="Directory">Directory</option>
-                    <option value="Other">Other (please describe)</option>
-                  </select>
+                    <label>Dedicate Donation To:</label>
+                    <select
+                      defaultValue=""
+                      onChange={(e) => setDedicate(e.target.value)}
+                    >
+                      <option value="">- No Dedication -</option>
+                      <option value="Directory">Directory</option>
+                      <option value="Other">Other (please describe)</option>
+                    </select>
                   </div>
                   <br />
                   <div>
@@ -368,7 +367,7 @@ const DonatePage: React.FC = () => {
                       onChange={(e) => setComment(e.target.value)}
                       className={styles.commentTextarea}
                       placeholder="Any comment?"
-                      ></textarea>
+                    ></textarea>
                   </div>
                 </div>
                 <br />
@@ -381,11 +380,11 @@ const DonatePage: React.FC = () => {
                     className={styles.checkboxInput}
                   />
                 </div>
-                
+
               </div>
               <div className={styles.formGroup}>
-                
-                
+
+
               </div>
               <div className={styles.submit}>
                 <PanaButton
