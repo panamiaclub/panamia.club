@@ -11,7 +11,7 @@ function ExcelToJsonConverter() {
         const res = await axios
         .post(
             "/api/importProfiles",
-            { jsonData },//add slug
+            { jsonData },//todo: add slug, format socials
             {
                 headers: {
                     Accept: "application/json",
