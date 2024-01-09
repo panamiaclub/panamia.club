@@ -99,7 +99,7 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
             locsFilter = {
                 'equals': {
                     'path': locsPaths,
-                    'equals': true,
+                    'value': true,
                 }
             }
         }
@@ -116,21 +116,23 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
             catsFilter = {
                 'equals': {
                     'path': catsPaths,
-                    'equals': true,
+                    'value': true,
                 }
             }
         }
       }
 
-      // TODO: Filter by ACTIVE Profiles
       const aggregateQuery = [
         {
           '$search': {
             'index': 'profiles-search', 
             'compound': {
-              'should': [
+              'filter': [
+                { 'equals': { 'path': "active", 'value': true, } },
                 ...(Object.keys(locsFilter).length !== 0 ? [locsFilter] : []),
                 ...(Object.keys(catsFilter).length !== 0 ? [catsFilter] : []),
+              ],
+              'should': [
                 {
                   'text': {
                     'query': searchTerm, 
@@ -184,7 +186,10 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
         }
         ];
 
-        //DOCS: https://www.mongodb.com/docs/atlas/atlas-search/score/get-details/#syntax
+        // TODO: Paginated results for list view
+        // DOCS: https://www.mongodb.com/docs/atlas/atlas-search/tutorial/divide-results-tutorial/
+
+        // DOCS: https://www.mongodb.com/docs/atlas/atlas-search/score/get-details/#syntax
 
       console.log(aggregateQuery[0]);
       const aggregateList = await profile.aggregate(aggregateQuery);

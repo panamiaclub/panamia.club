@@ -96,11 +96,12 @@ export default async function handler(
     name, five_words, tags
   );
 
+  // TODO: Set initial completion percentage?
   const newProfile = new profile({
       name: name,
       email: email,
       slug: slugify(name),
-      active: false,
+      active: true, // TODO: set to false on launch/approval process
       status: {
         submitted: new Date(),
       },
