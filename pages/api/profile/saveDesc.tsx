@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import dbConnect from "../auth/lib/connectdb";
 import profile from "../auth/lib/model/profile";
+import { slugify } from "@/lib/standardized";
 
 interface ResponseData {
   error?: string;
@@ -47,6 +48,7 @@ export default async function handler(
   if (existingProfile) {
     if (name) {
       existingProfile.name = name;
+      existingProfile.slug = slugify(name);
     }
     if (five_words) {
       existingProfile.five_words = five_words;

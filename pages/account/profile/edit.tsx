@@ -14,6 +14,7 @@ import { getUserSession, saveUserSession } from '@/lib/user';
 import { ProfileInterface } from '@/lib/interfaces';
 import { displayPronouns, standardizeDateTime } from '@/lib/standardized';
 import Status401_Unauthorized from '@/components/Page/Status401_Unauthorized';
+import { listSelectedCategories } from '@/lib/profile';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   return {
@@ -344,93 +345,14 @@ const Account_Profile: NextPage = (session_user) => {
               <Link href="/account/profile/categories"><a><IconEdit height="20" /> Edit</a></Link>
             </div>
             <div className={styles.profileFields}>
-              <label>Categories:</label><br />
-              <ul>
-                <li>
-                  <span>Products:</span>&emsp;
-                  {profile_data?.categories?.products &&
-                   <IconCheck color="green" /> ||
-                   <span className={styles.profileFieldBlank}>unselected</span>}
-                  </li>
-                <li>
-                  <span>Services:</span>&emsp;
-                  {profile_data?.categories?.services && 
-                  <IconCheck color="green" /> || 
-                  <span className={styles.profileFieldBlank}>unselected</span>}
-                </li>
-                <li>
-                  <span>Events:</span>&emsp;
-                  {profile_data?.categories?.events &&
-                  <IconCheck color="green" /> ||
-                  <span className={styles.profileFieldBlank}>unselected</span>}
-                </li>
-                <li>
-                  <span>Music:</span>&emsp;
-                  {profile_data?.categories?.music &&
-                  <IconCheck color="green" /> ||
-                  <span className={styles.profileFieldBlank}>unselected</span>}
-                </li>
-                <li>
-                  <span>Food:</span>&emsp;
-                  {profile_data?.categories?.food &&
-                   <IconCheck color="green" /> ||
-                   <span className={styles.profileFieldBlank}>unselected</span>}
-                  </li>
-                <li>
-                  <span>Clothing:</span>&emsp;
-                  {profile_data?.categories?.clothing && 
-                  <IconCheck color="green" /> || 
-                  <span className={styles.profileFieldBlank}>unselected</span>}
-                </li>
-                <li>
-                  <span>Accessories:</span>&emsp;
-                  {profile_data?.categories?.accessories &&
-                  <IconCheck color="green" /> ||
-                  <span className={styles.profileFieldBlank}>unselected</span>}
-                </li>
-                <li>
-                  <span>Art:</span>&emsp;
-                  {profile_data?.categories?.art &&
-                  <IconCheck color="green" /> ||
-                  <span className={styles.profileFieldBlank}>unselected</span>}
-                </li>
-                <li>
-                  <span>Digital Art:</span>&emsp;
-                  {profile_data?.categories?.digital_art &&
-                   <IconCheck color="green" /> ||
-                   <span className={styles.profileFieldBlank}>unselected</span>}
-                  </li>
-                <li>
-                  <span>Tech:</span>&emsp;
-                  {profile_data?.categories?.tech && 
-                  <IconCheck color="green" /> || 
-                  <span className={styles.profileFieldBlank}>unselected</span>}
-                </li>
-                <li>
-                  <span>Health &amp; Beauty:</span>&emsp;
-                  {profile_data?.categories?.health_beauty &&
-                  <IconCheck color="green" /> ||
-                  <span className={styles.profileFieldBlank}>unselected</span>}
-                </li>
-                <li>
-                  <span>Spiritual:</span>&emsp;
-                  {profile_data?.categories?.spiritual &&
-                  <IconCheck color="green" /> ||
-                  <span className={styles.profileFieldBlank}>unselected</span>}
-                </li>
-                <li>
-                  <span>Non-Profit:</span>&emsp;
-                  {profile_data?.categories?.non_profit &&
-                  <IconCheck color="green" /> ||
-                  <span className={styles.profileFieldBlank}>unselected</span>}
-                </li>
-                <li>
-                  <span>Homemade:</span>&emsp;
-                  {profile_data?.categories?.homemade &&
-                  <IconCheck color="green" /> ||
-                  <span className={styles.profileFieldBlank}>unselected</span>}
-                </li>
-              </ul>
+              <label>Selected Categories:</label><br />
+              <p>
+                { 
+                profile_data?.categories &&
+                listSelectedCategories(profile_data?.categories) ||
+                <small>None Selected</small>
+                }
+              </p>
             </div>
           </fieldset>
           <fieldset className={styles.profileFieldset}>
