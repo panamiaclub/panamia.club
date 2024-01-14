@@ -45,6 +45,37 @@ function ExcelToJsonConverter() {
         const json = XLSX.utils.sheet_to_json(worksheet);
         setJsonData(JSON.stringify(json, null, 2));
         console.log(json)
+
+        let newJsonArray = [{}];
+        //todo: collapse socials into a socials object {}
+        json.forEach((item:any) => {
+          
+         const socials = {
+            website: item.website,
+            facebook: item.facebook,
+            instagram: item.instagram,
+            tiktok: item.tiktok,
+            twitter: item.twitter,
+            spotify: item.spotify,
+         }
+
+         const newItem = {
+          background: item.background,
+          details: item.details, 
+          email: item.email,
+          five_words: item.five_words,
+          name: item.name,
+          tags: item.tags,
+          slug: item.name.toString().toLower().replace(" ", "_"),
+          phone_number: item.phone_number,
+          createdAt: new Date(item.date_added.toString())
+         }
+
+         newJsonArray.push(newItem);
+        })
+
+        console.log("new formatted Json array");
+        console.log(newJsonArray);
       };
       reader.readAsBinaryString(file);
     }
