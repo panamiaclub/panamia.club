@@ -162,7 +162,7 @@ const Directory_Search: NextPage = (props: any) => {
   }
 
   function applyView(e: FormEvent) {
-
+    // TODO: list (default) or map
   }
 
   function applyFilters(e: FormEvent, formData: FormData) {
@@ -315,10 +315,6 @@ const Directory_Search: NextPage = (props: any) => {
                 <span className="sr-only">Click to get random results</span>
               </PanaButton>
             </div>
-            <label hidden>
-              <input id="geo_toggle" type="checkbox" checked={geo_toggle}  />
-              <IconCurrentLocation height="20" />&nbsp;Use my Location
-            </label>
             <div>
                 <button className={styles.filtersButton}
                 onClick={useFiltersModal}>

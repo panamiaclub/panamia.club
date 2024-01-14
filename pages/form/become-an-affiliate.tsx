@@ -9,7 +9,7 @@ import PanaLogoLong from '@/components/PanaLogoLong';
 import Required from '@/components/Form/Required';
 import PanaButton from '@/components/PanaButton';
 
-const Form_ContactUs: NextPage = () => {
+const Form_BecomeAnAffiliate: NextPage = () => {
   // TODO: User must be logged in to access page
   const [acceptTOS, setAcceptTOS] = useState(false);
 
@@ -97,4 +97,4 @@ const Form_ContactUs: NextPage = () => {
   )
 }
 
-export default Form_ContactUs
+export default Form_BecomeAnAffiliate;

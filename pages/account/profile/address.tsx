@@ -16,6 +16,7 @@ import { profileQueryKey, useProfile, useMutateProfileAddress  } from '@/lib/que
 import Spinner from '@/components/Spinner';
 import { serialize } from '@/lib/standardized';
 import FullPage from '@/components/Page/FullPage';
+import axios from 'axios';
 
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
@@ -60,33 +61,29 @@ const Account_Profile_Address: NextPage = (props: any) => {
       alert("Please fill out a Street, City, State and Zipcode");
       return false;
     }
-    const address = `${a.street1} ${a.street2} ${a.city}, ${a.state} ${a.zipcode}`;
-    const apikey = process.env.NEXT_PUBLIC_POSITIONSTACK_APIKEY;
-    const url = `http://api.positionstack.com/v1/forward?access_key=${apikey}&query=${address}`;
-    // const url = `https://geocode.maps.co/search?q=${address}&api_key=${process.env.NEXT_PUBLIC_GEOCODING_API_KEY}`;
-    const res = await fetch(url);
-
-    if (!res.ok) {
-      alert("We couldn't get your GeoLocation, check your address and try again");
-      return false;
-    }
-
-    const georesponse = await res.json();
-    const geodata = georesponse.data as Array<any>;
-    // console.log(geodata);
-    if (geodata.length == 0) {
-      alert("We couldn't find results for the address you entered");
-    }
-    const firstAddress = geodata[0];
-    if (firstAddress?.latitude && firstAddress.longitude) {
+    const resGeo = await axios
+    .post(
+        "/api/geo/byAddress",
+        { address: a },
+        {
+          headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+          },
+        }
+    ).then( (response) => {
+      const coords = response.data.data[0];
+      console.log("coords", coords);
       const latInput = document.getElementById('geo_lat') as HTMLInputElement;
-      latInput.value = firstAddress.latitude;
+      latInput.value = coords?.lat;
       const lngInput = document.getElementById('geo_lng') as HTMLInputElement;
-      lngInput.value = firstAddress.longitude;
+      lngInput.value = coords?.lng;
       alert("Your Latitude and Longitude have been set, please save");
       return true;
-    }
-    alert("We couldn't find results for the address you entered [2]");
+    }).catch( (error) => {
+      alert(error);
+      return false;
+    });
   }
 
   const submitForm = (e: FormEvent, formData: FormData) => {
@@ -132,9 +129,10 @@ const Account_Profile_Address: NextPage = (props: any) => {
           <Link href="/account/profile/edit"><a>Back to Profile</a></Link>
         </p>
         <div className={styles.accountFields}>
-          <p className={styles.accountNote}>Your Primary Address is used for providing
-          directions on your profile. If you're not doing business out of a set location,
-          you don't need to provide this information.</p>
+          <p className={styles.accountNote}>Your Primary Address is your physical location and
+          used for providing directions on your profile. You don't need to provide this 
+          information if your business is digital only or does not require patrons to visit
+          a set address.</p>
         </div>
         <div className={styles.accountFields}>
           <label>Street 1</label>&emsp;
