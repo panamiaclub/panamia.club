@@ -49,3 +49,12 @@
 .logoLink{
     cursor: pointer;
 }
+
+@media only screen and (max-width: 600px) {
+    .medium{
+        width: calc(3rem * 3);
+    }
+    .large{
+        width: calc(3rem * 5);
+    }
+}

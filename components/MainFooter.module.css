@@ -1,8 +1,12 @@
 .footer{
     background-color: white;
-    padding:1.5rem 1rem;
+    padding:1.5rem 1rem 0 1rem;
     color: #444;
     font-size: 14px;
+}
+
+.footer a{
+    cursor: pointer;
 }
 
 .footerInner{
@@ -41,4 +45,14 @@
     list-style: none;
     line-height:1.5rem;
     padding: 0 1rem;
+}
+
+.termsLink{
+    text-align: center;
+    background-color: #F7F7F7;
+    padding: 1rem;
+}
+
+.termsLink a{
+    font-weight: 700;
 }
