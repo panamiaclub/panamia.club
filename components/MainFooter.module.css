@@ -56,3 +56,9 @@
 .termsLink a{
     font-weight: 700;
 }
+
+@media only screen and (max-width: 600px) {
+    .footer{
+        padding:.5rem .25rem 0 .25rem;
+    }
+}
