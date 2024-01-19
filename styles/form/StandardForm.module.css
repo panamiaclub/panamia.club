@@ -125,3 +125,12 @@
     padding: 1rem 0;
     text-align:center;
 }
+
+@media only screen and (max-width: 600px) {
+    .innerGradientBox{
+        padding:0.25rem;
+    }
+    .formFields{
+        padding: .25rem;
+    }
+}

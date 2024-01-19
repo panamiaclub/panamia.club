@@ -101,6 +101,7 @@ const Form_BecomeAPana: NextPage = () => {
             if(response.data.error) {
                 alert(response.data.error);
             } else {
+                // TODO: Submit Profile Photo 
                 console.log(response.data.msg);
                 setActivePage(7);
                 document.getElementById('form-page-confirmation')?.focus();
@@ -138,6 +139,9 @@ const Form_BecomeAPana: NextPage = () => {
     // validate
     submitExpressProfile(e);
   }
+
+    // TODO: Add Primary Picture upload - how to keep private?
+    // TODO: New Question, "How did you hear about us?"  
 
   return (
     <main className={styles.app}>

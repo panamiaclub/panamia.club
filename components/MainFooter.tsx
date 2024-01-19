@@ -19,7 +19,7 @@ export default function GlobalFooter() {
                 </ul>
                 <ul className={styles.footerLinksAlt}>
                     <li><strong>Users</strong></li>
-                    <li><Link href="/signin">Sign In</Link></li>
+                    <li hidden><Link href="/signin">Sign In</Link></li>
                     <li><Link href="/form/become-a-pana">Become A Pana</Link></li>
                     <li><Link href="/form/contact-us">Contact Us</Link></li>
                 </ul>
@@ -45,6 +45,9 @@ export default function GlobalFooter() {
                         </li>
                     </ul>
                 </div>
+            </div>
+            <div className={styles.termsLink}>
+                Please read our <Link href="/doc/terms-and-conditions"><a>Terms and Conditions</a></Link>
             </div>
         </footer>
     );

@@ -63,28 +63,33 @@ const Form_BecomeAnAffiliate: NextPage = () => {
         <div className={styles.formLogo}>
             <PanaLogoLong  color="blue" size="large" nolink={true} />
         </div>
-        <h2 className={styles.formTitle}>Become An Affiliate</h2>
-        <p>Complete the form below to join our Affiliate Program and start earning awesome rewards!</p>
+        <h2 className={styles.formTitle}>Become A ComPana</h2>
+        <p>Complete the form below to join our ComPana Affiliate Program and start earning awesome rewards!</p>
         <section id="form-section" className={styles.outerGradientBox}>
             <form id="form-form" className={styles.innerGradientBox} onSubmit={submitAffiliateTOS}>
                 <br/>
                 <p className={styles.formFields}>
-                  Please review the Full <Link href="#"><a>Terms of Service</a></Link>
+                  Please review the Full <Link href="/doc/affiliate-terms-and-conditions"><a>Terms and Conditions</a></Link>
                 </p>
                 <div className={styles.formFields}>
-                  <p><strong>Terms of Service Summary</strong></p>
-                  <ul>
-                    <li>Lorem Ipsum</li>
-                    <li>Lorem Ipsum</li>
-                    <li>Lorem Ipsum</li>
-                    <li>Lorem Ipsum</li>
-                  </ul>
+                  <p><strong>Terms and Conditions Summary</strong></p>
+                  <ol>
+                    <li>The affiliate agrees to actively promote Pana MIA Club in a positive 
+                      manner and in accordance with the organization's values and mission.</li>
+                    <li>Affiliates must comply with all applicable laws and regulations in 
+                      their promotion of Pana MIA Club</li>
+                    <li>Points can be redeemed within the affiliate system, providing individuals 
+                      with the opportunity to accumulate points eligible for specific rewards 
+                      (subject to change).</li>
+                    <li>The affiliate consents to receiving all marketing and promotional 
+                      materials via email and direct messaging</li>
+                  </ol>
                 </div>
                 <p className={styles.formFields}>
                     <Required /><br />
                     <label> <input type="checkbox" value="yes" checked={acceptTOS}
                         onChange={(e:any) => setAcceptTOS(e.target.checked)} />
-                        &nbsp;I have read and agree to the Affiliate Terms of Service
+                        &nbsp;I have read and agree to the Affiliate Terms and Conditions
                     </label>
                 </p>
                 <p className={styles.formSubmitFields}>
