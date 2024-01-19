@@ -7,6 +7,16 @@ import * as fs from "fs";
 
 const Schema = mongoose.Schema;
 
+const slugify = (value) => {
+  return value.normalize('NFD')
+      .replace("&", "and")
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9 ]/g, '')
+      .replace(/\s+/g, '-');
+}
+
 const profileSchema = new Schema(
     {
         email: {
@@ -48,7 +58,7 @@ const profileSchema = new Schema(
     }
 )
 
-const profile = mongoose.models.profile || mongoose.model("profile", profileSchema);
+const profile = mongoose.models.profile || mongoose.model("profile_import", profileSchema);
 
 async function handler(user) {
 
@@ -79,66 +89,60 @@ async function handler(user) {
 }
 
 function getUsersFromFile(){
-    const file = "users.xlsx"
+    const file = "scripts/users.xlsx"
     let newJsonArray = [{}];
+    XLSX.set_fs(fs);
 
-    fs.readFile(file, (err, data) => {
-        if (err) {
-          console.error('Error reading file:', err);
-          return;
-        }
+    const workbook = XLSX.readFile(file);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const json = XLSX.utils.sheet_to_json(worksheet);
+    // console.log(JSON.stringify(json, null, 2));
+    // console.log(json);
+  
+    //todo: collapse socials into a socials object {}
+    let cntr = 0;
+    json.forEach((item) => {
 
-      const workbook = XLSX.read(data, { type: "binary" });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const json = XLSX.utils.sheet_to_json(worksheet);
-      console.log(JSON.stringify(json, null, 2));
-      console.log(json);
-   
-      //todo: collapse socials into a socials object {}
-      json.forEach((item) => {
-        
-       const socials = {
-          website: item.website,
-          facebook: item.facebook,
-          instagram: item.instagram,
-          tiktok: item.tiktok,
-          twitter: item.twitter,
-          spotify: item.spotify,
-       }
+      cntr += 1;
+      
+      const socials = {
+        website: item.website,
+        facebook: item.facebook,
+        instagram: item.instagram,
+        tiktok: item.tiktok,
+        twitter: item.twitter,
+        spotify: item.spotify,
+      }
 
-       const newItem = {
-        background: item.background,
-        details: item.details, 
-        email: item.email,
-        five_words: item.five_words,
-        name: item.name,
-        tags: item.tags,
-        slug: item.name.toString().toLower().replace(" ", "_"),
-        phone_number: item.phone_number,
-        createdAt: new Date(item.date_added.toString())
-       }
+      const newItem = {
+      email: item.email,
+      background: item.background,
+      details: item.details, 
+      five_words: item.five_words,
+      name: item.name,
+      tags: item.tags,
+      slug: slugify(item.name.toString()),
+      phone_number: item.phone_number,
+      createdAt: new Date(item.dateadded.toString())
+      }
 
-       newJsonArray.push(newItem);
-      })
+      newJsonArray.push(newItem);
+      if (cntr == 10) {
+        console.log(newJsonArray) // Print the first 10;
+      }
+    })
 
-      console.log("new formatted Json array");
-      console.log(newJsonArray);
-    });
+    // console.log("new formatted Json array");
+    //console.log(newJsonArray);
 
     // newJsonArray.forEach((item) => {
     //     setTimeout(() => {
     //         handler(item);
     //     }, index * 2000);
     // })
-
 }
 
 await dbConnect();
 getUsersFromFile();
-
-export const config = {
-  api: {
-    responseLimit: '15mb',
-  },
-}
+process.exit();

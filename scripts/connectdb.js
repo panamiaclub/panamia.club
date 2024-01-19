@@ -5,6 +5,9 @@ https://github.com/vercel/next.js/blob/canary/examples/with-mongodb-mongoose/uti
 import mongoose from "mongoose";
 mongoose.set('strictQuery', false);
 
+import 'dotenv/config';
+console.log(process.env.MONGODB_URI);
+
 // if (!process.env.MONGODB_URI) {
 //   throw new Error("Please add your MONGODB_URI to .env.local");
 // }

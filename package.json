@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "import-profiles": "node ./scripts/import-profiles"
   },
   "dependencies": {
     "@emotion/react": "^11.10.4",
@@ -45,7 +46,7 @@
     "react-spinners": "^0.13.8",
     "react-svg": "^15.1.16",
     "stripe": "^14.9.0",
-    "xlsx": "^0.18.5",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.1/xlsx-0.20.1.tgz",
     "yarn": "^1.22.19"
   },
   "devDependencies": {
