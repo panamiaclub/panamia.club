@@ -1,16 +1,56 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 
-import dbConnect from "../auth/lib/connectdb";
-import profile from "../auth/lib/model/profile";
+import dbConnect from "./connectdb.js";
+import mongoose from "mongoose";
+import * as XLSX from "xlsx";
+import * as fs from "fs";
 
+const Schema = mongoose.Schema;
+
+const profileSchema = new Schema(
+    {
+        email: {
+            type: String,
+            required: true,
+            unique: true
+        },
+        name: {
+            type: String,
+            required: true
+        },
+        slug: String,
+        active: Boolean,
+        status: {},
+        administrative: {},
+        locally_based: String,
+        details: String,
+        background: String,
+        five_words: {
+            type: String,
+            required: true,
+            index: true,
+        },
+        socials: {},
+        phone_number: String,
+        whatsapp_community: Boolean,
+        pronouns: {},
+        tags: String,
+        counties: {},
+        categories: {},
+        primary_address: {},
+        geo: {},
+        locations: [],
+        images: {},
+        linked_profiles: [],
+    },
+    {
+        timestamps: true
+    }
+)
+
+const profile = mongoose.models.profile || mongoose.model("profile", profileSchema);
 
 async function handler(user) {
-
-  if (req.method !== "POST") {
-    return res
-      .status(200)
-      .json({ success: false,  error: "This API call only accepts POST methods" });
-  }
 
   const { email, name, slug, details, background, five_words, socials, phone_number, tags } = user;
   console.log("phone_number", phone_number);
@@ -39,17 +79,21 @@ async function handler(user) {
 }
 
 function getUsersFromFile(){
-    const file = "Users.xlsx"
-    const reader = new FileReader();
+    const file = "users.xlsx"
     let newJsonArray = [{}];
 
-    reader.onload = (e) => {
-      const data = e.target.result;
+    fs.readFile(file, (err, data) => {
+        if (err) {
+          console.error('Error reading file:', err);
+          return;
+        }
+
       const workbook = XLSX.read(data, { type: "binary" });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const json = XLSX.utils.sheet_to_json(worksheet);
-      setJsonData(JSON.stringify(json, null, 2));
+      console.log(JSON.stringify(json, null, 2));
+      console.log(json);
    
       //todo: collapse socials into a socials object {}
       json.forEach((item) => {
@@ -80,10 +124,14 @@ function getUsersFromFile(){
 
       console.log("new formatted Json array");
       console.log(newJsonArray);
-    };
-    reader.readAsBinaryString(file);
+    });
 
-    handler();
+    // newJsonArray.forEach((item) => {
+    //     setTimeout(() => {
+    //         handler(item);
+    //     }, index * 2000);
+    // })
+
 }
 
 await dbConnect();

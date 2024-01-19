@@ -2,6 +2,7 @@
   "name": "panamia",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -27,6 +28,7 @@
     "axios": "^1.2.1",
     "bcrypt": "^5.1.0",
     "busboy": "^1.6.0",
+    "dotenv": "^16.3.1",
     "formik": "^2.2.9",
     "framer-motion": "^7.6.12",
     "mongoose": "^6.8.1",
