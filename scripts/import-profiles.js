@@ -1,5 +1,7 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 
+// type: "module" must be set in package.json to run this file
+
 import dbConnect from "./connectdb.js";
 import mongoose from "mongoose";
 import * as XLSX from "xlsx";
@@ -37,8 +39,11 @@ const delay = ms => new Promise(res => setTimeout(res, ms));
 
 const cleanDate = (value) => {
   // Convert Excel serial date (numeric) to datetime
-    let newDate = value ? new Date((value - 25569) * 8.64e7) : null;
-    return newDate;
+  if (value.includes("/")) {
+    return new Date(value);
+  }
+  let newDate = value ? new Date((value - 25569) * 8.64e7) : null;
+  return newDate;
 }
 
 const profileSchema = new Schema(
@@ -82,12 +87,12 @@ const profileSchema = new Schema(
     }
 )
 
-const profile = mongoose.models.profile || mongoose.model("profile_import", profileSchema);
+const profile = mongoose.models.profile || mongoose.model("profiles", profileSchema);
 
 async function handler(profileData) {
   // console.log("handler");
   const { email, name, slug, details, background, five_words, socials, 
-    phone_number, address, tags } = profileData;
+    phone_number, address, tags, status } = profileData;
 
   let geo = null;
   if (address?.latitude && address?.longitude) {
@@ -102,6 +107,7 @@ async function handler(profileData) {
 
   const newProfile = new profile({
     name: name,
+    status: status,
     email: email,
     slug: slug,
     active: true, // default to Active
@@ -119,7 +125,7 @@ async function handler(profileData) {
   await newProfile
     .save()
     .then(() => {
-        console.log("Successfuly created new Profile: " + newProfile.email );
+        console.log(`Successfuly created new Profile: ${newProfile.email} | ${status.submitted}`);
       }
     )
     .catch((err) =>
@@ -169,16 +175,18 @@ function getUsersFromFile(){
 
       const newItem = {
         email: item.email.toString().toLowerCase().trim(),
+        status: {
+          submitted: cleanDate(item?.dateadded),
+        },
         background: item.background,
         details: item.details, 
-        five_words: item.fivewords?.toLowerCase(),
+        five_words: item.five_words?.toLowerCase(),
         name: item.name,
         tags: item.tags?.toLowerCase(),
         slug: slugify(item.name.toString()),
         phone_number: item.phone_number ? phoneTrim(item.phone_number) : null,
         socials: socials,
-        address: address,
-        createdAt: cleanDate(item?.dateadded),
+        address: address
       }
 
       newJsonArray.push(newItem);
