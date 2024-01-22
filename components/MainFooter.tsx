@@ -1,4 +1,4 @@
-import { IconBrandInstagram, IconBrandDiscord, IconBrandYoutube } from "@tabler/icons";
+import { IconBrandInstagram, IconBrandDiscord, IconBrandYoutube, IconBrandLinkedin } from "@tabler/icons";
 import Link from "next/link";
 
 import PanaLogo from "./PanaLogo";
@@ -38,9 +38,9 @@ export default function GlobalFooter() {
                             </a>
                         </li>
                         <li>
-                            <a href="https://discord.gg/SnNV48XGu3">
-                                <IconBrandDiscord size={32} stroke={1.5} />
-                                <span className="sr-only">Discord</span>
+                            <a href="https://www.linkedin.com/company/pana-mia/">
+                                <IconBrandLinkedin size={32} stroke={1.5} />
+                                <span className="sr-only">Linked In</span>
                             </a>
                         </li>
                     </ul>

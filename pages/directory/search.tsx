@@ -115,7 +115,7 @@ function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[
             <Link href={`/profile/${item.slug}`}><a><IconUserCircle height="20" />View Profile</a></Link>&emsp;
             <a href=""><IconHeart height="20" />Follow</a>
             </>
-            <div className={styles.cardlinks}>
+            <div className={styles.cardlinks} hidden>
               { socials?.website && 
               <a href={socials.website.toString()}>
                 <IconExternalLink height="24" width="24" />

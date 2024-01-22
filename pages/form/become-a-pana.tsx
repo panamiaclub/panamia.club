@@ -350,7 +350,7 @@ const Form_BecomeAPana: NextPage = () => {
                                     <br /><small>These will be displayed on your profile, please use the full URL for each</small>
                                 </li>
                                 <li className={styles.listSocialFields}>
-                                    <label>Website: <Required /></label>
+                                    <label>Website:</label>
                                     <input type="text" name="socials_website" required placeholder="https://www.example-pana.com"
                                         value={socials_website} onChange={(e:any) => setSocialsWebsite(e.target.value)} />
                                 </li>

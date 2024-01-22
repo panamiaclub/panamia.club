@@ -15,7 +15,7 @@ export interface ProfileStatusInterface {
 }
 
 export interface ProfileSocialsInterface {
-    website: string,
+    website?: string,
     instagram?: string,
     facebook?: string,
     tiktok?: string,

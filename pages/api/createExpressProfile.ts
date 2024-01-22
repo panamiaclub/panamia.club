@@ -101,7 +101,7 @@ export default async function handler(
       name: name,
       email: email,
       slug: slugify(name),
-      active: true, // TODO: set to false on launch/approval process
+      active: false, // TODO: set to false on launch/approval process
       status: {
         submitted: new Date(),
       },
