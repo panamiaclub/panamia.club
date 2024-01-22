@@ -1,0 +1,240 @@
+.app{
+    
+}
+
+.main{
+    margin: auto;
+    background-color: #f8f8f8;
+    background: content-box url('/img/bg_shrooms_forest.jpg');
+}
+
+.main a{
+    color: var(--color-pana-pink);
+}
+
+.header {
+    margin:auto;
+    padding:3rem 0 1rem;
+    text-align: center;
+    backdrop-filter: brightness(.5);
+}
+.header h2{
+    color: white;
+    padding: 0.25rem 0;
+}
+.header h3{
+    color: white;
+    padding: 0.25rem 0;
+}
+
+.allSearch{
+    background-color: #f8f8f8;
+}
+.searchFilters{
+    position: relative;
+    max-width: 45rem;
+    margin:auto;
+    padding: 1rem 0;
+    display: flex;
+    justify-content: space-between;
+}
+.viewListButton{
+    margin-right: 0;
+    border-radius: 25px 0 0 25px;
+    padding-right: 0.5rem;
+}
+.viewMapButton{
+    margin-left: 0;
+    border-radius: 0 25px 25px 0;
+    padding-left: 0.5rem;
+}
+.viewListButton:hover, .viewMapButton:hover{
+    cursor: pointer;
+    background-color: #444;
+    color: white;
+}
+.viewListButton.active, .viewMapButton.active{
+    background-color: var(--color-pana-blue);
+}
+
+.filtersButton{
+    cursor: pointer;
+    display: inline-block;
+    margin: 0 0.5rem;
+    font-size: var(--base-font-size);
+    letter-spacing: 1px;
+    padding: 0.5rem 1.5rem;
+    background-color: white;
+    color: #444;
+    font-weight: 700;
+    border-radius: 2rem;
+    border: 2px solid black;
+}
+
+.filtersButton:hover{
+    background-color: var(--color-bg-gray);
+}
+
+.filtersModal{
+    position: absolute;
+    top: 3.5rem;
+    right: 0;
+    width: 50%;
+    margin-left: 50%;
+    border: 3px solid #777;
+    border-radius: 12px;
+}
+.filtersModal label{
+    display: inline-block;
+    white-space: nowrap;
+    padding: 0.5rem;
+    color: #777;
+}
+.filtersModal input[type="checkbox"]{
+    transform: scale(1.5);
+}
+.filtersLocation{
+    margin-bottom: .5rem;
+}
+.filtersCategory{
+    margin-bottom: .5rem;
+}
+.searchFormContainer{
+    backdrop-filter: brightness(.5);
+}
+.searchForm{
+    max-width: 45rem;
+    margin:auto;
+    text-align: center;
+    padding-bottom: 1rem;
+    color: white;
+
+}
+.searchFieldBar{
+    border: 0;
+    margin: 1rem auto;
+    display: flex;
+    justify-content: center;
+}
+.searchField{
+    padding: 0.7rem 1rem;
+    border-radius: 2rem;
+    width: 100%;
+}
+.searchButton{
+    margin-left: -5rem;
+    margin-top: 0.4rem;
+}
+.searchBody{
+    min-height:75vh;
+    padding-bottom: 5vh;
+}
+
+.searchLoginCallout{
+    color: black;
+    text-align: center;
+    background-color: #FFF1D9;
+    max-width: 45rem;
+    margin: auto;
+    padding: 0.5rem;
+    border: 3px solid var(--color-pana-yellow);
+    border-radius: 12px;
+    margin-bottom:1rem;
+}
+
+
+.profileCard{
+    max-width: 45rem;
+    margin: auto;
+    border: 3px solid #CCC;
+    padding: 1rem;
+    margin-bottom:1rem;
+    border-radius: 12px;
+    background-color: white;
+    display: flex;
+}
+
+.profileCardSignup{
+    max-width: 45rem;
+    margin: auto;
+    border: 3px solid var(--color-pana-blue);
+    padding: 1rem;
+    margin-bottom:1rem;
+    border-radius: 12px;
+    background-color: #E1F1FF;
+    display: flex;
+}
+
+.profileCardImage{
+    width: 10rem;
+    flex-basis: 10rem;
+    padding-right:1rem;
+}
+
+.profileCardImage img{
+    width: 100%;
+}
+
+.profileCardInfo{
+    width: 100%;
+}
+
+.cardName{
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.cardFiveWords{
+    display: inline-block;
+    padding: 0.25rem;
+    margin: 0.25rem 0;
+    border-radius: 0.5rem;
+    background-color: #EEE;
+}
+
+.cardLocation{
+    font-style: italic;
+}
+.cardLocation small{
+    color: #777;
+}
+
+.cardDetails{
+    padding: 0.5rem 0;
+}
+
+.cardActions{
+    padding: 0.5rem 0 0;
+    display: flex;
+}
+
+.cardlinks{
+    margin-left:auto;
+}
+.cardlinks a{
+    display: inline-block;
+    padding: 0 0.5rem;
+}
+
+.noResults{
+    max-width: 45rem;
+    margin: auto;
+    border: 3px solid #CCC;
+    padding: 1rem;
+    border-radius: 12px;
+    background-color: white;
+    margin-bottom: 1rem;
+}
+.noResults a{
+    color: var(--color-pana-pink);
+}
+
+.directoryReferrals{
+    max-width: 45rem;
+    margin: auto;
+    text-align: center;
+    padding: 5vh;
+}
+.directoryReferrals a{
+    color: var(--color-pana-pink)
+}

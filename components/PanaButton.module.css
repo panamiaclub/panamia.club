@@ -1,22 +1,57 @@
 .panaButton {
+    --button-color-blue: var(--color-pana-blue);
+    --button-color-pink: var(--color-pana-pink);
+    --button-color-yellow: var(--color-pana-yellow);
+    --button-color-navy: var(--color-navy);
+    --button-color-gray: var(--color-gray);
+    --button-color-light: var(--color-bg-light);
+    --button-color-dark: var(--color-bg-dark);
+    --padding-standard: .5rem 1.5rem;
+    --padding-compact: .5rem .5rem;
     position: relative;
     margin: 0 .5rem;
     font-size: var(--base-font-size);
     letter-spacing: 1px;
-    padding:.5rem 1.5rem;
+    padding: var(--button-padding);
     background: linear-gradient(90deg, var(--main-color) 0%, var(--main-color) 100%);
     color: white;
     font-weight: 700;
     border-radius: 2rem;
     border: 2px solid black;
     border: 2px solid var(--main-color);
-    cursor: pointer;
 }
 
 .panaButton:hover {
     background: linear-gradient(90deg, var(--hover-color) 0%, var(--hover-color) 100%);
     background-color: var(--hover-color);
     border: 2px solid white;
+    cursor: pointer;
+}
+
+.groupLeft{
+    border-radius: 2rem 0 0 2rem;
+    border-color: white;
+    margin:0;
+}
+
+.groupMiddle{
+    border-radius: 0;
+    border-color: white;
+    margin:0;
+}
+
+.groupRight{
+    border-radius: 0 2rem 2rem 0;
+    border-color: white;
+    margin:0;
+}
+
+.panaButton:disabled{
+    opacity: 0.5;
+    filter: saturate(0.5);
+}
+.panaButton:disabled:hover{
+    cursor: not-allowed;
 }
 
 @media only screen and (max-width: 600px) {

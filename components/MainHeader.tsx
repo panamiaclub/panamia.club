@@ -7,7 +7,7 @@ import axios from 'axios';
 
 import styles from './MainHeader.module.css';
 import CallToActionBar from './CallToActionBar';
-import { getUserSession } from '../lib/user_management';
+import { getUserSession } from '../lib/user';
 import PanaLogo from './PanaLogo';
 import PanaButton from './PanaButton';
 
@@ -17,6 +17,7 @@ const menu_items = [
     {id:"home", link: "/", label: "Home", icon: "" },
     {id:"about", link: "/about-us", label: "About"},
     {id:"links", link: "/links", label: "Links"},
+    {id:"search", link: "/directory/search", label: "Search"},
     {id:"donations", link: "/donate", label: "Donate", special: false},
 ];
 
@@ -34,8 +35,8 @@ interface IconProps {
     reference?: string
 }
 
-
 export default function MainHeader() {
+    console.log("MainHeader");
     const { data: session, status } = useSession();
     const handleSignOut = () => signOut({ redirect: true, callbackUrl: '/' });
     const [menu_active, setMenuActive] = useState(false);
@@ -53,6 +54,10 @@ export default function MainHeader() {
     const [navStyle, setNavStyle] = useState<NavStyle>({});
     const [logoStyle, setLogoStyle] = useState<LogoStyle>({});
 
+    /*
+    We're setting this value but not using it. This script is causing the header
+    element to re-render on every scroll. If we need this we could maybe look
+    a non use-effect solution.
     useEffect(() => {
         const handleScroll = () => {
             const newScrollPosition = window.scrollY;
@@ -65,6 +70,7 @@ export default function MainHeader() {
           window.removeEventListener('scroll', handleScroll);
         };
       }, [scrollPosition]);
+      */
 
     function onBurgerClick() {
         const burger = (document.getElementById('mainheader-toggle') as Element);
@@ -96,7 +102,7 @@ export default function MainHeader() {
 
     async function onUserClick(e: React.MouseEvent) {
         e.stopPropagation();
-        const userSessionData = await getUserSession();
+        const userSessionData = await getUserSession("http://localhost:3000");
         // console.log("userSession", userSession);
         if (userSessionData?.status?.role == "admin") {
             setIsAdmin(true);
@@ -179,7 +185,9 @@ export default function MainHeader() {
                             <span className={styles.userModalUser}>{session.user.email}</span>
                             <hr />
                             <ul>
-                                <li className={styles.adminLink} hidden={!isAdmin}><Link href="/account/admin"><a><IconAlien height="16" width="16" />&nbsp;ADMIN PORTAL</a></Link></li>
+                                { isAdmin &&
+                                <li className={styles.adminLink}><Link href="/account/admin"><a><IconAlien height="16" width="16" />&nbsp;ADMIN</a></Link></li>
+                                }
                                 <li><Link href="/account/user"><a><IconSettings height="16" width="16" />&nbsp;Account</a></Link></li>
                                 <li><Link href="/api/auth/signout"><a><IconLogout height="16" width="16" />&nbsp;Sign Out</a></Link></li>
                             </ul>

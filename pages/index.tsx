@@ -1,7 +1,8 @@
 import type { NextPage } from 'next'
 import Link from 'next/link'
-import styles from '../styles/index.module.css'
-import PanaButton from '../components/PanaButton';
+
+import styles from '@/styles/index.module.css'
+import PanaButton from '@/components/PanaButton';
 
 const Home: NextPage = () => {
 
@@ -50,7 +51,7 @@ const Home: NextPage = () => {
         <div className={styles.becomePanaBar}>
           <div>Join our free Locals Directory today!</div>
           <div>
-            <PanaButton href="/become-a-pana" text="Become A Pana" color="yellow" hoverColor="yellow" />
+            <PanaButton href="/form/become-a-pana" text="Become A Pana" color="yellow" hoverColor="yellow" />
           </div>
         </div>
       </section>
@@ -91,7 +92,7 @@ const Home: NextPage = () => {
           </div>
         </div>
       </section>
-      <section className={styles.faqContainer}>
+      <section className={styles.faqContainer} id="home-faq">
         <div className={styles.faqHero}>
           <h2>Frequently Asked Questions</h2>
           <dl className={styles.faqList}>

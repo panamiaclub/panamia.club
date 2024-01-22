@@ -1,0 +1,28 @@
+/* Author: Cory LaViska */
+
+.spinnerBox{
+    margin:auto;
+    width: fit-content;
+}
+
+.spinner {
+    width: 2rem;
+    height: 2rem;
+    border-top-color: var(--color-pana-pink);
+    border-left-color: var(--color-pana-blue);
+    border-bottom-color: var(--color-pana-orange);
+    border-right-color: transparent;
+  
+    animation: spinner 1s linear infinite;
+    border-style: solid;
+    border-width: 5px;
+    border-radius: 50%;  
+    box-sizing: border-box;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+@keyframes spinner {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

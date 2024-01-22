@@ -2,9 +2,12 @@
   --color-pana-blue: #4ab3ea;
   --color-pana-pink: #fc2070;
   --color-pana-yellow: #fab22c;
-  --color-pana-light: #f8f8f8;
-  --color-pana-navy: #181c3d;
-  --color-pana-gray: #b5b5b5;
+  --color-pana-orange: #ff8100;
+  --color-bg-light: #f8f8f8;
+  --color-bg-dark: #444;
+  --color-bg-navy: #181c3d;
+  --color-navy: #181c3d;
+  --color-gray: #b5b5b5;
   --base-font-size: 18px;
   --mobile-font-size: 16px;
   --title-font-size: 32px;
@@ -35,6 +38,10 @@ a {
   color: inherit;
   text-decoration: none;
 }
+a:hover{
+  cursor: pointer;
+  text-decoration: underline
+}
 
 * {
   box-sizing: border-box;
@@ -42,12 +49,6 @@ a {
 
 ::selection {
   background-color: #fc207063;
-}
-
-button {
-  padding: .5rem 1.25rem !important;
-  border-radius: 25px !important;
-  border: none;
 }
 
 .glass {
@@ -73,6 +74,11 @@ button {
 .text-pana-yellow{
   color: var(--color-pana-yellow);
 }
+
+.icon.icon-tabler{
+  vertical-align: text-top;
+}
+
 
 .sr-only {
   position: absolute;

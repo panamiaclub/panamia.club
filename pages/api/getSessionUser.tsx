@@ -6,6 +6,7 @@ import { authOptions } from "./auth/[...nextauth]";
 
 import dbConnect from "./auth/lib/connectdb";
 import user from "./auth/lib/model/user";
+import { uniqueAffiliateCode } from "@/lib/server/user";
 
 interface ResponseData {
   error?: string;
@@ -35,7 +36,7 @@ export default async function handler(
       .status(200)
       .json({ error: "This API call only accepts GET methods" });
   }
-  const email = session.user?.email;
+  const email = session.user?.email ? (session.user?.email as string).toLowerCase() : null;
   if (!email) {
     return res
       .status(200)
@@ -43,13 +44,20 @@ export default async function handler(
   }
   const existingUser = await getUserByEmail(email);
   if (!existingUser) {
-    // console.log("getSessionUser:existingUser", existingUser);
+    console.log("getSessionUser:newUser");
     const newUser =  new user({
       email: email,
       name: session.user?.name,
       status: {
         role: "user",
         locked: null,
+      },
+      affiliate: {
+        activated: false,
+        code: await uniqueAffiliateCode(),
+        accepted_tos: null,
+        tier: 0,
+        points: 0,
       },
       alternate_emails: [],
       zipCode: null,
@@ -58,6 +66,19 @@ export default async function handler(
     .then(() =>
       { return res.status(200).json({ success: true, data: newUser }) }
     )
+  }
+  
+  if (existingUser && 
+    (typeof existingUser.affiliate === "undefined" || Object.keys(existingUser.affiliate).length === 0)
+    ) {
+    existingUser.set("affiliate", {
+      activated: false,
+      code: await uniqueAffiliateCode(),
+      accepted_tos: null,
+      tier: 0,
+      points: 0,
+    }, { strict: false });
+    await existingUser.save();
   }
   return res.status(200).json({ success: true, data: existingUser });
 }

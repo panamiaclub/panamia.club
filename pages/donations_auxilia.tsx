@@ -1,8 +1,8 @@
 import type { NextPage } from 'next'
 import React, { ReactEventHandler } from 'react';
 
-import styles from '../styles/Donations.module.css'
-import PageMeta from '../components/PageMeta';
+import styles from '@/styles/Donations.module.css'
+import PageMeta from '@/components/PageMeta';
 
 const Donations: NextPage = () => {
   return (

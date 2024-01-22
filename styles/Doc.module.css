@@ -1,0 +1,24 @@
+.app {
+  max-width: 45rem;
+  margin: auto;
+  min-height: 80vh;
+}
+
+.main{
+  margin-top: 1rem;
+  border-radius: 1rem;
+  background-color: #f7f7f7;
+  padding: 1rem;
+}
+
+.docHeader h2 {
+  color: var(--color-pana-pink, #fc2070);
+  text-align: center;
+  text-transform: uppercase;
+}
+.docHeader h3 {
+  color: #000;
+  text-align: center;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+}

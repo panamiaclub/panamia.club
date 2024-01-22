@@ -1,15 +1,8 @@
 import type { NextPage } from 'next'
-import classNames from 'classnames';
+import { IconCash } from '@tabler/icons';
 
-import styles from '../styles/AboutUs.module.css'
-import { IconBrandSpotify, IconBrandYoutube, IconBrandPatreon, IconCash } from '@tabler/icons';
-
-import {motion, useAnimation} from "framer-motion";
-import {useInView} from "react-intersection-observer";
-import React, {useEffect, useState} from 'react';
-
-import PanaLogo from '../components/PanaLogo';
-
+import PanaLogo from '@/components/PanaLogo';
+import styles from '@/styles/AboutUs.module.css'
 
 const AboutUs: NextPage = () => {
   return (
@@ -124,8 +117,6 @@ const AboutUs: NextPage = () => {
               &nbsp;Donate To Our GoFundMe!
               </a>
             </p>
-            
-
           </section>
           <div className={styles.footer}>
           </div>

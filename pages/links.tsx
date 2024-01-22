@@ -4,10 +4,9 @@ import Link from 'next/link';
 import classNames from 'classnames';
 import { IconBrandTwitter, IconBrandInstagram, IconBrandTiktok, IconMail, IconBrandPatreon, IconBrandSpotify } from '@tabler/icons';
 
-import PanaLogo from '../components/PanaLogo';
-import styles from '../styles/Links.module.css'
-import PageMeta from '../components/PageMeta';
-
+import PanaLogo from '@/components/PanaLogo';
+import styles from '@/styles/Links.module.css'
+import PageMeta from '@/components/PageMeta';
 
 const Links: NextPage = () => {
   return (

@@ -2,11 +2,13 @@
   "name": "panamia",
   "version": "0.1.0",
   "private": true,
+  "type": "commonjs",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "import-profiles": "node ./scripts/import-profiles"
   },
   "dependencies": {
     "@emotion/react": "^11.10.4",
@@ -23,14 +25,18 @@
     "@stripe/react-stripe-js": "^2.3.2",
     "@stripe/stripe-js": "^2.1.11",
     "@tabler/icons": "^1.107.0",
+    "@tanstack/react-query": "^5.14.0",
     "axios": "^1.2.1",
     "bcrypt": "^5.1.0",
+    "busboy": "^1.6.0",
+    "dotenv": "^16.3.1",
     "formik": "^2.2.9",
     "framer-motion": "^7.6.12",
     "mongoose": "^6.8.1",
     "next": "12.3.1",
     "next-auth": "^4.15.0",
     "nodemailer": "^6.9.7",
+    "pigeon-maps": "^0.21.3",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-dropzone-uploader": "^2.11.0",
@@ -40,10 +46,12 @@
     "react-spinners": "^0.13.8",
     "react-svg": "^15.1.16",
     "stripe": "^14.9.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.1/xlsx-0.20.1.tgz",
     "yarn": "^1.22.19"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
+    "@types/busboy": "^1.5.3",
     "@types/node": "18.11.5",
     "@types/react": "18.0.22",
     "@types/react-dom": "18.0.7",

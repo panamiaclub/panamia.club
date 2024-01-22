@@ -1,0 +1,60 @@
+.logoWrapDiv {
+    display: inline-flex;
+}
+
+.logoContainer{
+    display: inline-flex;
+    width: 3rem;
+    transition: width 0.3s ease-in-out;
+    margin: auto;
+    border-radius: 50%;
+    text-align: center;
+    cursor: pointer;
+}
+
+.small{
+    height: calc(3rem);
+    width: calc(3rem);
+    margin: 0.5em 0;
+}
+
+.medium{
+    width: calc(3rem * 3.5);
+}
+.large{
+    width: calc(3rem * 7);
+}
+
+.borderedPink{
+    background-color: #FC2070;
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+}
+.borderedPink .logo{
+    transform: scale(0.8);
+}
+.borderedBlue{
+    background-color: #228be6;
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+}
+.borderedBlue .logo{
+    transform: scale(0.8);
+}
+
+
+.logo{
+    display: inline-block;
+    width:100%;
+}
+
+.logoLink{
+    cursor: pointer;
+}
+
+@media only screen and (max-width: 600px) {
+    .medium{
+        width: calc(3rem * 3);
+    }
+    .large{
+        width: calc(3rem * 5);
+    }
+}

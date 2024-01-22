@@ -13,8 +13,10 @@ const userSchema = new Schema(
             role: String,
             locked: Date
         },
+        affiliate: {},
         alternate_emails: [],
         zip_code: String,
+        following: [],
     },
     {
         timestamps: true
