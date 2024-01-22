@@ -56,6 +56,13 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
   }
 }
 
+function detailLimit(detail: String) {
+  if (detail.length > 250) {
+    return `${detail.substring(0, 247)}...`;
+  }
+  return detail;
+}
+
 function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[], isLoading: boolean, params: any}) {
   console.log("data", data, "isLoading", isLoading)
   if (isLoading === true) {
@@ -109,7 +116,7 @@ function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[
               }
               </div>
           }
-          <div className={styles.cardDetails}>{item.details}</div>
+          <div className={styles.cardDetails}>{detailLimit(item.details)}</div>
           <div className={styles.cardActions}>
             <>
             <Link href={`/profile/${item.slug}`}><a><IconUserCircle height="20" />View Profile</a></Link>&emsp;
@@ -294,7 +301,7 @@ const Directory_Search: NextPage = (props: any) => {
         </section>
         <div className={styles.allSearch}>
           <section className={styles.searchFilters}>
-            <div className={styles.viewButtonGroup}>
+            <div className={styles.viewButtonGroup} hidden>
               <PanaButton color="gray" compact={true} group="left"
                 title="Select to view search results as a List">
                 <IconList height="20" />
@@ -352,7 +359,7 @@ const Directory_Search: NextPage = (props: any) => {
                     <PanaButton onClick={useFiltersModal}>Close</PanaButton>
                   </form>
                 </dialog>
-                <button className={styles.filtersButton}
+                <button className={styles.filtersButton} hidden
                   onClick={useSortModal}>
                   <IconSortDescending height="20" />
                   <span>Sort:&nbsp;</span>
