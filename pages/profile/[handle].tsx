@@ -44,6 +44,12 @@ const Profile_Public: NextPage = () => {
 
   const profileCoords = data?.geo ? [data.geo.coordinates[1], data.geo.coordinates[0]] as [number, number] : null;
 
+  function urlWithSource(url: string) {
+    const new_url = new URL(url);
+    new_url.searchParams.set('utm_source', 'panamia');
+    return new_url.toString();
+  }
+
   function hasAddress(address: AddressInterface) {
     if (address?.street1 || address?.street2 || address?.city ||
       address?.state || address?.zipcode) {
@@ -131,32 +137,32 @@ const Profile_Public: NextPage = () => {
             <h3>Socials and Links</h3>
             <div className={styles.profileInfo}>
               { data.socials?.website && 
-              <a href={data.socials.website} target="_blank" rel="noopener">
+              <a href={urlWithSource(data.socials.website)} target="_blank" rel="noopener noreferrer">
                 <IconExternalLink height="20" /> Website
               </a>
               }
               { data.socials?.instagram && 
-              <a href={data.socials.instagram} target="_blank" rel="noopener">
+              <a href={urlWithSource(data.socials.instagram)} target="_blank" rel="noopener noreferrer">
                 <IconBrandInstagram height="20" /> Instagram
               </a>
               }
               { data.socials?.facebook && 
-              <a href={data.socials.facebook} target="_blank" rel="noopener">
+              <a href={urlWithSource(data.socials.facebook)} target="_blank" rel="noopener noreferrer">
                 <IconBrandFacebook height="20" /> Facebook
               </a>
               }
               { data.socials?.tiktok && 
-              <a href={data.socials.tiktok} target="_blank" rel="noopener">
+              <a href={urlWithSource(data.socials.tiktok)} target="_blank" rel="noopener noreferrer">
                 <IconBrandTiktok height="20" /> TikTok
               </a>
               }
               { data.socials?.twitter && 
-              <a href={data.socials.twitter} target="_blank" rel="noopener">
+              <a href={urlWithSource(data.socials.twitter)} target="_blank" rel="noopener noreferrer">
                 <IconBrandTwitter height="20" /> Twitter
               </a>
               }
               { data.socials?.spotify && 
-              <a href={data.socials.spotify} target="_blank" rel="noopener">
+              <a href={urlWithSource(data.socials.spotify)} target="_blank" rel="noopener noreferrer">
                 <IconBrandSpotify height="20" /> Spotify
               </a>
               }
