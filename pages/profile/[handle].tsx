@@ -45,9 +45,14 @@ const Profile_Public: NextPage = () => {
   const profileCoords = data?.geo ? [data.geo.coordinates[1], data.geo.coordinates[0]] as [number, number] : null;
 
   function urlWithSource(url: string) {
-    const new_url = new URL(url);
-    new_url.searchParams.set('utm_source', 'panamia');
-    return new_url.toString();
+    try {
+      const new_url = new URL(url);
+      new_url.searchParams.set('utm_source', 'panamia');
+      return new_url.toString();
+    } catch (error) {
+
+    }
+    return url;
   }
 
   function hasAddress(address: AddressInterface) {

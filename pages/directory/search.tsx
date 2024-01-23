@@ -64,7 +64,7 @@ function detailLimit(detail: String) {
 }
 
 function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[], isLoading: boolean, params: any}) {
-  console.log("data", data, "isLoading", isLoading)
+  // console.log("data", data, "isLoading", isLoading)
   if (isLoading === true) {
     return (
       <div className={styles.noResults}>
