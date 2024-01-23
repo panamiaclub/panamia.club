@@ -1,21 +1,22 @@
+'use client';
+
 import type { NextPage } from 'next'
-import React from 'react';
+import { useRouter } from 'next/router';
+import { useEffect } from 'react';
 
-import styles from '@/styles/GoogleEmbeddedForm.module.css'
-import PageMeta from '@/components/PageMeta';
+import styles from '../styles/Affiliate.module.css';
 
-const BecomeAPana: NextPage = () => {
+const Affiliate: NextPage = () => {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/form/become-a-pana");
+  })
+  
+
   return (
-    <main className={styles.app}>
-      <PageMeta
-        title="Become a Pana"
-        desc="Sign up to become a Pana and get the benefits of being listed on our directory!"
-        />
-      <div className={styles.main}>
-        <iframe className={styles.fullFrame} src="https://docs.google.com/forms/d/e/1FAIpQLSdE7qckjuydnNl4GPLyyU6whh89MuOGTIEZIaI5EhFfOk4wVA/viewform?embedded=true">Loading...</iframe>
-      </div>
-  </main>
+    <>
+    </>
   )
 }
 
-export default BecomeAPana
+export default Affiliate

@@ -154,6 +154,13 @@
     display: flex;
 }
 
+@media screen and (max-width: 600px) {
+    .profileCard{
+        flex-direction: column;
+        padding: .5rem;
+    }
+}
+
 .profileCardSignup{
     max-width: 45rem;
     margin: auto;
@@ -165,14 +172,32 @@
     display: flex;
 }
 
+@media screen and (max-width: 600px) {
+    .profileCardSignup{
+        flex-direction: column;
+        padding: .5rem;
+    }
+}
+
 .profileCardImage{
     width: 10rem;
-    flex-basis: 10rem;
     padding-right:1rem;
 }
 
+@media screen and (max-width: 600px) {
+    .profileCardImage{
+        width: 100%;
+        max-width: 100%;
+        max-height: 25vh;
+        padding:0 1rem;
+        margin:0 auto 1rem;
+        overflow: hidden;
+    }
+}
+
 .profileCardImage img{
-    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
 }
 
 .profileCardInfo{
