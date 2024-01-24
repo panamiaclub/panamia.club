@@ -45,6 +45,9 @@ const Profile_Public: NextPage = () => {
   const profileCoords = data?.geo ? [data.geo.coordinates[1], data.geo.coordinates[0]] as [number, number] : null;
 
   function urlWithSource(url: string) {
+    if (url.substring(0, 4) !== "http") {
+      url = `https://${url}`;
+    }
     try {
       const new_url = new URL(url);
       new_url.searchParams.set('utm_source', 'panamia');
