@@ -38,8 +38,9 @@ const isNumber = (value) => {
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 const cleanDate = (value) => {
+  // console.log("value", typeof value, value)
   // Convert Excel serial date (numeric) to datetime
-  if (value.includes("/")) {
+  if (typeof value !== "number" && value.includes("/")) {
     return new Date(value);
   }
   let newDate = value ? new Date((value - 25569) * 8.64e7) : null;
