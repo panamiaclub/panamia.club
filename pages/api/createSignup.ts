@@ -55,7 +55,7 @@ const callBrevo_sendAdminNoticeEmail = async (name: string, email: string, signu
       email: email,
       signup_type: signup_type,
     }
-    const response = await brevo.sendTemplateEmail(template_id, params);
+    const response = await brevo.sendTemplateEmail(parseInt(template_id), params);
     // TODO: Confirm 201 response from Brevo
   }
 }

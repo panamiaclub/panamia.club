@@ -62,13 +62,13 @@ const Links: NextPage = () => {
               </a>
             </div>
             <div className={classNames(styles.link, styles.linkHighlight)}>
-              <Link href="/become-a-pana"><a target="_blank" rel="noreferrer">
+              <Link href="/form/become-a-pana/"><a target="_blank" rel="noreferrer">
               Become Our Pana!<br />
               <small>Are you a local entrepreneur or creative based in SoFlo? You’re invited to join our open-access Local’s Directory!</small>
               </a>
               </Link>
             </div>
-            <div className={classNames(styles.link, styles.linkHighlightAlt)}>
+            <div className={classNames(styles.link, styles.linkHighlightAlt)} hidden>
               <Link href="/form/cosa-hecha-love-local-market-vendor/"><a target="_blank" rel="noreferrer" >
               Cosa Hecha + Love Local Market Vendor Application<br />
               <small>Sign up to be a vendor at Pana MIA Club's sustainability market!</small>

@@ -31,6 +31,7 @@ export default async function handler(
     const handle = req.query.handle.toString().toLowerCase();
     const existingProfile = await getProfile(handle);
     if (existingProfile) {
+      // TODO: Create SAFE profile object for Public API
       return res.status(200).json({ success: true, data: existingProfile });
     }
   }

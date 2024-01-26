@@ -4,7 +4,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "./auth/lib/connectdb";
 import profile from "./auth/lib/model/profile";
 import BrevoApi from "@/lib/brevo_api";
-import { buildSearchData, slugify, splitName } from "@/lib/standardized";
+import { createUniqueString, slugify, splitName } from "@/lib/standardized";
 
 interface ResponseData {
   error?: string;
@@ -61,7 +61,8 @@ export default async function handler(
     whatsapp_community,
     pronouns,
     five_words,
-    tags
+    tags,
+    hearaboutus
     } = req.body;
 
     console.log({
@@ -75,7 +76,8 @@ export default async function handler(
       whatsapp_community,
       pronouns,
       five_words,
-      tags
+      tags,
+      hearaboutus
       });
 
   await dbConnect();
@@ -92,9 +94,6 @@ export default async function handler(
       .status(200)
       .json({ error: "Please enter a valid email address." });
   }
-  const search_data = buildSearchData(
-    name, five_words, tags
-  );
 
   // TODO: Set initial completion percentage?
   const newProfile = new profile({
@@ -104,6 +103,7 @@ export default async function handler(
       active: false, // TODO: set to false on launch/approval process
       status: {
         submitted: new Date(),
+        access: createUniqueString(),
       },
       locally_based: locally_based,
       details: details,
@@ -114,7 +114,7 @@ export default async function handler(
       pronouns: pronouns,
       five_words: five_words,
       tags: tags,
-      search_data: search_data,
+      hearaboutus: hearaboutus,
   }, {strict: false});
 
   try{
@@ -125,7 +125,7 @@ export default async function handler(
   const promise = await Promise.allSettled([
     callBrevo_createContact(email, name),
   ]);
-  return res.status(200).json({ msg: "Successfuly created new Profile: " + newProfile });
+  return res.status(200).json({ msg: "Successfuly created new Profile: " + newProfile.email });
 }
 
 export const config = {

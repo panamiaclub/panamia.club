@@ -84,7 +84,7 @@ export default class BrevoApi {
     }
   }
 
-  async sendTemplateEmail(template_id: string, params: {}, email?: string) {
+  async sendTemplateEmail(template_id: number, params: {}, email?: string) {
     const call = this.config.api_schema.Emails.sendTransactional;
     const full_endpoint = `${this.config.base_url}${call.endpoint}`
 
@@ -97,7 +97,7 @@ export default class BrevoApi {
 
     return this.postCall(full_endpoint, {
        "to":receivers,
-       "templateId": parseInt(template_id),
+       "templateId": template_id,
        "params": params,
     });
   }

@@ -13,6 +13,15 @@ export const serialize = (object: any) => {
     return  JSON.parse(JSON.stringify(object));
 }
 
+export const createUniqueString = () => {
+    const base = new Uint32Array(5);
+    crypto.getRandomValues(base);
+    let r = "";
+    base.forEach((value) => { r = r + value.toString(36)})
+    return r;
+}
+
+
 export const forceInt = (value: string | undefined, ifNaN: number) => {
     if (value === undefined) {
         return ifNaN;

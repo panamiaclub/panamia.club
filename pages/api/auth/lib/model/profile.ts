@@ -29,6 +29,7 @@ const profileSchema = new Schema(
         whatsapp_community: Boolean,
         pronouns: {},
         tags: String,
+        hearaboutus: String,
         counties: {},
         categories: {},
         primary_address: {},

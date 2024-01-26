@@ -36,6 +36,8 @@ const Form_BecomeAPana: NextPage = () => {
   const [pronouns_otherdesc, setPronounsOtherdesc] = useState("");
   const [five_words, setFiveWords] = useState("");
   const [tags, setTags] = useState("");
+  const [hearaboutus, setHearAboutUs] = useState("");
+  const [agree_tos, setAgreeTos] = useState(false);
 
 
   const createExpressProfile = async() => {
@@ -70,6 +72,7 @@ const Form_BecomeAPana: NextPage = () => {
                 pronouns: pronouns,
                 five_words: five_words,
                 tags: tags,
+                hearaboutus: hearaboutus,
             },
             {
                 headers: {
@@ -102,9 +105,21 @@ const Form_BecomeAPana: NextPage = () => {
                 alert(response.data.error);
             } else {
                 // TODO: Submit Profile Photo 
+
                 console.log(response.data.msg);
-                setActivePage(7);
+                setActivePage(8);
                 document.getElementById('form-page-confirmation')?.focus();
+                await axios
+                    .post(
+                        "/api/profile/sendSubmission",
+                        { email: email, },
+                        {
+                            headers: {
+                                Accept: "application/json",
+                                "Content-Type": "application/json",
+                            },
+                        }
+                    ) // Blind send, no need to confirm
             }
         }
     }
@@ -135,6 +150,11 @@ const Form_BecomeAPana: NextPage = () => {
     document.getElementById('form-page-6')?.focus();
   }
   function submitPage6(e: FormEvent) {
+    e.preventDefault();
+    // validate
+    // submitExpressProfile(e);
+  }
+  function submitPage7(e: FormEvent) {
     e.preventDefault();
     // validate
     submitExpressProfile(e);
@@ -209,7 +229,7 @@ const Form_BecomeAPana: NextPage = () => {
                         </div>
                         <div className={styles.formPageActions}>
                             <div className={styles.formPageActionsPrev}>
-                                <PanaButton color="light" onClick={(e:any) => {setActivePage(1)}}>Previous</PanaButton>
+                                <PanaButton color="gray" onClick={(e:any) => {setActivePage(1)}}>Previous</PanaButton>
                             </div>
                             <div className={styles.formPageActionsNext}>
                                 <PanaButton color="pink" type="submit">Next</PanaButton>
@@ -243,7 +263,7 @@ const Form_BecomeAPana: NextPage = () => {
                         </p>
                         <div className={styles.formPageActions}>
                             <div className={styles.formPageActionsPrev}>
-                                <PanaButton color="light" onClick={(e:any) => {setActivePage(2)}}>Previous</PanaButton>
+                                <PanaButton color="gray" onClick={(e:any) => {setActivePage(2)}}>Previous</PanaButton>
                             </div>
                             <div className={styles.formPageActionsNext}>
                                 <PanaButton color="pink" type="submit">Next</PanaButton>
@@ -294,8 +314,8 @@ const Form_BecomeAPana: NextPage = () => {
                             </ul>
                         </div>
                         <div className={styles.formPageActions}>
-                        <div className={styles.formPageActionsPrev}>
-                                <PanaButton color="light" onClick={(e:any) => {setActivePage(3)}}>Previous</PanaButton>
+                            <div className={styles.formPageActionsPrev}>
+                                <PanaButton color="gray" onClick={(e:any) => {setActivePage(3)}}>Previous</PanaButton>
                             </div>
                             <div className={styles.formPageActionsNext}>
                                 <PanaButton color="pink" onClick={(e:any) => {setActivePage(5)}}>Next/Skip</PanaButton>
@@ -304,7 +324,7 @@ const Form_BecomeAPana: NextPage = () => {
                     </form>
                 </article>
                 <article className={active_page == 5 ? styles.formPageActive : styles.formPage}>
-                    <form id="form-page-5" onSubmit={submitPage4} aria-describedby="form-progress-bar">
+                    <form id="form-page-5" onSubmit={submitPage5} aria-describedby="form-progress-bar">
                         <p className={styles.formFields}>
                             <label className={styles.label__field}>Explain your project in detail: <Required />
                             <br /></label><br />
@@ -332,8 +352,8 @@ const Form_BecomeAPana: NextPage = () => {
                             <small>Example (The Dancing Elephant): Spiritual/Metaphysical, Books, Bookstore, Retail Shop</small>
                         </p>
                         <div className={styles.formPageActions}>
-                        <div className={styles.formPageActionsPrev}>
-                                <PanaButton color="light" onClick={(e:any) => {setActivePage(4)}}>Previous</PanaButton>
+                            <div className={styles.formPageActionsPrev}>
+                                <PanaButton color="gray" onClick={(e:any) => {setActivePage(4)}}>Previous</PanaButton>
                             </div>
                             <div className={styles.formPageActionsNext}>
                                 <PanaButton color="pink" onClick={(e:any) => {setActivePage(6)}}>Next</PanaButton>
@@ -382,8 +402,36 @@ const Form_BecomeAPana: NextPage = () => {
                             </ul>
                         </div>
                         <div className={styles.formPageActions}>
-                        <div className={styles.formPageActionsPrev}>
-                                <PanaButton color="light" onClick={(e:any) => {setActivePage(5)}}>Previous</PanaButton>
+                            <div className={styles.formPageActionsPrev}>
+                                <PanaButton color="gray" onClick={(e:any) => {setActivePage(5)}}>Previous</PanaButton>
+                            </div>
+                            <div className={styles.formPageActionsNext}>
+                                <PanaButton color="pink" onClick={(e:any) => {setActivePage(7)}}>Next</PanaButton>
+                            </div>
+                        </div>
+                    </form>
+                </article>
+                <article className={active_page == 7 ? styles.formPageActive : styles.formPage}>
+                    <form id="form-page-7" onSubmit={submitPage7} aria-describedby="form-progress-bar">
+                        <p className={styles.formFields}>
+                            <label className={styles.label__field}>How did your hear about us? (optional)
+                            <br /></label><br />
+                            <textarea name="hearaboutus" maxLength={500} placeholder="" rows={4}
+                                value={hearaboutus} onChange={(e:any) => setHearAboutUs(e.target.value)} />
+                        </p>
+                        <p className={styles.formFields}>
+                            Please read our&nbsp;
+                            <Link href="/doc/terms-and-conditions"><a target="_blank" rel="noopener noreferrer">Terms and Conditions</a></Link>
+                            &nbsp;which includes our general terms, our privacy policy, and permission to accept email and SMS marketing.
+                            <label> <input type="checkbox" value="yes" checked={agree_tos}
+                                onChange={(e:any) => setAgreeTos(e.target.checked)} required />
+                                &nbsp;I agree to the Terms & Conditions
+                            </label>
+                        </p>
+                        <p></p>
+                        <div className={styles.formPageActions}>
+                            <div className={styles.formPageActionsPrev}>
+                                <PanaButton color="gray" onClick={(e:any) => {setActivePage(6)}}>Previous</PanaButton>
                             </div>
                             <div className={styles.formPageActionsNext}>
                                 <PanaButton color="pink" type="submit">Submit Form</PanaButton>
@@ -391,7 +439,7 @@ const Form_BecomeAPana: NextPage = () => {
                         </div>
                     </form>
                 </article>
-                <article className={active_page == 7 ? styles.formPageActive : styles.formPage}>
+                <article className={active_page == 8 ? styles.formPageActive : styles.formPage}>
                     <div id="form-page-confirmation" className={styles.formPageConfirmation}>
                         <h2>Thank you for signing up!</h2>
                         <p className={styles.notice}>We're confirming your profile details and will email you when it's published.</p>
