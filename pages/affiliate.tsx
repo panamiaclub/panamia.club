@@ -2,12 +2,10 @@
 
 import type { NextPage } from 'next'
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 import styles from '../styles/Affiliate.module.css';
 import { Local } from '@/lib/localstorage';
-
-
 
 const Affiliate: NextPage = () => {
   const router = useRouter();
@@ -25,7 +23,9 @@ const Affiliate: NextPage = () => {
       const redirect_key = redirectTo.toString().toUpperCase();
       if (redirect_key == "BECOMEAPANA") {
         console.log("Redirect:BECOMEAPANA");
-        router.replace("/form/become-a-pana")
+        setTimeout(function(){
+          router.replace("/form/become-a-pana")
+        },250);
         // window.location.href="/form/become-a-pana";
       }
     }

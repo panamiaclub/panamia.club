@@ -19,17 +19,16 @@ const hasExpired = (key: string) => {
     if (!expires) {
         return false;
     }
-    const now = (new Date()).valueOf();
-    if (Date.parse(expires) < now) {
-        return false
+    if (new Date() > new Date(parseInt(expires))) {
+        return true
     }
-    return true;
+    return false;
 }
 
 export const Local = {
     set: (key: string, value: string, expires?: number) => {
         if (typeof window == "undefined") {
-            return false;
+            return null;
         }
         if (expires) {
             setExpires(key, expires);
@@ -38,7 +37,7 @@ export const Local = {
     },
     get: (key: string,) => {
         if (typeof window == "undefined") {
-            return false;
+            return null;
         }
         if (hasExpired(key)) {
             localStorage.removeItem(modKey(key));

@@ -30,6 +30,7 @@ const profileSchema = new Schema(
         pronouns: {},
         tags: String,
         hearaboutus: String,
+        affiliate: String,
         counties: {},
         categories: {},
         primary_address: {},

@@ -1,8 +1,6 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth/next";
 
-import { authOptions } from "../auth/[...nextauth]";
 import dbConnect from "../auth/lib/connectdb";
 import profile from "../auth/lib/model/profile";
 import BrevoApi from "@/lib/brevo_api";
@@ -78,6 +76,7 @@ export default async function handler(
             socials_twitter: existingProfile?.socials?.twitter ? existingProfile.socials.twitter : "n/a",
             socials_spotify: existingProfile?.socials?.spotify ? existingProfile.socials.spotify : "n/a",
             hearaboutus: existingProfile.hearaboutus,
+            affiliate: existingProfile?.affiliate ? existingProfile.affiliate : "n/a",
             approve_url: approve_url.toString(),
             decline_url: decline_url.toString(),
           }

@@ -62,10 +62,11 @@ export default async function handler(
     pronouns,
     five_words,
     tags,
-    hearaboutus
+    hearaboutus,
+    affiliate,
     } = req.body;
 
-    console.log({
+    console.log("createExpressProfile", {
       name,
       email,
       locally_based,
@@ -77,7 +78,8 @@ export default async function handler(
       pronouns,
       five_words,
       tags,
-      hearaboutus
+      hearaboutus,
+      affiliate,
       });
 
   await dbConnect();
@@ -115,6 +117,7 @@ export default async function handler(
       five_words: five_words,
       tags: tags,
       hearaboutus: hearaboutus,
+      affiliate: affiliate,
   }, {strict: false});
 
   try{

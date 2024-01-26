@@ -56,11 +56,11 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
   }
 }
 
-function detailLimit(detail: String) {
-  if (detail.length > 250) {
-    return `${detail.substring(0, 247)}...`;
+function detailLimit(details: String) {
+  if (details?.length > 250) {
+    return `${details.substring(0, 247)}...`;
   }
-  return detail;
+  return details;
 }
 
 function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[], isLoading: boolean, params: any}) {

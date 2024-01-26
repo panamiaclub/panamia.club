@@ -10,6 +10,7 @@ import PanaLogo from '@/components/PanaLogo';
 import PanaLogoLong from '@/components/PanaLogoLong';
 import Required from '@/components/Form/Required';
 import PanaButton from '@/components/PanaButton';
+import { Local } from '@/lib/localstorage';
 
 const Form_BecomeAPana: NextPage = () => {
   const [active_page, setActivePage] = useState(1);
@@ -38,7 +39,8 @@ const Form_BecomeAPana: NextPage = () => {
   const [tags, setTags] = useState("");
   const [hearaboutus, setHearAboutUs] = useState("");
   const [agree_tos, setAgreeTos] = useState(false);
-
+  const [affiliate, setAffiliate] = useState(Local.get("affiliate"));
+  console.log("Affiliate", affiliate);
 
   const createExpressProfile = async() => {
     const socials = {
@@ -73,6 +75,7 @@ const Form_BecomeAPana: NextPage = () => {
                 five_words: five_words,
                 tags: tags,
                 hearaboutus: hearaboutus,
+                affiliate: affiliate,
             },
             {
                 headers: {
