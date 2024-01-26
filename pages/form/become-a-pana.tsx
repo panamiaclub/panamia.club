@@ -59,7 +59,7 @@ const Form_BecomeAPana: NextPage = () => {
     };
     const response = await axios
         .post(
-            "/api/createExpressProfile",
+            "/api/createExpressProfile/",
             {
                 email: email,
                 name: name,
