@@ -14,6 +14,7 @@ export const serialize = (object: any) => {
 }
 
 export const createUniqueString = () => {
+    const crypto = require('crypto');
     const base = new Uint32Array(5);
     crypto.getRandomValues(base);
     let r = "";
