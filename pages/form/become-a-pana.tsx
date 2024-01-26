@@ -83,6 +83,7 @@ const Form_BecomeAPana: NextPage = () => {
         )
         .catch((error) => {
             console.log(error);
+            alert("There was a problem submitting the form, please contact us.")
             return null;
         });
     return response
@@ -459,4 +460,4 @@ const Form_BecomeAPana: NextPage = () => {
   )
 }
 
-export default Form_BecomeAPana
+export default Form_BecomeAPana;
