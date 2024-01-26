@@ -68,7 +68,7 @@ export const getBrevoConfig = () => {
             "admin": {
                 "contact_us_submission": 8,
                 "newsletter_submission": 7,
-                "profile_submission": 0,
+                "profile_submission": 39,
                 "donation_submission": 0,
             }
         },

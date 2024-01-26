@@ -104,8 +104,7 @@ const Form_BecomeAPana: NextPage = () => {
             if(response.data.error) {
                 alert(response.data.error);
             } else {
-                // TODO: Submit Profile Photo 
-
+                // TODO: Submit Profile Photo
                 console.log(response.data.msg);
                 setActivePage(8);
                 document.getElementById('form-page-confirmation')?.focus();
