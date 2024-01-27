@@ -369,7 +369,7 @@ const Form_BecomeAPana: NextPage = () => {
                             <ul>
                                 <li>
                                     <strong>Website and Social Media</strong>
-                                    <br /><small>These will be displayed on your profile</small>
+                                    <br /><small>These will be displayed on your profile, please use the full URL for each</small>
                                 </li>
                                 <li className={styles.listSocialFields}>
                                     <label>Website:</label>
