@@ -207,7 +207,7 @@ const Form_BecomeAPana: NextPage = () => {
                         <div className={styles.formFields}>
                             <ul>
                                 <li>
-                                    <strong>Are you (the creator, director, owner, CEO) locally-based or are a native of South Florida? <Required /></strong>
+                                    <strong>Are you (the creator, director, owner, CEO) locally-based or a native of South Florida? <Required /></strong>
                                     <br /><small>South Florida is Miami-Dade, Broward and Palm Beach County</small>
                                 </li>
                                 <li>
