@@ -2,6 +2,7 @@ import type { NextPage } from 'next'
 
 import styles from '../../styles/Doc.module.css'
 import PageMeta from '../../components/PageMeta';
+import Link from 'next/link';
 
 const Doc_TermsAndConditions: NextPage = () => {
   return (
@@ -430,8 +431,9 @@ const Doc_TermsAndConditions: NextPage = () => {
           UNDERSTAND THAT WITHOUT THIS PROVISION, YOU WOULD HAVE THE RIGHT TO SUE IN COURT AND HAVE A JURY TRIAL. 
           The arbitration shall be commenced and conducted under the Commercial Arbitration Rules of the American 
           Arbitration Association ("AAA") and, where appropriate, the AAA's Supplementary Procedures for Consumer 
-          Related Disputes ("AAA Consumer Rules"), both of which are available at the American Arbitration Association 
-          (AAA) website. Your arbitration fees and your share of arbitrator compensation shall be governed by the AAA 
+          Related Disputes ("AAA Consumer Rules"), both of which are available at the&nbsp;
+          <Link href="http://www.adr.org"><a>American Arbitration Association (AAA) website</a></Link>.
+           Your arbitration fees and your share of arbitrator compensation shall be governed by the AAA 
           Consumer Rules and, where appropriate, limited by the AAA Consumer Rules. If such costs are determined by 
           the arbitrator to be excessive, we will pay all arbitration fees and expenses. The arbitration may be 
           conducted in person, through the submission of documents, by phone, or online. The arbitrator will make a 

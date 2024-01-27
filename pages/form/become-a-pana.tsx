@@ -189,10 +189,9 @@ const Form_BecomeAPana: NextPage = () => {
                     ></progress>
                 <article id="form-page-1" className={active_page == 1 ? styles.formPageActive : styles.formPage}>
                     <h3>Why are you filling out this form?</h3>
-                    <p>We want to better understand your project and get a better sense of your needs. Some of 
-                    this information will be for internal use and the some will be published publicly on our directory. Once our Keyword-Searchable Directory is up 
-                    on our website you will have the ability to edit your profiles as needed! In the meantime, you can view our current&nbsp; 
-                    <a href="https://docs.google.com/spreadsheets/d/1FWh_LIroPsu_0Xej-anP0RuIBDp6k8l1cfJ0pq8dQjY">Directory Sheet</a></p>
+                    <p>We want to better understand your project and get a better sense of your needs. Your answers 
+                        are used to create your user profile on our Local Directory. Once your user profile is live, you’ll be able to edit this information at any time. You can browse our Local Directory here.&nbsp; 
+                    <Link href="/directory/search/"><a>Directory Sheet</a></Link></p>
                     <p><strong>Please answer to the best of your ability. You are welcome to create more than
                     one profile if you have separate projects - just make sure to use a different email.</strong></p>
                     <p><em>If you have questions please reach out to us at hola@panamia.club</em></p>
@@ -243,7 +242,7 @@ const Form_BecomeAPana: NextPage = () => {
                 <article className={active_page == 3 ? styles.formPageActive : styles.formPage}>
                     <form id="form-page-3" onSubmit={submitPage3} aria-describedby="form-progress-bar">
                         <p className={styles.formFields}>
-                            <label className={styles.label__field}>Name of your self, Business, Project, or Org <Required /></label><br />
+                            <label className={styles.label__field}>Name of your Business, Project, or Organization <Required /></label><br />
                             <input type="text" name="name" maxLength={75} placeholder="Name" required
                                 value={name} onChange={(e:any) => setName(e.target.value)} />
                             <small>This name will display as the Title of your profile</small>
@@ -261,7 +260,7 @@ const Form_BecomeAPana: NextPage = () => {
                             <small>Used for contacting you, not displayed on profile</small>
                             <label> <input type="checkbox" value="yes" checked={whatsapp_community}
                                 onChange={(e:any) => setWhatsappCommunity(e.target.checked)} />
-                                I'm interested in the WhatsApp community chat/forum for directory members
+                                I'm interested in joining the WhatsApp community chat/forum for directory members
                             </label>
                         </p>
                         <div className={styles.formPageActions}>
@@ -370,7 +369,7 @@ const Form_BecomeAPana: NextPage = () => {
                             <ul>
                                 <li>
                                     <strong>Website and Social Media</strong>
-                                    <br /><small>These will be displayed on your profile, please use the full URL for each</small>
+                                    <br /><small>These will be displayed on your profile</small>
                                 </li>
                                 <li className={styles.listSocialFields}>
                                     <label>Website:</label>
