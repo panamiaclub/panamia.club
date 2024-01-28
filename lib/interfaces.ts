@@ -92,6 +92,8 @@ export interface ProfileInterface {
     locations: [],
     images?: ProfileImagesInterface,
     linked_profiles: [],
+    createdAt: Date,
+    updatedAt: Date,
 }
 
 export interface ContactUsInterface {

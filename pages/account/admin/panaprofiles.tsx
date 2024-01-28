@@ -10,7 +10,7 @@ import { IconUser } from '@tabler/icons';
 
 import styles from '@/styles/account/Account.module.css';
 import PageMeta from '@/components/PageMeta';
-import { UserInterface, Pagination } from '@/lib/interfaces';
+import { UserInterface, Pagination, ProfileInterface } from '@/lib/interfaces';
 import { standardizeDateTime } from '@/lib/standardized';
 import PanaButton from '@/components/PanaButton';
 import AdminButton from '@/components/Admin/AdminButton';
@@ -28,14 +28,14 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
   }
 }
 
-const Account_Admin_Users: NextPage = () => {
+const Account_Pana_Profiles: NextPage = () => {
   const { data: session } = useSession();
   const [page_number, setPageNumber] = useState(1);
   const [submissions_list, setSubmissionsList] = useState([]);
   const [pagination, setPagination] = useState({} as Pagination);
 
   function createListElements() {
-    const elements = submissions_list.map((item: UserInterface, index) => {
+    const elements = submissions_list.map((item: ProfileInterface, index) => {
       return (
         <div key={index} className={styles.submissionListItem}>
           <div className={styles.submissionListRow}>
@@ -48,7 +48,13 @@ const Account_Admin_Users: NextPage = () => {
             </div>
             <div className={styles.submissionListField}><label>Name</label>&emsp;{item?.name}</div>
             <div className={styles.submissionListField}><label>Email</label>&emsp;{item?.email}</div>
-            <div className={styles.submissionListField}><label>Role</label>&emsp;{item?.status?.role}</div>
+            <div className={styles.submissionListField}><label>details</label>&emsp;{item?.details}</div>
+            <div className={styles.submissionListField}><label>five words</label>&emsp;{item?.details}</div>
+            <div className={styles.submissionListField}><label>background</label>&emsp;{item?.details}</div>
+            <div className={styles.submissionListField}><label>active</label>&emsp;{item?.active?.toString()}</div>
+            <div className={styles.submissionListField}><label>tags</label>&emsp;{item?.tags?.toString()}</div>
+            <div className={styles.submissionListField}><label>whatsapp</label>&emsp;{item?.whatsapp_community?.toString()}</div>
+            <div style={{margin:"2%"}}><AdminButton>Edit</AdminButton><AdminButton>View Images</AdminButton></div>
           </div>
         </div>
       );
@@ -61,7 +67,7 @@ const Account_Admin_Users: NextPage = () => {
       .append("page", page_number.toString());
     axios
     .get(
-        `/api/getUserList?${params}`,
+        `/api/getProfileList?${params}`,
         {
             headers: {
                 Accept: "application/json",
@@ -87,7 +93,7 @@ const Account_Admin_Users: NextPage = () => {
         <PageMeta title="Users | Admin" desc="" />
         <AdminMenu />
         <div className={styles.main}>
-          <h2 className={styles.accountTitle}>Users</h2>
+          <h2 className={styles.accountTitle}>Pana Profiles</h2>
           <div className={styles.accountForm}>
             <div className={styles.submissionList}>
                 {createListElements()}
@@ -119,5 +125,5 @@ const Account_Admin_Users: NextPage = () => {
   )
 }
 
-export default Account_Admin_Users;
+export default Account_Pana_Profiles;
 

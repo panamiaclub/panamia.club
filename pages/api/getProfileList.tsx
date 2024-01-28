@@ -5,6 +5,7 @@ import { authOptions } from "./auth/[...nextauth]";
 
 import dbConnect from "./auth/lib/connectdb";
 import user from "./auth/lib/model/user";
+import profile from "./auth/lib/model/profile";
 
 interface ResponseData {
   error?: string,
@@ -48,7 +49,7 @@ export default async function handler(
   const offset = (per_page * page_number) - per_page;
 
   dbConnect();
-  const listCount = await user.count();
+  const listCount = await profile.count();
   const pagination = {
     count: listCount,
     per_page: per_page,
@@ -56,7 +57,7 @@ export default async function handler(
     page_number: page_number,
     total_pages: (listCount > 0 ? Math.ceil(listCount / per_page) : 1),
   }
-  const paginatedList = await user.find().sort({createdAt: "desc"}).limit(per_page).skip(offset);
+  const paginatedList = await profile.find().sort({createdAt: "desc"}).limit(per_page).skip(offset);
   if (paginatedList) {
     return res.status(200).json({ success: true, data: paginatedList, pagination: pagination }) 
   }

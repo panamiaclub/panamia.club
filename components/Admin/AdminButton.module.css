@@ -1,12 +1,12 @@
 .adminButton{
     display: inline-block;
     margin: 0 .5rem;
-    font-size: var(--base-font-size);
+    font-size: 0.7rem;
     letter-spacing: 1px;
-    background-color: black;
+    background-color: #4AB3EA;;
     color: white;
     font-weight: 700;
-    border:2px solid black;
+    border:2px solid #4AB3EA;;
     border-radius: 5px;
     padding: 0 1rem;
     line-height: 1.75rem;;

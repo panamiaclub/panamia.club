@@ -24,49 +24,49 @@ export default function AdminMenu() {
             <div className={styles.menuBlock}>
                 <ul className={styles.menuLinkList}>
                     <li className={styles.menuDesc}>ADMIN MENU</li>
-                    <li>
+                    <li > 
                         <AdminButton href="/account/admin">
-                            <IconDashboard height="16" />Dashboard
+                            <IconDashboard height="14" />Dashboard
                         </AdminButton>
                     </li>
                     <li>
                         <AdminButton href="/account/admin/podcasts">
-                            <IconFileDescription height="16" />Podcasts
+                            <IconFileDescription height="14" />Podcasts
                         </AdminButton>
                     </li>
                     <li>
                         <AdminButton disabled={true}>
-                            <IconFileDescription height="16" />Links
+                            <IconFileDescription height="14" />Links
                         </AdminButton>
                     </li>
                     <li>
                         <AdminButton disabled={true}>
-                            <IconFileDescription height="16" />Events
+                            <IconFileDescription height="14" />Events
                         </AdminButton>
                     </li>
                     <li>
                         <AdminButton disabled={true}>
-                            <IconFileDescription height="16" />Menu Link
+                            <IconFileDescription height="14" />Menu Link
                         </AdminButton>
                     </li>
                     <li>
                         <AdminButton href="/account/admin/signups">
-                            <IconEdit height="16" />Newsletter
+                            <IconEdit height="14" />Newsletter
                         </AdminButton>
                     </li>
                     <li>
                         <AdminButton href="/account/admin/contactus">
-                            <IconEdit height="16" />Contact Us
+                            <IconEdit height="14" />Contact Us
                         </AdminButton>
                     </li>
                     <li>
                         <AdminButton  href="/account/admin/users">
-                            <IconEdit height="16" />Users
+                            <IconEdit height="14" />Users
                         </AdminButton>
                     </li>
                     <li>
-                        <AdminButton disabled={true}>
-                            <IconEdit height="16" />Pana Profiles
+                        <AdminButton href="/account/admin/panaprofiles">
+                            <IconEdit height="14" />Pana Profiles
                         </AdminButton>
                     </li>
                 </ul>
