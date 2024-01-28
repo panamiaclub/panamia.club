@@ -7,6 +7,7 @@ interface AdminButtonProps {
     submit?: Boolean,
     href?: string,
     disabled?: Boolean,
+    color?: string,
 }
 
 export default function AdminButton({children, onClick, submit, href, disabled}: AdminButtonProps) {

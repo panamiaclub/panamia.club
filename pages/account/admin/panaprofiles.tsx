@@ -51,10 +51,15 @@ const Account_Pana_Profiles: NextPage = () => {
             <div className={styles.submissionListField}><label>details</label>&emsp;{item?.details}</div>
             <div className={styles.submissionListField}><label>five words</label>&emsp;{item?.details}</div>
             <div className={styles.submissionListField}><label>background</label>&emsp;{item?.details}</div>
-            <div className={styles.submissionListField}><label>active</label>&emsp;{item?.active?.toString()}</div>
+            
             <div className={styles.submissionListField}><label>tags</label>&emsp;{item?.tags?.toString()}</div>
             <div className={styles.submissionListField}><label>whatsapp</label>&emsp;{item?.whatsapp_community?.toString()}</div>
-            <div style={{margin:"2%"}}><AdminButton>Edit</AdminButton><AdminButton>View Images</AdminButton></div>
+            <div style={{margin:"2%"}}>
+              {item?.active && <button className={styles.deActivateButton}>Deactivate Profile</button> }
+              {!item?.active && <button className={styles.activateButton}>Activate Profile</button> }
+              <AdminButton>Edit</AdminButton>
+              <AdminButton>View Images</AdminButton>
+            </div>
           </div>
         </div>
       );
