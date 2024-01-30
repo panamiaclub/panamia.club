@@ -48,8 +48,7 @@ export default async function handler(
     if (existingProfile.active === false) {
         // send Brevo template email
         const brevo = new BrevoApi();
-        const brevo_config = getBrevoConfig()
-        const template_id = brevo_config.templates.admin.profile_submission;
+        const brevo_config = getBrevoConfig();
         const accessKey = existingProfile?.status?.access;
         const base_action_url = "https://www.panamia.club/admin/profile/action"
         const approve_url = new URL(`${base_action_url}`)
@@ -61,8 +60,9 @@ export default async function handler(
         decline_url.searchParams.set("email", existingProfile.email);
         decline_url.searchParams.set("access", accessKey);
         decline_url.searchParams.set("action", "decline");
-        if (template_id) {
-          const params = {
+        const promises = [];
+        if (brevo_config.templates.admin.profile_submission) {
+          const params_admin = {
             name: existingProfile.name,
             email: existingProfile.email,
             details: existingProfile.details,
@@ -80,14 +80,16 @@ export default async function handler(
             approve_url: approve_url.toString(),
             decline_url: decline_url.toString(),
           }
-
-          const response = await brevo.sendTemplateEmail(
-            brevo_config.templates.admin.profile_submission,
-            params,
-            );
-          console.log("response", response);
-          // TODO: Confirm 201 response from Brevo
+          promises.push(brevo.sendTemplateEmail( brevo_config.templates.admin.profile_submission, params_admin ));
         }
+        if (brevo_config.templates.profile.submitted) {
+          const params_submitted = {
+            name: existingProfile.name,
+          }
+          promises.push(brevo.sendTemplateEmail( brevo_config.templates.profile.submitted, params_submitted, existingProfile.email ));
+        }
+        await Promise.all(promises);
+        // TODO: Confirm 201 responses from Brevo
         return res.status(200).json({ success: true, data: [] });
     }
     return res.status(200).json({ success: false, error: "Profile already active" });

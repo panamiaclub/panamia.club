@@ -3,6 +3,8 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 import dbConnect from "../../auth/lib/connectdb";
 import profile from "../../auth/lib/model/profile";
+import BrevoApi from "@/lib/brevo_api";
+import { getBrevoConfig } from "@/config/brevo";
 
 interface ResponseData {
   error?: string;
@@ -45,7 +47,14 @@ export default async function handler(
           approved: new Date()
       };
       await existingProfile.save();
-      // TODO: Send Approval email
+      const brevo = new BrevoApi();
+      const brevo_config = getBrevoConfig();
+      if (brevo_config.templates.profile.published) {
+        const params = {
+          name: existingProfile.name,
+        }
+        const response = await brevo.sendTemplateEmail( brevo_config.templates.profile.published, params, existingProfile.email );
+      }
       return res.status(200).json({ success: true, data: [{
           "message": "Profile has been set active",
           "name": existingProfile.name,
@@ -58,7 +67,15 @@ export default async function handler(
         ...existingProfile.status,
         declined: new Date()
       };
-      await existingProfile.save()
+      await existingProfile.save();
+      const brevo = new BrevoApi();
+      const brevo_config = getBrevoConfig();
+      if (brevo_config.templates.profile.not_published) {
+        const params = {
+          name: existingProfile.name,
+        }
+        const response = await brevo.sendTemplateEmail( brevo_config.templates.profile.not_published, params, existingProfile.email );
+      }
       // TODO: Send Decline email
       return res.status(200).json({ success: true, data: [{
           "message": "Profile has been declined",
