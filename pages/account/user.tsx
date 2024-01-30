@@ -27,7 +27,8 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
   }
 }
 
-function copyAffiliateLink(code: string) {
+function copyAffiliateLink(e: any, code: string) {
+  e.preventDefault();
   const permissionName = "clipboard-write" as PermissionName;
   navigator.permissions.query({name: permissionName}).then((result) => {
     if (result.state === "granted" || result.state === "prompt") {
@@ -144,13 +145,17 @@ const Account_User: NextPage = () => {
           <div id="pana-affiliate-bar">
             <div className={styles.affiliateBar}>
               <div className={styles.affiliateBarHighlight}>ComPana</div>
-              <div className={styles.affiliateBarCode}>{userData?.affiliate?.code}&nbsp;
-                <button onClick={(e) => {copyAffiliateLink(userData.affiliate.code)}}>
-                  <IconCopy height="18" />Share Link
-                </button>
+              <div className={styles.affiliateBarDetails}>
+                <div className={styles.affiliateBarCode}>{userData?.affiliate?.code}</div>
+                <div className={styles.affiliateBarLink}>
+                  <a href={`https://panamia.club/affiliate?code=${userData?.affiliate?.code}`}
+                    onClick={(e) => {copyAffiliateLink(e, userData.affiliate.code)}}>
+                    <IconCopy height="18" />Share Link
+                  </a>
+                </div>
+                <div className={styles.affiliateBarPoints} hidden>{userData?.affiliate?.points ? userData.affiliate.points : "0"}&nbsp;points</div>
+                <div className={styles.affiliateBarView}></div>
               </div>
-              <div className={styles.affiliateBarPoints}>{userData?.affiliate?.points ? userData.affiliate.points : "0"}&nbsp;points</div>
-              <div className={styles.affiliateBarView}></div>
             </div>
           </div>
           }

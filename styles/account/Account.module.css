@@ -51,11 +51,17 @@
     color: white;
     background: linear-gradient(60deg, var(--color-pana-yellow) 0%, var(--color-pana-orange) 45%, var(--color-pana-yellow) 100%);
 }
-.affiliateBarCode{
+.affiliateBarDetails{
+    display: flex;
+    width: 100%;
     padding: 0.5rem 1rem;
 }
+.affiliateBarCode{
+}
+.affiliateBarLink{
+    margin-left: auto;
+}
 .affiliateBarPoints{
-    padding: 0.5rem 1rem;
     margin-left: auto;
 }
 .affiliateBarStatus{
