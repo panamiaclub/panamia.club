@@ -102,7 +102,7 @@ export default function MainHeader() {
 
     async function onUserClick(e: React.MouseEvent) {
         e.stopPropagation();
-        const userSessionData = await getUserSession("http://localhost:3000");
+        const userSessionData = await getUserSession();
         // console.log("userSession", userSession);
         if (userSessionData?.status?.role == "admin") {
             setIsAdmin(true);

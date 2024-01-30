@@ -53,6 +53,8 @@ const Form_BecomeAnAffiliate: NextPage = () => {
     }
   }
 
+  // TODO: User must be signed in
+
   return (
     <main className={styles.app}>
       <PageMeta

@@ -154,7 +154,6 @@ const Account_User: NextPage = () => {
             </div>
           </div>
           }
-          
         </div>
       </main>
     )

@@ -14,3 +14,23 @@ export const listSelectedCategories = (categories: CategoryInterface) => {
     });
     return listText;
 }
+
+export const unguardProfile = (profile: any) => {
+    // only send safe for public fields
+    return {
+        ...profile.slug,
+        ...profile.name,
+        ...profile.details,
+        ...profile.background,
+        ...profile.socials,
+        ...profile.five_words,
+        ...profile.socials,
+        ...profile.tags,
+        ...profile.categories,
+        ...profile.primary_address,
+        ...profile.counties,
+        ...profile.geo,
+        ...profile.images,
+        ...profile.linked_profiles,
+    }
+}

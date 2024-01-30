@@ -5,6 +5,9 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import dbConnect from "../auth/lib/connectdb";
 import user from "../auth/lib/model/user";
+import { unguardUser } from "@/lib/user";
+import BrevoApi from "@/lib/brevo_api";
+import { getBrevoConfig } from "@/config/brevo";
 
 interface ResponseData {
   error?: string;
@@ -67,7 +70,21 @@ export default async function handler(
           }
         }
     }
-    return res.status(200).json({ success: true, data: existingUser })
+    // send Brevo template email
+    const brevo = new BrevoApi();
+    const brevo_config = getBrevoConfig()
+    const template_id = brevo_config.templates.admin.affiliate_submission;
+    if (template_id) {
+      const params = {
+        name: existingUser.name,
+        email: existingUser.email,
+        affiliate: existingUser?.affiliate?.code ? existingUser.affiliate?.code : "n/a",
+      }
+      const response = await brevo.sendTemplateEmail( template_id, params);
+      console.log("response", response);
+    }
+    // TODO: Send Brevo email
+    return res.status(200).json({ success: true, data: unguardUser(existingUser) });
   }
   return res.status(401).json({ success: false, error: "Could not find User" });
 }

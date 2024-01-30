@@ -29,6 +29,7 @@ export const getBrevoConfig = () => {
                     "newsletter_submission": 0,
                     "profile_submission": 3,
                     "donation_submission": 0,
+                    "affiliate_submission": 4,
                 }
             },
             "lists": {
@@ -70,6 +71,7 @@ export const getBrevoConfig = () => {
                 "newsletter_submission": 7,
                 "profile_submission": 39,
                 "donation_submission": 0,
+                "affiliate_submission": 40,
             }
         },
         "lists": {
