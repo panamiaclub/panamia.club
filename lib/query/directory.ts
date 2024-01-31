@@ -9,7 +9,7 @@ interface SearchInterface {
     filterCategories: string,
     random: boolean,
     geolat: number,
-    geolng: number,
+    geolng: number
 }
 
 export interface SearchResultsInterface {
@@ -28,6 +28,10 @@ export interface SearchResultsInterface {
     }
     primary_address?: { city?: String },
     socials: {},
+    active: Boolean,
+    tags: String,
+    whatsapp_community: String,
+    email: String
 }
 
 export const searchParamsToString = (params: SearchInterface) => {

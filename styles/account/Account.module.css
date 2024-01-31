@@ -45,6 +45,7 @@
     padding:9px 10px !important;
     color:white;
     border:1px solid rgb(214, 0, 0);
+    cursor: pointer;
 }
 
 .activateButton{
@@ -53,6 +54,7 @@
     border-radius: 5px;
     padding:9px 10px !important;
     color:white;
+    cursor: pointer;
 }
 
 
@@ -215,4 +217,33 @@
 
 .submissionFieldsAction{
     margin-left: auto;
+}
+
+/*admin styles*/
+.searchForm{
+    max-width: 45rem;
+    margin:auto;
+    text-align: center;
+    padding-bottom: 1rem;
+    color: black;
+
+}
+.searchFieldBar{
+    border: 0;
+    margin: 1rem auto;
+    display: flex;
+    justify-content: center;
+}
+.searchField{
+    padding: 0.7rem 1rem;
+    border-radius: 2rem;
+    width: 100%;
+}
+.searchButton{
+    margin-left: -5.3rem;
+    margin-top: 0.2rem;
+}
+.searchBody{
+    min-height:75vh;
+    padding-bottom: 5vh;
 }
