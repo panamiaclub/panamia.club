@@ -144,6 +144,10 @@
 
 
 .profileCard{
+    display: grid;
+    grid-template-columns: 10rem 32rem;
+    grid-template-rows: 2rem 2rem 2rem auto 2rem;
+    column-gap: 1rem;
     max-width: 45rem;
     margin: auto;
     border: 3px solid #CCC;
@@ -151,13 +155,14 @@
     margin-bottom:1rem;
     border-radius: 12px;
     background-color: white;
-    display: flex;
 }
 
 @media screen and (max-width: 600px) {
     .profileCard{
-        flex-direction: column;
         padding: .5rem;
+        grid-template-columns: 25% calc(75% - 1.5rem);
+        grid-template-rows: auto auto auto auto auto;
+        column-gap: 0.5rem;
     }
 }
 
@@ -182,14 +187,16 @@
 .profileCardImage{
     width: 10rem;
     padding-right:1rem;
+    grid-row: span 3;
+    text-align: center;
 }
 
 @media screen and (max-width: 600px) {
     .profileCardImage{
-        width: 100%;
         max-width: 100%;
         max-height: 25vh;
-        padding:0 1rem;
+        grid-row: auto;
+        padding:0;
         margin:0 auto 1rem;
         overflow: hidden;
     }
@@ -209,6 +216,13 @@
     font-weight: 700;
 }
 
+@media screen and (max-width: 600px) {
+    .cardName{
+        width: 100%;
+        grid-row: auto;
+    }
+}
+
 .cardFiveWords{
     display: inline-block;
     padding: 0.25rem;
@@ -216,25 +230,44 @@
     border-radius: 0.5rem;
     background-color: #EEE;
 }
+@media screen and (max-width: 600px) {
+    .cardFiveWordsContainer{
+        grid-column: span 2;
+    }
+}
+
 
 .cardLocation{
     font-style: italic;
+    font-weight: 400;
+    font-size: 1rem;
+    padding-top:0.25rem;
 }
+@media screen and (max-width: 600px) {
+    .cardLocationContainer{
+        grid-column: span 2;
+    }
+}
+
 .cardLocation small{
     color: #777;
 }
 
 .cardDetails{
+    width: 100%;
     padding: 0.5rem 0;
+    grid-column: span 2;
 }
 
 .cardActions{
     padding: 0.5rem 0 0;
     display: flex;
+    grid-column: span 2;
 }
 
 .cardlinks{
     margin-left:auto;
+
 }
 .cardlinks a{
     display: inline-block;

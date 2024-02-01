@@ -105,10 +105,12 @@ function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[
           <img src="/img/bg_coconut_blue.jpg" />
           }
         </div>
-        <div className={styles.profileCardInfo}>
-          <div className={styles.cardName}>{item.name}</div>
+        <div className={styles.cardName}>{item.name}</div>
+        <div className={styles.cardFiveWordsContainer}>
           <div className={styles.cardFiveWords}>{item.five_words}</div>
-          { item?.primary_address?.city && 
+        </div>
+        <div className={styles.cardLocationContainer}>
+        { item?.primary_address?.city && 
             <div className={styles.cardLocation}>
               <IconMapPin height="20" />{item.primary_address.city}
               { distance > 0 && 
@@ -116,30 +118,31 @@ function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[
               }
               </div>
           }
-          <div className={styles.cardDetails}>{detailLimit(item.details)}</div>
-          <div className={styles.cardActions}>
-            <>
-            <Link href={`/profile/${item.slug}`}><a><IconUserCircle height="20" />View Profile</a></Link>&emsp;
-            <a href=""><IconHeart height="20" />Follow</a>
-            </>
-            <div className={styles.cardlinks} hidden>
-              { socials?.website && 
-              <a href={socials.website.toString()}>
-                <IconExternalLink height="24" width="24" />
-              </a>
-              }
-              { socials?.instagram && 
-              <a href={socials.instagram.toString()}>
-                <IconBrandInstagram height="24" width="24" />
-              </a>
-              }
-              { socials?.facebook && 
-              <a href={socials.facebook.toString()}>
-                <IconBrandFacebook height="24" width="24" />
-              </a>
-              }
-            </div>
+        </div>
+        <div className={styles.cardDetails}>{detailLimit(item.details)}</div>
+        <div className={styles.cardActions}>
+          <Link href={`/profile/${item.slug}`}><a><IconUserCircle height="20" />View Profile</a></Link>&emsp;
+          <a href=""><IconHeart height="20" />Follow</a>
+          <div className={styles.cardlinks} hidden>
+            { socials?.website && 
+            <a href={socials.website.toString()}>
+              <IconExternalLink height="24" width="24" />
+            </a>
+            }
+            { socials?.instagram && 
+            <a href={socials.instagram.toString()}>
+              <IconBrandInstagram height="24" width="24" />
+            </a>
+            }
+            { socials?.facebook && 
+            <a href={socials.facebook.toString()}>
+              <IconBrandFacebook height="24" width="24" />
+            </a>
+            }
           </div>
+        </div>
+        <div className={styles.profileCardInfo}>
+          
         </div>
       </article>
     );
