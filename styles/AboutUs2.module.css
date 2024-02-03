@@ -1,0 +1,110 @@
+.app{
+    min-height: 90vh;
+    background-color: #f8f8f8;
+}
+
+.main{
+    min-height: 1vh;
+    margin: auto;
+}
+
+.main p, .main h2, .main h3{
+    max-width: 45rem;
+    padding: 0 0 1rem;
+    margin: auto;
+}
+
+.sectionMission{
+    padding: 7.5vh 0;
+    background-color: var(--color-bg-navy);
+    color: white;
+}
+
+.sectionStory{
+    padding: 7.5vh 0;
+}
+.containerStory{
+    max-width:45rem;
+    display: flex;
+    margin: auto;
+}
+.storyImg{
+    max-width: 30%;
+    margin-right: 1rem;
+}
+.storyImg img{
+    max-width: 100%;
+}
+
+.sectionProjects{
+    padding: 7.5vh 0;
+    background-color: var(--color-pana-blue);
+    color: white;
+}
+
+.sectionBoard{
+    padding: 7.5vh 0;
+}
+
+.containerBoard{
+    max-width: 45rem;
+    margin: auto;
+}
+.boardBlock{
+    display: flex;
+    padding-bottom: 1rem;
+}
+.boardImg{
+    max-width: 20rem;
+    padding: .5rem;
+}
+.boardBlock:nth-child(2) .boardImg {
+    order: 1;
+}
+.boardImg img{
+    max-width: 100%;
+}
+
+.sectionTeam{
+    padding: 7.5vh;
+    background-color: var(--color-pana-orange);
+}
+.containerTeam{
+    max-width: 45rem;
+    margin: auto;
+}
+.teamBlocks{
+    display: flex;
+    flex-wrap: wrap;
+}
+.teamPicture{
+    max-width: 33%;
+}
+.teamPicture img{
+    max-width: 100%;
+}
+
+.sectionSupport{
+    padding: 7.5vh;
+}
+
+.sectionSupport a{
+    color: var(--color-pana-pink)
+}
+
+.header {
+    margin:auto;
+    padding: 5vh 0;
+    min-width: 1vw;
+    max-width:90%;
+    text-align: center;
+    color: #FC2070;
+}
+
+.header h1{
+    color: black;
+}
+
+.footer{
+    height:5vh;
+}
