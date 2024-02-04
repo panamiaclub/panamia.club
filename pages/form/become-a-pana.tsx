@@ -259,7 +259,7 @@ const Form_BecomeAPana: NextPage = () => {
                                 maxLength={15} placeholder="(###) ###-####" value={phone_number} onChange={(e:any) => setPhoneNumber(e.target.value)} />
                             <small>Used for contacting you, not displayed on profile</small>
                             <label> <input type="checkbox" value="yes" checked={whatsapp_community}
-                                onChange={(e:any) => setWhatsappCommunity(e.target.checked)} />
+                                onChange={(e:any) => setWhatsappCommunity(e.target.checked)} />&nbsp;
                                 I'm interested in joining the WhatsApp community chat/forum for directory members
                             </label>
                         </p>

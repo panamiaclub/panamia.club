@@ -127,10 +127,20 @@
 }
 
 @media only screen and (max-width: 600px) {
+    .main{
+        padding: .5rem;
+    }
     .innerGradientBox{
         padding:0.25rem;
     }
     .formFields{
         padding: .25rem;
+    }
+    .formPageActive{
+        padding: 0.25rem;
+    }
+    .listSocialFields{
+        display: block;
+        padding: 0rem;
     }
 }

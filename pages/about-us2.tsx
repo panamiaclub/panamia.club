@@ -4,6 +4,7 @@ import { IconCash } from '@tabler/icons';
 import PanaLogo from '@/components/PanaLogo';
 import styles from '@/styles/AboutUs2.module.css'
 import Link from 'next/link';
+import PanaButton from '@/components/PanaButton';
 
 const AboutUs: NextPage = () => {
   // Hero Image & Vision
@@ -23,7 +24,11 @@ const AboutUs: NextPage = () => {
             <h3>The Future is Local</h3>
           </section>
           <section className={styles.sectionMission}>
-            <p>Our mission is to unite the diverse working class of South Florida, igniting the creation of regenerative and vibrant economies. By connecting locals and the quality resources, paired with education on the advantages of reinvesting within our own community, we aim to cultivate financial stability, personal engagement, and emphasize the transformative strength of a unified community.</p>
+            <h2>Our Mission</h2>
+            <p>...is to unite the diverse working class of South Florida, igniting the creation of regenerative and vibrant economies. By connecting locals and the quality resources, paired with education on the advantages of reinvesting within our own community, we aim to cultivate financial stability, personal engagement, and emphasize the transformative strength of a unified community.</p>
+            <h2>Our Vision</h2>
+            <h3>The Future is Local</h3>
+            <p>Pana MIA Club is a 501(c)(3) non-profit based in South Florida.</p>
           </section>
           <section className={styles.sectionVideo}>
             
@@ -125,19 +130,15 @@ const AboutUs: NextPage = () => {
                   <img src="/img/about/genbarrios.png" />
                   <h3>Genesis Barrios<br /><small>Web Developer</small></h3>
                 </div>
-                <div className={styles.teamPicture}>
-                  <img src="/img/about/beemaria.png" />
-                  <h3>Felix Caraballo<br /><small>Web Developer</small></h3>
-                </div>
-                <div className={styles.teamPicture}>
+                <div className={styles.teamPicture} hidden>
                   <img src="/img/about/beemaria.png" />
                   <h3>Bryan Torres<br /><small>Branding Director</small></h3>
                 </div>
-                <div className={styles.teamPicture}>
+                <div className={styles.teamPicture} hidden>
                   <img src="/img/about/beemaria.png" />
                   <h3>Otto Munos<br /><small>Head Event Coordinator</small></h3>
                 </div>
-                <div className={styles.teamPicture}>
+                <div className={styles.teamPicture} hidden>
                   <img src="/img/about/beemaria.png" />
                   <h3>Jose Sifuentes<br /><small>Branding</small></h3>
                 </div>
@@ -151,7 +152,11 @@ const AboutUs: NextPage = () => {
                 everyday. We know we can do it with your help! You can support us by funding our 
                 mission with a one-time donation or by joining our community of supporters called 
                 Gente dePana!</p>
-              <p><Link href="/donate/"><a>Help Fund Our Open-Access Local's Directory</a></Link></p>
+              <p>
+                <PanaButton color="pink" href="/donate/">
+                Help Fund Our Open-Access Local's Directory
+                </PanaButton>
+              </p>
               <p>Our Gente dePana subscribers are the foundation of Pana MIA's sustainability, monthly 
                 contributions allow us to make bigger strides in our projects to support the local 
                 community. In return, our Gente are rewarded with so many benefits, discounts and perks 

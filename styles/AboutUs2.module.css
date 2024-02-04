@@ -13,11 +13,22 @@
     padding: 0 0 1rem;
     margin: auto;
 }
+.main p{
+    font-family: Nunito;
+}
+.main h2, .main h3{
+    font-family: Rubik;
+}
 
 .sectionMission{
     padding: 7.5vh 0;
     background-color: var(--color-bg-navy);
     color: white;
+    text-align: justify;
+}
+.sectionMission p h2{
+    display: inline-block;
+    padding-bottom: 0;
 }
 
 .sectionStory{
@@ -67,7 +78,7 @@
 
 .sectionTeam{
     padding: 7.5vh;
-    background-color: var(--color-pana-orange);
+    background-color: var(--color-pana-yellow);
 }
 .containerTeam{
     max-width: 45rem;
@@ -86,6 +97,10 @@
 
 .sectionSupport{
     padding: 7.5vh;
+}
+.containerSupport{
+    max-width: 45rem;
+    margin: auto;
 }
 
 .sectionSupport a{
