@@ -20,7 +20,7 @@ import { IconUserCircle, IconHeart, IconExternalLink, IconBrandInstagram,
   IconMap, IconCategory, IconMapPin, IconCurrentLocation, IconList, 
   IconSortDescending, IconMapPins} from '@tabler/icons';
 import { directorySearchKey, useSearch, SearchResultsInterface } from '@/lib/query/directory';
-
+import Link from 'next/link';
 export const getServerSideProps: GetServerSideProps = async function (context) {
   return {
     props: {
@@ -78,14 +78,6 @@ const Account_Pana_Profiles: NextPage = (props) => {
     console.log(id);
   }
 
-  function editUser(id: any){
-    console.log(id);
-  }
-
-  function viewImages(id: any){
-    console.log(id);
-  }
-
   function createListElements() {
     if(isLoading){
       <h1>Loading...</h1>
@@ -102,16 +94,11 @@ const Account_Pana_Profiles: NextPage = (props) => {
               
               <div className={styles.submissionListField}><label>Email</label>&emsp;{item?.email}</div>
               <div className={styles.submissionListField}><label>details</label>&emsp;{item?.details}</div>
-              <div className={styles.submissionListField}><label>five words</label>&emsp;{item?.details}</div>
-              <div className={styles.submissionListField}><label>background</label>&emsp;{item?.details}</div>
-              
-              <div className={styles.submissionListField}><label>tags</label>&emsp;{item?.tags?.toString()}</div>
-              <div className={styles.submissionListField}><label>whatsapp</label>&emsp;{item?.whatsapp_community?.toString()}</div>
               <div style={{margin:"2%"}}>
                 {item?.active && <button className={styles.deActivateButton} onClick={() => deactivate(item._id)}>Deactivate Profile</button> }
                 {!item?.active && <button className={styles.activateButton} onClick={() => activate(item._id)}>Activate Profile</button> }
-                <AdminButton onClick={() => editUser(item._id)}>Edit</AdminButton>
-                <AdminButton onClick={() => viewImages(item._id)}>View Images</AdminButton>
+                <AdminButton><Link href={`/account/admin/manageprofile/${item.slug}`}><a style={{color:'white'}}><IconUserCircle height="20" />View Profile</a></Link>&emsp;</AdminButton>
+                
               </div>
             </div>
           </div>
