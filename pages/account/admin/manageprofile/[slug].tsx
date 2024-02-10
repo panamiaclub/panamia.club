@@ -16,7 +16,7 @@ import PanaButton from '@/components/PanaButton';
 import AdminButton from '@/components/Admin/AdminButton';
 import AdminMenu from '@/components/Admin/AdminHeader';
 import { IconUserCircle, IconHeart, IconForms, IconSearch, IconStar, IconFilter,
-  IconMap, IconCategory, IconMapPin, IconCurrentLocation, IconList, 
+  IconMap, IconCategory, IconMapPin, IconCurrentLocation, IconList, IconTrash,
   IconSortDescending, IconMapPins, IconExternalLink, IconBrandInstagram, IconBrandFacebook, IconMap2, IconBrandTiktok, IconBrandTwitter, IconBrandSpotify } from '@tabler/icons';
 import { directorySearchKey, useSearch, SearchResultsInterface } from '@/lib/query/directory';
 import { fetchPublicProfile, profilePublicQueryKey } from '@/lib/query/profile';
@@ -25,6 +25,8 @@ import { AddressInterface, ProfileImagesInterface, ProfileSocialsInterface } fro
 import Link from 'next/link';
 import { Map, Marker, ZoomControl } from "pigeon-maps"
 import styles from '@/styles/profile/Profile.module.css'
+import {Alert} from '@mantine/core';
+import { profileQueryKey, useProfile, useMutateProfileDesc, fetchProfile  } from '@/lib/query/profile';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   const handle = context.query.handle as string;
@@ -44,21 +46,44 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
 }
 
 const Manage_Pana_Profiles: NextPage = (props) => {
-  const [editing, setEditing] = useState(Boolean);
+  const [editingDetails, setEditingDetails] = useState(Boolean);
+  const [editingLinks, setEditingLinks] = useState(Boolean);
   const [manageImages, setManageImages] = useState(Boolean);
+  const [detailsError, setDetailsError] = useState(Boolean);
+  const [linksError, setLinksError] = useState(Boolean);
+  const [imagesError, setImagesError] = useState(Boolean);
   const router = useRouter();
   const handle = router.query.slug as string;
   const { data, isLoading } = useQuery({
     queryKey: [ profilePublicQueryKey, { handle }],
     queryFn: () => fetchPublicProfile(handle),
   });
+
   //const { data: session } = useSession();
   const defaultCoords:[number, number] = [25.761681, -80.191788];
   const [coords, setCoords] = useState<[number, number]>(defaultCoords);
  
   const profileCoords = data?.geo ? [data.geo.coordinates[1], data.geo.coordinates[0]] as [number, number] : null;
   
+  const mutation = useMutateProfileDesc();
+
+  const submitForm = (e: FormEvent, formData: FormData) => {
+    e.preventDefault();
+    formData.forEach((value, key) => console.log(key, value));
+    const updates = {
+      name: formData.get("name"),
+      five_words: formData.get("five_words"),
+      details: formData.get("details"),
+      background: formData.get("background"),
+      tags: formData.get("tags"),
+    }
+    mutation.mutate(updates);
+  }
+
+
   console.log("user:handle", handle);
+
+  console.log(data);
 
   function editUser(id: any){
     console.log(id);
@@ -152,11 +177,11 @@ const Manage_Pana_Profiles: NextPage = (props) => {
         desc={data.details}
         />
       <div className={styles.manageProfile}>
-        <h3>Manage Profile - {data.name}</h3>
-        {data.active && <button className={styles.deActivateButton} onClick={() => deactivate(data._id)}>Deactivate Profile</button> }
-        {!data.active && <button className={styles.activateButton} onClick={() => activate(data._id)}>Activate Profile</button> }
-        {!editing && <button className={styles.editButton} onClick={() => setEditing(true)}>Edit Profile</button> }
-        <div className={styles.profileCard}>
+        <h3 style={{display:"inline"}}>Manage Profile - {data.name}</h3>
+        {data.active && <button className={styles.deActivateButton} style={{float:"right"}} onClick={() => deactivate(data._id)}>Deactivate Profile</button> }
+        {!data.active && <button className={styles.activateButton} style={{float:"right"}} onClick={() => activate(data._id)}>Activate Profile</button> }
+        
+        <div className={styles.profileCard} style={{marginTop:"2%"}}>
             <div className={styles.profileHeader}>
               <div className={styles.profileImage}>
                 {
@@ -166,7 +191,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                 }
               </div>
               <div className={styles.profilePrimary}>
-                <h2>{data.name} </h2>
+                <h2 style={{display:"inline"}}>{data.name} </h2> {!editingDetails && <button className={styles.editButton} style={{float:"right"}} onClick={() => setEditingDetails(true)}>Edit Details</button> }
                 <p className={styles.profileFiveWords}>{data.five_words}</p>
                 <p>{data.details}</p>
                 <div className={styles.profileInfo}>
@@ -175,11 +200,20 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                 </div>
               </div>
             </div>
+            <div className={styles.profileCard} style={{marginTop:"2%"}}>
+              <div className={styles.profileInfo}>
+                <div>
+                  <label>Tags: {data.tags}</label>
+                </div>
+              </div>
+            </div>
+            {detailsError && <Alert>{detailsError}</Alert>}
           </div>
 
           { hasSocials(data.socials) &&
           <div className={styles.profileCard}>
-            <h3>Socials and Links</h3>
+            <h3 style={{display:"inline"}}>Socials and Links</h3>
+            {!editingLinks && <button className={styles.editButton} style={{float:"right"}} onClick={() => setEditingLinks(true)}>Edit Links</button> }
             <div className={styles.profileInfo}>
               { data.socials?.website && 
               <a href={urlWithSource(data.socials.website)} target="_blank" rel="noopener noreferrer">
@@ -212,6 +246,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
               </a>
               }
             </div>
+            {linksError && <Alert>{linksError}</Alert>}
           </div>
           }
 
@@ -254,9 +289,10 @@ const Manage_Pana_Profiles: NextPage = (props) => {
           }
           { hasGallery(data.images) &&
           <div className={styles.profileCard}>
-            <h3>Gallery</h3>
+            <h3 style={{display:"inline", marginRight:"5px"}}>Gallery</h3> 
             <small>Click to see full-size image</small>
-            <div className={styles.profileInfo}>
+            {!manageImages && <button className={styles.editButton} style={{float:"right"}} onClick={() => setManageImages(true)}>Manage Images</button> }
+            <div className={styles.profileInfo} style={{marginTop:"5%"}}>
               { data.images?.gallery1CDN &&
               <div className={styles.profileGalleryImage}>
                 <img src={data.images?.gallery1CDN} onClick={(e) => {showGalleryDialog("dialog-gallery-1")}} /><br />
@@ -265,6 +301,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                   <a onClick={(e) => {closeGalleryDialog("dialog-gallery-1")}}>
                     <img src={data.images?.gallery1CDN} loading="lazy" />
                   </a>
+                  {manageImages && <IconTrash></IconTrash>}
                 </dialog>
               </div>
               }
@@ -291,17 +328,9 @@ const Manage_Pana_Profiles: NextPage = (props) => {
               </div>
               }
             </div>
-            {!manageImages && <button className={styles.editButton} onClick={() => setManageImages(true)}>Manage Images</button> }
+            {imagesError && <Alert>{imagesError}</Alert>}
           </div>
           }
-          
-          <div className={styles.profileCard}>
-            <div className={styles.profileInfo}>
-              <div>
-                <label>Tags: {data.tags}</label>
-              </div>
-            </div>
-          </div>
         </div>
     </main>
   )

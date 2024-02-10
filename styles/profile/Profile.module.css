@@ -27,11 +27,13 @@
 }
 .profileImage{
     max-width: 15rem;
-    padding: 0 1rem 0 0;
+    padding: 0 1rem 0 0;    
 }
+
 
 .profileImage img{
     width: 100%;
+    border-radius: 5px;
 }
 
 
@@ -57,7 +59,7 @@
 
 .editButton{
     background-color: #4AB3EA !important;
-    border:1px solid rgb(0, 198, 0) !important;
+    border:1px solid #4AB3EA !important;
     border-radius: 5px;
     padding:9px 10px !important;
     color:white;
