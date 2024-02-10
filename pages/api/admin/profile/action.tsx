@@ -30,7 +30,7 @@ export default async function handler(
       .json({ error: "This API call only accepts POST methods" });
   }
   const { email, access, action } = req.body;
-
+  const totalProfiles = await profile.countDocuments({active: true});
   if (email) {
     const emailCheck = email.toString().toLowerCase();
     const existingProfile = await getProfile(emailCheck);
@@ -59,6 +59,7 @@ export default async function handler(
           "message": "Profile has been set active",
           "name": existingProfile.name,
           "handle": existingProfile.slug,
+          "total": totalProfiles,
       }] });
     }
     if (action === "decline") {
@@ -76,16 +77,16 @@ export default async function handler(
         }
         const response = await brevo.sendTemplateEmail( brevo_config.templates.profile.not_published, params, existingProfile.email );
       }
-      // TODO: Send Decline email
       return res.status(200).json({ success: true, data: [{
           "message": "Profile has been declined",
           "name": existingProfile.name,
           "handle": existingProfile.slug,
+          "total": totalProfiles,
       }] });
     }
   }
   
-  return res.status(200).json({ success: false, error: "No Profile Found" });
+  return res.status(200).json({ success: false, error: `No Profile Found` });
 }
 
 export const config = {

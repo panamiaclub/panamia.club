@@ -13,6 +13,7 @@ const Admin_Profile_Approve: NextPage = () => {
   const [actionResponse, setActionResponse] = useState("");
   const [profileName, setProfileName] = useState("");
   const [profileUrl, setProfileUrl] = useState("");
+  const [totalProfiles, setTotalProfiles] = useState(0);
 
   const email = router.query.email;
   const accessKey = router.query.access;
@@ -34,6 +35,7 @@ const Admin_Profile_Approve: NextPage = () => {
             setActionResponse(data.message);
             setProfileUrl(`/profile/${data.handle}`);
             setProfileName(data.name);
+            setTotalProfiles(data.total);
         } else {
             setActionResponse(response.data.error);
         }
@@ -45,6 +47,7 @@ const Admin_Profile_Approve: NextPage = () => {
         <p><strong>Profile:</strong> {profileName} </p>
         <p><strong>Status:</strong> { actionResponse }</p>
         <PanaButton href={profileUrl}>View Profile</PanaButton>
+        <p><small>Active Profiles: {totalProfiles > 0 ? totalProfiles : "calculating..." }</small></p>
     </div>
   )
 }

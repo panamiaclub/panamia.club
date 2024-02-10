@@ -34,6 +34,7 @@ const profileSchema = new Schema(
         counties: {},
         categories: {},
         primary_address: {},
+        gentedepana: {},
         geo: {},
         locations: [],
         images: {},

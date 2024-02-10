@@ -14,6 +14,12 @@ export interface ProfileStatusInterface {
     notes?: String,
 }
 
+export interface ProfileGenteDePanaInterface {
+    code?: string,
+    percentage?: string,
+    details?: string,
+}
+
 export interface ProfileSocialsInterface {
     website?: string,
     instagram?: string,
@@ -88,6 +94,7 @@ export interface ProfileInterface {
     counties: CountyInterface,
     categories: CategoryInterface,
     primary_address: AddressInterface,
+    gentedepana: ProfileGenteDePanaInterface,
     geo: {},
     locations: [],
     images?: ProfileImagesInterface,

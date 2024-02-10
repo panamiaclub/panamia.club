@@ -206,3 +206,10 @@
 .submissionFieldsAction{
     margin-left: auto;
 }
+
+.accountFAQs dt{
+    text-decoration: underline;
+}
+.accountFAQs a{
+    color: var(--color-pana-pink);
+}

@@ -29,7 +29,7 @@ const Form_BecomeAnAffiliate: NextPage = () => {
         )
         .catch((error) => {
             console.log(error);
-            return null;
+            alert("There was a problem submitting the form. Please refresh the page and try again.");
         });
     return response
   }
