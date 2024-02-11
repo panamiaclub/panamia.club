@@ -15,6 +15,7 @@
 # production
 /build
 /scripts/images
+/scripts/prepped
 
 # misc
 .DS_Store
