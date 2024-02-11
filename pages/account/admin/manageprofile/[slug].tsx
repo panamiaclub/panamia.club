@@ -58,7 +58,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
     queryKey: [ profilePublicQueryKey, { handle }],
     queryFn: () => fetchPublicProfile(handle),
   });
-
+  const {isError, refetch } = useProfile();
   //const { data: session } = useSession();
   const defaultCoords:[number, number] = [25.761681, -80.191788];
   const [coords, setCoords] = useState<[number, number]>(defaultCoords);
@@ -67,7 +67,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
   
   const mutation = useMutateProfileDesc();
 
-  const submitForm = (e: FormEvent, formData: FormData) => {
+  const submitFormDetails = (e: FormEvent, formData: FormData) => {
     e.preventDefault();
     formData.forEach((value, key) => console.log(key, value));
     const updates = {
@@ -162,6 +162,32 @@ const Manage_Pana_Profiles: NextPage = (props) => {
     console.log(id);
   }
 
+  const submitForm = async (e: FormEvent, formData: FormData) => {
+    e.preventDefault();
+    // formData.forEach((value, key) => console.log(key, value));
+    const form = {
+      primary: formData.get("images_primary") ? formData.get("images_primary") as File : null,
+      gallery1: formData.get("images_gallery1") ? formData.get("images_gallery1") as File : null,
+      gallery2: formData.get("images_gallery2") ? formData.get("images_gallery2") as File : null,
+      gallery3: formData.get("images_gallery3") ? formData.get("images_gallery3") as File : null,
+    }
+    console.log("form", form.primary);
+    const uploads = await axios.post(
+      "/api/profile/upload",
+      form,
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "multipart/form-data"
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+    console.log("upload finished");
+    refetch(); // refresh images
+  }
+
   if (!data) {
     return (
       <article className={styles.profileCard}>
@@ -189,6 +215,11 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                   <img src={data.images.primaryCDN} /> ||
                   <img src="/img/bg_coconut_blue.jpg" />
                 }
+                <button className={styles.editButton} onClick={() => setEditingDetails(true)}>Replace Avatar</button> 
+                {data?.images?.primaryCDN && <button className={styles.deActivateButton} style={{marginLeft:"2%"}} onClick={() => setEditingDetails(true)}>Delete Avatar</button> }
+                  
+                  <input type="file" id="images_primary" name="images_primary" accept="image/png, image/jpeg, image/webp" />
+                  <div><small>Accepted images are jpg, png, and webp</small></div>
               </div>
               <div className={styles.profilePrimary}>
                 <h2 style={{display:"inline"}}>{data.name} </h2> {!editingDetails && <button className={styles.editButton} style={{float:"right"}} onClick={() => setEditingDetails(true)}>Edit Details</button> }
