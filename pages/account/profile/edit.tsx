@@ -362,7 +362,7 @@ const Account_Profile: NextPage = (session_user) => {
                 { 
                 profile_data?.categories &&
                 listSelectedCategories(profile_data?.categories) ||
-                <small>None Selected</small>
+                <small>None</small>
                 }
               </p>
             </div>

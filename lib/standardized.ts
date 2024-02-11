@@ -128,6 +128,7 @@ export const slugify = (value: string) => {
         .replaceAll("&", "and")
         .replaceAll("_", " ")
         .replaceAll("/", " ")
+        .replaceAll(".", " ")
         .replaceAll(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .trim()

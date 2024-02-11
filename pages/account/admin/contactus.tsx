@@ -12,7 +12,6 @@ import styles from '@/styles/account/Account.module.css';
 import PageMeta from '@/components/PageMeta';
 import { ContactUsInterface, Pagination } from '@/lib/interfaces';
 import { standardizeDateTime } from '@/lib/standardized';
-import PanaButton from '@/components/PanaButton';
 import AdminButton from '@/components/Admin/AdminButton';
 import AdminMenu from '@/components/Admin/AdminHeader';
 

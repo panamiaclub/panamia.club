@@ -139,7 +139,7 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
                     'path': 'name',
                     'fuzzy': {
                       'maxEdits': 1,
-                      'maxExpansions': 20,
+                      'maxExpansions': 5,
                     },
                     'score': {
                       'boost': {

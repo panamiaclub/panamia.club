@@ -1,7 +1,10 @@
-import type { NextPage } from 'next'
+import type { GetServerSideProps, NextPage } from 'next';
+import { authOptions } from "../api/auth/[...nextauth]";
 import React, { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
+import { getServerSession } from 'next-auth';
+import { useSession } from 'next-auth/react';
 
 import styles from '@/styles/form/StandardForm.module.css'
 import PageMeta from '@/components/PageMeta';
@@ -9,7 +12,20 @@ import PanaLogoLong from '@/components/PanaLogoLong';
 import Required from '@/components/Form/Required';
 import PanaButton from '@/components/PanaButton';
 
+export const getServerSideProps: GetServerSideProps = async function (context) {
+  return {
+    props: {
+      session: await getServerSession(
+        context.req,
+        context.res,
+        authOptions
+      ),
+    },
+  }
+}
+
 const Form_BecomeAnAffiliate: NextPage = () => {
+  const { data: session } = useSession();
   // TODO: User must be logged in to access page
   const [acceptTOS, setAcceptTOS] = useState(false);
 
