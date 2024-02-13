@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, ReactNode } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import styles from '../styles/Donations2.module.css';
-import PageMeta from '../../components/PageMeta';
 import { IconPlant, IconMedal, IconTrophy, IconCrown, } from '@tabler/icons';
-import PanaButton from '../../components/PanaButton';
+
+import styles from '@/styles/event/Event.module.css';
+import PageMeta from '@/components/PageMeta';
+import PanaButton from '@/components/PanaButton';
 
 const stripePublicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 const preAmounts = [25, 40, 100, 250, 500, 1000, 2500];
