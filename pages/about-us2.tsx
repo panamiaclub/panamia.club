@@ -87,7 +87,7 @@ const AboutUs: NextPage = () => {
           <section className={styles.sectionStory}>
             <div className={styles.containerStory}>
               <div className={styles.storyImg}>
-                <img src="\img\about\clari_and_anette.webp" />
+                <img src="/img/about/clari_and_anette.webp" />
               </div>
               <div>
                 <h2>Our Story</h2>

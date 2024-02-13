@@ -32,7 +32,7 @@ const Links: NextPage = () => {
                   </a>
               </div>
               <div className={styles.headerIcon}>
-                  <a target="_blank" rel="noreferrer" href="https://instagram.com/panamiaclub">
+                  <a target="_blank" rel="noreferrer" href="https://instagram.com/real.panamia">
                     <IconBrandInstagram size={32} stroke={2.5} color='white' />
                   </a>
               </div>
