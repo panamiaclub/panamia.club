@@ -41,7 +41,7 @@ export default async function handler(
   const pageNum = forceInt(forceString(rq?.page, "1"), 1);
   const pageLimit = forceInt(forceString(rq?.limit, "20"), 20);
   const searchTerm = forceString(rq?.q, "20");
-  const random = forceString(rq?.random, "") ? true : false;
+  const random = forceInt(forceString(rq.random, "0"), 0);
   const filterLocations = forceString(rq?.floc, "");
   const filterCategories = forceString(rq?.floc, "");
   const geolat = forceString(rq?.geolat, "");
@@ -59,7 +59,7 @@ export default async function handler(
 
     const apiResponse = await getSearch(params);
     if (apiResponse) {
-      console.log(apiResponse);
+      // console.log(apiResponse);
       return res.status(200).json(apiResponse) 
     }
     return res.status(200).json({ success: true, data: [], pagination: {} });

@@ -11,7 +11,7 @@ import { FormEvent } from 'react';
 import styles from '@/styles/Directory.module.css'
 import PanaButton from '@/components/PanaButton';
 import { ProfileSocialsInterface } from '@/lib/interfaces';
-import { forceInt, serialize } from '@/lib/standardized';
+import { forceInt, forceString, serialize } from '@/lib/standardized';
 import PageMeta from '@/components/PageMeta';
 import { countyList, profileCategoryList } from '@/lib/lists';
 import { directorySearchKey, useSearch, SearchResultsInterface } from '@/lib/query/directory';
@@ -21,7 +21,7 @@ function getSearchParams(q: any) {
   const pageNum = q.p ? forceInt(q.p as string, 1) : 1;
   const pageLimit = q.l ? forceInt(q.l as string, 20) : 20;
   const searchTerm = q.q ? q.q as string : "";
-  const random = q.random ? true : false;
+  const random = q.random ? forceInt(q.random as string, 0) : 0;
   const geolat =  q.geolat ? q.geolat : null;
   const geolng =  q.geolng ? q.geolng : null;
   const filterLocations = q.floc ? q.floc as string : "";
@@ -42,7 +42,7 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
   }
 
   const queryClient = new QueryClient();
-  console.log("searchData", searchData);
+  // console.log("searchData", searchData);
   console.log("server:params", params);
   await queryClient.prefetchQuery({
     queryKey: [ directorySearchKey, params],
@@ -96,7 +96,7 @@ function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[
     if (params?.geolat && params?.geolng && lat && lng) {
       distance = calcDistance(params.geolat, params.geolng, lat, lng);
     }
-
+    
     return (
       <article key={index} className={styles.profileCard} data-score={item.score}>
         <div className={styles.profileCardImage}>
@@ -200,6 +200,13 @@ const Directory_Search: NextPage = (props: any) => {
     // console.log(window.location.search);
   }
 
+  const setPage = async (e: FormEvent, newPage: number) => {
+    e.preventDefault();
+    const params = new URLSearchParams(window.location.search);
+    params.set("p", newPage.toString());
+    router.push(`/directory/search/?${params}`);
+  }
+
   const applyGeo = async (e: FormEvent) => {
     e.preventDefault();
     const geo_toggle = document.getElementById('geo_toggle') as HTMLInputElement;
@@ -279,6 +286,16 @@ const Directory_Search: NextPage = (props: any) => {
   }
 
   
+  const totalResults = data ? data[0]?.meta?.count?.total : 0;
+  const totalPages = Math.ceil(totalResults / params.pageLimit);
+  const pagination = {
+    previous: params.pageNum - 1,
+    current: params.pageNum,
+    next: params.pageNum < totalPages ? params.pageNum + 1 : 0,
+    pages: totalPages,
+    results: totalResults,
+  }
+  console.log("pagination", pagination);
 
   return (
     <main className={styles.app}>
@@ -381,7 +398,21 @@ const Directory_Search: NextPage = (props: any) => {
           </section>
           <section className={styles.searchBody}>
             <SearchResults data={data ? data : []} isLoading={isLoading} params={params} />
-    
+            <nav className={styles.resultsPagination}>
+              <PanaButton compact={true}
+                color={pagination.previous > 0 ?  "blue" : "gray"}
+                disabled={pagination.previous > 0 ?  false : true}
+                onClick={(e:any) => {setPage(e, pagination.previous)}}>
+                &laquo;&nbsp;Previous</PanaButton>
+              { pagination.current > 0 && 
+              <span>Page {pagination.current} of {pagination.pages}</span>
+              }
+              <PanaButton compact={true}
+                color={pagination.next > 0 ?  "blue" : "gray"}
+                disabled={pagination.next > 0 ?  false : true}
+                onClick={(e:any) => {setPage(e, pagination.next)}}>
+                Next&nbsp;&raquo;</PanaButton>
+            </nav>
             <article className={styles.profileCardSignup}>
               <div className={styles.profileCardImage}>
                 <img src="/img/bg_coconut.jpg" />

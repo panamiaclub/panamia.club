@@ -7,7 +7,7 @@ interface SearchInterface {
     searchTerm: string,
     filterLocations: string,
     filterCategories: string,
-    random: boolean,
+    random: number,
     geolat: number,
     geolng: number,
 }
@@ -28,6 +28,8 @@ export interface SearchResultsInterface {
     }
     primary_address?: { city?: String },
     socials: {},
+    meta: any,
+    paginationToken: any,
 }
 
 export const searchParamsToString = (params: SearchInterface) => {

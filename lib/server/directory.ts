@@ -8,7 +8,7 @@ interface SearchInterface {
     searchTerm: string,
     filterLocations: string,
     filterCategories: string,
-    random: boolean,
+    random: number,
     geolat: string,
     geolng: string,
     resultsView: string,
@@ -67,13 +67,11 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
     }
     // console.log("geoFilter", geoFilter)
 
-    if (random) {
+    if (random > 0) {
         const randomList = await profile.aggregate([{ '$sample': { 'size': pageLimit } }]);
         return {
           success: true,
           data: randomList,
-          pagination: {},
-          msg: "No Search Term",
         };
     }
     
@@ -166,11 +164,17 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
                   }
                 },
                 ...(Object.keys(geoFilter).length !== 0 ? [geoFilter] : []),
-              ]
+              ], 
+              "minimumShouldMatch": 1
+            },
+            "count": {
+              "type": "total"
             },
           }
         }, {
           '$limit': pageLimit
+        }, {
+          '$skip': pageNum > 1 ? ((pageNum - 1) * pageLimit) : 0
         }, {
           '$project': {
             'name': 1,
@@ -182,6 +186,8 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
             'primary_address.city': 1,
             'geo': 1,
             'score': {'$meta': 'searchScore'},
+            "paginationToken" : { "$meta" : "searchSequenceToken" },
+            "meta": "$$SEARCH_META",
           }
         }
         ];
