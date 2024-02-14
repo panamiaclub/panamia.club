@@ -96,7 +96,7 @@ function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[
     if (params?.geolat && params?.geolng && lat && lng) {
       distance = calcDistance(params.geolat, params.geolng, lat, lng);
     }
-    
+
     return (
       <article key={index} className={styles.profileCard} data-score={item.score}>
         <div className={styles.profileCardImage}>
@@ -287,7 +287,7 @@ const Directory_Search: NextPage = (props: any) => {
 
   
   const totalResults = data ? data[0]?.meta?.count?.total : 0;
-  const totalPages = Math.ceil(totalResults / params.pageLimit);
+  const totalPages = totalResults ? Math.ceil(totalResults / params.pageLimit) : 1;
   const pagination = {
     previous: params.pageNum - 1,
     current: params.pageNum,
@@ -398,6 +398,7 @@ const Directory_Search: NextPage = (props: any) => {
           </section>
           <section className={styles.searchBody}>
             <SearchResults data={data ? data : []} isLoading={isLoading} params={params} />
+            { (data && data?.length > 0) &&
             <nav className={styles.resultsPagination}>
               <PanaButton compact={true}
                 color={pagination.previous > 0 ?  "blue" : "gray"}
@@ -413,6 +414,7 @@ const Directory_Search: NextPage = (props: any) => {
                 onClick={(e:any) => {setPage(e, pagination.next)}}>
                 Next&nbsp;&raquo;</PanaButton>
             </nav>
+            }
             <article className={styles.profileCardSignup}>
               <div className={styles.profileCardImage}>
                 <img src="/img/bg_coconut.jpg" />

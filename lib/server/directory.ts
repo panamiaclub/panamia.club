@@ -120,6 +120,8 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
         }
       }
 
+      const skip = pageNum > 1 ? ((pageNum - 1) * pageLimit) : 0;
+      // console.log("skip", skip);
       const aggregateQuery = [
         {
           '$search': {
@@ -172,9 +174,9 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
             },
           }
         }, {
-          '$limit': pageLimit
+          '$skip': skip
         }, {
-          '$skip': pageNum > 1 ? ((pageNum - 1) * pageLimit) : 0
+          '$limit': pageLimit
         }, {
           '$project': {
             'name': 1,
