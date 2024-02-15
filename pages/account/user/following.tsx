@@ -42,7 +42,7 @@ const Account_User_Edit: NextPage = () => {
     userMutation.mutate(updates);
   } 
 
-  let followingElements = [<></>];
+  let followingElements = [<div key="0"></div>];
   if (followingData && followingData.length > 0) {
     console.log("followingData", followingData);
     followingElements = followingData.map((item: ProfileInterface, index) => {
@@ -66,7 +66,7 @@ const Account_User_Edit: NextPage = () => {
       ) });
   } else {
     followingElements = [(
-      <article className={styles.profileListEmpty}>
+      <article className={styles.profileListEmpty} key={0}>
         <div>You're not following any profiles yet</div>
       </article>
     )];
