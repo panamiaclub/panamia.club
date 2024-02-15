@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { IconUserCircle, IconHeart, IconExternalLink, IconBrandInstagram,
   IconBrandFacebook, IconForms, IconSearch, IconStar, IconFilter,
   IconMap, IconCategory, IconMapPin, IconCurrentLocation, IconList, 
-  IconSortDescending, IconMapPins} from '@tabler/icons';
+  IconSortDescending, IconMapPins, IconHeartBroken} from '@tabler/icons';
 import { QueryClient, dehydrate } from '@tanstack/react-query';
 import { FormEvent } from 'react';
 
@@ -16,6 +16,7 @@ import PageMeta from '@/components/PageMeta';
 import { countyList, profileCategoryList } from '@/lib/lists';
 import { directorySearchKey, useSearch, SearchResultsInterface } from '@/lib/query/directory';
 import { calcDistance, getGeoPosition } from '@/lib/geolocation';
+import { useMutateUserFollowing, useUser } from '@/lib/query/user';
 
 function getSearchParams(q: any) {
   const pageNum = q.p ? forceInt(q.p as string, 1) : 1;
@@ -57,13 +58,34 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
 }
 
 function detailLimit(details: String) {
-  if (details?.length > 250) {
-    return `${details.substring(0, 247)}...`;
+  if (details?.length > 200) {
+    return `${details.substring(0, 197)}...`;
   }
   return details;
 }
 
-function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[], isLoading: boolean, params: any}) {
+function SearchResults(
+  {data, isLoading, params}: {data: SearchResultsInterface[], isLoading: boolean, params: any}
+  ) {
+
+  const { data: userData } = useUser();
+  const userMutation = useMutateUserFollowing();
+  const followProfile = (e: FormEvent, id: string) => {
+    e.preventDefault();
+    const updates = {
+      action: "follow",
+      id: id,
+    }
+    userMutation.mutate(updates);
+  }
+  const unfollowProfile = (e: FormEvent, id: string) => {
+    e.preventDefault();
+    const updates = {
+      action: "unfollow",
+      id: id,
+    }
+    userMutation.mutate(updates);
+  }
   // console.log("data", data, "isLoading", isLoading)
   if (isLoading === true) {
     return (
@@ -96,7 +118,14 @@ function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[
     if (params?.geolat && params?.geolng && lat && lng) {
       distance = calcDistance(params.geolat, params.geolng, lat, lng);
     }
-
+    const profileId = item._id as string;
+    let profileFollowed = false;
+    if (userData && profileId) {
+      if (userData.following) {
+        profileFollowed = userData.following.indexOf(profileId) > -1 ? true : false;
+        console.log("following", profileId, userData.following.indexOf(profileId), profileFollowed);
+      }
+    }
     return (
       <article key={index} className={styles.profileCard} data-score={item.score}>
         <div className={styles.profileCardImage}>
@@ -105,7 +134,12 @@ function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[
           <img src="/img/bg_coconut_blue.jpg" />
           }
         </div>
-        <div className={styles.cardName}>{item.name}</div>
+        <div className={styles.cardName}>
+          {item.name}
+          {profileFollowed && 
+            <span title="You're following this profile">&nbsp;<IconHeart color="red" fill="red" size={22} /></span>
+          }
+        </div>
         <div className={styles.cardFiveWordsContainer}>
           <div className={styles.cardFiveWords}>{item.five_words}</div>
         </div>
@@ -122,7 +156,11 @@ function SearchResults({data, isLoading, params}: {data: SearchResultsInterface[
         <div className={styles.cardDetails}>{detailLimit(item.details)}</div>
         <div className={styles.cardActions}>
           <Link href={`/profile/${item.slug}`}><a><IconUserCircle height="20" />View Profile</a></Link>&emsp;
-          <a href=""><IconHeart height="20" />Follow</a>
+          { profileFollowed && 
+          <button onClick={(e: any) => {unfollowProfile(e, profileId)}}><IconHeartBroken height="20" />Unfollow</button> ||
+          <button onClick={(e: any) => {followProfile(e, profileId)}}><IconHeart height="20" />Follow</button>
+          }
+          
           <div className={styles.cardlinks} hidden>
             { socials?.website && 
             <a href={socials.website.toString()}>
@@ -160,6 +198,7 @@ const Directory_Search: NextPage = (props: any) => {
   console.log("client:params", params);
   const geo_toggle = (params.geolat && params.geolng) ? true : false;
   // const sortby = params.s ? params.s : "score";
+
   const { data, isLoading, refetch } = useSearch(params);
 
   function submitSearchForm(e: FormEvent, formData: FormData) {
@@ -170,6 +209,8 @@ const Directory_Search: NextPage = (props: any) => {
     qs.append("q", searchTerm);
     router.push(`/directory/search/?${qs}`);
   }
+
+  
 
   function applyView(e: FormEvent) {
     // TODO: list (default) or map
@@ -295,7 +336,7 @@ const Directory_Search: NextPage = (props: any) => {
     pages: totalPages,
     results: totalResults,
   }
-  console.log("pagination", pagination);
+  // console.log("pagination", pagination);
 
   return (
     <main className={styles.app}>
@@ -337,7 +378,7 @@ const Directory_Search: NextPage = (props: any) => {
               </PanaButton>
             </div>
             <div title="Click to get random results!" hidden>
-              <PanaButton color="yellow" onClick={searchRandom}>
+              <PanaButton compact={true} color="yellow" onClick={searchRandom}>
                 <IconStar height="20" />
                 <span className="sr-only">Click to get random results</span>
               </PanaButton>
@@ -375,8 +416,8 @@ const Directory_Search: NextPage = (props: any) => {
                         })
                       }
                     </div>
-                    <PanaButton type="submit">Apply</PanaButton>
-                    <PanaButton onClick={useFiltersModal}>Close</PanaButton>
+                    <PanaButton compact={true} type="submit">Apply</PanaButton>
+                    <PanaButton compact={true} onClick={useFiltersModal}>Close</PanaButton>
                   </form>
                 </dialog>
                 <button className={styles.filtersButton} hidden
@@ -391,15 +432,21 @@ const Directory_Search: NextPage = (props: any) => {
                         <li><IconStar />&nbsp;Best Match</li>
                         <li><IconMapPins />&nbsp;Distance</li>
                         <li><IconHeart />&nbsp;Most Popular</li>
+                        <li><IconSortDescending />&nbsp;Newest</li>
                       </ul>
                   </form>
                 </dialog>
               </div>
           </section>
           <section className={styles.searchBody}>
+            { params.searchTerm.length == 0 && 
+            <div className={styles.noResults}>
+              <p>You haven't searched anything yet, explore some of our local profiles below!</p>
+            </div>
+            }
             <SearchResults data={data ? data : []} isLoading={isLoading} params={params} />
             { (data && data?.length > 0) &&
-            <nav className={styles.resultsPagination}>
+            <nav className={styles.pagination}>
               <PanaButton compact={true}
                 color={pagination.previous > 0 ?  "blue" : "gray"}
                 disabled={pagination.previous > 0 ?  false : true}
@@ -413,6 +460,9 @@ const Directory_Search: NextPage = (props: any) => {
                 disabled={pagination.next > 0 ?  false : true}
                 onClick={(e:any) => {setPage(e, pagination.next)}}>
                 Next&nbsp;&raquo;</PanaButton>
+                { pagination.results && 
+                <div className={styles.resultsCount}>{pagination.results} result(s)</div>
+                }
             </nav>
             }
             <article className={styles.profileCardSignup}>

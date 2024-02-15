@@ -140,6 +140,7 @@ export interface UserInterface {
         points: number,
     }
     alternate_emails?: [],
+    following?: string[],
     createdAt: Date,
     updatedAt: Date,
 }

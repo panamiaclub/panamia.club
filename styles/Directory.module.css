@@ -63,7 +63,7 @@
     margin: 0 0.5rem;
     font-size: var(--base-font-size);
     letter-spacing: 1px;
-    padding: 0.5rem 1.5rem;
+    padding: 0.25rem 0.75rem;
     background-color: white;
     color: #444;
     font-weight: 700;
@@ -122,8 +122,8 @@
     width: 100%;
 }
 .searchButton{
-    margin-left: -5rem;
-    margin-top: 0.4rem;
+    margin-left: -5.5rem;
+    line-height: 3rem;
 }
 .searchBody{
     min-height:75vh;
@@ -163,6 +163,7 @@
         grid-template-columns: 25% calc(75% - 1.5rem);
         grid-template-rows: auto auto auto auto auto;
         column-gap: 0.5rem;
+        margin: 0.25rem;
     }
 }
 
@@ -187,7 +188,7 @@
 .profileCardImage{
     width: 10rem;
     padding-right:1rem;
-    grid-row: span 3;
+    grid-row: span 5;
     text-align: center;
 }
 
@@ -197,7 +198,7 @@
         max-height: 25vh;
         grid-row: auto;
         padding:0;
-        margin:0 auto 1rem;
+        margin:0 auto .5rem;
         overflow: hidden;
     }
 }
@@ -220,6 +221,7 @@
     .cardName{
         width: 100%;
         grid-row: auto;
+        font-size: var(--base-font-size);
     }
 }
 
@@ -239,8 +241,8 @@
 .cardLocation{
     font-style: italic;
     font-weight: 400;
-    font-size: 1rem;
     padding-top:0.25rem;
+    line-height: 175%;
 }
 @media screen and (max-width: 600px) {
     .cardLocationContainer{
@@ -255,13 +257,31 @@
 .cardDetails{
     width: 100%;
     padding: 0.5rem 0;
-    grid-column: span 2;
+    grid-column: span 1;
+}
+@media screen and (max-width: 600px) {
+    .cardDetails{
+        grid-column: span 2;
+    }
 }
 
 .cardActions{
     padding: 0.5rem 0 0;
     display: flex;
-    grid-column: span 2;
+    grid-column: span 1;
+}
+.cardActions button{
+    all: unset;
+    color: var(--color-pana-pink);
+}
+.cardActions button:hover{
+    cursor: pointer;
+    text-decoration: underline;
+}
+@media screen and (max-width: 600px) {
+    .cardActions{
+        grid-column: span 2;
+    }
 }
 
 .cardlinks{
@@ -286,10 +306,16 @@
     color: var(--color-pana-pink);
 }
 
-.resultsPagination{
+.pagination{
     max-width: 45rem;
     margin: 1rem auto 3rem;
     text-align: left;
+    line-height: 3rem;
+}
+
+.resultsCount{
+    display: inline-block;
+    float: right;
 }
 
 .directoryReferrals{

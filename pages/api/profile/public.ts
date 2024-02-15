@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 import dbConnect from "../auth/lib/connectdb";
 import profile from "../auth/lib/model/profile";
+import { unguardProfile } from "@/lib/profile";
 
 interface ResponseData {
   error?: string;
@@ -32,7 +33,7 @@ export default async function handler(
     const existingProfile = await getProfile(handle);
     if (existingProfile) {
       // TODO: Create SAFE profile object for Public API
-      return res.status(200).json({ success: true, data: existingProfile });
+      return res.status(200).json({ success: true, data: unguardProfile(existingProfile) });
     }
   }
   

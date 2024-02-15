@@ -18,19 +18,19 @@ export const listSelectedCategories = (categories: CategoryInterface) => {
 export const unguardProfile = (profile: any) => {
     // only send safe for public fields
     return {
-        ...profile.slug,
-        ...profile.name,
-        ...profile.details,
-        ...profile.background,
-        ...profile.socials,
-        ...profile.five_words,
-        ...profile.socials,
-        ...profile.tags,
-        ...profile.categories,
-        ...profile.primary_address,
-        ...profile.counties,
-        ...profile.geo,
-        ...profile.images,
-        ...profile.linked_profiles,
+        ...{_id: profile._id},
+        ...{slug: profile.slug},
+        ...{name: profile.name},
+        ...{details: profile.details},
+        ...{background: profile.background},
+        ...{socials: profile.socials},
+        ...{five_words: profile.five_words},
+        ...{tags: profile.tags},
+        ...{categories: profile.categories},
+        ...{primary_address: profile.primary_address},
+        ...{counties: profile.counties},
+        ...{geo: profile.geo},
+        ...{images: profile.images},
+        ...{linked_profiles: profile.linked_profiles},
     }
 }
