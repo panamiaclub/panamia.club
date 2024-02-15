@@ -13,7 +13,7 @@ interface ResponseData {
   error?: string;
   success?: boolean;
   msg?: string;
-  data?: any[];
+  data?: any[] | any;
 }
 
 const getUserByEmail = async (email: string) =>{
