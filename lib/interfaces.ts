@@ -77,6 +77,7 @@ export interface CategoryInterface {
 }
 
 export interface ProfileInterface {
+    _id: string,
     email: string,
     name: string,
     slug: string,

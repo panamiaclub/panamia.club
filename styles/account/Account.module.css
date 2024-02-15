@@ -213,3 +213,25 @@
 .accountFAQs a{
     color: var(--color-pana-pink);
 }
+
+.profileListCard{
+    display: grid;
+    grid-template-columns: 4rem auto max-content;
+    border: 3px solid #ccc;
+    padding: .5rem;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+}
+.listCardImage img{
+    width: 100%;
+}
+.listCardName{
+    padding: 0 1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+.listCardAction{
+}
+.profileListEmpty{
+    text-align: center;
+}
