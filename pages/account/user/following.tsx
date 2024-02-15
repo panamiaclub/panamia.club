@@ -47,7 +47,7 @@ const Account_User_Edit: NextPage = () => {
     console.log("followingData", followingData);
     followingElements = followingData.map((item: ProfileInterface, index) => {
       return (
-        <article className={styles.profileListCard}>
+        <article className={styles.profileListCard} key={index}>
           <div className={styles.listCardImage}>
             { item?.images?.primaryCDN && 
             <img src={item.images?.primaryCDN} /> ||
