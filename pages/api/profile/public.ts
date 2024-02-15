@@ -9,7 +9,7 @@ interface ResponseData {
   error?: string;
   success?: boolean;
   msg?: string;
-  data?: any[];
+  data?: any[] | any;
 }
 const getProfile = async (slug: string) =>{
     await dbConnect();
