@@ -30,7 +30,12 @@ export default async function handler(
       .json({ error: "This API call only accepts POST methods" });
   }
   const { email, access, action } = req.body;
-  const totalProfiles = await profile.countDocuments({active: true});
+  let totalProfiles = 0;
+  try {
+    totalProfiles = await profile.countDocuments({active: true});
+  } catch (e: any) {
+    console.log("profile.countDocuments failed", e)
+  }
   if (email) {
     const emailCheck = email.toString().toLowerCase();
     const existingProfile = await getProfile(emailCheck);

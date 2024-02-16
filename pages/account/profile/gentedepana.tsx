@@ -16,6 +16,7 @@ import { profileQueryKey, useProfile, useMutateProfileGenteDePana  } from '@/lib
 import Spinner from '@/components/Spinner';
 import { serialize } from '@/lib/standardized';
 import FullPage from '@/components/Page/FullPage';
+import { IconArrowBackUp, IconDeviceFloppy } from '@tabler/icons';
 
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
@@ -73,9 +74,10 @@ const Account_Profile_GenteDePana: NextPage = (props: any) => {
     <div className={styles.main}>
       <h2 className={styles.accountTitle}>Profile - Edit Gente dePana Offers</h2>
       <form className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>
-        <p>
-          <Link href="/account/profile/edit"><a>Back to Profile</a></Link>
-        </p>
+        <div className={styles.accountFormActions}>
+          <PanaButton href="/account/profile/edit" compact={true}><IconArrowBackUp size={18} /> Back</PanaButton>
+          <PanaButton color="blue" type="submit" disabled={isLoading} compact={true}><IconDeviceFloppy size={18} /> Save Changes</PanaButton>
+        </div>
         <div className={styles.accountFields}>
           <label>Discount Code</label>&emsp;
           <input name="code" type="text" defaultValue={profile?.gentedepana?.code} />

@@ -7,23 +7,8 @@ import PageMeta from '@/components/PageMeta';
 import PanaButton from '@/components/PanaButton';
 
 const stripePublicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const preAmounts = [25, 40, 100, 250, 500, 1000, 2500];
-const monthPreAmounts = [10, 15, 25];
-
-const GridCheck = () => {
-  return (
-    <span className={styles.gridCheck} title="Checked">&#10003;</span>
-  )
-}
-const GridNotCheck = () => {
-  return (
-    <span className={styles.gridNotCheck} title="Not Checked">-</span>
-  )
-}
-
 
 const Event_Panimo2024: React.FC = () => {
-
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -33,6 +18,10 @@ const Event_Panimo2024: React.FC = () => {
       return;
     }
   };
+  
+  // Event Description
+  // Event Date & Time
+  // Event Place
 
   return (
     <main className={styles.app}>
@@ -43,6 +32,19 @@ const Event_Panimo2024: React.FC = () => {
       <div className={styles.main}>
         <section className={styles.header}>
           <h2>Panimo 2024 by Pana MIA Club</h2>
+        </section>
+        <section>
+          <p></p>
+          <p>
+            March 16th, 6pm to 2am
+          </p>
+          <address>
+          228 NE 59 St,<br />
+          Miami, FL 33137
+          </address>
+          <div className={styles.ticketSelection}>PreSale Ticket</div>
+          <div className={styles.upsellSelection}>VIP</div>
+          <div className={styles.upsellSelection}>Pana MIA T-Shirt</div>
         </section>
       </div>
     </main>

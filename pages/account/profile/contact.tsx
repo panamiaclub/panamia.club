@@ -2,10 +2,9 @@ import type { NextPage } from 'next';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from "next-auth/next";
 import { useSession } from 'next-auth/react';
-import { FormEvent, useRef, useState } from 'react';
-import axios from 'axios';
-import Link from 'next/link';
+import { FormEvent, useState } from 'react';
 import { useQueryClient, dehydrate, QueryClient } from '@tanstack/react-query';
+import { IconArrowBackUp, IconDeviceFloppy } from '@tabler/icons';
 
 import { authOptions } from "../../api/auth/[...nextauth]";
 import styles from '@/styles/account/Account.module.css';
@@ -17,6 +16,7 @@ import { profileQueryKey, useProfile, useMutateProfileContact, fetchProfile  } f
 import Spinner from '@/components/Spinner';
 import { serialize } from '@/lib/standardized';
 import FullPage from '@/components/Page/FullPage';
+
 
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
@@ -84,9 +84,10 @@ const Account_Profile_Contact: NextPage = (props: any) => {
     <div className={styles.main}>
       <h2 className={styles.accountTitle}>Profile - Edit Contact Info</h2>
       <form className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>
-        <p>
-          <Link href="/account/profile/edit"><a>Back to Profile</a></Link>
-        </p>
+        <div className={styles.accountFormActions}>
+          <PanaButton href="/account/profile/edit" compact={true}><IconArrowBackUp size={18} /> Back</PanaButton>
+          <PanaButton color="blue" type="submit" disabled={isLoading} compact={true}><IconDeviceFloppy size={18} /> Save Changes</PanaButton>
+        </div>
         <div className={styles.accountFields}>
           <label>Email</label>&emsp;
           <input name="email" type="email" defaultValue={profile.email} disabled />

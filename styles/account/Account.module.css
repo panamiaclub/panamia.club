@@ -8,10 +8,20 @@
     padding: 1rem;
     margin-bottom:10vh;
 }
+@media screen and (max-width: 600px) {
+    .main{
+        padding: 0.25rem;
+    }
+}
 
 .accountTitle{
     text-align: center;
     padding: 3rem 0 1rem;
+}
+@media screen and (max-width: 600px) {
+    .accountTitle{
+        padding: 1rem 0;
+    }
 }
 .accountProfileBar{
     display: flex;
@@ -131,6 +141,7 @@
 .profileFieldset{
     padding: 1rem;
     margin-bottom: 2rem;
+    overflow: hidden;
 }
 .profileFieldset a{
     color: var(--color-pana-pink);
@@ -149,6 +160,9 @@
 }
 .profileFields label{
     font-weight: 700;
+}
+.profileFields ul{
+    padding-left: 0.75rem;
 }
 .profileNote{
     color: #777;

@@ -133,14 +133,14 @@ const AboutUs: NextPage = () => {
                 </div>
                 <div>
                   <h3>Claribel Avila, Co-Founder</h3>
-                  <p>Claribel, a gender-fluid, queer, Puerto Rican, graduated from Northeastern University in 
-                    2018 with a Bachelors in Economics and a concentration in Economic Policy. From a family 
-                    of entrepreneurs, they explored diverse industries and started their first business in 
-                    2019, selling herbal-infused honey. Despite personal pursuits, their central focus has 
-                    been on one question: How do we resource communities for economic prosperity? Moving to 
-                    Miami in 2021 brought purpose, and as a problem solver, their work with Pana MIA Club 
-                    soon became a way to leverage strengths in creating sustainable systems connecting local 
-                    communities. </p>
+                  <p>Claribel Avila is a Puerto Rican entrepreneur and creative who began calling Miami home 
+                    in 2021. They graduated from Northeastern University in 2018 with a Bachelors in Economic 
+                    Policy. Having been raised by an entrepreneurial migrant family, they explored diverse 
+                    industries and started their first business in 2019, selling herbal-infused honey. Despite 
+                    their many passions and personal pursuits, their central focus has always been social, 
+                    economic and racial justice. Moving to Miami brought purpose, and as a problem solver, 
+                    their work with Pana MIA Club soon became a way to leverage strengths in order to bring 
+                    about a more equitable and humane world.</p>
                 </div>
               </div>
             </div>
