@@ -100,10 +100,6 @@ const Account_Profile_Desc: NextPage = (props: any) => {
           <label>Tags</label>&emsp;
           <textarea name="tags" rows={4} maxLength={500} defaultValue={profile.tags}></textarea>
         </div>
-        
-        <div className={styles.accountFields}>
-          <PanaButton color="blue" type="submit" disabled={isLoading}>Update</PanaButton>
-        </div>
       </form>
       </div>
     </main>

@@ -91,9 +91,6 @@ const Account_Profile_GenteDePana: NextPage = (props: any) => {
           <textarea name="details" rows={4} maxLength={500} defaultValue={profile?.gentedepana?.details}></textarea>
           <small>For adding specific details or exemptions that apply to the discount provided.</small>
         </div>
-        <div className={styles.accountFields}>
-          <PanaButton color="blue" type="submit" disabled={isLoading}>Update</PanaButton>
-        </div>
       </form>
       <div>
         <h3>Help &amp; FAQs</h3>

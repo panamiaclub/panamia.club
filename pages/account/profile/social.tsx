@@ -106,10 +106,6 @@ const Account_Profile_Social: NextPage = (props: any) => {
           <label>Spotify</label>&emsp;
           <input name="spotify" type="text" defaultValue={profile.socials.spotify} />
         </div>
-        
-        <div className={styles.accountFields}>
-          <PanaButton color="blue"type="submit" disabled={isLoading}>Update</PanaButton>
-        </div>
       </form>
       </div>
     </main>

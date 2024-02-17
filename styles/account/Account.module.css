@@ -116,6 +116,7 @@
 }
 .accountFields input[type="file"]{
     background-color: #EEE;
+    
 }
 .accountFields input[type="file"]::file-selector-button{
     background-color: #444;
@@ -123,6 +124,11 @@
     padding: 0.5rem;
     border-radius: 1rem;
     margin-right: 1rem;
+}
+@media screen and (max-width: 600px) {
+    .accountFields input[type="file"]{
+        font-size: .8rem;
+    }
 }
 
 .accountFields ul{
@@ -150,6 +156,12 @@
     font-weight: 700;
     font-size: 1.25rem;
     padding: 0 1rem;
+}
+@media screen and (max-width: 600px) {
+    .profileFieldset legend{
+        font-size: 1rem;
+        padding: 0 0.5rem;
+    }
 }
 .profileEditLink{
     float: right;
