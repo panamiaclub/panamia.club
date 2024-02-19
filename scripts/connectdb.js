@@ -2,10 +2,10 @@
 Source : 
 https://github.com/vercel/next.js/blob/canary/examples/with-mongodb-mongoose/utils/dbConnect.js 
 **/
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 mongoose.set('strictQuery', false);
 
-import 'dotenv/config';
+require('dotenv/config');
 
 // if (!process.env.MONGODB_URI) {
 //   throw new Error("Please add your MONGODB_URI to .env.local");
@@ -48,4 +48,4 @@ async function dbConnect() {
   return cached.conn;
 }
 
-export default dbConnect;
+module.exports = dbConnect;

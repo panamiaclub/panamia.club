@@ -14,6 +14,12 @@ export interface ProfileStatusInterface {
     notes?: String,
 }
 
+export interface ProfileGenteDePanaInterface {
+    code?: string,
+    percentage?: string,
+    details?: string,
+}
+
 export interface ProfileSocialsInterface {
     website?: string,
     instagram?: string,
@@ -71,6 +77,7 @@ export interface CategoryInterface {
 }
 
 export interface ProfileInterface {
+    _id: string,
     email: string,
     name: string,
     slug: string,
@@ -88,6 +95,7 @@ export interface ProfileInterface {
     counties: CountyInterface,
     categories: CategoryInterface,
     primary_address: AddressInterface,
+    gentedepana: ProfileGenteDePanaInterface,
     geo: {},
     locations: [],
     images?: ProfileImagesInterface,
@@ -135,6 +143,7 @@ export interface UserInterface {
         points: number,
     }
     alternate_emails?: [],
+    following?: string[],
     createdAt: Date,
     updatedAt: Date,
 }

@@ -8,10 +8,20 @@
     padding: 1rem;
     margin-bottom:10vh;
 }
+@media screen and (max-width: 600px) {
+    .main{
+        padding: 0.25rem;
+    }
+}
 
 .accountTitle{
     text-align: center;
     padding: 3rem 0 1rem;
+}
+@media screen and (max-width: 600px) {
+    .accountTitle{
+        padding: 1rem 0;
+    }
 }
 .accountProfileBar{
     display: flex;
@@ -68,11 +78,17 @@
     color: white;
     background: linear-gradient(60deg, var(--color-pana-yellow) 0%, var(--color-pana-orange) 45%, var(--color-pana-yellow) 100%);
 }
-.affiliateBarCode{
+.affiliateBarDetails{
+    display: flex;
+    width: 100%;
     padding: 0.5rem 1rem;
 }
+.affiliateBarCode{
+}
+.affiliateBarLink{
+    margin-left: auto;
+}
 .affiliateBarPoints{
-    padding: 0.5rem 1rem;
     margin-left: auto;
 }
 .affiliateBarStatus{
@@ -117,6 +133,7 @@
 }
 .accountFields input[type="file"]{
     background-color: #EEE;
+    
 }
 .accountFields input[type="file"]::file-selector-button{
     background-color: #444;
@@ -124,6 +141,11 @@
     padding: 0.5rem;
     border-radius: 1rem;
     margin-right: 1rem;
+}
+@media screen and (max-width: 600px) {
+    .accountFields input[type="file"]{
+        font-size: .8rem;
+    }
 }
 
 .accountFields ul{
@@ -142,6 +164,7 @@
 .profileFieldset{
     padding: 1rem;
     margin-bottom: 2rem;
+    overflow: hidden;
 }
 .profileFieldset a{
     color: var(--color-pana-pink);
@@ -150,6 +173,12 @@
     font-weight: 700;
     font-size: 1.25rem;
     padding: 0 1rem;
+}
+@media screen and (max-width: 600px) {
+    .profileFieldset legend{
+        font-size: 1rem;
+        padding: 0 0.5rem;
+    }
 }
 .profileEditLink{
     float: right;
@@ -160,6 +189,9 @@
 }
 .profileFields label{
     font-weight: 700;
+}
+.profileFields ul{
+    padding-left: 0.75rem;
 }
 .profileNote{
     color: #777;
@@ -245,4 +277,33 @@
 .searchBody{
     min-height:75vh;
     padding-bottom: 5vh;
+}
+
+.accountFAQs dt{
+    text-decoration: underline;
+}
+.accountFAQs a{
+    color: var(--color-pana-pink);
+}
+
+.profileListCard{
+    display: grid;
+    grid-template-columns: 4rem auto max-content;
+    border: 3px solid #ccc;
+    padding: .5rem;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+}
+.listCardImage img{
+    width: 100%;
+}
+.listCardName{
+    padding: 0 1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+.listCardAction{
+}
+.profileListEmpty{
+    text-align: center;
 }

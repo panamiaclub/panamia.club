@@ -125,12 +125,15 @@ export const debounce = (func: Function, wait = 500) => {
 export const slugify = (value: string) => {
     // TODO: Check for duplicate slug
     return value.normalize('NFD')
-        .replace("&", "and")
-        .replace(/[\u0300-\u036f]/g, '')
+        .replaceAll("&", "and")
+        .replaceAll("_", " ")
+        .replaceAll("/", " ")
+        .replaceAll(".", " ")
+        .replaceAll(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .trim()
-        .replace(/[^a-z0-9 ]/g, '')
-        .replace(/\s+/g, '-');
+        .replaceAll(/[^a-z0-9 ]/g, '')
+        .replaceAll(/\s+/g, '-');
 }
 
 export const truncateWithEllipsis = (value: string) => {

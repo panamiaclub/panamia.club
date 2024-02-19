@@ -1,0 +1,317 @@
+.app{
+    min-height: 90vh;
+    background-color: #f8f8f8;
+}
+
+.main{
+    min-height: 1vh;
+    margin: auto;
+}
+
+.main p, .main h2, .main h3{
+    max-width: 45rem;
+    padding: 0 0 1rem;
+    margin: auto;
+}
+
+.header{
+    padding: 25vh 0;
+    background: url('/img/about/florida.jpg');
+    background-position: 100% 100%;
+    background-size: cover;
+    background-repeat: no-repeat;
+    text-align: center;
+    color: white;
+}
+
+.header h2{
+    font-size: 48px;
+}
+
+.sectionMission{
+    padding: 10vh 0;
+    background-color: var(--color-bg-navy);
+    color: white;
+    text-align: justify;
+}
+.sectionMission p h2{
+    display: inline-block;
+    padding-bottom: 0;
+}
+@media screen and (max-width: 600px) {
+    .sectionMission{
+        padding: 4rem 0.5rem;
+    }
+}
+
+.sectionStory{
+    padding: 12.5vh 0;
+}
+.containerStory{
+    max-width:45rem;
+    display: flex;
+    margin: auto;
+}
+.storyImg{
+    max-width: 30%;
+    margin-right: 1rem;
+}
+.storyImg img{
+    max-width: 100%;
+}
+@media screen and (max-width: 600px) {
+    .sectionStory{
+        padding: 4rem 0.5rem;
+    }
+    .sectionStory p{
+        text-align: justify;
+    }
+    .containerStory{
+        display: block;
+    }
+    .storyImg{
+        max-width: 100%;
+    }
+}
+
+.sectionProjects{
+    padding: 12.5vh 0;
+    background-color: #777;
+    background: url('/img/about/bubbles_navy.jpg');
+    background-size: cover;
+    color: white;
+}
+.containerProjects{
+    max-width: 45rem;
+    margin: auto;
+}
+.containerProjects h2{
+    text-align: center;
+}
+
+.projectsBlock{
+    border-radius: 1rem;
+}
+.directorio{
+    background-color: var(--color-pana-blue);
+}
+.projectsBlock.leolero{
+    background-color: var(--color-pana-yellow);
+}
+.projectsBlock.panavizion{
+    background-color: var(--color-pana-pink);
+}
+.projectsHeader{
+    display: flex;
+}
+.projectsHeader h3{
+    padding: 0.5rem 1rem .75rem;
+    border-radius: 1rem 1rem 0 0;
+    width: 33.33%;
+    text-align: center;
+}
+.projectsHeader h3:hover{
+    cursor: pointer;
+}
+
+.directorioTitle{
+    color: var(--color-pana-blue);
+    border: solid 4px var(--color-pana-blue);
+    background-color: white;
+}
+.directorioTitleActive{
+    border: solid 4px var(--color-pana-blue);
+    background-color: var(--color-pana-blue);
+}
+.directorioTitle:hover{
+    color: white;
+    background-color: var(--color-pana-blue);
+}
+.leoleroTitle{
+    color: var(--color-pana-yellow);
+    border: solid 4px var(--color-pana-yellow);
+    background-color: white;
+}
+.leoleroTitleActive{
+    border: solid 4px var(--color-pana-yellow);
+    background-color: var(--color-pana-yellow);
+}
+.leoleroTitle:hover{
+    color: white;
+    background-color: var(--color-pana-yellow);
+}
+.panavizionTitle{
+    color: var(--color-pana-pink);
+    border: solid 4px var(--color-pana-pink);
+    background-color: white;
+}
+.panavizionTitleActive{
+    border: solid 4px var(--color-pana-pink);
+    background-color: var(--color-pana-pink);
+}
+.panavizionTitle:hover{
+    color: white;
+    background-color: var(--color-pana-pink);
+}
+.projectsBlock p{
+    color: black;
+    padding: 2rem 1rem;
+    border-radius: 0 0 1rem 1rem;
+}
+.directorioBody{
+    background-color: white;
+    border: solid var(--color-pana-blue) 4px;
+}
+.leoleroBody{
+    background-color: white;
+    border: solid var(--color-pana-yellow) 4px;
+}
+.panavizionBody{
+    background-color: white;
+    border: solid var(--color-pana-pink) 4px;
+}
+@media screen and (max-width: 600px) {
+    .sectionProjects{
+        padding: 4rem 0.5rem;
+    }
+    .sectionProjects p{
+        text-align: justify;
+    }
+    .projectsHeader h3{
+        padding: 0.25rem;
+        font-size: 1em;
+    }
+}
+
+.sectionBoard{
+    padding: 10vh 0;
+}
+.containerBoard{
+    max-width: 45rem;
+    margin: auto;
+}
+.boardBlock{
+    display: flex;
+    padding: 1rem 0;
+}
+.boardImg{
+    max-width: 20rem;
+    padding: 0 1rem;
+}
+.boardBlock:nth-child(2) .boardImg {
+    order: 1;
+}
+.boardImg img{
+    max-width: 100%;
+}
+@media screen and (max-width: 600px) {
+    .sectionBoard{
+        padding: 4rem 0.5rem;
+    }
+    .sectionBoard h2{
+        text-align: center;
+    }
+    .boardBlock{
+        display: block;
+        padding: 1rem 0;
+    }
+    .boardBlock h3{
+        text-align: center;
+    }
+    .boardBlock p{
+        padding: 0 1rem;
+        text-align: justify;
+    }
+}
+
+.sectionTeam{
+    padding: 12.5vh;
+    background-color: var(--color-pana-yellow);
+    background: url('/img/about/parallax2.jpg');
+    background-attachment: fixed;
+    background-repeat:repeat-y;
+    background-size: cover;
+
+}
+.containerTeam{
+    max-width: 45rem;
+    margin: auto;
+}
+.teamBlocks{
+    display: flex;
+    flex-wrap: wrap;
+}
+.teamPicture{
+    max-width: 31%;
+    padding: 0.5rem;
+    background-color: white;
+    border-radius: 1rem;
+    margin: 0 1%
+}
+.teamPicture h3{
+    padding: 0 0 0.5rem;
+}
+.teamPicture img{
+    max-width: 100%;
+    border-radius: 0.5rem;
+}
+@media screen and (max-width: 600px) {
+    .sectionTeam{
+        padding: 4rem 0.5rem;
+    }
+    .teamBlocks{
+        display: block;
+    }
+    .teamPicture{
+        max-width: 100%;
+        margin:1rem;
+    }
+}
+
+.sectionMap{
+    padding: 10vh;
+}
+.mapImg{
+    max-width: 20rem;
+    margin: auto;
+    padding-right: 2rem;
+}
+.mapImg img{
+    max-width: 100%;
+    border-radius: 1rem;
+}
+
+.sectionSupport{
+    padding: 12.5vh;
+}
+.containerSupport{
+    max-width: 45rem;
+    margin: auto;
+    display: flex;
+}
+.sectionSupport a{
+    color: var(--color-pana-pink)
+}
+@media screen and (max-width: 600px) {
+    .sectionSupport{
+        padding: 4rem 0.5rem;
+    }
+    .containerSupport{
+        display: block;
+    }
+    .mapImg{
+        max-width: 100%;
+        padding: 0;
+    }
+    .sectionSupport h2{
+        padding-top: 1rem;
+        text-align: center;
+    }
+    .sectionSupport p{
+        text-align: justify;
+    }
+}
+
+.footer{
+    height:5vh;
+}

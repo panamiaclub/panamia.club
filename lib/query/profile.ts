@@ -77,6 +77,25 @@ export const useMutateProfileContact = () => {
       })
 }
 
+export const useMutateProfileGenteDePana = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+      mutationFn: (updates: any) => {
+        return axios.post("/api/profile/saveGenteDePana", updates);
+      },
+      onSuccess: (data) => {
+        alert('Succesfully updated profile');
+        return queryClient.invalidateQueries({
+          queryKey: profileQueryKey,
+          exact: true
+        });
+      },
+      onError: () => {
+        alert('Failed to update profile. Please contact us.');
+      }
+    })
+}
+
 export const useMutateProfileDesc = () => {
     const queryClient = useQueryClient();
     return useMutation({

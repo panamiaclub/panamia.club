@@ -100,7 +100,7 @@ export default async function handler(
   // TODO: Set initial completion percentage?
   const newProfile = new profile({
       name: name,
-      email: email,
+      email: email.toString().toLowerCase(),
       slug: slugify(name),
       active: false, // TODO: set to false on launch/approval process
       status: {

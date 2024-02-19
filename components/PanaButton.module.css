@@ -8,9 +8,11 @@
     --button-color-dark: var(--color-bg-dark);
     --padding-standard: .5rem 1.5rem;
     --padding-compact: .5rem .5rem;
+    --text-standard: var(--base-font-size);
+    --text-compact: var(--mobile-font-size);
     position: relative;
     margin: 0 .5rem;
-    font-size: var(--base-font-size);
+    font-size: var(--button-text-size);
     letter-spacing: 1px;
     padding: var(--button-padding);
     background: linear-gradient(90deg, var(--main-color) 0%, var(--main-color) 100%);

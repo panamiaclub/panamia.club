@@ -17,6 +17,7 @@ interface CustomCSSProperties extends React.CSSProperties {
     '--main-color'?: string,
     '--hover-color'?: string,
     '--button-padding'?: string,
+    '--button-text-size'?: string,
 }
 
 export default function PanaButton(props: PanaButtonProps)  {
@@ -31,6 +32,7 @@ export default function PanaButton(props: PanaButtonProps)  {
         '--main-color': props.color ? `var(--button-color-${props.color})` : "var(--button-color-dark)",
         '--hover-color': props.hoverColor ? `var(--button-color-${props.hoverColor})` : "var(--button-color-dark)",
         '--button-padding': props.compact ? "var(--padding-compact)" : "var(--padding-standard)",
+        '--button-text-size': props.compact ? "var(--text-compact)" : "var(--text-standard)",
     };
 
     let button_class = styles.panaButton;

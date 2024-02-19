@@ -26,7 +26,7 @@ export default function GlobalFooter() {
                 <div className={styles.socials}>
                     <ul>
                         <li>
-                            <a href="https://instagram.com/panamiaclub">
+                            <a href="https://instagram.com/real.panamia">
                                 <IconBrandInstagram size={32} stroke={1.5} />
                                 <span className="sr-only">Instagram</span>
                             </a>

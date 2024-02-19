@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import classNames from 'classnames';
-import { IconHome, IconUser, IconLogout, IconAlien, IconSettings } from '@tabler/icons';
+import { IconHome, IconUser, IconLogout, IconAlien, IconSettings, IconUsers } from '@tabler/icons';
 import axios from 'axios';
 
 import styles from './MainHeader.module.css';
@@ -102,7 +102,7 @@ export default function MainHeader() {
 
     async function onUserClick(e: React.MouseEvent) {
         e.stopPropagation();
-        const userSessionData = await getUserSession("http://localhost:3000");
+        const userSessionData = await getUserSession();
         // console.log("userSession", userSession);
         if (userSessionData?.status?.role == "admin") {
             setIsAdmin(true);
@@ -189,6 +189,7 @@ export default function MainHeader() {
                                 <li className={styles.adminLink}><Link href="/account/admin"><a><IconAlien height="16" width="16" />&nbsp;ADMIN</a></Link></li>
                                 }
                                 <li><Link href="/account/user"><a><IconSettings height="16" width="16" />&nbsp;Account</a></Link></li>
+                                <li><Link href="/account/user/following"><a><IconUsers height="16" width="16" />&nbsp;Following</a></Link></li>
                                 <li><Link href="/api/auth/signout"><a><IconLogout height="16" width="16" />&nbsp;Sign Out</a></Link></li>
                             </ul>
                         </div>

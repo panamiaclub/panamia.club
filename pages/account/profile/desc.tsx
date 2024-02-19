@@ -16,6 +16,7 @@ import { profileQueryKey, useProfile, useMutateProfileDesc, fetchProfile  } from
 import Spinner from '@/components/Spinner';
 import { serialize } from '@/lib/standardized';
 import FullPage from '@/components/Page/FullPage';
+import { IconArrowBackUp, IconDeviceFloppy } from '@tabler/icons';
 
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
@@ -75,9 +76,10 @@ const Account_Profile_Desc: NextPage = (props: any) => {
     <div className={styles.main}>
       <h2 className={styles.accountTitle}>Profile - Edit Description</h2>
       <form className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>
-        <p>
-          <Link href="/account/profile/edit"><a>Back to Profile</a></Link>
-        </p>
+        <div className={styles.accountFormActions}>
+          <PanaButton href="/account/profile/edit" compact={true}><IconArrowBackUp size={18} /> Back</PanaButton>
+          <PanaButton color="blue" type="submit" disabled={isLoading} compact={true}><IconDeviceFloppy size={18} /> Save Changes</PanaButton>
+        </div>
         <div className={styles.accountFields}>
           <label>Name</label>&emsp;
           <input name="name" type="text" defaultValue={profile.name} />
@@ -97,10 +99,6 @@ const Account_Profile_Desc: NextPage = (props: any) => {
         <div className={styles.accountFields}>
           <label>Tags</label>&emsp;
           <textarea name="tags" rows={4} maxLength={500} defaultValue={profile.tags}></textarea>
-        </div>
-        
-        <div className={styles.accountFields}>
-          <PanaButton color="blue" type="submit" disabled={isLoading}>Update</PanaButton>
         </div>
       </form>
       </div>

@@ -40,30 +40,29 @@ export default async function handler(
   const rq = req.query;
   const pageNum = forceInt(forceString(rq?.page, "1"), 1);
   const pageLimit = forceInt(forceString(rq?.limit, "20"), 20);
-  const searchTerm = forceString(rq?.q, "20");
-  const random = forceString(rq?.random, "") ? true : false;
+  const searchTerm = forceString(rq?.q, "");
+  const paramRandom = forceInt(forceString(rq.random, "0"), 0);
   const filterLocations = forceString(rq?.floc, "");
   const filterCategories = forceString(rq?.floc, "");
   const geolat = forceString(rq?.geolat, "");
   const geolng = forceString(rq?.geolng, "");
   const resultsView = forceString(rq?.v, "");
   
-  if (!searchTerm && !random) {
-    return res.status(200).json({ success: true, data: [], pagination: {} });
+  let random = paramRandom;
+  if (searchTerm.length == 0 && random == 0) {
+    random = Math.ceil(Math.random() * 100000);
+    // return res.status(200).json({ success: true, data: [], pagination: {} });
   }
 
-  if (searchTerm) {
-    const params = { pageNum, pageLimit, searchTerm, 
-      filterLocations, filterCategories, random, geolat, geolng, resultsView}
-    const offset = (pageLimit * pageNum) - pageLimit;
+  const params = { pageNum, pageLimit, searchTerm, 
+    filterLocations, filterCategories, random, geolat, geolng, resultsView}
 
-    const apiResponse = await getSearch(params);
-    if (apiResponse) {
-      console.log(apiResponse);
-      return res.status(200).json(apiResponse) 
-    }
-    return res.status(200).json({ success: true, data: [], pagination: {} });
+  const apiResponse = await getSearch(params);
+  if (apiResponse) {
+    // console.log(apiResponse);
+    return res.status(200).json(apiResponse) 
   }
+  return res.status(200).json({ success: true, data: [], pagination: {} });
 }
 
 export const config = {

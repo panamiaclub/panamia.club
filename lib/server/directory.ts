@@ -8,7 +8,7 @@ interface SearchInterface {
     searchTerm: string,
     filterLocations: string,
     filterCategories: string,
-    random: boolean,
+    random: number,
     geolat: string,
     geolng: string,
     resultsView: string,
@@ -67,13 +67,11 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
     }
     // console.log("geoFilter", geoFilter)
 
-    if (random) {
+    if (random > 0) {
         const randomList = await profile.aggregate([{ '$sample': { 'size': pageLimit } }]);
         return {
           success: true,
           data: randomList,
-          pagination: {},
-          msg: "No Search Term",
         };
     }
     
@@ -122,6 +120,8 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
         }
       }
 
+      const skip = pageNum > 1 ? ((pageNum - 1) * pageLimit) : 0;
+      // console.log("skip", skip);
       const aggregateQuery = [
         {
           '$search': {
@@ -139,7 +139,7 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
                     'path': 'name',
                     'fuzzy': {
                       'maxEdits': 1,
-                      'maxExpansions': 20,
+                      'maxExpansions': 5,
                     },
                     'score': {
                       'boost': {
@@ -166,9 +166,15 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
                   }
                 },
                 ...(Object.keys(geoFilter).length !== 0 ? [geoFilter] : []),
-              ]
+              ], 
+              "minimumShouldMatch": 1
+            },
+            "count": {
+              "type": "total"
             },
           }
+        }, {
+          '$skip': skip
         }, {
           '$limit': pageLimit
         }, {
@@ -182,6 +188,8 @@ export const getSearch = async ({ pageNum, pageLimit, searchTerm,
             'primary_address.city': 1,
             'geo': 1,
             'score': {'$meta': 'searchScore'},
+            "paginationToken" : { "$meta" : "searchSequenceToken" },
+            "meta": "$$SEARCH_META",
           }
         }
         ];

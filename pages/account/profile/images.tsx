@@ -90,8 +90,8 @@ const Account_Profile_Address: NextPage = (props: any) => {
       <h2 className={styles.accountTitle}>Profile - Edit Images</h2>
       <form className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>
         <div className={styles.accountFormActions}>
-          <PanaButton href="/account/profile/edit"><IconArrowBackUp /> Back To Profile</PanaButton>
-          <PanaButton color="blue" type="submit" disabled={isLoading}><IconDeviceFloppy /> Save Changes</PanaButton>
+          <PanaButton href="/account/profile/edit" compact={true}><IconArrowBackUp size={18} /> Back</PanaButton>
+          <PanaButton color="blue" type="submit" disabled={isLoading} compact={true}><IconDeviceFloppy size={18} /> Save Changes</PanaButton>
         </div>
         <fieldset className={styles.profileFieldset}>
           <legend>Primary Picture</legend>

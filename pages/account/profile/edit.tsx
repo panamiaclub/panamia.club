@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { useSession } from 'next-auth/react';
 import { useEffect, useState, FormEvent } from 'react';
 import axios from 'axios';
-import { IconCategory, IconCheck, IconCheckupList, IconEdit, IconExternalLink, IconMapPin, IconPhoto, IconUser, IconUserCircle, IconUsers, IconX } from '@tabler/icons';
+import { IconCategory, IconCheck, IconCheckupList, IconDiscount, IconEdit, IconExternalLink, IconMapPin, IconPhoto, IconUser, IconUserCircle, IconUsers, IconX } from '@tabler/icons';
 import Link from 'next/link';
 
 import { authOptions } from "../../api/auth/[...nextauth]";
@@ -56,6 +56,18 @@ const Account_Profile: NextPage = (session_user) => {
       zip_code: session_zipCode,
     });
     // console.log("updateUserSession:response", response);
+  }
+
+  const SpanBlank = () => {
+    return (
+      <span className={styles.profileFieldBlank}>blank</span>
+      );
+  }
+
+  const SpanUnselected = () => {
+    return (
+      <span className={styles.profileFieldBlank}>unselected</span>
+      );
   }
 
   function onZipCodeChange(e: FormEvent) {
@@ -162,7 +174,7 @@ const Account_Profile: NextPage = (session_user) => {
               <label>Tags:</label>&emsp;
               {profile_data?.tags &&
               <span>{profile_data?.tags}</span> ||
-              <span className={styles.profileFieldBlank}>blank</span>}
+              <SpanBlank />}
             </div>
             <div className={styles.profileFields}>
               <div className={styles.profileNote}>
@@ -217,37 +229,37 @@ const Account_Profile: NextPage = (session_user) => {
                   <span>Website:</span>&emsp;
                   {profile_data?.socials?.website &&
                   <span>{profile_data?.socials?.website}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                 </li>
                 <li>
                   <span>Instagram:</span>&emsp;
                   {profile_data?.socials?.instagram &&
                   <span>{profile_data?.socials?.instagram}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                   </li>
                 <li>
                   <span>Facebook:</span>&emsp;
                   {profile_data?.socials?.facebook &&
                   <span>{profile_data?.socials?.facebook}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                 </li>
                 <li>
                   <span>TikTok:</span>&emsp;
                   {profile_data?.socials?.tiktok &&
                   <span>{profile_data?.socials?.tiktok}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                 </li>
                 <li>
                   <span>Twitter:</span>&emsp;
                   {profile_data?.socials?.twitter &&
                   <span>{profile_data?.socials?.twitter}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                 </li>
                 <li>
                   <span>Spotify:</span>&emsp;
                   {profile_data?.socials?.spotify &&
                   <span>{profile_data?.socials?.spotify}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                 </li>
               </ul>
             </div>
@@ -264,37 +276,37 @@ const Account_Profile: NextPage = (session_user) => {
                   <span>Street 1:</span>&emsp;
                   {profile_data?.primary_address?.street1 &&
                   <span>{profile_data?.primary_address?.street1}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                 </li>
                 <li>
                   <span>Street 2:</span>&emsp;
                   {profile_data?.primary_address?.street2 &&
                   <span>{profile_data?.primary_address?.street2}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                 </li>
                 <li>
                   <span>City:</span>&emsp;
                   {profile_data?.primary_address?.city &&
                   <span>{profile_data?.primary_address?.city}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                 </li>
                 <li>
                   <span>State:</span>&emsp;
                   {profile_data?.primary_address?.state &&
                   <span>{profile_data?.primary_address?.state}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                 </li>
                 <li>
                   <span>Zip Code:</span>&emsp;
                   {profile_data?.primary_address?.zipcode &&
                   <span>{profile_data?.primary_address?.zipcode}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                 </li>
                 <li>
                   <span>Location Hours:</span>&emsp;
                   {profile_data?.primary_address?.hours &&
                   <span>{profile_data?.primary_address?.hours}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                 </li>
               </ul>
             </div>
@@ -305,13 +317,13 @@ const Account_Profile: NextPage = (session_user) => {
                   <span>Latitude:</span>&emsp;
                   {profile_data?.primary_address?.lat &&
                   <span>{profile_data?.primary_address?.lat}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                 </li>
                 <li>
                   <span>Longitude:</span>&emsp;
                   {profile_data?.primary_address?.lng &&
                   <span>{profile_data?.primary_address?.lng}</span> ||
-                  <span className={styles.profileFieldBlank}>blank</span>}
+                  <SpanBlank />}
                 </li>
               </ul>
             </div>
@@ -322,19 +334,19 @@ const Account_Profile: NextPage = (session_user) => {
                   <span>Palm Beach:</span>&emsp;
                   {profile_data?.counties?.palm_beach &&
                    <IconCheck color="green" /> ||
-                   <span className={styles.profileFieldBlank}>unselected</span>}
+                   <SpanUnselected />}
                   </li>
                 <li>
                   <span>Broward:</span>&emsp;
                   {profile_data?.counties?.broward && 
                   <IconCheck color="green" /> || 
-                  <span className={styles.profileFieldBlank}>unselected</span>}
+                  <SpanUnselected />}
                 </li>
                 <li>
                   <span>Miami-Dade:</span>&emsp;
                   {profile_data?.counties?.miami_dade &&
                   <IconCheck color="green" /> ||
-                  <span className={styles.profileFieldBlank}>unselected</span>}
+                  <SpanUnselected />}
                 </li>
               </ul>
             </div>
@@ -350,12 +362,35 @@ const Account_Profile: NextPage = (session_user) => {
                 { 
                 profile_data?.categories &&
                 listSelectedCategories(profile_data?.categories) ||
-                <small>None Selected</small>
+                <small>None</small>
                 }
               </p>
             </div>
           </fieldset>
           <fieldset className={styles.profileFieldset}>
+            <legend><IconDiscount /> Gente dePana Offer</legend>
+            <div className={styles.profileFields}>
+              <label>Discount Code:</label>&emsp;{
+              profile_data?.gentedepana?.code &&
+              <span>{profile_data.gentedepana.code}</span> || 
+              <SpanBlank />}
+            </div>
+            <div className={styles.profileFields}>
+              <label>Percentage:</label>&emsp;{profile_data?.gentedepana?.percentage &&
+              <span>{profile_data?.gentedepana?.percentage}</span> || 
+              <SpanBlank />}
+            </div>
+            <div className={styles.profileFields}>
+              <label>Details:</label>&emsp;
+              {profile_data?.gentedepana?.details &&
+              <span>{profile_data.gentedepana.details}</span> || 
+              <SpanBlank />}
+            </div>
+            <div className={styles.profileEditLink}>
+              <Link href="/account/profile/gentedepana"><a><IconEdit height="20" /> Edit</a></Link>
+            </div>
+          </fieldset>
+          <fieldset className={styles.profileFieldset} hidden>
             <legend><IconUsers /> Linked Profiles</legend>
             <div className={styles.profileEditLink}>
               <Link href="/account/profile/contact"><a><IconEdit height="20" /> Edit</a></Link>

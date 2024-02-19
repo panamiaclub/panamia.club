@@ -19,6 +19,18 @@ const mongoAdapterOptions = {
   }
 }
 
+//GoogleProvider({
+//  clientId: process.env.GOOGLE_OAUTH_CLIENT_ID || "",
+//  clientSecret: process.env.GOOGLE_OATH_SECRET || "",
+//  authorization: {
+//    params: {
+//      prompt: "consent",
+//      access_type: "offline",
+//      response_type: "code"
+//    }
+//  }
+//}),
+
 
 export const authOptions = {
   adapter: MongoDBAdapter(clientPromise, mongoAdapterOptions),
@@ -33,17 +45,6 @@ export const authOptions = {
         }
       },
       from: process.env.EMAIL_FROM
-    }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_OATH_SECRET || "",
-      authorization: {
-        params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code"
-        }
-      }
     }),
   ],
   callbacks: {

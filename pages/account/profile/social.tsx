@@ -2,8 +2,8 @@ import type { NextPage } from 'next';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from "next-auth/next";
 import { useSession } from 'next-auth/react';
-import { FormEvent, useRef, useState } from 'react';
-import Link from 'next/link';
+import { FormEvent,} from 'react';
+import { IconArrowBackUp, IconDeviceFloppy } from '@tabler/icons';
 import { useQueryClient, dehydrate, QueryClient } from '@tanstack/react-query';
 
 import { authOptions } from "../../api/auth/[...nextauth]";
@@ -78,9 +78,10 @@ const Account_Profile_Social: NextPage = (props: any) => {
     <div className={styles.main}>
       <h2 className={styles.accountTitle}>Profile - Edit Links and Socials</h2>
       <form className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>
-        <p>
-          <Link href="/account/profile/edit"><a>Back to Profile</a></Link>
-        </p>
+        <div className={styles.accountFormActions}>
+          <PanaButton href="/account/profile/edit" compact={true}><IconArrowBackUp size={18} /> Back</PanaButton>
+          <PanaButton color="blue" type="submit" disabled={isLoading} compact={true}><IconDeviceFloppy size={18} /> Save Changes</PanaButton>
+        </div>
         <div className={styles.accountFields}>
           <label>Website</label>&emsp;
           <input name="website" type="text" defaultValue={profile.socials.website} />
@@ -104,10 +105,6 @@ const Account_Profile_Social: NextPage = (props: any) => {
         <div className={styles.accountFields}>
           <label>Spotify</label>&emsp;
           <input name="spotify" type="text" defaultValue={profile.socials.spotify} />
-        </div>
-        
-        <div className={styles.accountFields}>
-          <PanaButton color="blue"type="submit" disabled={isLoading}>Update</PanaButton>
         </div>
       </form>
       </div>
