@@ -332,6 +332,7 @@ const Pana_Profiles: NextPage = (props: any) => {
             </fieldset>
           </form>
         </section>
+       
         <div className={styles.allSearch}>
           <section className={styles.searchFilters}>
             <div className={styles.viewButtonGroup} hidden>
@@ -356,6 +357,8 @@ const Pana_Profiles: NextPage = (props: any) => {
               </PanaButton>
             </div>
             <div>
+              <button className={styles.filtersButton} style={{marginRight:"5px"}} onClick={ () => {router.push('/account/admin/')}}>Back</button> 
+
                 <button className={styles.filtersButton}
                 onClick={useFiltersModal}>
                   <IconFilter height="20" />
