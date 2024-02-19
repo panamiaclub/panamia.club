@@ -19,7 +19,7 @@ import { IconUserCircle, IconHeart, IconForms, IconSearch, IconStar, IconFilter,
   IconMap, IconCategory, IconMapPin, IconCurrentLocation, IconList, IconTrash,
   IconSortDescending, IconMapPins, IconExternalLink, IconBrandInstagram, IconBrandFacebook, IconMap2, IconBrandTiktok, IconBrandTwitter, IconBrandSpotify } from '@tabler/icons';
 import { directorySearchKey, useSearch, SearchResultsInterface } from '@/lib/query/directory';
-import { fetchPublicProfile, profilePublicQueryKey } from '@/lib/query/profile';
+import { fetchPrivateProfile, profilePublicQueryKey } from '@/lib/query/profile';
 import Spinner from '@/components/Spinner';
 import { AddressInterface, ProfileImagesInterface, ProfileSocialsInterface } from '@/lib/interfaces';
 import Link from 'next/link';
@@ -47,6 +47,7 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
 const Manage_Pana_Profiles: NextPage = (props) => {
   const [editingDetails, setEditingDetails] = useState(Boolean);
   const [editingLinks, setEditingLinks] = useState(Boolean);
+  const [editingAvatar, setEditingAvatar] = useState(Boolean);
   const [manageImages, setManageImages] = useState(Boolean);
   const [detailsError, setDetailsError] = useState(Boolean);
   const [linksError, setLinksError] = useState(Boolean);
@@ -57,7 +58,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
   const handle = router.query.slug as string;
   const { data, isLoading } = useQuery({
     queryKey: [ profilePublicQueryKey, { handle }],
-    queryFn: () => fetchPublicProfile(handle),
+    queryFn: () => fetchPrivateProfile(handle),
   });
   const {isError, refetch } = useProfile();
   //const { data: session } = useSession();
@@ -258,36 +259,64 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                   <img src={data.images.primaryCDN} /> ||
                   <img src="/img/bg_coconut_blue.jpg" />
                 }
-                <button className={styles.editButton} onClick={() => setEditingDetails(true)}>Replace Avatar</button> 
-                {data?.images?.primaryCDN && <button className={styles.deActivateButton} style={{marginLeft:"2%"}} onClick={() => setEditingDetails(true)}>Delete Avatar</button> }
-                  
-                  <input type="file" id="images_primary" name="images_primary" accept="image/png, image/jpeg, image/webp" />
-                  <div><small>Accepted images are jpg, png, and webp</small></div>
-              </div>
-              <div className={styles.profilePrimary}>
-                <h2 style={{display:"inline"}}>{data.name} </h2> {!editingDetails && <button className={styles.editButton} style={{float:"right"}} onClick={() => setEditingDetails(true)}>Edit Details</button> }
-                <p className={styles.profileFiveWords}>{data.five_words}</p>
-                <p>{data.details}</p>
-                <div className={styles.profileInfo}>
-                  <label>Background</label>
-                  <div>{data.background}</div>
-                </div>
-              </div>
-            </div>
-            <div className={styles.profileCard} style={{marginTop:"2%"}}>
-              <div className={styles.profileInfo}>
-                <div>
-                  <label>Tags: {data.tags}</label>
-                </div>
-              </div>
-            </div>
-            {detailsError && <div>{detailsError}</div>}
-          </div>
+                {!editingAvatar && <button className={styles.editButton} onClick={() => setEditingAvatar(true)}>Replace Avatar</button> }
+                {data?.images?.primaryCDN && !editingAvatar && <button className={styles.deActivateButton} style={{marginLeft:"2%"}} onClick={() => setEditingAvatar(false)}>Delete Avatar</button>}
+                {editingAvatar && 
+                   <>
+                    <input type="file" id="images_primary" name="images_primary" accept="image/png, image/jpeg, image/webp" />
+                    <div><small>Accepted images are jpg, png, and webp</small></div>
 
-          { hasSocials(data.socials) &&
+                    <button className={styles.cancelButton} onClick={() => {setEditingAvatar(false)}}>cancel</button>
+                    <button className={styles.editButton} >Upload</button>
+                  </>
+                }
+              </div>
+              {!editingDetails && 
+              <div className={styles.profilePrimary}>
+                  <h2 style={{display:"inline"}}>{data.name} </h2> <button className={styles.editButton} style={{float:"right"}} onClick={() => setEditingDetails(true)}>Edit Details</button> 
+                  <p className={styles.profileFiveWords}>{data.five_words}</p>
+                  <p>{data.details}</p>
+                  <div className={styles.profileInfo}>
+                    <label>Background</label>
+                    <div>{data.background}</div>
+                  </div>
+              </div>
+              }
+              {editingDetails && 
+                <div>
+                  <h3>Edit {data.name}</h3>
+                  <label>name: </label>
+                  <input type="text" id="name" name="name" value={data.name} style={{display:'block'}}/>
+                  <label>details: </label>
+                  <input type="text" id="details" name="details" value={data.details} style={{width:"100%"}}/>
+                  <label>background: </label>
+                  <input type="text" id="background" name="background" value={data.background} style={{width:"100%"}}/>
+                  <label>tags: </label>
+                  <input type="text" id="tags" name="tags" value={data.tags} style={{width:"100%", marginBottom:"10px"}}/>
+                  
+                  <button onClick={() => {setEditingDetails(false)}} className={styles.cancelButton}>cancel</button>
+                  <button className={styles.editButton}>submit</button>
+                </div>
+              }
+              {detailsError && <div>{detailsError}</div>}
+            </div>
+            {!editingDetails && 
+              <div className={styles.profileCard} style={{marginTop:"2%"}}>
+                <div className={styles.profileInfo}>
+                  <div>
+                    <label>Tags: {data.tags}</label>
+                  </div>
+                </div>
+              </div>
+            }
+           
+          </div>
+         
+
+          { hasSocials(data.socials) && !editingLinks &&
           <div className={styles.profileCard}>
             <h3 style={{display:"inline"}}>Socials and Links</h3>
-            {!editingLinks && <button className={styles.editButton} style={{float:"right"}} onClick={() => setEditingLinks(true)}>Edit Links</button> }
+           <button className={styles.editButton} style={{float:"right"}} onClick={() => setEditingLinks(true)}>Edit Links</button> 
             <div className={styles.profileInfo}>
               { data.socials?.website && 
               <a href={urlWithSource(data.socials.website)} target="_blank" rel="noopener noreferrer">
@@ -320,11 +349,113 @@ const Manage_Pana_Profiles: NextPage = (props) => {
               </a>
               }
             </div>
-            {linksError && <div>{linksError}</div>}
           </div>
           }
-
-          { hasAddress(data.primary_address) &&
+        { hasSocials(data.socials) && editingLinks && 
+            <div>
+              <div className={styles.profileInfo}>
+                <h3>Edit Socials</h3>
+              { data.socials?.website && 
+                 <>
+                 <label>Website: </label>
+                  <input type="text" id="website" name="website" value={(data.socials.website.toString())} style={{display:'block', width:"100%"}}/>
+                </>
+              }
+              { data.socials?.instagram && 
+                <>
+                  <label>Instagram: </label>
+                  <input type="text" id="instagram" name="instagram" value={(data.socials.instagram.toString())} style={{display:'block', width:"100%"}}/>
+                </>
+              }
+                { data.socials?.facebook && 
+                <>
+                 <label>Facebook: </label>
+                 <input type="text" id="facebook" name="facebook" value={(data.socials.facebook.toString())} style={{display:'block', width:"100%"}}/>
+                </>
+              }
+              { data.socials?.tiktok && 
+                <>
+                  <label>Tiktok: </label>
+                  <input type="text" id="tiktok" name="tiktok" value={(data.socials.tiktok.toString())} style={{display:'block', width:"100%"}}/>
+                </>
+              }
+              { data.socials?.twitter && 
+               <>
+                <label>Twitter: </label>
+                <input type="text" id="twitter" name="twitter" value={(data.socials.twitter.toString())} style={{display:'block', width:"100%"}}/>
+               </>
+              }
+              { data.socials?.spotify && 
+              <>
+                <label>Spotify: </label>
+                <input type="text" id="spotify" name="spotify" value={(data.socials.spotify.toString())} style={{display:'block', width:"100%"}}/>
+              </>
+              }
+              <button onClick={() => {setEditingLinks(false)}} className={styles.cancelButton} style={{marginTop:"10px"}}>cancel</button>
+              <button className={styles.editButton}>submit</button>
+            </div>
+            </div>
+          }
+          {linksError && <div>{linksError}</div>}
+         
+          { hasGallery(data.images) &&
+          <div className={styles.profileCard}>
+           
+            {!manageImages && 
+            <>
+              <h3 style={{display:"inline", marginRight:"5px"}}>Gallery</h3> 
+              <small>Click to see full-size image</small>
+              <button className={styles.editButton} style={{float:"right"}} onClick={() => setManageImages(true)}>Manage Images</button> 
+            </>
+            }
+            {manageImages && 
+            <>
+              <h3 style={{display:"inline", marginRight:"5px"}}>Manage Images</h3> 
+              <button onClick={() => {setManageImages(false)}} className={styles.cancelButton} style={{marginTop:"10px"}}>cancel</button>
+            </>
+            }
+            <div className={styles.profileInfo} style={{marginTop:"5%"}}>
+              { data.images?.gallery1CDN &&
+              <div className={styles.profileGalleryImage}>
+                <img src={data.images?.gallery1CDN} onClick={(e) => {showGalleryDialog("dialog-gallery-1")}} /><br />
+                <dialog id="dialog-gallery-1">
+                  <small>Click to dismiss</small>
+                  <a onClick={(e) => {closeGalleryDialog("dialog-gallery-1")}}>
+                    <img src={data.images?.gallery1CDN} loading="lazy" />
+                  </a>
+                </dialog>
+                {manageImages && <div style={{textAlign:"center"}}><IconTrash style={{color:"#FC2070"}}></IconTrash></div>}
+              </div>
+              }
+              { data.images?.gallery2CDN &&
+              <div className={styles.profileGalleryImage}>
+                <img src={data.images?.gallery2CDN} onClick={(e) => {showGalleryDialog("dialog-gallery-2")}} /><br />
+                <dialog id="dialog-gallery-2">
+                  <small>Click to dismiss</small>
+                  <a onClick={(e) => {closeGalleryDialog("dialog-gallery-2")}}>
+                    <img src={data.images?.gallery2CDN} loading="lazy" />
+                  </a>
+                </dialog>
+                {manageImages && <div style={{textAlign:"center"}}><IconTrash style={{color:"#FC2070"}}></IconTrash></div>}
+              </div>
+              }
+              { data.images?.gallery3CDN &&
+              <div className={styles.profileGalleryImage}>
+                <img src={data.images?.gallery3CDN} onClick={(e) => {showGalleryDialog("dialog-gallery-3")}} /><br />
+                <dialog id="dialog-gallery-3">
+                  <small>Click to dismiss</small>
+                  <a onClick={(e) => {closeGalleryDialog("dialog-gallery-3")}}>
+                    <img src={data.images?.gallery3CDN} loading="lazy" />
+                  </a>
+                </dialog>
+                {manageImages && <div style={{textAlign:"center"}}><IconTrash style={{color:"#FC2070"}}></IconTrash></div>}
+              </div>
+              }
+            </div>
+            {imagesError && <div>{imagesError}</div>}
+          </div>
+          }
+           { hasAddress(data.primary_address) &&
           <div className={styles.profileCard}>
             <h3>Location</h3>
             <div className={styles.profileInfoSplit}>
@@ -359,50 +490,6 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                   onClick={clickMarker} />
               </Map>
             }
-          </div>
-          }
-          { hasGallery(data.images) &&
-          <div className={styles.profileCard}>
-            <h3 style={{display:"inline", marginRight:"5px"}}>Gallery</h3> 
-            <small>Click to see full-size image</small>
-            {!manageImages && <button className={styles.editButton} style={{float:"right"}} onClick={() => setManageImages(true)}>Manage Images</button> }
-            <div className={styles.profileInfo} style={{marginTop:"5%"}}>
-              { data.images?.gallery1CDN &&
-              <div className={styles.profileGalleryImage}>
-                <img src={data.images?.gallery1CDN} onClick={(e) => {showGalleryDialog("dialog-gallery-1")}} /><br />
-                <dialog id="dialog-gallery-1">
-                  <small>Click to dismiss</small>
-                  <a onClick={(e) => {closeGalleryDialog("dialog-gallery-1")}}>
-                    <img src={data.images?.gallery1CDN} loading="lazy" />
-                  </a>
-                  {manageImages && <IconTrash></IconTrash>}
-                </dialog>
-              </div>
-              }
-              { data.images?.gallery2CDN &&
-              <div className={styles.profileGalleryImage}>
-                <img src={data.images?.gallery2CDN} onClick={(e) => {showGalleryDialog("dialog-gallery-2")}} /><br />
-                <dialog id="dialog-gallery-2">
-                  <small>Click to dismiss</small>
-                  <a onClick={(e) => {closeGalleryDialog("dialog-gallery-2")}}>
-                    <img src={data.images?.gallery2CDN} loading="lazy" />
-                  </a>
-                </dialog>
-              </div>
-              }
-              { data.images?.gallery3CDN &&
-              <div className={styles.profileGalleryImage}>
-                <img src={data.images?.gallery3CDN} onClick={(e) => {showGalleryDialog("dialog-gallery-3")}} /><br />
-                <dialog id="dialog-gallery-3">
-                  <small>Click to dismiss</small>
-                  <a onClick={(e) => {closeGalleryDialog("dialog-gallery-3")}}>
-                    <img src={data.images?.gallery3CDN} loading="lazy" />
-                  </a>
-                </dialog>
-              </div>
-              }
-            </div>
-            {imagesError && <div>{imagesError}</div>}
           </div>
           }
         </div>

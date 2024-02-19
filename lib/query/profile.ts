@@ -51,6 +51,31 @@ export async function fetchPublicProfile(handle: string) {
   return { data: { message: ""}};
 }
 
+export async function fetchPrivateProfile(handle: string) {
+  console.log("fetchPrivateProfile");
+
+  const params = new URLSearchParams();
+  params.append("handle", handle);
+  const profile = await axios
+  .get(
+      `/api/profile/private?${params}`,
+      {
+          headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+          },
+      }
+  )
+  .catch((error: Error) => {
+      console.log(error.name, error.message);
+  });
+  if (profile) {
+      return profile.data.data;
+  }
+  return { data: { message: ""}};
+}
+
+
 export const useProfile = () => {
     return useQuery<ProfileInterface, Error>({
         queryKey: profileQueryKey,

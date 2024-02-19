@@ -68,6 +68,17 @@
     margin-left: 10px;
 }
 
+.cancelButton{
+    background-color: #D60000 !important;
+    border:1px solid #D60000 !important;
+    border-radius: 5px;
+    padding:9px 10px !important;
+    color:white;
+    cursor: pointer;
+    margin-bottom: 10px;
+    margin-left: 10px;
+}
+
 .alertMessageDiv{
     border: 1px solid rgb(20, 74, 20);
     border-radius:10px;

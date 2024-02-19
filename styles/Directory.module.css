@@ -8,6 +8,12 @@
     background: content-box url('/img/bg_shrooms_forest.jpg');
 }
 
+.mainAdminSearch{
+    margin: auto;
+    background-color: #f8f8f8;
+    background: content-box url('/img/bg_shrooms_forest_inv.jpg');
+}
+
 .main a{
     color: var(--color-pana-pink);
 }
@@ -269,6 +275,8 @@
     padding: 0.5rem 0 0;
     display: flex;
     grid-column: span 1;
+    margin-top:20px;
+    color:#FC2070;
 }
 .cardActions button{
     all: unset;
