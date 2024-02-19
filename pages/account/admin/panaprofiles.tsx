@@ -179,7 +179,7 @@ const Pana_Profiles: NextPage = (props: any) => {
     const searchTerm = formData.get("search_term") ? formData.get("search_term") as string : "";
     const qs = new URLSearchParams();
     qs.append("q", searchTerm);
-    router.push(`/directory/search/?${qs}`);
+    router.push(`/account/admin/panaprofiles/?${qs}`);
   }
 
   
