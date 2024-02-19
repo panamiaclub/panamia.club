@@ -25,7 +25,6 @@ import { AddressInterface, ProfileImagesInterface, ProfileSocialsInterface } fro
 import Link from 'next/link';
 import { Map, Marker, ZoomControl } from "pigeon-maps"
 import styles from '@/styles/profile/Profile.module.css'
-import {Alert} from '@mantine/core';
 import { profileQueryKey, useProfile, useMutateProfileDesc, fetchProfile  } from '@/lib/query/profile';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
@@ -52,6 +51,8 @@ const Manage_Pana_Profiles: NextPage = (props) => {
   const [detailsError, setDetailsError] = useState(Boolean);
   const [linksError, setLinksError] = useState(Boolean);
   const [imagesError, setImagesError] = useState(Boolean);
+  const [activateMessage, setActivateMessage] = useState(Boolean);
+
   const router = useRouter();
   const handle = router.query.slug as string;
   const { data, isLoading } = useQuery({
@@ -155,11 +156,49 @@ const Manage_Pana_Profiles: NextPage = (props) => {
 
 
   function deactivate(id: any){
-    console.log(id);
+    axios
+    .put(
+        `/api/editActive`,
+        {
+          id:id,
+          active: false
+        },
+        {
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            },
+        }
+    ).then((resp) => {
+      console.log(resp.data.msg);
+      setActivateMessage(resp.data.msg);
+    })
+    .catch((error) => {
+        console.log(error);
+    });
   }
 
   function activate(id: any){
-    console.log(id);
+      axios
+        .put(
+            `/api/editActive`,
+            {
+              id:id,
+              active: true
+            },
+            {
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                },
+            }
+        ).then((resp) => {
+          console.log(resp.data.msg);
+          setActivateMessage(resp.data.msg);
+        })
+        .catch((error) => {
+            console.log(error);
+        });
   }
 
   const submitForm = async (e: FormEvent, formData: FormData) => {
@@ -203,10 +242,14 @@ const Manage_Pana_Profiles: NextPage = (props) => {
         desc={data.details}
         />
       <div className={styles.manageProfile}>
-        <h3 style={{display:"inline"}}>Manage Profile - {data.name}</h3>
+       {activateMessage && <div className={styles.alertMessageDiv}>{activateMessage}</div>}
+      
+        <h3 style={{display:"inline"}}>Manage Profile: {data.name}</h3>
+        
         {data.active && <button className={styles.deActivateButton} style={{float:"right"}} onClick={() => deactivate(data._id)}>Deactivate Profile</button> }
         {!data.active && <button className={styles.activateButton} style={{float:"right"}} onClick={() => activate(data._id)}>Activate Profile</button> }
-        
+        <button className={styles.editButton} style={{float:"right", marginRight:"5px"}} onClick={ () => {router.push('/account/admin/panaprofiles/')}}>Back</button> 
+
         <div className={styles.profileCard} style={{marginTop:"2%"}}>
             <div className={styles.profileHeader}>
               <div className={styles.profileImage}>
@@ -238,7 +281,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                 </div>
               </div>
             </div>
-            {detailsError && <Alert>{detailsError}</Alert>}
+            {detailsError && <div>{detailsError}</div>}
           </div>
 
           { hasSocials(data.socials) &&
@@ -277,7 +320,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
               </a>
               }
             </div>
-            {linksError && <Alert>{linksError}</Alert>}
+            {linksError && <div>{linksError}</div>}
           </div>
           }
 
@@ -359,7 +402,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
               </div>
               }
             </div>
-            {imagesError && <Alert>{imagesError}</Alert>}
+            {imagesError && <div>{imagesError}</div>}
           </div>
           }
         </div>

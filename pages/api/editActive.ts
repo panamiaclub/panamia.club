@@ -2,6 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "./auth/lib/connectdb";
 import users from "./auth/lib/model/users";
+import profile from "./auth/lib/model/profile";
 import bcrypt from "bcrypt";
 
 interface ResponseData {
@@ -11,35 +12,25 @@ interface ResponseData {
 
 const validateForm = async (
   email: string,
-  featured: string, 
+  active: string, 
 ) => {
   // if (!validateEmail(email)) {
   //   return { error: "Email is invalid" };
   // }
-  if(featured){
-    console.log('featured'+featured);
+  if(active){
+    console.log('active: '+ active);
    
   }
   //await dbConnect();
   //const emailUser = await users.findOne({ email: email });
   return null;
 };
-const validateBool = (featured:string)=> {
-  let featuredBool;
-  if(featured =="true"){
-    featuredBool = true;
-  }else{
-    featuredBool = false;
-  }
-
-  return featuredBool;
-}
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
 ) {
-  console.log(req.body)
+  
   // validate if it is a POST
   if (req.method !== "PUT") {
     return res
@@ -48,29 +39,25 @@ export default async function handler(
   }
 
   // get and validate body variables
-  const {email, featured} = req.body;
-  console.log(email);
-  console.log(featured);
-  let featuredBool = validateBool(featured);
+  const {id, active} = req.body;
+  console.log(req.body)
+  console.log(id);
+  console.log(active);
 
-  const errorMessage = await validateForm(email, featured);
+  const errorMessage = await validateForm(id, active);
   if (errorMessage) {
     return res.status(400).json(errorMessage as ResponseData);
   }
 
     // create new User on MongoDB
-   
-      console.log(email);
-      console.log(featured);
-      await users.findOneAndUpdate({ email: email }, {$set: {featured:featuredBool}})
-      .then(() =>{
-          console.log('success');
-          res.status(200).json({ msg: "Successfuly edited user "+ {email}+" to featured: " + featuredBool })
-      })
-        .catch((err: string) =>
-        res.status(400).json({ error: "Error on '/api/editFeature': " + err })
-        );
-
+    await profile.findOneAndUpdate({ id: id }, {$set: {featured:active}})
+    .then(() =>{
+        console.log('success');
+        res.status(200).json({ msg: "Successfuly updated user " + id.toString() + " active status to: " + active })
+    })
+      .catch((err: string) =>
+      res.status(400).json({ error: "Error on '/api/editFeature': " + err })
+      );
 
     }
   
