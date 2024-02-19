@@ -291,6 +291,8 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                   <input type="text" id="details" name="details" value={data.details} style={{width:"100%"}}/>
                   <label>background: </label>
                   <input type="text" id="background" name="background" value={data.background} style={{width:"100%"}}/>
+                  <label>five words: </label>
+                  <input type="text" id="five_words" name="five_words" value={data.five_words} style={{width:"100%", marginBottom:"10px"}}/>
                   <label>tags: </label>
                   <input type="text" id="tags" name="tags" value={data.tags} style={{width:"100%", marginBottom:"10px"}}/>
                   
