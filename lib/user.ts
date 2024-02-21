@@ -55,6 +55,9 @@ export const unguardUser = (user: any) => {
     return {
         ...{email: user.email},
         ...{name: user.name},
+        ...{status: {
+            ...{role: user?.status?.role}
+        }},
         ...{affiliate: user.affiliate},
         ...{zip_code: user.zip_code},
         ...{following: user.following},

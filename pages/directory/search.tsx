@@ -71,10 +71,15 @@ function SearchResults(
   ) {
 
   let loggedInUser: UserInterface | undefined = undefined;
+  let isAdmin: boolean = false;
+  const { data: userData } = useUser();
   if (session) {
-    const { data: userData } = useUser();
     if (userData) {
       loggedInUser = userData;
+      console.log("userData?.status?.role", userData);
+      if (userData?.status?.role === "admin") {
+        isAdmin = true;
+      }
     }
   }
   const userMutation = useMutateUserFollowing();
@@ -188,7 +193,7 @@ function SearchResults(
             }
             </>
           }
-          { false && 
+          { isAdmin && 
           <button hidden={loggedInUser ? false : true}
             onClick={(e: any) => {openUserlists(e, item)}}><IconPlaylistAdd height={20} /> Add To List</button>
           }
@@ -232,11 +237,11 @@ const Directory_Search: NextPage = (props: any) => {
   // const sortby = params.s ? params.s : "score";
 
   const { data, isLoading } = useSearch(params);
+  const { data: userListsData } = useUserLists();
   const mutationUserlists = useMutateUserLists();
   
   let userlistElements: any[] = [];
   if (session) {
-    const { data: userListsData } = useUserLists();
     if (typeof userListsData?.map == "function") {
       userlistElements = userListsData.map((item: any, index: number) => {
         return (
