@@ -4,19 +4,20 @@ import Link from 'next/link';
 import { IconUserCircle, IconHeart, IconExternalLink, IconBrandInstagram,
   IconBrandFacebook, IconForms, IconSearch, IconStar, IconFilter,
   IconMap, IconCategory, IconMapPin, IconCurrentLocation, IconList, 
-  IconSortDescending, IconMapPins, IconHeartBroken} from '@tabler/icons';
+  IconSortDescending, IconMapPins, IconHeartBroken, IconPlaylistAdd, IconX, IconPlaylist, IconPlus} from '@tabler/icons';
 import { QueryClient, dehydrate } from '@tanstack/react-query';
 import { FormEvent } from 'react';
 
 import styles from '@/styles/Directory.module.css'
 import PanaButton from '@/components/PanaButton';
-import { ProfileSocialsInterface } from '@/lib/interfaces';
+import { ProfileSocialsInterface, UserInterface } from '@/lib/interfaces';
 import { forceInt, forceString, serialize } from '@/lib/standardized';
 import PageMeta from '@/components/PageMeta';
 import { countyList, profileCategoryList } from '@/lib/lists';
 import { directorySearchKey, useSearch, SearchResultsInterface } from '@/lib/query/directory';
 import { calcDistance, getGeoPosition } from '@/lib/geolocation';
-import { useMutateUserFollowing, useUser } from '@/lib/query/user';
+import { useMutateUserFollowing, useMutateUserLists, useUser, useUserLists } from '@/lib/query/user';
+import { useSession } from 'next-auth/react';
 
 function getSearchParams(q: any) {
   const pageNum = q.p ? forceInt(q.p as string, 1) : 1;
@@ -65,11 +66,19 @@ function detailLimit(details: String) {
 }
 
 function SearchResults(
-  {data, isLoading, params}: {data: SearchResultsInterface[], isLoading: boolean, params: any}
+    {data, isLoading, params, session}:
+    {data: SearchResultsInterface[], isLoading: boolean, params: any, session: any}
   ) {
 
-  const { data: userData } = useUser();
+  let loggedInUser: UserInterface | undefined = undefined;
+  if (session) {
+    const { data: userData } = useUser();
+    if (userData) {
+      loggedInUser = userData;
+    }
+  }
   const userMutation = useMutateUserFollowing();
+  
   const followProfile = (e: FormEvent, id: string) => {
     e.preventDefault();
     const updates = {
@@ -86,6 +95,19 @@ function SearchResults(
     }
     userMutation.mutate(updates);
   }
+
+  const openUserlists = (e: FormEvent, profile: any) => { 
+    const spanSelectedProfile = document.getElementById('span-selectedprofile') as HTMLSpanElement;
+    if (spanSelectedProfile) {
+      spanSelectedProfile.innerText = profile.name;
+      spanSelectedProfile.setAttribute('data-id', profile._id);
+    }
+    const dialogUserlists = document.getElementById('dialog-userlists') as HTMLDialogElement;
+    if (dialogUserlists) {
+      dialogUserlists.showModal();
+    }
+  }
+
   // console.log("data", data, "isLoading", isLoading)
   if (isLoading === true) {
     return (
@@ -120,10 +142,10 @@ function SearchResults(
     }
     const profileId = item._id as string;
     let profileFollowed = false;
-    if (userData && profileId) {
-      if (userData.following) {
-        profileFollowed = userData.following.indexOf(profileId) > -1 ? true : false;
-        console.log("following", profileId, userData.following.indexOf(profileId), profileFollowed);
+    if (loggedInUser && profileId) {
+      if (loggedInUser.following) {
+        profileFollowed = loggedInUser.following.indexOf(profileId) > -1 ? true : false;
+        // console.log("following", profileId, userData.following.indexOf(profileId), profileFollowed);
       }
     }
     return (
@@ -155,12 +177,21 @@ function SearchResults(
         </div>
         <div className={styles.cardDetails}>{detailLimit(item.details)}</div>
         <div className={styles.cardActions}>
-          <Link href={`/profile/${item.slug}`}><a><IconUserCircle height="20" />View Profile</a></Link>&emsp;
-          { profileFollowed && 
-          <button onClick={(e: any) => {unfollowProfile(e, profileId)}}><IconHeartBroken height="20" />Unfollow</button> ||
-          <button onClick={(e: any) => {followProfile(e, profileId)}}><IconHeart height="20" />Follow</button>
+          <Link href={`/profile/${item.slug}`}><a><IconUserCircle height="20" />View Profile</a></Link>
+          { loggedInUser && 
+            <>
+            { profileFollowed && 
+            <button hidden={loggedInUser ? false : true} onClick={(e: any) => {unfollowProfile(e, profileId)}}>
+                <IconHeartBroken height="20" />Unfollow</button> ||
+            <button hidden={loggedInUser ? false : true} onClick={(e: any) => {followProfile(e, profileId)}}>
+              <IconHeart height="20" />Follow</button>
+            }
+            </>
           }
-          
+          { false && 
+          <button hidden={loggedInUser ? false : true}
+            onClick={(e: any) => {openUserlists(e, item)}}><IconPlaylistAdd height={20} /> Add To List</button>
+          }
           <div className={styles.cardlinks} hidden>
             { socials?.website && 
             <a href={socials.website.toString()}>
@@ -193,13 +224,52 @@ function SearchResults(
 }
 
 const Directory_Search: NextPage = (props: any) => {
+  const { data: session } = useSession();
   const router = useRouter();
   const params = getSearchParams(router.query);
   console.log("client:params", params);
   const geo_toggle = (params.geolat && params.geolng) ? true : false;
   // const sortby = params.s ? params.s : "score";
 
-  const { data, isLoading, refetch } = useSearch(params);
+  const { data, isLoading } = useSearch(params);
+  const mutationUserlists = useMutateUserLists();
+  
+  let userlistElements: any[] = [];
+  if (session) {
+    const { data: userListsData } = useUserLists();
+    if (typeof userListsData?.map == "function") {
+      userlistElements = userListsData.map((item: any, index: number) => {
+        return (
+          <li key={index}><button onClick={(e: any) => {addToList(e, item._id)}}>{item.name}</button></li>
+        )
+      });
+    }
+  }
+
+  function createList(e: FormEvent) {
+    e.preventDefault();
+    const selectedProfile = document.getElementById('span-selectedprofile') as HTMLSpanElement;
+    const updates = {
+      action: "add",
+      list_id: "new",
+      profile_id: selectedProfile.getAttribute('data-id'), 
+    }
+    mutationUserlists.mutate(updates);
+    console.log("createList mutate");
+  }
+
+  function addToList(e: FormEvent, id: string) {
+    e.preventDefault();
+    const selectedProfile = document.getElementById('span-selectedprofile') as HTMLSpanElement;
+    const updates = {
+      action: "add",
+      list_id: id,
+      profile_id: selectedProfile.getAttribute('data-id'), 
+    }
+    mutationUserlists.mutate(updates);
+    console.log("addToList mutate");
+  }
+  
 
   function submitSearchForm(e: FormEvent, formData: FormData) {
     e.preventDefault();
@@ -282,6 +352,22 @@ const Directory_Search: NextPage = (props: any) => {
     }
   }
 
+  const closeUserlists = (e: FormEvent | undefined) => {
+    if (e) {
+      e.preventDefault();
+    }
+    if (typeof document !== "undefined") {
+      const dialogUserlists = document.getElementById('dialog-userlists') as HTMLDialogElement;
+      if (dialogUserlists) {
+        dialogUserlists.close();
+      }
+    }
+  }
+
+  const editLists = (e: FormEvent) => {
+
+  }
+
   function searchRandom() {
     router.push("/directory/search/?random=1");
     // TO-DO: Every random search should invalidate the query
@@ -338,6 +424,7 @@ const Directory_Search: NextPage = (props: any) => {
   }
   // console.log("pagination", pagination);
 
+  closeUserlists(undefined);
   return (
     <main className={styles.app}>
       <PageMeta title="Search for locals"
@@ -444,7 +531,7 @@ const Directory_Search: NextPage = (props: any) => {
               <p>You haven't searched anything yet, explore some of our local profiles below!</p>
             </div>
             }
-            <SearchResults data={data ? data : []} isLoading={isLoading} params={params} />
+            <SearchResults data={data ? data : []} isLoading={isLoading} params={params} session={session} />
             { (data && data?.length > 0) &&
             <nav className={styles.pagination}>
               <PanaButton compact={true}
@@ -488,6 +575,24 @@ const Directory_Search: NextPage = (props: any) => {
           <section className={styles.directoryReferrals}>
             <p>Don't see your favorite local spot here? <Link href="/form/contact-us">Send us a recommendation!</Link></p>
           </section>
+          <dialog id="dialog-userlists" className={styles.dialogUserlists}>
+            <div className={styles.dialogHeader}>
+              <span id="span-selectedprofile"></span>
+              <div><button onClick={(e:any) => {closeUserlists(e)}}><IconX /></button></div>
+            </div>
+            <div className={styles.dialogBody}>
+              
+              <small><IconPlaylistAdd size="16" /> Add to List:</small>&nbsp;
+              <button onClick={(e: any) => {createList(e)}}> New List</button>
+              <ul>
+              { userlistElements }
+              </ul>
+              
+            </div>
+            <div className={styles.dialogFooter}>
+              <button onClick={(e: any) => {editLists(e)}}> Edit Lists</button><br />
+            </div>
+          </dialog>
         </div>
       </div>
   </main>

@@ -146,6 +146,15 @@ export interface UserInterface {
     updatedAt: Date,
 }
 
+export interface UserlistInterface {
+    _id: string,
+    user_id: string,
+    name: string,
+    desc?: string,
+    public: boolean,
+    profiles: string[],
+}
+
 export interface Pagination {
     count: number,
     per_page: number,

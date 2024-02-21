@@ -47,18 +47,22 @@ export default async function handler(
     }
     if (action === "approve") {
       existingProfile.active = true;
+      const original_approved_date = existingProfile?.status?.approved;
       existingProfile.status = {
           ...existingProfile.status,
           approved: new Date()
       };
       await existingProfile.save();
-      const brevo = new BrevoApi();
-      const brevo_config = getBrevoConfig();
-      if (brevo_config.templates.profile.published) {
-        const params = {
-          name: existingProfile.name,
+      if (!original_approved_date) {
+        // Send Approval email if first time approved
+        const brevo = new BrevoApi();
+        const brevo_config = getBrevoConfig();
+        if (brevo_config.templates.profile.published) {
+          const params = {
+            name: existingProfile.name,
+          }
+          const response = await brevo.sendTemplateEmail( brevo_config.templates.profile.published, params, existingProfile.email );
         }
-        const response = await brevo.sendTemplateEmail( brevo_config.templates.profile.published, params, existingProfile.email );
       }
       return res.status(200).json({ success: true, data: [{
           "message": "Profile has been set active",
@@ -69,18 +73,21 @@ export default async function handler(
     }
     if (action === "decline") {
       existingProfile.active = false;
+      const original_declined_date = existingProfile?.status?.declined;
       existingProfile.status = {
         ...existingProfile.status,
         declined: new Date()
       };
       await existingProfile.save();
-      const brevo = new BrevoApi();
-      const brevo_config = getBrevoConfig();
-      if (brevo_config.templates.profile.not_published) {
-        const params = {
-          name: existingProfile.name,
+      if (!original_declined_date) {
+        const brevo = new BrevoApi();
+        const brevo_config = getBrevoConfig();
+        if (brevo_config.templates.profile.not_published) {
+          const params = {
+            name: existingProfile.name,
+          }
+          const response = await brevo.sendTemplateEmail( brevo_config.templates.profile.not_published, params, existingProfile.email );
         }
-        const response = await brevo.sendTemplateEmail( brevo_config.templates.profile.not_published, params, existingProfile.email );
       }
       return res.status(200).json({ success: true, data: [{
           "message": "Profile has been declined",
