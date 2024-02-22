@@ -6,3 +6,23 @@
     max-width: 45rem;
     margin: auto;
 }
+.main a{
+    color: var(--color-pana-pink);
+}
+
+.adminTitle{
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.adminTable{
+    width: 100%;
+    text-align: left;
+}
+
+.adminTable td{
+    border: 1px solid #CCC;
+    padding: 0.25rem;
+}
+
+

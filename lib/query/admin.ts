@@ -1,6 +1,8 @@
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 
+import { ProfileInterface } from "@/lib/interfaces";
+
 export const profilesQueryKey = ['profiles'];
 
 export interface AdminProfileInterface {
@@ -36,24 +38,32 @@ export interface AdminSearchResultsInterface {
     paginationToken: any,
 }
 
+export interface AdminDashboardInterface {
+    all: number,
+    recent: ProfileInterface[],
+}
+
+export const adminSearchKey = 'directoryAdminSearch';
+export const adminDashboardKey = 'adminDashboard';
+
 export async function fetchAdminActiveProfiles() {
-  const profiles = await axios
-  .get(
-      `/api/admin/allProfiles`,
-      {
-          headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-          },
-      }
-  )
-  .catch((error: Error) => {
-      console.log(error.name, error.message);
-  });
-  if (profiles) {
-      return profiles.data.data;
-  }
-  return { data: { message: ""}};
+    const profiles = await axios
+        .get(
+            `/api/admin/allProfiles`,
+            {
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                },
+            }
+        )
+        .catch((error: Error) => {
+            console.log(error.name, error.message);
+        });
+    if (profiles) {
+        return profiles.data.data;
+    }
+    return { data: { message: "" } };
 }
 
 export const useAdminActiveProfiles = () => {
@@ -75,34 +85,65 @@ export const searchParamsToString = (params: AdminSearchInterface) => {
     return `${qs}`
 }
 
-export const directorySearchKey = 'directoryAdminSearch';
-
 export async function fetchAdminSearch(query: AdminSearchInterface) {
     console.log("fetchSearch");
     const response = await axios
-    .get(
-        `/api/admin/getDirectorySearch?${searchParamsToString(query)}`,
-        {
-            headers: {
-                Accept: "application/json",
-                "Content-Type": "application/json",
-            },
-        }
-    )
-    .catch((error: Error) => {
-        console.log(error.name, error.message);
-    });
+        .get(
+            `/api/admin/getDirectorySearch?${searchParamsToString(query)}`,
+            {
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                },
+            }
+        )
+        .catch((error: Error) => {
+            console.log(error.name, error.message);
+        });
     if (response) {
-        
+
         return response.data.data;
     }
     console.log("NO RESPONSE")
-    return { data: { message: ""}};
+    return { data: { message: "" } };
 }
 
 export const useAdminSearch = (filters: AdminSearchInterface) => {
     return useQuery<AdminSearchResultsInterface[], Error>({
-        queryKey: [directorySearchKey, filters],
+        queryKey: [adminSearchKey, filters],
         queryFn: () => fetchAdminSearch(filters),
     });
 };
+
+export async function fetchAdminDashboard() {
+    console.log("fetchSearch");
+    const response = await axios
+        .get(
+            `/api/admin/getDashboard`,
+            {
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                },
+            }
+        )
+        .catch((error: Error) => {
+            console.log(error.name, error.message);
+        });
+    if (response) {
+
+        return response.data.data;
+    }
+    console.log("NO RESPONSE")
+    return { data: { message: "" } };
+}
+
+export const useAdminDashboard = () => {
+    return useQuery<AdminDashboardInterface, Error>({
+        queryKey: [adminDashboardKey],
+        queryFn: () => fetchAdminDashboard(),
+    });
+};
+
+
+

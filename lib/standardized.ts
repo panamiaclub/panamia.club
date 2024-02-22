@@ -13,6 +13,12 @@ export const serialize = (object: any) => {
     return  JSON.parse(JSON.stringify(object));
 }
 
+export const dateXdays = (days: number) => {
+    const last_xdays_datetime = new Date(new Date().setDate(new Date().getDate() - days)).toISOString();
+    const last_xdays_date = last_xdays_datetime.slice(0, last_xdays_datetime.indexOf("T"));
+    return last_xdays_date;
+}
+
 export const createUniqueString = () => {
     const crypto = require('crypto');
     const base = new Uint32Array(5);
