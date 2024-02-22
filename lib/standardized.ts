@@ -16,7 +16,7 @@ export const serialize = (object: any) => {
 export const dateXdays = (days: number) => {
     const last_xdays_datetime = new Date(new Date().setDate(new Date().getDate() - days)).toISOString();
     const last_xdays_date = last_xdays_datetime.slice(0, last_xdays_datetime.indexOf("T"));
-    return last_xdays_date;
+    return new Date(last_xdays_date);
 }
 
 export const createUniqueString = () => {

@@ -43,21 +43,21 @@ const Account_Admin: NextPage = () => {
     const count_recent = dashboardData.recent.length;
     const daysToSunday = new Date().getDay();
     const filter_week1 = dashboardData.recent.filter(
-      (item) => onlyDate(item.createdAt) >= new Date(dateXdays(daysToSunday))
+      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday) && onlyDate(item.createdAt) < dateXdays(daysToSunday + 7))
     );
-    
     const filter_week2 = dashboardData.recent.filter(
-      (item) => onlyDate(item.createdAt) >= new Date(dateXdays(daysToSunday + 7)) && new Date(item.createdAt) < new Date(dateXdays(daysToSunday + 14))
+      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday + 7) && onlyDate(item.createdAt) < dateXdays(daysToSunday + 14))
     );
     const filter_week3 = dashboardData.recent.filter(
-      (item) => onlyDate(item.createdAt) >= new Date(dateXdays(daysToSunday + 14)) && new Date(item.createdAt) < new Date(dateXdays(daysToSunday + 21))
+      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday + 14) && onlyDate(item.createdAt) < dateXdays(daysToSunday + 21))
     );
     const filter_week4 = dashboardData.recent.filter(
-      (item) => onlyDate(item.createdAt) >= new Date(dateXdays(daysToSunday + 21)) && new Date(item.createdAt) < new Date(dateXdays(daysToSunday + 28))
+      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday + 21) && onlyDate(item.createdAt) < dateXdays(daysToSunday + 28))
     );
     const filter_4weekstotal = dashboardData.recent.filter(
-      (item) => onlyDate(item.createdAt) >= new Date(dateXdays(daysToSunday + 21))
+      (item) => onlyDate(item.createdAt) >= dateXdays(daysToSunday + 21)
     );
+    // console.log(dateXdays(daysToSunday), dateXdays(daysToSunday + 21));
     // Subtract final value minus starting value
     // Divide that amount by the absolute value of the starting value
     // Multiply by 100 to get percent increase
@@ -80,7 +80,7 @@ const Account_Admin: NextPage = () => {
               <tr>
                 <td>
                   <strong>{ filter_week4.length }</strong>&emsp;
-                  <small>{growthPercentage(16, 20)}</small>
+                  <small></small>
                 </td>
                 <td>
                   <strong>{ filter_week3.length }</strong>&emsp;
