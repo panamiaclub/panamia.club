@@ -43,16 +43,16 @@ const Account_Admin: NextPage = () => {
     const count_recent = dashboardData.recent.length;
     const daysToSunday = new Date().getDay();
     const filter_week1 = dashboardData.recent.filter(
-      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday) && onlyDate(item.createdAt) < dateXdays(daysToSunday + 7))
+      (item) => onlyDate(item.createdAt) >= dateXdays(daysToSunday)
     );
     const filter_week2 = dashboardData.recent.filter(
-      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday + 7) && onlyDate(item.createdAt) < dateXdays(daysToSunday + 14))
+      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday + 7) && onlyDate(item.createdAt) < dateXdays(daysToSunday))
     );
     const filter_week3 = dashboardData.recent.filter(
-      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday + 14) && onlyDate(item.createdAt) < dateXdays(daysToSunday + 21))
+      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday + 14) && onlyDate(item.createdAt) < dateXdays(daysToSunday + 7))
     );
     const filter_week4 = dashboardData.recent.filter(
-      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday + 21) && onlyDate(item.createdAt) < dateXdays(daysToSunday + 28))
+      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday + 21) && onlyDate(item.createdAt) < dateXdays(daysToSunday + 14))
     );
     const filter_4weekstotal = dashboardData.recent.filter(
       (item) => onlyDate(item.createdAt) >= dateXdays(daysToSunday + 21)
