@@ -358,6 +358,11 @@
 .dialogBody{
     padding: 0.5rem 1rem;
 }
+.dialogInput{
+    max-width: 12rem;
+    padding: 0.5rem;
+    border-radius: 12px;
+}
 .dialogFooter{
     background-color: var(--color-bg-light);
     padding: 0.5rem 1rem;

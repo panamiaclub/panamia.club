@@ -1,0 +1,16 @@
+.linkButton {
+    all: unset;
+    font-size: var(--base-font-size);
+    color: var(--color-pana-pink);
+}
+.linkButton:hover {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+
+@media only screen and (max-width: 600px) {
+    .linkButton{
+        font-size: var(--mobile-font-size);
+    }
+}

@@ -83,7 +83,7 @@ export const getAdminDashboard = async () => {
     await dbConnect();
     const profilesFilters = {
         active: true,
-        createdAt: {"$gte": dateXdays(30)}
+        createdAt: {"$gte": dateXdays(35)}
     }
     const profilesFields = {
         name: 1,

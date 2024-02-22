@@ -254,10 +254,12 @@ const Directory_Search: NextPage = (props: any) => {
   function createList(e: FormEvent) {
     e.preventDefault();
     const selectedProfile = document.getElementById('span-selectedprofile') as HTMLSpanElement;
+    const newlistName = document.getElementById('input-newlist') as HTMLInputElement;
     const updates = {
       action: "add",
       list_id: "new",
-      profile_id: selectedProfile.getAttribute('data-id'), 
+      list_name: newlistName ? newlistName.value : "Unnamed",
+      profile_id: selectedProfile.getAttribute('data-id'),
     }
     mutationUserlists.mutate(updates);
     console.log("createList mutate");
@@ -370,7 +372,7 @@ const Directory_Search: NextPage = (props: any) => {
   }
 
   const editLists = (e: FormEvent) => {
-
+    location.href = "/account/user/lists";
   }
 
   function searchRandom() {
@@ -586,16 +588,21 @@ const Directory_Search: NextPage = (props: any) => {
               <div><button onClick={(e:any) => {closeUserlists(e)}}><IconX /></button></div>
             </div>
             <div className={styles.dialogBody}>
-              
-              <small><IconPlaylistAdd size="16" /> Add to List:</small>&nbsp;
-              <button onClick={(e: any) => {createList(e)}}> New List</button>
+              <input className={styles.dialogInput} 
+                maxLength={100}
+                id="input-newlist"
+                type="text" 
+                placeholder="New List Name" /><br />
+              <button onClick={(e: any) => {createList(e)}}> Create List</button><br />
+              <hr />
+              <small><IconPlaylistAdd size="16" /> Add to List:</small><br />
               <ul>
               { userlistElements }
               </ul>
               
             </div>
             <div className={styles.dialogFooter}>
-              <button onClick={(e: any) => {editLists(e)}}> Edit Lists</button><br />
+              <Link href="/account/user/lists/"><a target="_blank" rel="noreferrer">Edit Lists</a></Link>
             </div>
           </dialog>
         </div>

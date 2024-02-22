@@ -1,3 +1,4 @@
+
 .panaButton {
     --button-color-blue: var(--color-pana-blue);
     --button-color-pink: var(--color-pana-pink);
@@ -9,7 +10,7 @@
     --padding-standard: .5rem 1.5rem;
     --padding-compact: .5rem .5rem;
     --text-standard: var(--base-font-size);
-    --text-compact: var(--mobile-font-size);
+    --text-compact: 14px;
     position: relative;
     margin: 0 .5rem;
     font-size: var(--button-text-size);

@@ -28,37 +28,80 @@ const Account_Admin: NextPage = () => {
   const { data: session } = useSession();
   const {data: dashboardData } = useAdminDashboard();
   console.log("dashboardData", dashboardData);
+
+  const onlyDate = (date: Date) => {
+    return new Date(new Date(date).toLocaleDateString())
+  }
+
+  const growthPercentage = (base: number, growth: number) => {
+    if (growth == 0) return "0%";
+    if (base == 0) return "100%";
+    return `${(((growth - base)/base) * 100).toFixed(2)}%`;
+  }
+
   if (session && dashboardData) {
     const count_recent = dashboardData.recent.length;
-    const filter_7days = dashboardData.recent.filter((item) => new Date(item.createdAt) > new Date(dateXdays(7)));
-    const filter_1days = dashboardData.recent.filter((item) => new Date(item.createdAt) > new Date(dateXdays(1)));
+    const daysToSunday = new Date().getDay();
+    const filter_week1 = dashboardData.recent.filter(
+      (item) => onlyDate(item.createdAt) >= new Date(dateXdays(daysToSunday))
+    );
+    
+    const filter_week2 = dashboardData.recent.filter(
+      (item) => onlyDate(item.createdAt) >= new Date(dateXdays(daysToSunday + 7)) && new Date(item.createdAt) < new Date(dateXdays(daysToSunday + 14))
+    );
+    const filter_week3 = dashboardData.recent.filter(
+      (item) => onlyDate(item.createdAt) >= new Date(dateXdays(daysToSunday + 14)) && new Date(item.createdAt) < new Date(dateXdays(daysToSunday + 21))
+    );
+    const filter_week4 = dashboardData.recent.filter(
+      (item) => onlyDate(item.createdAt) >= new Date(dateXdays(daysToSunday + 21)) && new Date(item.createdAt) < new Date(dateXdays(daysToSunday + 28))
+    );
+    const filter_4weekstotal = dashboardData.recent.filter(
+      (item) => onlyDate(item.createdAt) >= new Date(dateXdays(daysToSunday + 21))
+    );
+    // Subtract final value minus starting value
+    // Divide that amount by the absolute value of the starting value
+    // Multiply by 100 to get percent increase
+    // If the percentage is negative, it means there was a decrease and not an increase.
     return (
       <main className={styles.app}>
         <PageMeta title="Admin Portal | Admin" desc="" />
         <AdminMenu />
         <div className={styles.main}>
           <h2 className={styles.adminTitle}>Admin Portal</h2>
-          <h3>Active Profile Stats</h3>
+          <h3>Active Profile Growth</h3>
           <table className={styles.adminTable}>
             <tbody>
               <tr>
-                <th>Total</th>
-                <th>Last 30 days</th>
-                <th>Last 7 days</th>
-                <th>Today</th>
+                <th>3 weeks ago</th>
+                <th>2 weeks ago</th>
+                <th>Last Week</th>
+                <th>This Week</th>
               </tr>
               <tr>
-                <td>{ dashboardData?.all }</td>
-                <td>{ count_recent }</td>
-                <td>{ filter_7days.length }</td>
-                <td>{ filter_1days.length }</td>
+                <td>
+                  <strong>{ filter_week4.length }</strong>&emsp;
+                  <small>{growthPercentage(16, 20)}</small>
+                </td>
+                <td>
+                  <strong>{ filter_week3.length }</strong>&emsp;
+                  <small>{growthPercentage(filter_week4.length, filter_week3.length)}</small>
+                </td>
+                <td>
+                  <strong>{ filter_week2.length }</strong>&emsp;
+                  <small>{growthPercentage(filter_week3.length, filter_week2.length)}</small>
+                </td>
+                <td>
+                  <strong>{ filter_week1.length }</strong>&emsp;
+                  <small>{growthPercentage(filter_week2.length, filter_week1.length)}</small>
+                </td>
               </tr>
             </tbody>
           </table>
+          <small>Total Profiles: { dashboardData?.all }</small>
           <br />
-          <h3>New Active Profiles (last 30 days)</h3>
+          <h3>New Active Profiles (last 4 weeks)</h3>
           {
-            dashboardData.recent && 
+            filter_4weekstotal && 
             <table className={styles.adminTable}>
               <thead>
                 <tr>
@@ -68,7 +111,7 @@ const Account_Admin: NextPage = () => {
                 </tr>
               </thead>
               <tbody>
-              { dashboardData.recent.map((item, index) => {
+              { filter_4weekstotal.map((item, index) => {
                 const createdDate = new Date(item?.createdAt);
                 return (
                 <tr key={index}>

@@ -48,7 +48,7 @@ export default async function handler(
       .json({ success: false, error: "No valid email" });
   }
 
-  const { action, list_id, profile_id } = req.body;
+  const { action, list_id, profile_id, list_name } = req.body;
   if (!list_id || !action || !profile_id) {
     return res.status(200).json({ success: false, error: "Missing or invalid parameters" });
   }
@@ -63,7 +63,7 @@ export default async function handler(
     msg = "Creating new list";
     const newUserlist = new userlist({
       user_id: existingUser._id,
-      name: "Unnamed",
+      name: list_name ? list_name : "Unnamed",
       public: false,
       profiles: [profile_id],
     });
