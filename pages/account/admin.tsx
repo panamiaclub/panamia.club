@@ -30,8 +30,8 @@ const Account_Admin: NextPage = () => {
   console.log("dashboardData", dashboardData);
   if (session && dashboardData) {
     const count_recent = dashboardData.recent.length;
-    const filter_7days = dashboardData.recent.filter((item) => item.createdAt > new Date(dateXdays(7)));
-    const filter_1days = dashboardData.recent.filter((item) => item.createdAt > new Date(dateXdays(1)));
+    const filter_7days = dashboardData.recent.filter((item) => new Date(item.createdAt) > new Date(dateXdays(7)));
+    const filter_1days = dashboardData.recent.filter((item) => new Date(item.createdAt) > new Date(dateXdays(1)));
     return (
       <main className={styles.app}>
         <PageMeta title="Admin Portal | Admin" desc="" />
@@ -56,7 +56,7 @@ const Account_Admin: NextPage = () => {
             </tbody>
           </table>
           <br />
-          <h3>New Active Profiles</h3>
+          <h3>New Active Profiles (last 30 days)</h3>
           {
             dashboardData.recent && 
             <table className={styles.adminTable}>
