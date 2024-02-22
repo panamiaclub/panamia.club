@@ -97,7 +97,8 @@ const Account_Admin: NextPage = () => {
               </tr>
             </tbody>
           </table>
-          <small>Total Profiles: { dashboardData?.all }</small>
+          <small>Total Profiles: { dashboardData?.all }</small>&emsp;
+          <small>Last 4 weeks: { filter_4weekstotal.length }</small>
           <br />
           <h3>New Active Profiles (last 4 weeks)</h3>
           {
