@@ -10,6 +10,32 @@ export interface AdminProfileInterface {
     phone: string,
 }
 
+export interface AdminSearchInterface {
+    pageNum: number,
+    pageLimit: number,
+    searchTerm: string,
+}
+
+export interface AdminSearchResultsInterface {
+    _id: String,
+    score: number,
+    score_details: {},
+    name: String,
+    slug: String,
+    details: String,
+    five_words: String,
+    geo: {
+        coordinates?: Array<2>
+    },
+    images: {
+        primaryCDN: string,
+    }
+    primary_address?: { city?: String },
+    socials: {},
+    meta: any,
+    paginationToken: any,
+}
+
 export async function fetchAdminActiveProfiles() {
   const profiles = await axios
   .get(
@@ -34,5 +60,49 @@ export const useAdminActiveProfiles = () => {
     return useQuery<AdminProfileInterface[], Error>({
         queryKey: profilesQueryKey,
         queryFn: () => fetchAdminActiveProfiles(),
+    });
+};
+
+export const searchParamsToString = (params: AdminSearchInterface) => {
+    const qs = new URLSearchParams();
+    qs.append("q", params.searchTerm);
+    if (params.pageNum > 1) {
+        qs.append("page", params.pageNum.toString())
+    }
+    if (params.pageLimit !== 20) {
+        qs.append("limit", params.pageLimit.toString())
+    }
+    return `${qs}`
+}
+
+export const directorySearchKey = 'directoryAdminSearch';
+
+export async function fetchAdminSearch(query: AdminSearchInterface) {
+    console.log("fetchSearch");
+    const response = await axios
+    .get(
+        `/api/admin/getDirectorySearch?${searchParamsToString(query)}`,
+        {
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            },
+        }
+    )
+    .catch((error: Error) => {
+        console.log(error.name, error.message);
+    });
+    if (response) {
+        
+        return response.data.data;
+    }
+    console.log("NO RESPONSE")
+    return { data: { message: ""}};
+}
+
+export const useAdminSearch = (filters: AdminSearchInterface) => {
+    return useQuery<AdminSearchResultsInterface[], Error>({
+        queryKey: [directorySearchKey, filters],
+        queryFn: () => fetchAdminSearch(filters),
     });
 };
