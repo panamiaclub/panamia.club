@@ -38,13 +38,23 @@
 
 
 .deActivateButton{
-    background-color: rgb(214, 0, 0) !important;
+    background-color: #FC2070!important;
     border-radius: 5px;
     padding:9px 10px !important;
     color:white;
-    border:1px solid rgb(214, 0, 0);
+    border:1px solid #FC2070!important;
     cursor: pointer;
     margin-bottom: 10px;
+}
+
+.deActivateButton:hover{
+    background-color: #ed7ba5!important;
+    border:1px solid rgb(235, 217, 217);
+    
+    -moz-transition: all .2s ease-in;
+    -o-transition: all .2s ease-in;
+    -webkit-transition: all .2s ease-in;
+    transition: all .2s ease-in;
 }
 
 .activateButton{
@@ -68,15 +78,36 @@
     margin-left: 10px;
 }
 
+.editButton:hover{
+    background-color: #3c8eba !important;
+    border:1px solid #29a4e6 !important;
+
+    -moz-transition: all .2s ease-in;
+    -o-transition: all .2s ease-in;
+    -webkit-transition: all .2s ease-in;
+    transition: all .2s ease-in;
+}
+
+
 .cancelButton{
-    background-color: #D60000 !important;
-    border:1px solid #D60000 !important;
+    background-color: #d66161 !important;
+    border:1px solid #e69494 !important;
     border-radius: 5px;
     padding:9px 10px !important;
     color:white;
     cursor: pointer;
     margin-bottom: 10px;
     margin-left: 10px;
+}
+
+.cancelButton:hover{
+    background-color: #cbbdbd !important;
+    border:1px solid #d7c3c3 !important;
+    
+    -moz-transition: all .2s ease-in;
+    -o-transition: all .2s ease-in;
+    -webkit-transition: all .2s ease-in;
+    transition: all .2s ease-in;
 }
 
 .alertMessageDiv{
@@ -149,4 +180,50 @@
 }
 .profileGalleryImage dialog{
 
+}
+
+
+.accountFormActions{
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem 0;
+}
+.accountList li{
+    padding: 0.25rem 0.5rem;
+}
+.accountForm a{
+    color: var(--color-pana-pink);
+}
+.accountFields{
+    margin-bottom: 1rem;
+}
+.accountFields label{
+    display: inline-block;
+    font-weight:700;
+    padding: 0.5rem 0;
+}
+.accountFields input{
+    width:100%;
+    padding: 0.5rem;
+    border-radius: 10px;
+}
+.accountFields input[type='checkbox']{
+    width:auto;
+    padding: 0.5rem;
+    transform: scale(1.5);
+}
+.accountFields textarea{
+    width: 100%;
+    padding: 0.5rem;
+}
+.accountFields input[type="file"]{
+    background-color: #EEE;
+    
+}
+.accountFields input[type="file"]::file-selector-button{
+    background-color: #444;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 1rem;
+    margin-right: 1rem;
 }

@@ -78,20 +78,21 @@ const Account_Admin: NextPage = () => {
                 <th>This Week</th>
               </tr>
               <tr>
-                <td>
-                  <strong>{ filter_week4.length }</strong>&emsp;
+                <td style={{borderRadius:"10px"}}>
+                  {/* <strong>{ filter_week4.length }</strong>&emsp; */}
+                  <small>{growthPercentage(filter_week4.length, filter_week3.length)}</small>
                   <small></small>
                 </td>
-                <td>
-                  <strong>{ filter_week3.length }</strong>&emsp;
+                <td style={{borderRadius:"10px"}}>
+                  {/* <strong>{ filter_week3.length }</strong>&emsp; */}
                   <small>{growthPercentage(filter_week4.length, filter_week3.length)}</small>
                 </td>
-                <td>
-                  <strong>{ filter_week2.length }</strong>&emsp;
+                <td style={{borderRadius:"10px"}}>
+                  {/* <strong>{ filter_week2.length }</strong>&emsp; */}
                   <small>{growthPercentage(filter_week3.length, filter_week2.length)}</small>
                 </td>
-                <td>
-                  <strong>{ filter_week1.length }</strong>&emsp;
+                <td style={{borderRadius:"10px"}}> 
+                  {/* <strong>{ filter_week1.length }</strong>&emsp; */}
                   <small>{growthPercentage(filter_week2.length, filter_week1.length)}</small>
                 </td>
               </tr>

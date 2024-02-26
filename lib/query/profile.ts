@@ -140,6 +140,26 @@ export const useMutateProfileDesc = () => {
       })
 }
 
+
+export const useMutateProfileDescAdmin = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+      mutationFn: (updates: any) => {
+        return axios.post("/api/profile/saveDescAdmin", updates);
+      },
+      onSuccess: (data) => {
+        alert('Succesfully updated profile');
+        return queryClient.invalidateQueries({
+          queryKey: profileQueryKey,
+          exact: true
+        });
+      },
+      onError: () => {
+        alert('Failed to update profile. Please contact us.');
+      }
+    })
+}
+
 export const useMutateProfileSocial = () => {
     const queryClient = useQueryClient();
     return useMutation({

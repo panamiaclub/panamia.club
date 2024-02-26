@@ -25,7 +25,7 @@ import { AddressInterface, ProfileImagesInterface, ProfileSocialsInterface } fro
 import Link from 'next/link';
 import { Map, Marker, ZoomControl } from "pigeon-maps"
 import styles from '@/styles/profile/Profile.module.css'
-import { profileQueryKey, useProfile, useMutateProfileDesc, fetchProfile  } from '@/lib/query/profile';
+import { profileQueryKey, useProfile, useMutateProfileDescAdmin, fetchProfile  } from '@/lib/query/profile';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   const handle = context.query.handle as string;
@@ -49,10 +49,14 @@ const Manage_Pana_Profiles: NextPage = (props) => {
   const [editingLinks, setEditingLinks] = useState(Boolean);
   const [editingAvatar, setEditingAvatar] = useState(Boolean);
   const [manageImages, setManageImages] = useState(Boolean);
-  const [detailsError, setDetailsError] = useState(Boolean);
-  const [linksError, setLinksError] = useState(Boolean);
-  const [imagesError, setImagesError] = useState(Boolean);
-  const [activateMessage, setActivateMessage] = useState(Boolean);
+  const [detailsError, setDetailsError] = useState("");
+  const [linksError, setLinksError] = useState("");
+  const [detailsMessage, setDetailsMessage] = useState("");
+  const [linksMessage, setLinksMessage] = useState("");
+  const [imagesError, setImagesError] = useState("");
+  const [imagesMessage, setImagesMessage] = useState(Boolean);
+  const [activateMessage, setActivateMessage] = useState("");
+  const [activateError, setActivateError] = useState("");
 
   const router = useRouter();
   const handle = router.query.slug as string;
@@ -67,21 +71,11 @@ const Manage_Pana_Profiles: NextPage = (props) => {
  
   const profileCoords = data?.geo ? [data.geo.coordinates[1], data.geo.coordinates[0]] as [number, number] : null;
   
-  const mutation = useMutateProfileDesc();
+  const mutation = useMutateProfileDescAdmin();
 
-  const submitFormDetails = (e: FormEvent, formData: FormData) => {
-    e.preventDefault();
-    formData.forEach((value, key) => console.log(key, value));
-    const updates = {
-      name: formData.get("name"),
-      five_words: formData.get("five_words"),
-      details: formData.get("details"),
-      background: formData.get("background"),
-      tags: formData.get("tags"),
-    }
-    mutation.mutate(updates);
-  }
-
+  // useEffect( () => {
+  //   console.log(data?.email);
+  // })
 
   console.log("user:handle", handle);
 
@@ -156,13 +150,13 @@ const Manage_Pana_Profiles: NextPage = (props) => {
   }
 
 
-  function deactivate(id: any){
+  function deactivate(email: any){
     axios
-    .put(
-        `/api/editActive`,
+    .post(
+      `/api/admin/profile/action`,
         {
-          id:id,
-          active: false
+          email:email,
+          action: "decline"
         },
         {
             headers: {
@@ -172,20 +166,21 @@ const Manage_Pana_Profiles: NextPage = (props) => {
         }
     ).then((resp) => {
       console.log(resp.data.msg);
-      setActivateMessage(resp.data.msg);
+      setActivateMessage(resp.data.msg  || "Profile de-activated!");
+      refetch(); // refresh
     })
     .catch((error) => {
         console.log(error);
     });
   }
 
-  function activate(id: any){
+  function activate(email: any){
       axios
-        .put(
-            `/api/editActive`,
+        .post(
+            `/api/admin/profile/action`,
             {
-              id:id,
-              active: true
+              email:email,
+              action: "approve"
             },
             {
                 headers: {
@@ -195,11 +190,30 @@ const Manage_Pana_Profiles: NextPage = (props) => {
             }
         ).then((resp) => {
           console.log(resp.data.msg);
-          setActivateMessage(resp.data.msg);
+          setActivateMessage(resp.data.msg || "Profile activated!");
+          refetch(); // refresh
         })
         .catch((error) => {
             console.log(error);
         });
+  }
+
+  const submitFormUserDetails = (e: FormEvent, formData: FormData) => {
+    e.preventDefault();
+    if(data.email){
+      formData.forEach((value, key) => console.log(key, value));
+      const updates = {
+        name: formData.get("name"),
+        five_words: formData.get("five_words"),
+        details: formData.get("details"),
+        background: formData.get("background"),
+        tags: formData.get("tags"),
+        email: data?.email
+      }
+      mutation.mutate(updates);
+      setEditingDetails(false);
+      setDetailsMessage("Succesfully edited profile!");
+    }
   }
 
   const submitForm = async (e: FormEvent, formData: FormData) => {
@@ -247,8 +261,8 @@ const Manage_Pana_Profiles: NextPage = (props) => {
       
         <h3 style={{display:"inline"}}>Manage Profile: {data.name}</h3>
         
-        {data.active && <button className={styles.deActivateButton} style={{float:"right"}} onClick={() => deactivate(data._id)}>Deactivate Profile</button> }
-        {!data.active && <button className={styles.activateButton} style={{float:"right"}} onClick={() => activate(data._id)}>Activate Profile</button> }
+        {data.active && <button className={styles.deActivateButton} style={{float:"right"}} onClick={() => deactivate(data.email)}>Deactivate Profile</button> }
+        {!data.active && <button className={styles.activateButton} style={{float:"right"}} onClick={() => activate(data.email)}>Activate Profile</button> }
         <button className={styles.editButton} style={{float:"right", marginRight:"5px"}} onClick={ () => {router.push('/account/admin/panaprofiles/')}}>Back</button> 
 
         <div className={styles.profileCard} style={{marginTop:"2%"}}>
@@ -283,25 +297,42 @@ const Manage_Pana_Profiles: NextPage = (props) => {
               </div>
               }
               {editingDetails && 
-                <div>
+                <div style={{width:"100%"}}>
                   <h3>Edit {data.name}</h3>
-                  <label>name: </label>
-                  <input type="text" id="name" name="name" value={data.name} style={{display:'block'}}/>
-                  <label>details: </label>
-                  <input type="text" id="details" name="details" value={data.details} style={{width:"100%"}}/>
-                  <label>background: </label>
-                  <input type="text" id="background" name="background" value={data.background} style={{width:"100%"}}/>
-                  <label>five words: </label>
-                  <input type="text" id="five_words" name="five_words" value={data.five_words} style={{width:"100%", marginBottom:"10px"}}/>
-                  <label>tags: </label>
-                  <input type="text" id="tags" name="tags" value={data.tags} style={{width:"100%", marginBottom:"10px"}}/>
-                  
-                  <button onClick={() => {setEditingDetails(false)}} className={styles.cancelButton}>cancel</button>
-                  <button className={styles.editButton}>submit</button>
+                  <form className={styles.accountForm} onSubmit={(e) => submitFormUserDetails(e, new FormData(e.currentTarget))}>
+                    <div className={styles.accountFields}>
+                      <label>name: </label>
+                      <input type="text" id="name" name="name" defaultValue={data.name} style={{display:'block'}}/>
+                    </div>
+
+                    <div className={styles.accountFields}>
+                      <label>details: </label>
+                      <input type="text" id="details" name="details" defaultValue={data.details} style={{width:"100%"}}/>
+                    </div>
+
+                    <div className={styles.accountFields}>
+                      <label>background: </label>
+                      <input type="text" id="background" name="background" defaultValue={data.background} style={{width:"100%"}}/>
+                    </div>
+
+                    <div className={styles.accountFields}>
+                      <label>five words: </label>
+                      <input type="text" id="five_words" name="five_words" defaultValue={data.five_words} style={{width:"100%", marginBottom:"10px"}}/>
+                    </div>
+
+                    <div className={styles.accountFields}>
+                      <label>tags: </label>
+                      <input type="text" id="tags" name="tags" defaultValue={data.tags} style={{width:"100%", marginBottom:"10px"}}/>
+                    </div>
+                    
+                    <button style={{float:"right"}} onClick={() => {setEditingDetails(false)}} className={styles.cancelButton}>cancel</button>
+                    <button style={{float:"right"}} type="submit" className={styles.editButton}>save changes</button>
+                  </form>
                 </div>
               }
-              {detailsError && <div>{detailsError}</div>}
             </div>
+            {detailsError && <div className={styles.alertMessageDiv}>{detailsError}</div>}
+            {detailsMessage && <div className={styles.alertMessageDiv}>{detailsMessage}</div>}
             {!editingDetails && 
               <div className={styles.profileCard} style={{marginTop:"2%"}}>
                 <div className={styles.profileInfo}>
