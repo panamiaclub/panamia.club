@@ -3,16 +3,15 @@ import { GetServerSideProps } from 'next';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../api/auth/[...nextauth]";
 import { useSession } from 'next-auth/react';
-import { useEffect, useState, FormEvent } from 'react';
-import axios from 'axios';
+import Link from 'next/link';
+import { FormEvent } from 'react';
 
 import styles from '@/styles/account/Account.module.css';
 import PageMeta from '@/components/PageMeta';
-import { getUserSession, saveUserSession } from '@/lib/user';
 import PanaButton from '@/components/PanaButton';
-import { ProfileInterface, UserInterface } from '@/lib/interfaces';
-import { useMutateUserFollowing, useUser, useUserFollowing } from '@/lib/query/user';
-import Link from 'next/link';
+import { UserlistInterface } from '@/lib/interfaces';
+import { useMutateUserLists, useUser, useUserFollowing, useUserLists } from '@/lib/query/user';
+import PanaLinkButton from '@/components/PanaLinkButton';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   return {
@@ -26,48 +25,42 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
   }
 }
 
-const Account_User_Following: NextPage = () => {
+const Account_User_Edit: NextPage = () => {
   const { data: session } = useSession();
   // from session
   const { data: userData } = useUser();
-  const { data: followingData } = useUserFollowing();
-  const userMutation = useMutateUserFollowing();
+  const { data: userlistsData } = useUserLists();
+  const userMutation = useMutateUserLists();
 
-  const unfollowProfile = (e: FormEvent, id: string) => {
+  const deleteList = (e: FormEvent, id: string) => {
     e.preventDefault();
+    // TODO: CONFIRM DELETE
     const updates = {
-      action: "unfollow",
+      action: "delete",
       id: id,
     }
     userMutation.mutate(updates);
-  } 
+  }
 
-  let followingElements = [<div key="0"></div>];
-  if (followingData && followingData.length > 0) {
-    console.log("followingData", followingData);
-    followingElements = followingData.map((item: ProfileInterface, index) => {
+  let userlistElements = [<div key="0"></div>];
+  if (userlistsData && userlistsData.length > 0) {
+    console.log("userlistsData", userlistsData);
+    userlistElements = userlistsData.map((item: UserlistInterface, index) => {
       return (
-        <article className={styles.profileFollowingCard} key={index}>
-          <div className={styles.listCardImage}>
-            { item?.images?.primaryCDN && 
-            <img src={item.images?.primaryCDN} /> ||
-            <img src="/img/bg_coconut_blue.jpg" />
-            }
-          </div>
+        <article className={styles.profileListCard} key={index}>
           <div className={styles.listCardName}>
-            <Link href={`/profile/${item.slug}`}><a>{item.name}</a></Link>
+            {item.name}
           </div>
           <div className={styles.listCardAction}>
-            <PanaButton compact={true} color="gray"
-              onClick={(e:any) => {unfollowProfile(e, item._id)}}
-              >Unfollow</PanaButton>
+            <Link href={`/list/${item._id}`}><a target="_blank">View</a></Link>&emsp;
+            <PanaLinkButton onClick={(e:any) => {deleteList(e, item._id)}}>Delete</PanaLinkButton>
           </div>
         </article>
       ) });
   } else {
-    followingElements = [(
+    userlistElements = [(
       <article className={styles.profileListEmpty} key={0}>
-        <div>You're not following any profiles yet</div>
+        <div>You haven't created any lists yet</div>
       </article>
     )];
   }
@@ -77,10 +70,10 @@ const Account_User_Following: NextPage = () => {
       <main className={styles.app}>
         <PageMeta title="User Account | Profiles Your Follow" desc="" />
         <div className={styles.main}>
-          <h2 className={styles.accountTitle}>Profiles You Follow</h2>
+          <h2 className={styles.accountTitle}>My Lists</h2>
           <div className={styles.accountForm}>
             <div className={styles.accountFields}>
-              { followingElements }
+              { userlistElements }
             </div>
           </div>
         </div>
@@ -98,5 +91,5 @@ const Account_User_Following: NextPage = () => {
   )
 }
 
-export default Account_User_Following;
+export default Account_User_Edit;
 

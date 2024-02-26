@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { ProfileInterface, UserInterface } from "@/lib/interfaces";
+import { ProfileInterface, UserInterface, UserlistInterface } from "@/lib/interfaces";
 
 export const userQueryKey = ['user'];
 
@@ -75,6 +75,53 @@ export const useMutateUserFollowing = () => {
             queryKey: [userQueryKey, "following"]
           });
           return queryClient.setQueryData(userQueryKey, response.data.data);
+        },
+        onError: () => {
+          alert('Failed to update. Please contact us.');
+        }
+      })
+}
+
+export async function fetchUserLists() {
+  const user = await axios
+  .get(
+      "/api/user/getList/",
+      {
+          headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+          },
+      }
+  )
+  .catch((error: Error) => {
+      console.log(error.name, error.message);
+  });
+  if (user) {
+      return user.data.data;
+  }
+  return { data: { message: ""}};
+}
+
+export const useUserLists = () => {
+  return useQuery<UserlistInterface[], Error>({
+      queryKey: [userQueryKey, "lists"],
+      queryFn: () => fetchUserLists(),
+  });
+};
+
+
+export const useMutateUserLists = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (updates: any) => {
+          return axios.post("/api/user/updateList/", updates);
+        },
+        onSuccess: (response) => {
+          console.log(response.data.msg);
+          queryClient.invalidateQueries({
+            queryKey: [userQueryKey, "lists"]
+          });
+          // return queryClient.setQueryData(userQueryKey, response.data.data);
         },
         onError: () => {
           alert('Failed to update. Please contact us.');

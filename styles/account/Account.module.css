@@ -285,10 +285,17 @@
 .accountFAQs a{
     color: var(--color-pana-pink);
 }
-
-.profileListCard{
+.profileFollowingCard{
     display: grid;
     grid-template-columns: 4rem auto max-content;
+    border: 3px solid #ccc;
+    padding: .5rem;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+}
+.profileListCard{
+    display: grid;
+    grid-template-columns: auto max-content;
     border: 3px solid #ccc;
     padding: .5rem;
     border-radius: 12px;
