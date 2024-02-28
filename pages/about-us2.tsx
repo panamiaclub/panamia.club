@@ -154,11 +154,11 @@ const AboutUs: NextPage = () => {
                   <h3>Bee Maria<br /><small>Copywriter</small></h3>
                 </div>
                 <div className={styles.teamPicture}>
-                  <img src="/img/about/jeremy_downs.jpg" />
+                  <img src="/img/about/jdowns.jpg" />
                   <h3>Jeremy Downs<br /><small>Technical Advisor</small></h3>
                 </div>
                 <div className={styles.teamPicture}>
-                  <img src="/img/about/gen_barrios.jpg" />
+                  <img src="/img/about/gbarrios.jpg" />
                   <h3>Genesis Barrios<br /><small>Web Developer</small></h3>
                 </div>
                 <div className={styles.teamPicture} hidden>
@@ -184,7 +184,7 @@ const AboutUs: NextPage = () => {
           <section className={styles.sectionSupport}>
             <div className={styles.containerSupport}>
               <div className={styles.mapImg}>
-                <img src="/img/about/florida_panamia2.jpg" />
+                <img src="/img/about/floridamap_panamia.jpg" />
               </div>
               <div>
                 <h2>Support Our Club</h2>

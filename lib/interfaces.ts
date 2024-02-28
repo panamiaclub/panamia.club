@@ -71,7 +71,7 @@ export interface CategoryInterface {
     digital_art: Boolean,
     tech: Boolean,
     health_beauty: Boolean,
-    spiritual: Boolean,
+    wellness: Boolean,
     non_profit: Boolean,
     homemade: Boolean,
 }
