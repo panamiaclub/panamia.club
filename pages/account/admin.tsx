@@ -111,13 +111,15 @@ const Account_Admin: NextPage = () => {
           <small>Total Profiles: { dashboardData?.all }</small>&emsp;
           <small>Last 4 weeks: { filter_4weekstotal.length }</small>
           <br />
-          <h3>New Active Profiles (last 4 weeks)</h3>
+          <h3>New Profiles (last 4 weeks)</h3>
           {
             filter_4weekstotal && 
             <table className={styles.adminTable}>
               <thead>
                 <tr>
+                  <th>Status</th>
                   <th>Name</th>
+                  <th>Hear About Us/Affiliate</th>
                   <th>Created</th>
                   <th></th>
                 </tr>
@@ -127,7 +129,16 @@ const Account_Admin: NextPage = () => {
                 const createdDate = new Date(item?.createdAt);
                 return (
                 <tr key={index}>
+                  <td><small>{item.active ? "Active" : "Inactive" }</small></td>
                   <td>{ item.name }</td>
+                  <td>
+                    { item.hearaboutus && 
+                    <div><small>Hear About Us: {item.hearaboutus}</small></div>
+                    }
+                    { item.affiliate && 
+                    <div><small>Affiliate: {item.affiliate}</small></div>
+                    }
+                  </td>
                   <td><small>{ createdDate.toLocaleDateString() } { createdDate.toLocaleTimeString() }</small></td>
                   <td><Link href={`/profile/${item.slug}`}><a target="_blank"rel="noreferrer">View</a></Link></td>
                 </tr>

@@ -86,6 +86,8 @@ export interface ProfileInterface {
     locally_based: string,
     details: string,
     background?: string,
+    hearaboutus?: string,
+    affiliate?: string,
     socials: ProfileSocialsInterface,
     phone_number: string,
     whatsapp_community?: Boolean,
