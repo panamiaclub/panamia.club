@@ -118,7 +118,7 @@ const Account_Admin: NextPage = () => {
               <thead>
                 <tr>
                   <th>Status</th>
-                  <th>Name</th>
+                  <th style={{minWidth: "250px"}}>Name</th>
                   <th>Hear About Us/Affiliate</th>
                   <th>Created</th>
                   <th></th>

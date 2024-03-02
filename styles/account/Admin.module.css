@@ -18,6 +18,7 @@
 .adminTable{
     width: 100%;
     text-align: left;
+    font-size:14px;
 }
 
 .adminTable td{
