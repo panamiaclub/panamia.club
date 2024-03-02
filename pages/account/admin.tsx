@@ -128,7 +128,7 @@ const Account_Admin: NextPage = () => {
               { filter_4weekstotal.map((item, index) => {
                 const createdDate = new Date(item?.createdAt);
                 return (
-                <tr key={index}>
+                <tr key={index} className={ item.active ? styles.activeRow : styles.inactiveRow}>
                   <td><small>{item.active ? "Active" : "Inactive" }</small></td>
                   <td>{ item.name }</td>
                   <td>
@@ -140,7 +140,11 @@ const Account_Admin: NextPage = () => {
                     }
                   </td>
                   <td><small>{ createdDate.toLocaleDateString() } { createdDate.toLocaleTimeString() }</small></td>
-                  <td><Link href={`/profile/${item.slug}`}><a target="_blank"rel="noreferrer">View</a></Link></td>
+                  <td>
+                    { item.active && 
+                    <Link href={`/profile/${item.slug}`}><a target="_blank"rel="noreferrer">View</a></Link>
+                    }
+                  </td>
                 </tr>
                 )
               })
