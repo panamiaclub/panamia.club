@@ -51,6 +51,7 @@ const Account_User_Edit: NextPage = () => {
           <div className={styles.listCardName}>
             {item.name}
           </div>
+          <div><small>{item.profiles.length} profiles</small></div>
           <div className={styles.listCardAction}>
             <Link href={`/list/${item._id}`}><a target="_blank">View</a></Link>&emsp;
             <PanaLinkButton onClick={(e:any) => {deleteList(e, item._id)}}>Delete</PanaLinkButton>

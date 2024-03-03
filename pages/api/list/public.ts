@@ -2,9 +2,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
 import dbConnect from "../auth/lib/connectdb";
+import userlist from "../auth/lib/model/userlist";
 import profile from "../auth/lib/model/profile";
 import { unguardProfile } from "@/lib/profile";
-import userlist from "../auth/lib/model/userlist";
 
 interface ResponseData {
   error?: string;
@@ -29,12 +29,22 @@ export default async function handler(
       .json({ error: "This API call only accepts GET methods" });
   }
 
-  if (req.query.handle) {
-    const handle = req.query.handle.toString().toLowerCase();
-    const existingUserlist = await getUserlist(handle);
+  if (req.query.id) {
+    const list_id = req.query.id.toString();
+    const existingUserlist = await getUserlist(list_id);
+    console.log("existingUserlist", existingUserlist)
     if (existingUserlist) {
       // TODO: Create SAFE profile object for Public API
-      return res.status(200).json({ success: true, data: existingUserlist });
+      if (existingUserlist?.profiles.length > 0) {
+        const listProfiles = await profile.find({ '_id': { $in: existingUserlist.profiles } });
+        const profiles = listProfiles.map((guardedProfile) => {
+          return unguardProfile(guardedProfile);
+        });
+        if (listProfiles) {
+          return res.status(200).json({ success: true, data: {list: existingUserlist, profiles: profiles} });
+        }
+      }
+      return res.status(200).json({ success: true, data: {list: existingUserlist, profiles: []} });
     }
   }
   

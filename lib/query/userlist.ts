@@ -8,7 +8,7 @@ export async function fetchUserlistPublic(id: string) {
     params.append("id", id);
     const profile = await axios
     .get(
-        `/api/list/public${params}`,
+        `/api/list/public?${params}`,
         {
             headers: {
                 Accept: "application/json",
