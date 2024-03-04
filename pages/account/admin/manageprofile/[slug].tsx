@@ -26,6 +26,7 @@ import Link from 'next/link';
 import { Map, Marker, ZoomControl } from "pigeon-maps"
 import styles from '@/styles/profile/Profile.module.css'
 import { profileQueryKey, useProfile, useMutateProfileDescAdmin, fetchProfile  } from '@/lib/query/profile';
+import { deleteFile, uploadFile } from "@/lib/bunnycdn/api";
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   const handle = context.query.handle as string;
@@ -54,7 +55,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
   const [detailsMessage, setDetailsMessage] = useState("");
   const [linksMessage, setLinksMessage] = useState("");
   const [imagesError, setImagesError] = useState("");
-  const [imagesMessage, setImagesMessage] = useState(Boolean);
+  const [imagesMessage, setImagesMessage] = useState("");
   const [activateMessage, setActivateMessage] = useState("");
   const [activateError, setActivateError] = useState("");
 
@@ -134,6 +135,8 @@ const Manage_Pana_Profiles: NextPage = (props) => {
     const dialog = document.getElementById(id) as HTMLDialogElement;
     dialog.close();
   }
+
+ 
 
   const plus = (s: string) => {
     return s.trim().replaceAll(" ","+");
@@ -216,28 +219,32 @@ const Manage_Pana_Profiles: NextPage = (props) => {
     }
   }
 
+  function deleteImage(image:any){
+      setImagesMessage("deleting image...");
+      const response = deleteFile(image);
+      setImagesMessage(response.toString());
+  }
+
   const submitForm = async (e: FormEvent, formData: FormData) => {
     e.preventDefault();
     // formData.forEach((value, key) => console.log(key, value));
     const form = {
       primary: formData.get("images_primary") ? formData.get("images_primary") as File : null,
-      gallery1: formData.get("images_gallery1") ? formData.get("images_gallery1") as File : null,
-      gallery2: formData.get("images_gallery2") ? formData.get("images_gallery2") as File : null,
-      gallery3: formData.get("images_gallery3") ? formData.get("images_gallery3") as File : null,
     }
     console.log("form", form.primary);
-    const uploads = await axios.post(
-      "/api/profile/upload",
-      form,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "multipart/form-data"
-      }
-    })
-    .catch((error) => {
-      console.log(error);
-    });
+    //todo: add new api route to accept profile handle and check for admin role
+    // const uploads = await axios.post(
+    //   "/api/profile/upload",
+    //   form,
+    //   {
+    //     headers: {
+    //       Accept: "application/json",
+    //       "Content-Type": "multipart/form-data"
+    //   }
+    // })
+    // .catch((error) => {
+    //   console.log(error);
+    // });
     console.log("upload finished");
     refetch(); // refresh images
   }
@@ -274,15 +281,21 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                   <img src="/img/bg_coconut_blue.jpg" />
                 }
                 {!editingAvatar && <button className={styles.editButton} onClick={() => setEditingAvatar(true)}>Replace Avatar</button> }
-                {data?.images?.primaryCDN && !editingAvatar && <button className={styles.deActivateButton} style={{marginLeft:"2%"}} onClick={() => setEditingAvatar(false)}>Delete Avatar</button>}
-                {editingAvatar && 
-                   <>
-                    <input type="file" id="images_primary" name="images_primary" accept="image/png, image/jpeg, image/webp" />
-                    <div><small>Accepted images are jpg, png, and webp</small></div>
+                
+                {data?.images?.primaryCDN && !editingAvatar && 
+                <form onSubmit={(e) => deleteImage(data.images?.primaryCDN)}>
+                  <button className={styles.deActivateButton} style={{marginLeft:"2%"}} type="submit">Delete Avatar</button>
+                </form>
+                }
 
-                    <button className={styles.cancelButton} onClick={() => {setEditingAvatar(false)}}>cancel</button>
-                    <button className={styles.editButton} >Upload</button>
-                  </>
+                {editingAvatar && 
+                    <form className={styles.accountForm} onSubmit={(e) => submitForm(e, new FormData(e.currentTarget))}>
+                      <input type="file" id="images_primary" name="images_primary" accept="image/png, image/jpeg, image/webp" />
+                      <div><small>Accepted images are jpg, png, and webp</small></div>
+
+                      <button className={styles.cancelButton} onClick={() => {setEditingAvatar(false)}}>cancel</button>
+                      <button className={styles.editButton} type="submit">Upload</button>
+                  </form>
                 }
               </div>
               {!editingDetails && 
@@ -439,7 +452,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
               <h3 style={{display:"inline", marginRight:"5px"}}>Gallery</h3> 
               <small>Click to see full-size image</small>
               <button className={styles.editButton} style={{float:"right"}} onClick={() => setManageImages(true)}>Manage Images</button> 
-            </>
+            </>  
             }
             {manageImages && 
             <>
@@ -457,7 +470,11 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                     <img src={data.images?.gallery1CDN} loading="lazy" />
                   </a>
                 </dialog>
-                {manageImages && <div style={{textAlign:"center"}}><IconTrash style={{color:"#FC2070"}}></IconTrash></div>}
+                {manageImages && 
+                <form onSubmit={(e) => deleteImage(data.images?.gallery1CDN)}>
+                  <button style={{textAlign:"center", border:"none", background:"none"}} type="submit"><IconTrash style={{color:"#FC2070"}}></IconTrash></button>
+                </form>
+                }
               </div>
               }
               { data.images?.gallery2CDN &&
@@ -469,7 +486,11 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                     <img src={data.images?.gallery2CDN} loading="lazy" />
                   </a>
                 </dialog>
-                {manageImages && <div style={{textAlign:"center"}}><IconTrash style={{color:"#FC2070"}}></IconTrash></div>}
+                {manageImages && 
+                  <form className={styles.accountForm} onSubmit={(e) => deleteImage(data.images?.gallery2CDN)}>
+                    <button style={{textAlign:"center", border:"none", background:"none"}} type="submit"><IconTrash style={{color:"#FC2070"}}></IconTrash></button>
+                  </form>
+                  }
               </div>
               }
               { data.images?.gallery3CDN &&
@@ -481,11 +502,16 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                     <img src={data.images?.gallery3CDN} loading="lazy" />
                   </a>
                 </dialog>
-                {manageImages && <div style={{textAlign:"center"}}><IconTrash style={{color:"#FC2070"}}></IconTrash></div>}
+                {manageImages && 
+                 <form className={styles.accountForm} onSubmit={(e) => deleteImage(data.images?.gallery3CDN)}>
+                  <button style={{textAlign:"center", border:"none", background:"none"}} type="submit"><IconTrash style={{color:"#FC2070"}}></IconTrash></button>
+                  </form>
+                  }
               </div>
               }
             </div>
             {imagesError && <div>{imagesError}</div>}
+            {imagesMessage && <div>{imagesMessage}</div>}
           </div>
           }
            { hasAddress(data.primary_address) &&

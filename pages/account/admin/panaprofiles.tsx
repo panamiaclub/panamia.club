@@ -57,6 +57,7 @@ export const getServerSideProps: GetServerSideProps = async function (context) {
   }
 }
 
+
 function detailLimit(details: String) {
   if (details?.length > 100) {
     return `${details.substring(0, 50)}...`;
