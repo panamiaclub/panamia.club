@@ -87,9 +87,9 @@ function SearchResults(
         the search field empty and click search to explore locals near you!</p>
         <p>Select an option below to try out these popular categories!</p>
         <p>
-          <Link href="/directory/search/?q=music"><a>Music</a></Link>&emsp;
-          <Link href="/directory/search/?q=food"><a>Food</a></Link>&emsp;
-          <Link href="/directory/search/?q=clothing"><a>Clothing</a></Link>&emsp;
+          <Link href="/account/admin/panaprofiles/?q=music"><a>Music</a></Link>&emsp;
+          <Link href="/account/admin/panaprofiles/?q=food"><a>Food</a></Link>&emsp;
+          <Link href="/account/admin/panaprofiles/?q=clothing"><a>Clothing</a></Link>&emsp;
         </p>
       </div>
     )

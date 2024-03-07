@@ -5,7 +5,6 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import dbConnect from "../auth/lib/connectdb";
 import profile from "../auth/lib/model/profile";
-import { slugify } from "@/lib/standardized";
 
 interface ResponseData {
   error?: string;
@@ -37,23 +36,15 @@ export default async function handler(
       .status(200)
       .json({ success: false,  error: "This API call only accepts POST methods" });
   }
-  
-  const { name, five_words, details, background, tags, email } = req.body;
+ 
+
+  const { socials, email } = req.body;
 
   const existingProfile = await getProfileByEmail(email);
   if (existingProfile) {
-    if (name) {
-      existingProfile.name = name;
-      existingProfile.slug = slugify(name);
-    }
-    if (five_words) {
-      existingProfile.five_words = five_words;
-    }
-    if (details) {
-      existingProfile.details = details;
-    }
-    existingProfile.background = background;
-    existingProfile.tags = tags;
+    if (socials) {
+      existingProfile.socials = socials;
+    }    
     try {
       existingProfile.save()
     } catch(e) {

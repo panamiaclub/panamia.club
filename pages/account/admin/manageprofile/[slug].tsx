@@ -19,7 +19,7 @@ import { IconUserCircle, IconHeart, IconForms, IconSearch, IconStar, IconFilter,
   IconMap, IconCategory, IconMapPin, IconCurrentLocation, IconList, IconTrash,
   IconSortDescending, IconMapPins, IconExternalLink, IconBrandInstagram, IconBrandFacebook, IconMap2, IconBrandTiktok, IconBrandTwitter, IconBrandSpotify } from '@tabler/icons';
 import { directorySearchKey, useSearch, SearchResultsInterface } from '@/lib/query/directory';
-import { fetchPrivateProfile, profilePublicQueryKey } from '@/lib/query/profile';
+import { fetchPrivateProfile, profilePublicQueryKey, useMutateProfileSocialAdmin } from '@/lib/query/profile';
 import Spinner from '@/components/Spinner';
 import { AddressInterface, ProfileImagesInterface, ProfileSocialsInterface } from '@/lib/interfaces';
 import Link from 'next/link';
@@ -73,6 +73,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
   const profileCoords = data?.geo ? [data.geo.coordinates[1], data.geo.coordinates[0]] as [number, number] : null;
   
   const mutation = useMutateProfileDescAdmin();
+  const mutationSocials = useMutateProfileSocialAdmin();
 
   // useEffect( () => {
   //   console.log(data?.email);
@@ -216,6 +217,27 @@ const Manage_Pana_Profiles: NextPage = (props) => {
       mutation.mutate(updates);
       setEditingDetails(false);
       setDetailsMessage("Succesfully edited profile!");
+    }
+  }
+
+  const submitFormUserLinks = (e: FormEvent, formData: FormData) => {
+    e.preventDefault();
+    if(data.email){
+      formData.forEach((value, key) => console.log(key, value));
+      const updates = {
+        socials: {
+          website: formData.get("website"),
+          facebook: formData.get("facebook"),
+          instagram: formData.get("instagram"),
+          tiktok: formData.get("tiktok"),
+          twitter: formData.get("twitter"),
+          spotify: formData.get("spotify"),
+        },
+        email: data?.email
+      }
+      mutationSocials.mutate(updates);
+      setEditingLinks(false);
+      setLinksMessage("Succesfully edited links!");
     }
   }
 
@@ -394,6 +416,8 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                 <IconBrandSpotify height="20" /> Spotify
               </a>
               }
+              {linksError && <div className={styles.alertMessageDiv}>{linksError}</div>}
+              {linksMessage && <div className={styles.alertMessageDiv}>{linksMessage}</div>}
             </div>
           </div>
           }
@@ -401,44 +425,46 @@ const Manage_Pana_Profiles: NextPage = (props) => {
             <div>
               <div className={styles.profileInfo}>
                 <h3>Edit Socials</h3>
+                <form className={styles.accountForm} onSubmit={(e) => submitFormUserLinks(e, new FormData(e.currentTarget))}>
               { data.socials?.website && 
                  <>
                  <label>Website: </label>
-                  <input type="text" id="website" name="website" value={(data.socials.website.toString())} style={{display:'block', width:"100%"}}/>
+                  <input type="text" id="website" name="website" defaultValue={(data.socials.website.toString())} style={{display:'block', width:"100%"}}/>
                 </>
               }
               { data.socials?.instagram && 
                 <>
                   <label>Instagram: </label>
-                  <input type="text" id="instagram" name="instagram" value={(data.socials.instagram.toString())} style={{display:'block', width:"100%"}}/>
+                  <input type="text" id="instagram" name="instagram" defaultValue={(data.socials.instagram.toString())} style={{display:'block', width:"100%"}}/>
                 </>
               }
                 { data.socials?.facebook && 
                 <>
                  <label>Facebook: </label>
-                 <input type="text" id="facebook" name="facebook" value={(data.socials.facebook.toString())} style={{display:'block', width:"100%"}}/>
+                 <input type="text" id="facebook" name="facebook" defaultValue={(data.socials.facebook.toString())} style={{display:'block', width:"100%"}}/>
                 </>
               }
               { data.socials?.tiktok && 
                 <>
                   <label>Tiktok: </label>
-                  <input type="text" id="tiktok" name="tiktok" value={(data.socials.tiktok.toString())} style={{display:'block', width:"100%"}}/>
+                  <input type="text" id="tiktok" name="tiktok" defaultValue={(data.socials.tiktok.toString())} style={{display:'block', width:"100%"}}/>
                 </>
               }
               { data.socials?.twitter && 
                <>
                 <label>Twitter: </label>
-                <input type="text" id="twitter" name="twitter" value={(data.socials.twitter.toString())} style={{display:'block', width:"100%"}}/>
+                <input type="text" id="twitter" name="twitter" defaultValue={(data.socials.twitter.toString())} style={{display:'block', width:"100%"}}/>
                </>
               }
               { data.socials?.spotify && 
               <>
                 <label>Spotify: </label>
-                <input type="text" id="spotify" name="spotify" value={(data.socials.spotify.toString())} style={{display:'block', width:"100%"}}/>
+                <input type="text" id="spotify" name="spotify" defaultValue={(data.socials.spotify.toString())} style={{display:'block', width:"100%"}}/>
               </>
               }
               <button onClick={() => {setEditingLinks(false)}} className={styles.cancelButton} style={{marginTop:"10px"}}>cancel</button>
-              <button className={styles.editButton}>submit</button>
+              <button className={styles.editButton} type="submit" >submit</button>
+              </form>
             </div>
             </div>
           }
