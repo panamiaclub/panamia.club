@@ -137,8 +137,6 @@ const Manage_Pana_Profiles: NextPage = (props) => {
     dialog.close();
   }
 
- 
-
   const plus = (s: string) => {
     return s.trim().replaceAll(" ","+");
   }
@@ -305,7 +303,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                 {!editingAvatar && <button className={styles.editButton} onClick={() => setEditingAvatar(true)}>Replace Avatar</button> }
                 
                 {data?.images?.primaryCDN && !editingAvatar && 
-                <form onSubmit={(e) => deleteImage(data.images?.primaryCDN)}>
+                <form onSubmit={(e) => deleteImage(data.images?.primaryCDN.name)}>
                   <button className={styles.deActivateButton} style={{marginLeft:"2%"}} type="submit">Delete Avatar</button>
                 </form>
                 }
@@ -497,7 +495,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                   </a>
                 </dialog>
                 {manageImages && 
-                <form onSubmit={(e) => deleteImage(data.images?.gallery1CDN)}>
+                <form onSubmit={(e) => deleteImage(data.images?.gallery1CDN.name)}>
                   <button style={{textAlign:"center", border:"none", background:"none"}} type="submit"><IconTrash style={{color:"#FC2070"}}></IconTrash></button>
                 </form>
                 }
@@ -513,7 +511,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                   </a>
                 </dialog>
                 {manageImages && 
-                  <form className={styles.accountForm} onSubmit={(e) => deleteImage(data.images?.gallery2CDN)}>
+                  <form className={styles.accountForm} onSubmit={(e) => deleteImage(data.images?.gallery2CDN.name)}>
                     <button style={{textAlign:"center", border:"none", background:"none"}} type="submit"><IconTrash style={{color:"#FC2070"}}></IconTrash></button>
                   </form>
                   }
@@ -529,7 +527,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                   </a>
                 </dialog>
                 {manageImages && 
-                 <form className={styles.accountForm} onSubmit={(e) => deleteImage(data.images?.gallery3CDN)}>
+                 <form className={styles.accountForm} onSubmit={(e) => deleteImage(data.images?.gallery3CDN.name)}>
                   <button style={{textAlign:"center", border:"none", background:"none"}} type="submit"><IconTrash style={{color:"#FC2070"}}></IconTrash></button>
                   </form>
                   }
