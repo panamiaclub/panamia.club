@@ -6,6 +6,7 @@ import { authOptions } from "../auth/[...nextauth]";
 import dbConnect from "../auth/lib/connectdb";
 import profile from "../auth/lib/model/profile";
 import { slugify } from "@/lib/standardized";
+import user from "../auth/lib/model/user";
 
 interface ResponseData {
   error?: string;
@@ -20,7 +21,12 @@ const getProfileByEmail = async (email: string) =>{
     return Profile;
 }
 
-//todo: add admin check
+const getUserByEmail = async (email: string) =>{
+  await dbConnect();
+  const User = await user.findOne({email: email});
+  return User;
+}
+
 
 export default async function handler(
   req: NextApiRequest,
@@ -30,6 +36,12 @@ export default async function handler(
 
   if (!session) {
     return res.status(401).json({ success: false,  error: "No user session available" });
+  }
+
+  //admin check
+  const adminProfile = await getUserByEmail(session.user.email);
+  if(!adminProfile.status?.role || adminProfile.status?.role != "admin"){
+    return res.status(401).json({ success: false,  error: "No admin session available" });
   }
 
   if (req.method !== "POST") {

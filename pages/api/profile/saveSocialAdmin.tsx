@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import dbConnect from "../auth/lib/connectdb";
 import profile from "../auth/lib/model/profile";
+import user from "../auth/lib/model/user";
 
 interface ResponseData {
   error?: string;
@@ -19,6 +20,12 @@ const getProfileByEmail = async (email: string) =>{
     return Profile;
 }
 
+const getUserByEmail = async (email: string) =>{
+  await dbConnect();
+  const User = await user.findOne({email: email});
+  return User;
+}
+
 //todo: add admin check
 
 export default async function handler(
@@ -31,6 +38,12 @@ export default async function handler(
     return res.status(401).json({ success: false,  error: "No user session available" });
   }
 
+  //admin check
+  const adminProfile = await getUserByEmail(session.user.email);
+  if(!adminProfile.status?.role || adminProfile.status?.role != "admin"){
+    return res.status(401).json({ success: false,  error: "No admin session available" });
+  }
+
   if (req.method !== "POST") {
     return res
       .status(200)
@@ -41,6 +54,7 @@ export default async function handler(
   const { socials, email } = req.body;
 
   const existingProfile = await getProfileByEmail(email);
+
   if (existingProfile) {
     if (socials) {
       existingProfile.socials = socials;

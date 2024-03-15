@@ -27,6 +27,7 @@ import { Map, Marker, ZoomControl } from "pigeon-maps"
 import styles from '@/styles/profile/Profile.module.css'
 import { profileQueryKey, useProfile, useMutateProfileDescAdmin, fetchProfile  } from '@/lib/query/profile';
 import { deleteFile, uploadFile } from "@/lib/bunnycdn/api";
+import {fetchUser} from "@/lib/query/user";
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   const handle = context.query.handle as string;
@@ -58,6 +59,8 @@ const Manage_Pana_Profiles: NextPage = (props) => {
   const [imagesMessage, setImagesMessage] = useState("");
   const [activateMessage, setActivateMessage] = useState("");
   const [activateError, setActivateError] = useState("");
+  const [role, setRole] = useState();
+  const { data: session } = useSession();
 
   const router = useRouter();
   const handle = router.query.slug as string;
@@ -75,21 +78,36 @@ const Manage_Pana_Profiles: NextPage = (props) => {
   const mutation = useMutateProfileDescAdmin();
   const mutationSocials = useMutateProfileSocialAdmin();
 
-  // useEffect( () => {
-  //   console.log(data?.email);
-  // })
+  async function getUser() {
+    try {
+        const user = await fetchUser();
+        return user;
+    } catch (error) {
+        console.error("Error fetching user:", error);
+        throw error; // Re-throw the error to propagate it to the caller
+    }
+}
+  
+  useEffect( () => {
+    const user = getUser()
+    .then(user => {
+        // Handle the user data
+        setRole(user.status.role);
+    })
+    .catch(error => {
+        // Handle errors
+        console.error(error);
+    });
+  }, [])
+
+  // useEffect(() => {
+  //   console.log('user - admin role')
+  //   console.log(role);
+  // }, [role])
 
   console.log("user:handle", handle);
 
   console.log(data);
-
-  function editUser(id: any){
-    console.log(id);
-  }
-
-  function editImages(id: any){
-    console.log(id);
-  }
 
   function urlWithSource(url: string) {
     if (url.substring(0, 4) !== "http") {
@@ -150,7 +168,6 @@ const Manage_Pana_Profiles: NextPage = (props) => {
   const clickMarker = () => {
     window.open(directionsFromAddress(data.primary_address));
   }
-
 
   function deactivate(email: any){
     axios
@@ -239,10 +256,24 @@ const Manage_Pana_Profiles: NextPage = (props) => {
     }
   }
 
-  function deleteImage(image:any){
-      setImagesMessage("deleting image...");
-      const response = deleteFile(image);
-      setImagesMessage(response.toString());
+  const deleteImage = async (image:string) => {
+    console.log('image delete pressed')
+    console.log(role);
+    if(!role || role != "admin"){
+      setImagesError("No Admin Role!");
+      return;
+    }
+    
+    // console.log(data.images);
+    console.log(image.split("/")[5]);
+    var response = ""
+    setImagesMessage("deleting image...");
+    try{
+      response = deleteFile(image.split("/")[5]).toString();
+    }catch(error:any){
+      setImagesError("error deleting image:" + error)
+    }
+    setImagesMessage(response.toString());
   }
 
   const submitForm = async (e: FormEvent, formData: FormData) => {
@@ -250,22 +281,27 @@ const Manage_Pana_Profiles: NextPage = (props) => {
     // formData.forEach((value, key) => console.log(key, value));
     const form = {
       primary: formData.get("images_primary") ? formData.get("images_primary") as File : null,
+      email: data?.email,
     }
     console.log("form", form.primary);
-    //todo: add new api route to accept profile handle and check for admin role
-    // const uploads = await axios.post(
-    //   "/api/profile/upload",
-    //   form,
-    //   {
-    //     headers: {
-    //       Accept: "application/json",
-    //       "Content-Type": "multipart/form-data"
-    //   }
-    // })
-    // .catch((error) => {
-    //   console.log(error);
-    // });
+    
+    const uploads = await axios.post(
+      "/api/admin/uploadAvatar",
+      form,
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "multipart/form-data",
+          email: data?.email
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+      setDetailsError("Error replacing image!");
+    });
     console.log("upload finished");
+    setDetailsMessage("Succesfully replaced image!");
+    setEditingAvatar(false);
     refetch(); // refresh images
   }
 
@@ -303,7 +339,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                 {!editingAvatar && <button className={styles.editButton} onClick={() => setEditingAvatar(true)}>Replace Avatar</button> }
                 
                 {data?.images?.primaryCDN && !editingAvatar && 
-                <form onSubmit={(e) => deleteImage(data.images?.primaryCDN.name)}>
+                <form onSubmit={(e) => deleteImage(data.images?.primaryCDN)}>
                   <button className={styles.deActivateButton} style={{marginLeft:"2%"}} type="submit">Delete Avatar</button>
                 </form>
                 }
@@ -495,7 +531,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                   </a>
                 </dialog>
                 {manageImages && 
-                <form onSubmit={(e) => deleteImage(data.images?.gallery1CDN.name)}>
+                <form onSubmit={(e) => deleteImage(data.images?.gallery1CDN)}>
                   <button style={{textAlign:"center", border:"none", background:"none"}} type="submit"><IconTrash style={{color:"#FC2070"}}></IconTrash></button>
                 </form>
                 }
@@ -511,7 +547,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                   </a>
                 </dialog>
                 {manageImages && 
-                  <form className={styles.accountForm} onSubmit={(e) => deleteImage(data.images?.gallery2CDN.name)}>
+                  <form className={styles.accountForm} onSubmit={(e) => deleteImage(data.images?.gallery2CDN)}>
                     <button style={{textAlign:"center", border:"none", background:"none"}} type="submit"><IconTrash style={{color:"#FC2070"}}></IconTrash></button>
                   </form>
                   }
@@ -527,7 +563,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
                   </a>
                 </dialog>
                 {manageImages && 
-                 <form className={styles.accountForm} onSubmit={(e) => deleteImage(data.images?.gallery3CDN.name)}>
+                 <form className={styles.accountForm} onSubmit={(e) => deleteImage(data.images?.gallery3CDN)}>
                   <button style={{textAlign:"center", border:"none", background:"none"}} type="submit"><IconTrash style={{color:"#FC2070"}}></IconTrash></button>
                   </form>
                   }
