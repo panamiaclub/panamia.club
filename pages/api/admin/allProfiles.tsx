@@ -56,6 +56,7 @@ export default async function handler(
         phone: guardedProfile.phone_number ? guardedProfile.phone_number : "",
       };
     });
+    
     if (allActiveProfiles) {
       return res.status(200).json({ success: true, data: profiles });
     }

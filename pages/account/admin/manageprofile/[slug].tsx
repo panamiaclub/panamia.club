@@ -266,10 +266,31 @@ const Manage_Pana_Profiles: NextPage = (props) => {
     
     // console.log(data.images);
     console.log(image.split("/")[5]);
+    const fileName = image.split("/")[5];
     var response = ""
     setImagesMessage("deleting image...");
     try{
-      response = deleteFile(image.split("/")[5]).toString();
+      axios
+      .post(
+          `/api/admin/profile/deleteImage`,
+          {
+            filename:fileName,
+          },
+          {
+              headers: {
+                  Accept: "application/json",
+                  "Content-Type": "application/json",
+              },
+          }
+      ).then((resp) => {
+        console.log(resp.data.msg);
+        setImagesMessage(resp.data.msg || "Image Deleted!");
+        refetch(); // refresh
+      })
+      .catch((error) => {
+          console.log(error);
+      }); 
+      
     }catch(error:any){
       setImagesError("error deleting image:" + error)
     }
