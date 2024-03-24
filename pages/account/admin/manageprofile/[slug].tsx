@@ -257,24 +257,24 @@ const Manage_Pana_Profiles: NextPage = (props) => {
   }
 
   const deleteImage = async (image:string) => {
-    console.log('image delete pressed')
-    console.log(role);
-    if(!role || role != "admin"){
+    console.log('image delete pressed');
+    console.log('Image:', image); // Log the image string
+    console.log('Role:', role); // Make sure role is defined and has the correct value
+
+    if (!role || role !== "admin") {
       setImagesError("No Admin Role!");
       return;
     }
     
-    // console.log(data.images);
-    console.log(image.split("/")[5]);
     const fileName = image.split("/")[5];
-    var response = ""
-    setImagesMessage("deleting image...");
+    console.log('FileName:', fileName); // Log the extracted fileName
+    setImagesMessage("Deleting image...");
+
     try{
-      axios
-      .post(
+      axios.post(
           `/api/admin/profile/deleteImage`,
           {
-            filename:fileName,
+            filename: fileName,
           },
           {
               headers: {
@@ -294,7 +294,6 @@ const Manage_Pana_Profiles: NextPage = (props) => {
     }catch(error:any){
       setImagesError("error deleting image:" + error)
     }
-    setImagesMessage(response.toString());
   }
 
   const submitForm = async (e: FormEvent, formData: FormData) => {
