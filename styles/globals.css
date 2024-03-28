@@ -49,6 +49,15 @@ a:hover{
   text-decoration: underline
 }
 
+.linkButton {
+  all: unset;
+  color: var(--color-pana-pink);
+}
+.linkButton:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 * {
   box-sizing: border-box;
 }

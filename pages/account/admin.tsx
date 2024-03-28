@@ -11,6 +11,9 @@ import AdminHeader from '@/components/Admin/AdminHeader';
 import AdminMenu from '@/components/Admin/AdminHeader';
 import { useAdminDashboard } from '@/lib/query/admin';
 import { dateXdays } from '@/lib/standardized';
+import PanaLinkButton from '@/components/PanaLinkButton';
+import { FormEvent } from 'react';
+import axios from 'axios';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   return {
@@ -44,6 +47,22 @@ const Account_Admin: NextPage = () => {
     if (growth == 0) return "0%";
     if (base == 0) return "100%";
     return `${(((growth - base)/base) * 100).toFixed(2)}%`;
+  }
+
+  const resendSubmission = (e: FormEvent, email: string) => {
+    e.preventDefault();
+    axios.post(
+            "/api/profile/sendSubmission",
+            { email: email, },
+            {
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                },
+            }
+        ).then((response) => {
+          alert("Profile Submission Email has been re-sent")
+        }) // Blind send, no need to confirm
   }
 
   if (session && dashboardData) {
@@ -143,6 +162,9 @@ const Account_Admin: NextPage = () => {
                   <td>
                     { item.active && 
                     <Link href={`/profile/${item.slug}`}><a target="_blank"rel="noreferrer">View</a></Link>
+                    }
+                    { !item.active && 
+                    <button className="linkButton" onClick={(e: any) => {resendSubmission(e, item.email)}}>Resend</button>
                     }
                   </td>
                 </tr>
