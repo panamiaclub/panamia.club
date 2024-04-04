@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 import styles from '@/styles/index.module.css'
 import PanaButton from '@/components/PanaButton';
+import PageTracking from '@/components/PageTracking';
 
 const Home: NextPage = () => {
 
@@ -17,6 +18,7 @@ const Home: NextPage = () => {
 
   return (
     <div className={styles.App} >
+      <PageTracking />
       <section className={styles.headerHero}>
         <div className={styles.headerHeroOverlay}>
           <div className={styles.hero}>
