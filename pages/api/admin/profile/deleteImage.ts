@@ -15,11 +15,16 @@ interface ResponseData {
   msg?: string;
 }
 
-
 const getUserByEmail = async (email: string) =>{
   await dbConnect();
   const User = await user.findOne({email: email});
   return User;
+}
+
+const getPanaByEmail = async (email: string) => {
+  await dbConnect();
+  const Profile = await profile.findOne({email: email});
+  return Profile;
 }
 
 export default async function handler(
@@ -44,20 +49,60 @@ export default async function handler(
     console.log('no admin session');
     return res.status(401).json({ success: false,  error: "No admin session available" });
   }
-
-  const { filename } = req.body;
+  
+  //Check if filename exists
+  const { filename, email } = req.body;
   console.log(req.body)
   console.log('Filename: ' + filename);
-
-   // Check if filename exists
-   if (!filename) {
+  
+  if (!filename) {
     return res.status(400).json({ success: false, error: "Filename not provided" });
   }
+
+  console.log(filename);
   
+  //get pana profile
+  const panaProfile = await getPanaByEmail(email);
+  if(!panaProfile){
+    return res.status(400).json({ success: false, error: "Error Loading Pana! Please refresh and try again!" });
+  }
+  const panaProileDoc = new profile(panaProfile);
+    
+  const existingImages = panaProfile?.images;
+  console.log("existingImages", existingImages);
+
+  // Create a new object to store the filtered images
+  const newImages: { [key: string]: string } = {};
+
+ if (existingImages && typeof existingImages === 'object') {
+    // Iterate over object properties
+    for (const key in existingImages) {
+      if (existingImages.hasOwnProperty(key)) {
+        // Check if the value (filename) matches
+        if (!existingImages[key].includes(filename)) {
+          // If filename doesn't match, retain the image
+          newImages[key] = existingImages[key];
+        }
+      }
+    }
+    
+    // Update panaProfile with the filtered images
+    panaProfile.images = newImages;
+  } else {
+    // Handle the case where existingImages is not an object
+    console.error("existingImages is not an object");
+    return res.status(500).json({ success: false, error: "Internal Server Error" });
+ } 
+  
+  //delete image
   try {
-    await deleteFile(filename);
+    panaProfile.images = newImages;
+    await panaProfile.save();
+
+    //var response = await deleteFile(filename);
     console.log("File deleted successfully");
     return res.status(200).json({ success: true });
+  
   } catch (error) {
     console.error("Error deleting file:", error);
     return res.status(500).json({ success: false, error: "Internal Server Error" });

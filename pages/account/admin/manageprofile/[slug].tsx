@@ -100,10 +100,10 @@ const Manage_Pana_Profiles: NextPage = (props) => {
     });
   }, [])
 
-  // useEffect(() => {
-  //   console.log('user - admin role')
-  //   console.log(role);
-  // }, [role])
+  useEffect(() => {
+    console.log('data images')
+    console.log(data?.images);
+  }, [data])
 
   console.log("user:handle", handle);
 
@@ -265,9 +265,14 @@ const Manage_Pana_Profiles: NextPage = (props) => {
       setImagesError("No Admin Role!");
       return;
     }
+
+    if(!data){
+      setImagesError("Error with user data, please refresh...");
+      return;
+    }
     
-    const fileName = image.split("/")[5];
-    console.log('FileName:', fileName); // Log the extracted fileName
+    const fileName = image.split("/")[3] + "/" + image.split("/")[4] + "/" + image.split("/")[5];
+    console.log(fileName);
     setImagesMessage("Deleting image...");
 
     try{
@@ -275,6 +280,7 @@ const Manage_Pana_Profiles: NextPage = (props) => {
           `/api/admin/profile/deleteImage`,
           {
             filename: fileName,
+            email: data?.email,
           },
           {
               headers: {
@@ -286,6 +292,8 @@ const Manage_Pana_Profiles: NextPage = (props) => {
         console.log(resp.data.msg);
         setImagesMessage(resp.data.msg || "Image Deleted!");
         refetch(); // refresh
+        
+        //todo: delete reference to file from profile?
       })
       .catch((error) => {
           console.log(error);
