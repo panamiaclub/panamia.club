@@ -99,7 +99,7 @@ export default async function handler(
     panaProfile.images = newImages;
     await panaProfile.save();
 
-    //var response = await deleteFile(filename);
+    var response = await deleteFile(filename);
     console.log("File deleted successfully");
     return res.status(200).json({ success: true });
   
