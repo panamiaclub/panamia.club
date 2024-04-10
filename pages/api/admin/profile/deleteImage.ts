@@ -96,13 +96,20 @@ export default async function handler(
   
   //delete image
   try {
-    panaProfile.images = newImages;
-    await panaProfile.save();
 
     var response = await deleteFile(filename);
-    console.log("File deleted successfully");
-    return res.status(200).json({ success: true });
+
+    if(response != null) {
+      panaProfile.images = newImages;
+      await panaProfile.save();
   
+      
+      console.log("File deleted successfully");
+      return res.status(200).json({ success: true });
+    }else{
+      return res.status(500).json({ success: false, error: "Internal Server Error" });
+    }
+
   } catch (error) {
     console.error("Error deleting file:", error);
     return res.status(500).json({ success: false, error: "Internal Server Error" });
