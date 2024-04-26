@@ -1,11 +1,11 @@
 .headerHero{
     text-align: center;
-    background: url('/img/home/bg_main_hero.jpg');
+    background: url('/img/home/website_banner.jpg');
     background-size: cover;
     background-position: 50% 50%;
 }
 .headerHeroOverlay{
-    background-color: rgba(0,0,0,0.1);
+    /* background-color: rgba(0,0,0,0.1); */
 }
 .hero{
     margin:auto;
@@ -35,18 +35,23 @@
 .directorySearch{
     padding:2rem 1rem;
 }
-
-.directorySearchForm label {
+.directorySearch h2{
+    font-size: 40px;
     color: white;
-    font-size:24px;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
+
+.directorySearch h3{
+    font-size: 32px;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+
 
 .directorySearchField {
     margin:1rem 0;
-    font-size:20px;
-    height:2em;
-    padding: 0.5em;
-    border-radius:0.5em;
+    font-size:18px;
+    padding: 0.75rem 1.5rem;
+    border-radius:1rem;
     border:#AAA solid 2px;
     min-width:33vw;
 }
@@ -60,6 +65,16 @@
     }
 }
 
+
+.searchCategories{
+    margin: auto;
+    max-width:450px;
+    line-height: 3.5rem;
+}
+
+.searchCategories button{
+    font-size: 1.25rem;
+}
 
 .directorySearchSubmit {
     margin:1rem;
@@ -107,11 +122,14 @@
 
 .whatIsContainer{
     background: linear-gradient(60deg, var(--color-pana-blue) 0%, var(--color-pana-pink) 45%, var(--color-pana-yellow) 100%);
+    background: url('/img/home/bg_coral.png');
+    background-size: cover;
+    background-position: 50% 50%;
 }
 
 .whatIsHero{
     max-width:45em;
-    padding: 3rem 1rem;
+    padding: 4rem 1rem;
     text-align: center;
     color: #fff;
     margin: auto;
@@ -131,8 +149,9 @@
 .becomePanaBar{
     display: flex;
     justify-content: center;
-    padding: 1rem;
+    padding: 1.5rem;
     text-align: center;
+    font-size: 1.2rem;
     margin: auto;
     flex-flow: column;
     line-height: 2.5rem;
