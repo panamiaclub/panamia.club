@@ -4,6 +4,7 @@ import styles from '../styles/Donations2.module.css';
 import PageMeta from '../components/PageMeta';
 import { IconPlant, IconMedal, IconTrophy, IconCrown, IconUser, IconStar, IconCheck } from '@tabler/icons';
 import PanaButton from '../components/PanaButton';
+import PageTracking from '@/components/PageTracking';
 
 const stripePublicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 const preAmounts = [25, 40, 100, 250, 500, 1000, 2500];
@@ -125,6 +126,7 @@ const DonatePage: React.FC = () => {
         title="Support Us Through Donations"
         desc="Help support us through donations which are used for events, campaigns and community support."
       />
+      <PageTracking />
       <div className={styles.main}>
         <section className={styles.header}>
           <h2>Make a Donation</h2>

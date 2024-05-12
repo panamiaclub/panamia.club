@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 
 import styles from '../styles/Affiliate.module.css';
 import { Local } from '@/lib/localstorage';
+import PageTracking from '@/components/PageTracking';
 
 const Affiliate: NextPage = () => {
   const router = useRouter();
@@ -35,6 +36,7 @@ const Affiliate: NextPage = () => {
 
   return (
     <div className={styles.affiliatePage}>
+      <PageTracking />
       Redirecting...
     </div>
   )

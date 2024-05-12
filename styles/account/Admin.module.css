@@ -18,11 +18,20 @@
 .adminTable{
     width: 100%;
     text-align: left;
+    font-size:14px;
 }
 
 .adminTable td{
     border: 1px solid #CCC;
     padding: 0.25rem;
+}
+
+.activeRow td{
+    background-color: #FFF;
+}
+.inactiveRow td{
+    background-color: #F9F9F9;
+    color: #777;
 }
 
 

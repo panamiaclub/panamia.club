@@ -11,6 +11,9 @@ import AdminHeader from '@/components/Admin/AdminHeader';
 import AdminMenu from '@/components/Admin/AdminHeader';
 import { useAdminDashboard } from '@/lib/query/admin';
 import { dateXdays } from '@/lib/standardized';
+import PanaLinkButton from '@/components/PanaLinkButton';
+import { FormEvent } from 'react';
+import axios from 'axios';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   return {
@@ -32,6 +35,13 @@ const Account_Admin: NextPage = () => {
   const onlyDate = (date: Date) => {
     return new Date(new Date(date).toLocaleDateString())
   }
+  const dayPlus1 = (date: Date) => {
+    return new Date(date.setDate(date.getDate() + 1));
+  }
+  const adminShortDate = (date: Date) => {
+    const dateString = date.toLocaleDateString()
+    return dateString.slice(0, dateString.lastIndexOf("/"));
+  }
 
   const growthPercentage = (base: number, growth: number) => {
     if (growth == 0) return "0%";
@@ -39,23 +49,43 @@ const Account_Admin: NextPage = () => {
     return `${(((growth - base)/base) * 100).toFixed(2)}%`;
   }
 
+  const resendSubmission = (e: FormEvent, email: string) => {
+    e.preventDefault();
+    axios.post(
+            "/api/profile/sendSubmission",
+            { email: email, },
+            {
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                },
+            }
+        ).then((response) => {
+          alert("Profile Submission Email has been re-sent")
+        }) // Blind send, no need to confirm
+  }
+
   if (session && dashboardData) {
-    const count_recent = dashboardData.recent.length;
+    // const count_recent = dashboardData.recent.length;
     const daysToSunday = new Date().getDay();
+    const week1_start = onlyDate(dateXdays(daysToSunday))
+    const week2_start = onlyDate(dateXdays(daysToSunday + 7))
+    const week3_start = onlyDate(dateXdays(daysToSunday + 14))
+    const week4_start = onlyDate(dateXdays(daysToSunday + 21))
     const filter_week1 = dashboardData.recent.filter(
-      (item) => onlyDate(item.createdAt) >= dateXdays(daysToSunday)
+      (item) => onlyDate(item.createdAt) > week1_start
     );
     const filter_week2 = dashboardData.recent.filter(
-      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday + 7) && onlyDate(item.createdAt) < dateXdays(daysToSunday))
+      (item) => (onlyDate(item.createdAt) > week2_start && onlyDate(item.createdAt) <= week1_start)
     );
     const filter_week3 = dashboardData.recent.filter(
-      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday + 14) && onlyDate(item.createdAt) < dateXdays(daysToSunday + 7))
+      (item) => (onlyDate(item.createdAt) > week3_start && onlyDate(item.createdAt) <= week2_start)
     );
     const filter_week4 = dashboardData.recent.filter(
-      (item) => (onlyDate(item.createdAt) >= dateXdays(daysToSunday + 21) && onlyDate(item.createdAt) < dateXdays(daysToSunday + 14))
+      (item) => (onlyDate(item.createdAt) > week4_start && onlyDate(item.createdAt) <= week3_start)
     );
     const filter_4weekstotal = dashboardData.recent.filter(
-      (item) => onlyDate(item.createdAt) >= dateXdays(daysToSunday + 21)
+      (item) => onlyDate(item.createdAt) > week4_start
     );
     // console.log(dateXdays(daysToSunday), dateXdays(daysToSunday + 21));
     // Subtract final value minus starting value
@@ -72,10 +102,10 @@ const Account_Admin: NextPage = () => {
           <table className={styles.adminTable}>
             <tbody>
               <tr>
-                <th>3 weeks ago</th>
-                <th>2 weeks ago</th>
-                <th>Last Week</th>
-                <th>This Week</th>
+                <th>{ adminShortDate(dayPlus1(week4_start)) } to { adminShortDate(week3_start) }</th>
+                <th>{ adminShortDate(dayPlus1(week3_start)) } to { adminShortDate(week2_start) }</th>
+                <th>{ adminShortDate(dayPlus1(week2_start)) } to { adminShortDate(week1_start) }</th>
+                <th>{ adminShortDate(dayPlus1(week1_start)) } to now</th>
               </tr>
               <tr>
                 <td style={{borderRadius:"10px"}}>
@@ -101,13 +131,15 @@ const Account_Admin: NextPage = () => {
           <small>Total Profiles: { dashboardData?.all }</small>&emsp;
           <small>Last 4 weeks: { filter_4weekstotal.length }</small>
           <br />
-          <h3>New Active Profiles (last 4 weeks)</h3>
+          <h3>New Profiles (last 4 weeks)</h3>
           {
             filter_4weekstotal && 
             <table className={styles.adminTable}>
               <thead>
                 <tr>
-                  <th>Name</th>
+                  <th>Status</th>
+                  <th style={{minWidth: "250px"}}>Name</th>
+                  <th>Hear About Us/Affiliate</th>
                   <th>Created</th>
                   <th></th>
                 </tr>
@@ -116,10 +148,26 @@ const Account_Admin: NextPage = () => {
               { filter_4weekstotal.map((item, index) => {
                 const createdDate = new Date(item?.createdAt);
                 return (
-                <tr key={index}>
+                <tr key={index} className={ item.active ? styles.activeRow : styles.inactiveRow}>
+                  <td><small>{item.active ? "Active" : "Inactive" }</small></td>
                   <td>{ item.name }</td>
+                  <td>
+                    { item.hearaboutus && 
+                    <div><small>Hear About Us: {item.hearaboutus}</small></div>
+                    }
+                    { item.affiliate && 
+                    <div><small>Affiliate: {item.affiliate}</small></div>
+                    }
+                  </td>
                   <td><small>{ createdDate.toLocaleDateString() } { createdDate.toLocaleTimeString() }</small></td>
-                  <td><Link href={`/profile/${item.slug}`}><a target="_blank"rel="noreferrer">View</a></Link></td>
+                  <td>
+                    { item.active && 
+                    <Link href={`/profile/${item.slug}`}><a target="_blank"rel="noreferrer">View</a></Link>
+                    }
+                    { !item.active && 
+                    <button className="linkButton" onClick={(e: any) => {resendSubmission(e, item.email)}}>Resend</button>
+                    }
+                  </td>
                 </tr>
                 )
               })

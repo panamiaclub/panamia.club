@@ -1,0 +1,22 @@
+.app{
+    min-height: 90vh;
+}
+
+.main{
+    min-height: 1vh;
+    max-width: 45rem;
+    margin: auto;
+}
+
+.userlistCard{
+    display: grid;
+    grid-template-columns: 4rem auto max-content;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    margin-bottom: .5rem;
+    padding: 0.5rem;
+}
+.listCardImage img{
+    max-width: 100%;
+    padding-right: .5rem;
+}

@@ -3,8 +3,11 @@ import Link from 'next/link'
 
 import styles from '@/styles/index.module.css'
 import PanaButton from '@/components/PanaButton';
+import PageTracking from '@/components/PageTracking';
+import { useRouter } from 'next/router';
 
 const Home: NextPage = () => {
+  const router = useRouter();
 
   // Header Hero
   // Directory Search
@@ -15,25 +18,32 @@ const Home: NextPage = () => {
   // Featured Panas
   // Goals
 
+  const homepageSearch = (e: any) => {
+    e.preventDefault();
+    const searchterm = (document.getElementById('homepage-search') as HTMLInputElement).value;
+    router.push(`/directory/search?q=${searchterm}`);
+  }
+
   return (
     <div className={styles.App} >
+      <PageTracking />
       <section className={styles.headerHero}>
         <div className={styles.headerHeroOverlay}>
           <div className={styles.hero}>
-            <div className={styles.heroTitles}>
-              <h2>
-                <img src="/logos/pana_logo_long_white.png" />
-              </h2>
-              <h3>All things Local in SoFlo</h3>
+            <div className={styles.heroTitles} hidden>
+              <h2 hidden><img src="/logos/pana_logo_long_white.png" /></h2>
+              <h3 hidden>All things Local in SoFlo</h3>
             </div>
-            <div className={styles.directorySearch} hidden>
-              <h3>Search Our Directory</h3>
+            <div className={styles.directorySearch}>
+              <h2>The Future is Local</h2>
+              <h3>Search South Florida's First Local Directory</h3>
               <form className={styles.directorySearchForm}>
                 <input
+                  id="homepage-search"
                   type="search"
                   placeholder="Search by name, category, products"
                   className={styles.directorySearchField} />
-                <PanaButton href="/directorio" color="blue" text="Search Our Directory" />
+                <PanaButton onClick={(e: any) => {homepageSearch(e)}} color="blue" text="Search" type="submit" />
               </form>
             </div>
           </div>
@@ -57,15 +67,28 @@ const Home: NextPage = () => {
       </section>
       <section className={styles.whatIsContainer}>
         <div className={styles.whatIsHero}>
-          <h2>What is Pana MIA Club actually?</h2>
-          <h3>Pana MIA Club is a community platform that makes all things <em>local</em> accessible.</h3>
-          <p><u>Connecting the SoFlo Community to its own vibrant &amp; innovative creators/entrepreneurs</u></p>
-          <div className={styles.whatIsMission}>
-            <h3>Mission Statement</h3>
-            <p>We are organizing the South Florida diversified working class to build regenerative and vibrant
-              economies. By connecting locals with quality resources and educating on the benefits of reinvesting
-              locally, we cultivate financial security, personal engagement, and emphasize the power of a
-              unified community.</p>
+          <div className={styles.searchCategories}>
+            <h3>Search these keywords:</h3>
+            <PanaButton href="/directory/search?q=music" text="Music" color="yellow" hoverColor="yellow" />
+            <PanaButton href="/directory/search?q=artist" text="Artist" color="yellow" hoverColor="yellow" />
+            <PanaButton href="/directory/search?q=food" text="Food" color="yellow" hoverColor="yellow" />
+            <PanaButton href="/directory/search?q=organization" text="Organizations" color="yellow" hoverColor="yellow" />
+            <PanaButton href="/directory/search?q=venue" text="Venue" color="yellow" hoverColor="yellow" />
+            <PanaButton href="/directory/search?q=jewelry" text="Jewelry" color="yellow" hoverColor="yellow" />
+            <PanaButton href="/directory/search?q=art" text="Art" color="yellow" hoverColor="yellow" />
+            <PanaButton href="/directory/search?q=cafe" text="Cafe" color="yellow" hoverColor="yellow" />
+          </div>
+          <div hidden>
+            <h2>What is Pana MIA Club actually?</h2>
+            <h3>Pana MIA Club is a community platform that makes all things <em>local</em> accessible.</h3>
+            <p><u>Connecting the SoFlo Community to its own vibrant &amp; innovative creators/entrepreneurs</u></p>
+            <div className={styles.whatIsMission}>
+              <h3>Mission Statement</h3>
+              <p>We are organizing the South Florida diversified working class to build regenerative and vibrant
+                economies. By connecting locals with quality resources and educating on the benefits of reinvesting
+                locally, we cultivate financial security, personal engagement, and emphasize the power of a
+                unified community.</p>
+            </div>
           </div>
         </div>
       </section>

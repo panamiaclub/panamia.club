@@ -1,122 +1,210 @@
-import type { NextPage } from 'next'
+import type { NextPage } from 'next';
+import { useState } from 'react';
+import classNames from 'classnames';
 import { IconCash } from '@tabler/icons';
+import Link from 'next/link';
 
-import PanaLogo from '@/components/PanaLogo';
-import styles from '@/styles/AboutUs.module.css'
+import styles from '@/styles/AboutUs2.module.css'
+import PanaButton from '@/components/PanaButton';
+import PageTracking from '@/components/PageTracking';
+
+const ProjectsBlock = () => {
+
+  const [project, setProject] = useState("directorio");
+
+  return (
+    <div className={classNames(styles.projectsBlock, project)}>
+      <div className={styles.projectsHeader}>
+        <h3 
+        className={project == "directorio" ? styles.directorioTitleActive : styles.directorioTitle}
+        onClick={ (e:any) => {setProject('directorio')}}
+        >El Directorio</h3>
+        <h3 
+        className={project == "leolero" ? styles.leoleroTitleActive : styles.leoleroTitle}
+        onClick={ (e:any) => {setProject('leolero')}}
+        >LeoLero</h3>
+        <h3 
+        className={project == "panavizion" ? styles.panavizionTitleActive : styles.panavizionTitle}
+        onClick={ (e:any) => {setProject('panavizion')}}
+        >PanaVizion</h3>
+      </div>
+      { project == "directorio" && 
+        <p className={styles.directorioBody}>El Directorio is your access guide to everything locally made and occurring in SoFlo! 
+        Our online Local Directory, with easy keyword search functionality, allows patrons to 
+        find locally sourced solutions for any need or desire. This enhances convenience for 
+        consumers when shopping locally and provides increased visibility for local brands, 
+        service providers, and organizations. Our objective is to create a tool that will 
+        stimulate the local SoFlo economy and advocate for a lifestyle centered around supporting 
+        local businesses.</p>
+      }
+      { project == "leolero" && 
+        <p className={styles.leoleroBody}>Discover the vibrant world of LeoLero, our monthly newsletter that brings you a curated 
+        selection of exclusive insights. Dive into excerpts from our talented Panas, catch recaps 
+        from our podcast, and join engaging conversations led by seasoned experts. Explore topics 
+        that resonate with the SoFlo community and stay in the loop with a thoughtfully crafted 
+        playlist and a local events calendar for South Florida. LeoLero is your key to the latest 
+        happenings, diverse voices, and the heartbeat of our creative community.</p>
+      }
+      { project == "panavizion"  && 
+        <p className={styles.panavizionBody}>PanaVizión serves as a broadcast channel and podcast dedicated to highlighting impactful 
+        community leaders in South Florida through curated media content that shares their stories. 
+        Our goal is to uncover the rich experiences, talents, and creations that the people of 
+        South Florida have to offer. By providing a platform for these stories, we strive to expand 
+        the public's perspective and appreciation for the diverse narratives within the community.</p>
+      }
+      
+    </div>
+  );
+}
 
 const AboutUs: NextPage = () => {
+  
+  // Hero Image & Vision
+  // Mission Statement
+  // VIDEO
+  // Our Story
+  // Our Projects
+  // Board
+  // Team
+  // Support Our Club
   return (
     <main className={styles.app}>
+      <PageTracking />
         <div className={styles.main}>
           <section className={styles.header}>
-            <PanaLogo color="pink" size="large" nolink={true} />
-            <h1>Pana MIA Club: Your Guide to Local</h1>
+            <h2>About Us</h2>
             <br />
-            <div className={styles.outline}>
-              <ul>
-                <li>
-                  <a href="#who-is-panamia">Who is Pana MIA Club?</a>
-                  <ul>
-                    <li><a href="#mission-statement">Mission Statement</a></li>
-                    <li><a href="#anette-and-clari">Anette &amp; Clari</a></li>
-                  </ul>
-                </li>
-                <li>
-                  <a href="#what-does-panamia">What does Pana MIA Club do?</a>
-                  <ul>
-                    <li>
-                    <a href="#womanifesto">The (Wo)Manifesto</a>
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  <a href="#our-ongoing-projects">Our Ongoing Projects:</a>
-                  <ul>
-                    <li><a href="#el-directorio">El Directorio- Our Online Local's Directory</a></li>
-                    <li><a href="#mapa-miami">MaPa Miami</a></li>
-                    <li><a href="#panavizion-podcast">PanaVizión: El Todo SoFLo Podcast</a></li>
-                  </ul>
-                </li>
-                <li>
-                  <a href="#how-to-register">How to register your business with Pana MIA Club</a>
-                </li>
-                <li>
-                  <a href="#soflo-soundtrack">The SoFlo Soundtrack</a>
-                </li>
-                <li>
-                  <a href="#donate-now">Donate Now</a>
-                </li>
-              </ul>
+            <h3>The Future is Local</h3>
+          </section>
+          <section className={styles.sectionMission}>
+            <h2>Our Mission</h2>
+            <p>...is to unite the diverse working class of South Florida, igniting the creation of regenerative and vibrant economies. By connecting locals and the quality resources, paired with education on the advantages of reinvesting within our own community, we aim to cultivate financial stability, personal engagement, and emphasize the transformative strength of a unified community.</p>
+            <h2>Our Vision</h2>
+            <h3>The Future is Local</h3>
+            <p>Pana MIA Club is a 501(c)(3) non-profit based in South Florida.</p>
+          </section>
+          <section className={styles.sectionVideo}>
+            
+          </section>
+          <section className={styles.sectionStory}>
+            <div className={styles.containerStory}>
+              <div className={styles.storyImg}>
+                <img src="/img/about/clari_and_anette.webp" />
+              </div>
+              <div>
+                <h2>Our Story</h2>
+                <p>In the spring of 2022, Anette and Clari, two emerging entrepreneurs, formed a fated 
+                  bond at a Miami market. Despite their differences, their friendship deepened over time, 
+                  evolving into an opportunity for something greater than themselves.</p>
+                <p>Their shared dreams and mutual support became the catalyst for the creation of Pana 
+                  MIA Club, proving that entrepreneurship doesn't have to be a solo journey. Together, 
+                  they discovered the power of unity among local entrepreneurs and creatives. Pana MIA's 
+                  story began in that unexpected meeting that transformed into the foundation of it all.</p>
+              </div>
             </div>
           </section>
-          <section className={styles.body}>
-            <a href="#who-is-panamia"><h2 id="who-is-panamia">Who is Pana MIA Club?</h2></a>
-            <p>Pana MIA Club is a 501(c)(3) non-profit based in South Florida.</p>
-            <p>We are an inclusive South Florida Locals' Directory representing entrepreneurs, creatives and organizations of all backgrounds. Our mission is to empower the local community by providing essential tools to unite resources, insights, reach, and strategies, cultivating a thriving environment for all.</p>
-            <p>As consumers start recognizing the benefits of shopping locally, our centralized directory is a place where the public can explore and fall in love with local brands. Created by two small business owners, Pana MIA Club is designed by and for SoFlo creatives & entrepreneurs to come together.</p>
-            <p>We live up to our motto in every part of our platform.</p>
-            <p><strong>Yo tu Pana, tú la MIA</strong></p>
-            <p>I, your friend and you mine.</p>
-
-            <a href="#mission-statement"><h3 id="mission-statement">&para; Mission Statement</h3></a>
-            <blockquote>Pana MIA Club is an all-inclusive platform for all things locally-based in South Florida. We are dedicated to closing the gap between Patron and Pana, making it easier than ever to support local. We cross-promote small businesses and creatives using our Locals Directory; a one-stop shop for anything you need (art, food, services, apparel, platforms etc) provided locally, *finally* a centralized space where you can explore and fall in love with local brands all over South Florida.</blockquote>
-            
-            <a href="#anette-and-clari"><h3 id="anette-and-clari">&para; Anette &amp; Clari</h3></a>
-            <p>Clari and Anette met at a Good Vibes Market at the Center for Subtropical Affairs. Anette is an art wear brand owner and art teacher based out of Miramar. Clari is a certified yoga teacher and owns a small honey brand company. Despite the different industries—and the fact that Anette doesn’t like honey, the two started supporting one another. Pana MIA Club is the direct result from realizing we do not have to do everything alone. Local entrepreneurs and creatives are stronger when they collaborate and contribute to our collective knowledge and experiences.</p>
-            
-            <a href="#what-does-panamia"><h2 id="what-does-panamia">What does Pana MIA Club do?</h2></a>
-            <p>So now that you know who we are, what is it we’re trying to do? We have many projects in the works but our first goal is to create our online keyword-searchable Local’s Directory. With over 300 members in our collective, Anette and I are excited to have a website up so local patrons can search through and find their new favorite brands.</p>
-
-            <a href="#womanifesto"><h3 id="womanifesto">&para; The (Wo)Manifesto</h3></a>
-            <div className={styles.swipeGallery}>
-              <img src="/img/about/ig_promo_1.webp" alt="" />
-              <img src="/img/about/ig_promo_2.webp" alt="" />
-              <img src="/img/about/ig_promo_4.webp" alt="" />
+          <section className={styles.sectionProjects}>
+            <div className={styles.containerProjects}>
+              <h2>Our Projects</h2>
+              <ProjectsBlock />
             </div>
+          </section>
 
-            <a href="#our-ongoing-projects"><h2 id="our-ongoing-projects">Our Ongoing Projects:</h2></a>
-
-            <a href="#el-directorio"><h3 id="el-directorio">&para; El Directorio- Our Online Local's Directory</h3></a>
-            <p>The most effective way of converting consumers into local shoppers is by creating systems  they are familiar with. Our online keyword-search Local’s Directory makes it natural for a local patron to enter a keyword search (i.e. “Gluten-free Bakery) and find locally sourced solutions to meet any need/desire. The patron can browse and select any profile they see in search results which will link to a personalized profile of our Pana. These profiles includes an image gallery, descriptive content, contact links and more.</p>
-            <p>El Directorio is your all access guide to all things locally-made and happening in So Flo! 🌴</p>
-
-            <a href="#mapa-miami"><h3 id="mapa-miami">&para; MaPa Miami</h3></a>
-            <p>Ever searched for somewhere to go on Google Maps? A cafe, a bar, or maybe a retail shop? What if we could search specifically for locally-owned and independent SoFlo businesses? Now there is! MaPa Miami is your Google Maps search for local venues and brick-and-mortar locations all over South Florida.</p>
-            <p>MaPa Miami is your all access guide to local in South Florida</p>
-            <ul>
-              <li>Search these locations on our filterable general search</li>
-              <li>Browse through our location tags for different location categories like “Restaurants” or “Retail” directly on Google Maps through Pana MIA’s MaPa page.</li>
-              <li>Find profiles on each location with pictures, descriptions, hours, links and other information.</li>
-            </ul>
-
-            <a href="#panavizion-podcast"><h3 id="panavizion-podcast">&para; PanaVizión: El Todo SoFLo Podcast</h3></a>
-            
-
-            <a href="#how-to-register"><h2 id="how-to-register">How to register your business with Pana MIA Club</h2></a>
-            <p>Signing up to join Pana MIA Club is easy and free! All we ask is that you fill out our form. Please find the links below for the 6 categories. If your business fits into more than one category, choose the one that best describes you. We use your answers to create your online profile so please be as detailed as possible when answering the prompts. Pretend you’re introducing your project to our followers for the first time. 🙂</p>
-            
-            <ol>
-              <li><a href="https://docs.google.com/forms/d/e/1FAIpQLScRaDf72JKx5-jx_nbuqVauPEsZjft_KasVPHgTUy3ETxJq8A/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer">Food</a></li>
-              <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSd8O18ZJjvgTY-zUXnHRpv0xsSuDine3-XIUC1XziqdTfKfMw/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer">Apparel/Jewelry</a></li>
-              <li><a href="https://docs.google.com/forms/d/e/1FAIpQLScRuYdLv1-ony5z5VjCqUpRMihbO9vjdD_HauohSjyI_c6ivA/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer">Consumer Goods</a></li>
-              <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSeGFuia9rDFZefGixvxcTVyx6fYTMNUiCEuap3ryyjuJNLf0w/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer">Services/Groups</a></li>
-              <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSfTUsnOxSWMjnilVU50Nnq4xdPgurlaIbJA8keNMuZBe0-WwQ/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer">Art</a></li>
-              <li><a href="https://docs.google.com/forms/d/e/1FAIpQLSfjrQj7IS4lToILFqPQt6X_1W7utKVE3rIQgMsJhaUqfWsMSQ/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer">Platform/Organizations</a></li>
-            </ol>
-
-            <a href="#soflo-soundtrack"><h2 id="soflo-soundtrack">The SoFlo Soundtrack</h2></a>
-            <p>Check out our Spotify Local New Music Playlist: SoFlo Sounds. Want to add your own local music? Reach out to us via email at panamiaclub@gmail.com.</p>
-            <p className={styles.spotifyFrame}>
-              <iframe src="https://open.spotify.com/embed/playlist/1fCbLXVMcd0Kmo23dzj8Km?utm_source=oembed" sandbox="allow-scripts allow-popups allow-top-navigation-by-user-activation allow-forms allow-same-origin allow-storage-access-by-user-activation" allowFullScreen></iframe>
-            </p>
-
-            <a href="#donate-now"><h2 id="donate-now">Donate Now</h2></a>
-            <p className={styles.link}>
-              <a target="_blank" rel="noopener noreferrer" href="https://www.gofundme.com/f/panamia-club-help-create-soflo-locals-directory">
-              <IconCash size={20} stroke={1.5} color='white' />
-              &nbsp;Donate To Our GoFundMe!
-              </a>
-            </p>
+          <section className={styles.sectionBoard}>
+            <div className={styles.containerBoard}>
+              <h2>Our Board</h2>
+              <div className={styles.boardBlock}>
+                <div className={styles.boardImg}>
+                  <img src="/img/about/anette_mago.jpg" />
+                </div>
+                <div>
+                  <h3>Anette Mago, Co-Founder</h3>
+                  <p>Anette Mago, a Venezuelan-American conceptual artist raised in South Florida, has long 
+                    been fascinated by the multicultural landscape and vibrant community of her home state. 
+                    Having graduated from the University of Florida in Visual Art Studies in 2021, she delved 
+                    into the Miami art scene while establishing her artwear brand, Alobebi. Two years into her 
+                    entrepreneurial journey, Anette formed a close bond with Claribel, another small business 
+                    owner. Recognizing the importance of a supportive community, Anette's realization led to 
+                    the creation of Pana MIA Club, her most ambitious art project to date.</p>
+                </div>
+              </div>
+              
+              <div className={styles.boardBlock}>
+                <div className={styles.boardImg}>
+                <img src="/img/about/claribel_avila.jpg" />
+                </div>
+                <div>
+                  <h3>Claribel Avila, Co-Founder</h3>
+                  <p>Claribel Avila is a Puerto Rican entrepreneur and creative who began calling Miami home 
+                    in 2021. They graduated from Northeastern University in 2018 with a Bachelors in Economic 
+                    Policy. Having been raised by an entrepreneurial migrant family, they explored diverse 
+                    industries and started their first business in 2019, selling herbal-infused honey. Despite 
+                    their many passions and personal pursuits, their central focus has always been social, 
+                    economic and racial justice. Moving to Miami brought purpose, and as a problem solver, 
+                    their work with Pana MIA Club soon became a way to leverage strengths in order to bring 
+                    about a more equitable and humane world.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section className={styles.sectionTeam}>
+            <div className={styles.containerTeam}>
+              <h2>Our Team</h2>
+              <div className={styles.teamBlocks}>
+                <div className={styles.teamPicture}>
+                  <img src="/img/about/bee_maria.jpg" />
+                  <h3>Bee Maria<br /><small>Copywriter</small></h3>
+                </div>
+                <div className={styles.teamPicture}>
+                  <img src="/img/about/jdowns.jpg" />
+                  <h3>Jeremy Downs<br /><small>Technical Advisor</small></h3>
+                </div>
+                <div className={styles.teamPicture}>
+                  <img src="/img/about/gbarrios.jpg" />
+                  <h3>Genesis Barrios<br /><small>Web Developer</small></h3>
+                </div>
+                <div className={styles.teamPicture} hidden>
+                  <img src="/img/about/bee_maria.jpg" />
+                  <h3>Bryan Torres<br /><small>Branding Director</small></h3>
+                </div>
+                <div className={styles.teamPicture} hidden>
+                  <img src="/img/about/bee_maria.jpg" />
+                  <h3>Otto Munos<br /><small>Head Event Coordinator</small></h3>
+                </div>
+                <div className={styles.teamPicture} hidden>
+                  <img src="/img/about/bee_maria.jpg" />
+                  <h3>Jose Sifuentes<br /><small>Branding</small></h3>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section className={styles.sectionMap} hidden>
+            <div className={styles.mapImg}>
+              <img src="/img/about/florida_panamia2.jpg" />
+            </div>
+          </section>
+          <section className={styles.sectionSupport}>
+            <div className={styles.containerSupport}>
+              <div className={styles.mapImg}>
+                <img src="/img/about/floridamap_panamia.jpg" />
+              </div>
+              <div>
+                <h2>Support Our Club</h2>
+                <p>Pana MIA Club works hard towards our vision for a unified local SoFlo community 
+                  everyday. We know we can do it with your help! You can support us by funding our 
+                  mission with a one-time donation or by joining our community of supporters called 
+                  Gente dePana!</p>
+                <p>
+                  <PanaButton color="pink" href="/donate/">
+                  Help Fund Our<br />Open-Access Local's Directory
+                  </PanaButton>
+                </p>
+                <p>Our Gente dePana subscribers are the foundation of Pana MIA's sustainability, monthly 
+                  contributions allow us to make bigger strides in our projects to support the local 
+                  community. In return, our Gente are rewarded with so many benefits, discounts and perks 
+                  that give you special access to all things Pana!</p>
+              </div>
+            </div>
           </section>
           <div className={styles.footer}>
           </div>

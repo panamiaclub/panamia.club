@@ -16,11 +16,11 @@ import PanaButton from './PanaButton';
 const menu_items = [
     {id:"home", link: "/", label: "Home", icon: "" },
     {id:"about", link: "/about-us", label: "About"},
-    {id:"links", link: "/links", label: "Links"},
     {id:"search", link: "/directory/search", label: "Search"},
     {id:"donations", link: "/donate", label: "Donate", special: false},
 ];
 
+// {id:"links", link: "/links", label: "Links"},
 // {id:"event", link: "https://shotgun.live/events/serotonin-dipity-mini-fest", label: "EVENT!", special: true},
 
 interface MenuItemProps {

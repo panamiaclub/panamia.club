@@ -7,17 +7,14 @@ export const countyList = [
 export const profileCategoryList = [
     {"desc": "Products", "value": "products"},
     {"desc": "Services", "value": "services"},
-    {"desc": "Events", "value": "events"},
+    {"desc": "Venues", "value": "Venue"},
     {"desc": "Music", "value": "music"},
     {"desc": "Food", "value": "food"},
-    {"desc": "Clothing", "value": "clothing"},
-    {"desc": "Accessories", "value": "accessories"},
+    {"desc": "Apparel", "value": "apparel"},
     {"desc": "Art", "value": "art"},
-    {"desc": "Digital Art", "value": "digital_art"},
     {"desc": "Tech", "value": "tech"},
-    {"desc": "Health & Beauty", "value": "health_beauty"},
-    {"desc": "Spiritual", "value": "spiritual"},
+    {"desc": "Wellness", "value": "wellness"},
     {"desc": "Non-Profit", "value": "non_profit"},
-    {"desc": "Homemade", "value": "homemade"},
+    {"desc": "Artisanal", "value": "artisanal"},
 ]
 // TODO: New options - Education

@@ -82,7 +82,6 @@ export const getAdminSearch = async ({ pageNum, pageLimit, searchTerm }: AdminSe
 export const getAdminDashboard = async () => {
     await dbConnect();
     const profilesFilters = {
-        active: true,
         createdAt: {"$gte": dateXdays(35)}
     }
     const profilesFields = {
@@ -92,6 +91,6 @@ export const getAdminDashboard = async () => {
         createdAt: 1,
     }
     const recentProfiles = await profile.find(profilesFilters).sort({ $natural: -1 });
-    const allProfiles = await profile.find({active: true}).count();
+    const allProfiles = await profile.find().count();
     return { recent: recentProfiles, all: allProfiles };
 }

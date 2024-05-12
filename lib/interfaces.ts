@@ -71,7 +71,7 @@ export interface CategoryInterface {
     digital_art: Boolean,
     tech: Boolean,
     health_beauty: Boolean,
-    spiritual: Boolean,
+    wellness: Boolean,
     non_profit: Boolean,
     homemade: Boolean,
 }
@@ -86,6 +86,8 @@ export interface ProfileInterface {
     locally_based: string,
     details: string,
     background?: string,
+    hearaboutus?: string,
+    affiliate?: string,
     socials: ProfileSocialsInterface,
     phone_number: string,
     whatsapp_community?: Boolean,
