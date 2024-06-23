@@ -7,7 +7,6 @@ import { IconBrandTwitter, IconBrandInstagram, IconBrandTiktok, IconMail, IconBr
 import PanaLogo from '@/components/PanaLogo';
 import styles from '@/styles/Links.module.css'
 import PageMeta from '@/components/PageMeta';
-import PageTracking from '@/components/PageTracking';
 
 const Links: NextPage = () => {
   return (
@@ -16,7 +15,6 @@ const Links: NextPage = () => {
         title="Links to Explore"
         desc="Links to our socials, events, forms and local connections! Find out more about our community by exploring these links, becoming a subscriber, and enjoying our Spotify Playlist"
         />
-        <PageTracking />
         <div className={styles.main}>
           <section className={styles.header}>
             <span className={styles.logo}>

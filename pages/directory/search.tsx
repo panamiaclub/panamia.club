@@ -18,7 +18,6 @@ import { directorySearchKey, useSearch, SearchResultsInterface } from '@/lib/que
 import { calcDistance, getGeoPosition } from '@/lib/geolocation';
 import { useMutateUserFollowing, useMutateUserLists, useUser, useUserLists } from '@/lib/query/user';
 import { useSession } from 'next-auth/react';
-import PageTracking from '@/components/PageTracking';
 
 function getSearchParams(q: any) {
   const pageNum = q.p ? forceInt(q.p as string, 1) : 1;
@@ -437,7 +436,6 @@ const Directory_Search: NextPage = (props: any) => {
     <main className={styles.app}>
       <PageMeta title="Search for locals"
         desc="Search our directory of South Florida locals to find amazing creatives and businesses" />
-      <PageTracking />
       <div className={styles.main}>
         <section className={styles.header}>
           <h2>Welcome to the Pana Mia Directory</h2>

@@ -6,7 +6,6 @@ import Link from 'next/link';
 
 import styles from '@/styles/AboutUs2.module.css'
 import PanaButton from '@/components/PanaButton';
-import PageTracking from '@/components/PageTracking';
 
 const ProjectsBlock = () => {
 
@@ -69,7 +68,6 @@ const AboutUs: NextPage = () => {
   // Support Our Club
   return (
     <main className={styles.app}>
-      <PageTracking />
         <div className={styles.main}>
           <section className={styles.header}>
             <h2>About Us</h2>

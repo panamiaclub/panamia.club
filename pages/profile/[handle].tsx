@@ -12,7 +12,6 @@ import { AddressInterface, ProfileImagesInterface, ProfileSocialsInterface } fro
 import Link from 'next/link';
 import { Map, Marker, ZoomControl } from "pigeon-maps"
 import { useState, useEffect } from 'react';
-import PageTracking from '@/components/PageTracking';
 
 export const getServerSideProps: GetServerSideProps = async function (context) {
   const handle = context.query.handle as string;
@@ -119,7 +118,6 @@ const Profile_Public: NextPage = () => {
         title={data.name}
         desc={data.details}
         />
-      <PageTracking />
       <div className={styles.main}>
         <div className={styles.profileCard}>
             <div className={styles.profileHeader}>
