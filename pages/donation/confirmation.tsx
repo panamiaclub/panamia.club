@@ -8,6 +8,7 @@ import Link from 'next/link';
 const Podcasts: NextPage = () => {
   const router = useRouter();
   const tier = router.query?.tier ? parseInt(router.query.tier.toString()) : 0;
+  const amt = router.query?.amt ? parseInt(router.query.amt.toString()) : 0;
 
   return (
     <main className={styles.app}>

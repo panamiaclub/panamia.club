@@ -25,7 +25,7 @@ export default async function createCheckoutSession(req: NextApiRequest, res: Ne
           quantity: 1,
         }],
         mode: isRecurring ? 'subscription' : 'payment',
-        success_url: `${req.headers.origin}/donation/confirmation?tier=${tier}&session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${req.headers.origin}/donation/confirmation?tier=${tier}&amt=${amount}&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${req.headers.origin}/donate`,
         customer_email: customerEmail,
         metadata: {
