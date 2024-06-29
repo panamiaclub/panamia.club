@@ -4,11 +4,36 @@ import styles from '../../styles/Donations2.module.css'
 import PageMeta from '../../components/PageMeta';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import ReactGA from "react-ga4";
+import { useEffect } from 'react';
+
+ReactGA.initialize("G-H9HZTY30DN");
 
 const Podcasts: NextPage = () => {
   const router = useRouter();
   const tier = router.query?.tier ? parseInt(router.query.tier.toString()) : 0;
   const amt = router.query?.amt ? parseInt(router.query.amt.toString()) : 0;
+
+  useEffect(() => {
+    if (tier == 0) {
+      // ONE-TIME DONATION TRACKING
+      ReactGA.event({
+        category: "Donation",
+        action: "One-Time Donation",
+        label: "AW-16508333106/KBZgCMq-6LwZELLY5L89", // optional
+        value: amt, // optional, must be a number
+      });
+    } else {
+      // RECURRING DONATION TRACKING
+      ReactGA.event({
+        category: "Donation",
+        action: "Recurring Donation",
+        label: "AW-16508333106/KkYdCK7A6LwZELLY5L89", // optional
+        value: amt, // optional, must be a number
+      });
+    }
+    
+  })
 
   return (
     <main className={styles.app}>
