@@ -7,7 +7,7 @@ import Link from 'next/link';
 import ReactGA from "react-ga4";
 import { useEffect } from 'react';
 
-ReactGA.initialize("16508333106"); // G-H9HZTY30DN
+ReactGA.initialize("G-H9HZTY30DN"); // G-H9HZTY30DN
 
 const Podcasts: NextPage = () => {
   const router = useRouter();

@@ -4,6 +4,9 @@ import Layout from '@/components/Layout';
 import { SessionProvider } from "next-auth/react";
 import {Session} from "next-auth";
 import { useState } from 'react';
+import ReactGA from "react-ga4";
+
+ReactGA.initialize("G-H9HZTY30DN"); // G-H9HZTY30DN
 
 import {
   QueryClient,
