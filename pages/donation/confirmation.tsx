@@ -7,7 +7,7 @@ import Link from 'next/link';
 import ReactGA from "react-ga4";
 import { useEffect } from 'react';
 
-ReactGA.initialize("G-H9HZTY30DN");
+ReactGA.initialize("16508333106"); // G-H9HZTY30DN
 
 const Podcasts: NextPage = () => {
   const router = useRouter();
@@ -20,7 +20,7 @@ const Podcasts: NextPage = () => {
       ReactGA.event({
         category: "Donation",
         action: "One-Time Donation",
-        label: "AW-16508333106/KBZgCMq-6LwZELLY5L89", // optional
+        label: "KBZgCMq-6LwZELLY5L89", // optional
         value: amt, // optional, must be a number
       });
     } else {
@@ -28,7 +28,7 @@ const Podcasts: NextPage = () => {
       ReactGA.event({
         category: "Donation",
         action: "Recurring Donation",
-        label: "AW-16508333106/KkYdCK7A6LwZELLY5L89", // optional
+        label: "KkYdCK7A6LwZELLY5L89", // optional
         value: amt, // optional, must be a number
       });
     }
