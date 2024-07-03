@@ -171,7 +171,7 @@ export default function MainHeader() {
                     {!session &&
                         <div className={styles.sessionButton}>
                             <PanaButton
-                        text="Sign In"
+                        text="Sign Up"
                         color="blue"
                         hoverColor='blue'
                         href="/api/auth/signin" />

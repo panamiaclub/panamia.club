@@ -16,10 +16,11 @@ export default function GlobalFooter() {
                     <li><Link href="/about-us">About</Link></li>
                     <li><Link href="/links">Links</Link></li>
                     <li><Link href="/directorio">Directorio</Link></li>
+                    <li><Link href="/form/join-the-team/">Join The Team</Link></li>
                 </ul>
                 <ul className={styles.footerLinksAlt}>
                     <li><strong>Users</strong></li>
-                    <li hidden><Link href="/signin">Sign In</Link></li>
+                    <li hidden><Link href="/signin">Sign Up</Link></li>
                     <li><Link href="/form/become-a-pana">Become A Pana</Link></li>
                     <li><Link href="/form/contact-us">Contact Us</Link></li>
                 </ul>

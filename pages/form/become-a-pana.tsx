@@ -446,7 +446,7 @@ const Form_BecomeAPana: NextPage = () => {
                         <h2>Thank you for signing up!</h2>
                         <p className={styles.notice}>We're confirming your profile details and will email you when it's published.</p>
                         <p>
-                            You can <Link href="/api/auth/signin"><a>Sign In</a></Link>
+                            You can <Link href="/api/auth/signin"><a>Sign Up</a></Link>
                             &nbsp;using your profile email to see other features and continue updating 
                             your profile! The Pana MIA Club community is here for you! Visit
                             our <Link href="/about-us"><a>About Us</a></Link> to learn more about how 

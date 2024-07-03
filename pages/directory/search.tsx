@@ -576,7 +576,7 @@ const Directory_Search: NextPage = (props: any) => {
               </div>
             </article>
             <div className={styles.searchLoginCallout}>
-              <Link href="/signin"><a>Sign In</a></Link> to follow <IconHeart height="20" color="red" fill="red" /> your favorite profiles and get notified about their updates! 
+              <Link href="/signin"><a>Sign Up</a></Link> to follow <IconHeart height="20" color="red" fill="red" /> your favorite profiles and get notified about their updates! 
             </div>
           </section>
           <section className={styles.directoryReferrals}>
