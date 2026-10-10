@@ -8,6 +8,7 @@ import {
   useGifSearch,
   type GifResult,
   GIPHY_ATTRIBUTION,
+  GIPHY_ATTRIBUTION_MARK,
   GIPHY_SEARCH_PLACEHOLDER,
 } from '@/lib/query/social';
 
@@ -105,10 +106,18 @@ export function GifPicker({
                   {/* Plain <img>, not next/image: the src is on GIPHY's CDN
                       rather than our own, so it is outside the configured
                       remote patterns, and these tiles are previews of
-                      something being chosen rather than page content. */}
+                      something being chosen rather than page content.
+
+                      The uploader goes in the alt text because GIPHY's terms
+                      forbid displaying their content "without Giphy user
+                      and/or source attribution where available". */}
                   <img
                     src={gif.previewUrl}
-                    alt={gif.description}
+                    alt={
+                      gif.creator
+                        ? `${gif.description} by ${gif.creator}`
+                        : gif.description
+                    }
                     loading="lazy"
                     className="h-24 w-full bg-white object-cover"
                   />
@@ -125,11 +134,23 @@ export function GifPicker({
         </p>
       )}
 
-      {/* Required by GIPHY's terms, not decoration -- see GIPHY_ATTRIBUTION.
-          Using their catalogue obliges us to say whose it is. */}
-      <p className="text-pana-ink/40 border-pana-ink/10 border-t px-4 py-1.5 text-[10px] font-bold tracking-wide uppercase">
-        {GIPHY_ATTRIBUTION}
-      </p>
+      {/* Required by GIPHY's terms, not decoration. Their API Terms of
+          Service ask for the words "Powered by Giphy" *and* the Giphy logo,
+          so this is their official mark reproduced unmodified rather than
+          text styled to look like it -- the trademark licence covers
+          reproducing the artwork, not redrawing it. */}
+      <div className="border-pana-ink/10 flex items-center border-t px-4 py-2">
+        {/* Plain <img> to match the tiles above, and because this is a fixed
+            static badge rather than content worth running the optimiser
+            over. Half the asset's 200x42 so it stays crisp on retina. */}
+        <img
+          src={GIPHY_ATTRIBUTION_MARK}
+          alt={GIPHY_ATTRIBUTION}
+          width={100}
+          height={21}
+          className="h-[21px] w-auto"
+        />
+      </div>
     </div>
   );
 }

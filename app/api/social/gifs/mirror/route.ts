@@ -22,36 +22,73 @@
  * conversations the first time any one sender closed their account.
  *
  * ---------------------------------------------------------------------------
- * KNOWN DEVIATION FROM GIPHY'S TERMS -- read before changing or copying this.
+ * KNOWN DEVIATION FROM GIPHY'S DOCS -- read before changing or copying this.
  *
- * GIPHY's "Prohibited Integration Practices" say, in their words:
+ * Two different documents get called "GIPHY's terms" and they do not say the
+ * same thing. An earlier version of this comment conflated them and claimed
+ * the contract forbids what we do here. It does not. The distinction decides
+ * what the actual exposure is, so it is spelled out.
  *
- *   2. Do not cache media URLs or copies of GIPHY media assets unless your
- *      integration has been explicitly approved by GIPHY for media caching
- *      and follows GIPHY's required cache revalidation implementation.
- *   3. Do not proxy requests to GIPHY, either API calls or media URL loads.
- *      All requests to GIPHY should be made directly from the client side.
+ * 1. The developer documentation's "Prohibited Integration Practices" says:
  *
- * and separately: "GIPHY media should be loaded directly from the media URLs
- * returned by the API and should not be cached, proxied, rewritten, or stored
- * by the partner."
+ *      2. Do not cache media URLs or copies of GIPHY media assets unless your
+ *         integration has been explicitly approved by GIPHY for media caching
+ *         and follows GIPHY's required cache revalidation implementation.
+ *      3. Do not proxy requests to GIPHY, either API calls or media URL loads.
+ *         All requests to GIPHY should be made directly from the client side.
  *
- * This route stores. /api/social/gifs proxies and caches. Both are deliberate
- * and both are outside GIPHY's standard integration terms. The reason is the
- * privacy property described above -- hotlinking would hand GIPHY the IP of
- * every DM recipient on every thread open -- which we are not willing to give
- * up quietly for a messaging surface that is members-only and expires.
+ *    This route stores; /api/social/gifs proxies and caches. We are plainly
+ *    outside that guidance, deliberately.
  *
- * GIPHY does operate an approval path for exactly this ("in some approved
- * high-scale integrations, GIPHY may allow a partner-operated caching layer
- * for media delivery... requires prior written approval"), and they publish
- * a Cloudflare cache-revalidation example, which is the stack we are on.
- * Until that approval exists, the realistic downside is key revocation.
+ * 2. The GIPHY API Terms of Service -- the contract those same docs link to,
+ *    and the thing actually agreed to -- contains no prohibition on caching,
+ *    proxying, or storing media anywhere in it. What it does contain:
  *
- * Do not treat this comment as settled. If GIPHY declines, the compliant
- * shape is client-side calls plus hotlinked media, and the privacy tradeoff
- * has to be put back in front of the product owner rather than absorbed here.
+ *      - clause 4: label the application "Powered by Giphy" AND display the
+ *        Giphy logo. A conjunction, not a choice. (Picker footer.)
+ *      - clause 5: do not display content "without Giphy user and/or source
+ *        attribution where available". (The uploader credit carried through
+ *        this route into the attachment name.)
+ *      - "You shall not use content you obtain through Giphy's products and
+ *        services to create a database, directory, or index containing GIFs
+ *        or digital stickers." The one genuinely arguable clause. It reads as
+ *        aimed at building a rival GIF catalogue, and our R2 objects are
+ *        per-recipient message attachments -- not searchable, not an index.
+ *        A hostile reading could still stretch it. Flagged, not dismissed.
+ *      - clause 2: we follow limits "as provided to you by us from time to
+ *        time", which arguably lets GIPHY impose the docs rules regardless.
+ *
+ * So: no breach anyone can point to, but not blessed either. The remedy GIPHY
+ * reserves (clause 1) is denial or revocation of API access without notice.
+ * No damages clause, no fee. The exposure is the feature going dark, not money.
+ *
+ * Why we store anyway. The durable reason is permanence: a hotlinked GIF
+ * disappears out of a two-year-old conversation when the host reorganises,
+ * loses rights, or shuts down -- not hypothetical, since this integration
+ * exists only because Google decommissioned Tenor and took the previous
+ * implementation with it. The privacy reason (hotlinking hands GIPHY the IP
+ * of every DM recipient on every thread open) is real but should be read
+ * sceptically: it was written here to justify an architecture that had
+ * already been built, and it carries less weight than its length suggests.
+ *
+ * GIPHY does operate an approval path ("in some approved high-scale
+ * integrations, GIPHY may allow a partner-operated caching layer for media
+ * delivery... requires prior written approval") and publishes a Cloudflare
+ * revalidation example, which is our stack. But their own docs discourage
+ * applying -- "for most applications a rate limited beta key is sufficient",
+ * "we receive a lot of applications" -- and the exception targets high-scale
+ * partners, which we are not. Applying is not the obvious cheap move.
+ *
+ * Worth knowing before anyone "fixes" this: full compliance means client-side
+ * calls, which means no shared server cache, which means the 100/hour beta
+ * quota burns per user instead of once per search term. The cache is the only
+ * reason we fit inside that quota, so complying makes a production-tier key a
+ * prerequisite rather than a follow-up.
+ *
+ * Do not treat this as settled and do not resolve it in code. The tradeoff
+ * belongs to the product owner.
  * https://developers.giphy.com/docs/api/
+ * https://support.giphy.com/hc/en-us/articles/360028134111-GIPHY-API-Terms-of-Service
  * ---------------------------------------------------------------------------
  */
 
@@ -82,7 +119,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  let body: { url?: unknown; description?: unknown };
+  let body: { url?: unknown; description?: unknown; creator?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -156,14 +193,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    /* GIPHY requires "Powered By GIPHY" wherever their API is used. The
-       picker carries the mark itself; this carries the credit onward with
-       the GIF once it leaves the picker, in the alt text, which is what a
-       screen reader announces and what stands in if the image fails. */
-    const description =
+    /* GIPHY's terms want two different things here and this carries both.
+       Clause 4 is the "Powered By GIPHY" credit, which the picker shows as
+       their mark but which has to survive the GIF leaving the picker. Clause
+       5 is per-content attribution -- content may not be displayed "without
+       Giphy user and/or source attribution where available" -- so the
+       uploader is named when GIPHY gave us one. It goes in the alt text,
+       which is what a screen reader announces and what stands in if the
+       image fails. Many GIFs have no uploader, hence the plain form. */
+    const creator =
+      typeof body.creator === 'string'
+        ? // Third-party text landing in a stored attachment name: collapse
+          // whitespace so it cannot smuggle newlines into alt text.
+          body.creator.replace(/\s+/g, ' ').trim().slice(0, 60)
+        : '';
+
+    const base =
       typeof body.description === 'string' && body.description.trim()
-        ? `${body.description.trim().slice(0, 180)} (via GIPHY)`
-        : 'GIF (via GIPHY)';
+        ? body.description.trim().slice(0, 180)
+        : 'GIF';
+
+    const description = creator
+      ? `${base} by ${creator} (via GIPHY)`
+      : `${base} (via GIPHY)`;
 
     return NextResponse.json({
       success: true,

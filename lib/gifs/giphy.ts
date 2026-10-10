@@ -30,6 +30,14 @@ export interface GifResult {
   url: string;
   width: number;
   height: number;
+  /**
+   * Whoever uploaded the GIF to GIPHY, when it has one.
+   *
+   * Required by their terms rather than offered as a nicety: content may not
+   * be displayed "without Giphy user and/or source attribution where
+   * available". Plenty of GIFs are unattributed, hence optional.
+   */
+  creator?: string;
 }
 
 const GIPHY_ENDPOINT = 'https://api.giphy.com/v1/gifs';
@@ -43,12 +51,31 @@ const GIPHY_ENDPOINT = 'https://api.giphy.com/v1/gifs';
  * should not be removed to tidy the UI -- it is the term under which the
  * GIFs are free.
  *
- * We carry it twice: as the mark in the picker, and in the alt text of a
- * sent GIF, so the credit survives leaving the picker.
+ * We carry it in three places, because the contract asks for more than the
+ * docs page does. GIPHY's API Terms of Service, clause 4, require an app to
+ * be labelled with the words "Powered by Giphy" *and the Giphy logo* -- a
+ * conjunction, not a choice -- so the picker shows their official mark
+ * rather than styled text of our own. Clause 5 adds that content may not be
+ * displayed "without Giphy user and/or source attribution where available",
+ * which is why GifResult carries `creator` and why a sent GIF names its
+ * uploader in the alt text, so the credit survives leaving the picker.
  *
+ * https://support.giphy.com/hc/en-us/articles/360028134111-GIPHY-API-Terms-of-Service
  * https://developers.giphy.com/docs/api/
  */
 export const GIPHY_ATTRIBUTION = 'Powered By GIPHY';
+
+/**
+ * GIPHY's own attribution mark, served from our origin.
+ *
+ * This is their approved artwork, unmodified, out of the logo pack at
+ * media.giphy.com/giphy-attribution-marks.zip -- the 200x42 horizontal badge
+ * from "Light Backgrounds", which is a black bar with white lettering and so
+ * reads correctly on the picker's sand background. Their trademark licence
+ * covers reproducing the mark, not redrawing it, so this is deliberately a
+ * copy of their file rather than an approximation in CSS.
+ */
+export const GIPHY_ATTRIBUTION_MARK = '/giphy-attribution.png';
 export const GIPHY_SEARCH_PLACEHOLDER = 'Search GIPHY';
 
 /** Raised when GIPHY refuses us for going too fast. See the cache below. */
@@ -116,10 +143,39 @@ interface GiphyItem {
   title?: unknown;
   alt_text?: unknown;
   images?: unknown;
+  username?: unknown;
+  user?: unknown;
 }
 
 const asRendition = (value: unknown): GiphyRendition | null =>
   value && typeof value === 'object' ? (value as GiphyRendition) : null;
+
+/**
+ * The uploader's name, for GIPHY's per-content attribution requirement.
+ *
+ * GIPHY exposes this in two places and populates neither reliably: a
+ * top-level `username`, and a `user` object with `display_name` and
+ * `username`. The friendly name is preferred when present because it is what
+ * GIPHY itself shows, falling back to the handle.
+ *
+ * Length-capped because this is third-party text that ends up in alt text and
+ * in a stored attachment name. Returns null rather than an empty string so
+ * the caller can omit the field entirely instead of carrying a blank credit.
+ */
+const asCreator = (item: GiphyItem): string | null => {
+  const user =
+    item.user && typeof item.user === 'object'
+      ? (item.user as { display_name?: unknown; username?: unknown })
+      : null;
+
+  const candidate =
+    (typeof user?.display_name === 'string' && user.display_name.trim()) ||
+    (typeof user?.username === 'string' && user.username.trim()) ||
+    (typeof item.username === 'string' && item.username.trim()) ||
+    '';
+
+  return candidate ? candidate.slice(0, 60) : null;
+};
 
 const asUrl = (rendition: GiphyRendition | null): string | null => {
   const url = rendition?.url;
@@ -206,6 +262,8 @@ export function normalizeGifResults(payload: unknown): GifResult[] {
       (typeof item.title === 'string' && item.title.trim()) ||
       '';
 
+    const creator = asCreator(item);
+
     out.push({
       id,
       description: described || 'GIF',
@@ -213,6 +271,7 @@ export function normalizeGifResults(payload: unknown): GifResult[] {
       url: send,
       width,
       height,
+      ...(creator ? { creator } : {}),
     });
   }
 

@@ -15,6 +15,9 @@ import type {
   SocialGroupRole,
   SocialGroupVisibility,
 } from '@/lib/schema';
+/* Type-only, so this is erased at compile time and the server-only GIPHY
+   module never reaches the client bundle. */
+import type { GifResult } from '@/lib/gifs/giphy';
 
 export const socialQueryKey = ['social'];
 
@@ -1399,22 +1402,23 @@ export const useConversation = (actorId: string | null) =>
     refetchOnWindowFocus: true,
   });
 
-/** A GIF as the picker sees it. Mirrors lib/gifs/giphy.ts. */
-export interface GifResult {
-  id: string;
-  description: string;
-  previewUrl: string;
-  url: string;
-  width: number;
-  height: number;
-}
+/* Re-exported rather than restated. This was a second declaration that
+   "mirrors lib/gifs/giphy.ts", and the two promptly drifted: the uploader
+   credit GIPHY's terms require was added to one and not the other, so the
+   picker could not see a field the server was already sending. One
+   definition cannot drift from itself. */
+export type { GifResult };
 
 /* Re-exported so client components get GIPHY's required attribution strings
    without importing the server-only GIPHY module (which reads the API key at
    module scope). The constants live there because that is where the
    obligation is documented; they surface here because that is where the UI
    can reach them. */
-export { GIPHY_ATTRIBUTION, GIPHY_SEARCH_PLACEHOLDER } from '@/lib/gifs/giphy';
+export {
+  GIPHY_ATTRIBUTION,
+  GIPHY_ATTRIBUTION_MARK,
+  GIPHY_SEARCH_PLACEHOLDER,
+} from '@/lib/gifs/giphy';
 
 /** Attachment metadata, already uploaded, ready to hang off a status. */
 export interface DraftAttachment {
@@ -1472,6 +1476,7 @@ export const useMirrorGif = () =>
       const { data } = await axios.post('/api/social/gifs/mirror', {
         url: gif.url,
         description: gif.description,
+        creator: gif.creator,
       });
       if (!data?.success) {
         throw new Error(data?.error ?? 'Could not save that GIF');

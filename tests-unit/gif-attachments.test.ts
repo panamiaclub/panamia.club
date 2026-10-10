@@ -25,7 +25,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import {
   isGifMediaUrl,
   normalizeGifResults,
@@ -34,6 +34,7 @@ import {
   gifCacheKey,
   GIF_CACHE_TTL_MS,
   GIPHY_ATTRIBUTION,
+  GIPHY_ATTRIBUTION_MARK,
   GIPHY_SEARCH_PLACEHOLDER,
   type GifCacheEntry,
 } from '@/lib/gifs/giphy';
@@ -165,6 +166,53 @@ describe('normalizeGifResults', () => {
     const noAlt = { ...row('abc'), alt_text: undefined };
     const [second] = normalizeGifResults({ data: [noAlt] });
     assert.equal(second.description, 'abc GIF');
+  });
+
+  /* GIPHY's API Terms of Service, clause 5: content may not be displayed
+     "without Giphy user and/or source attribution where available". We only
+     have that credit if we parse it, and GIPHY puts it in three different
+     places depending on the row. */
+  it('captures the uploader for per-content attribution', () => {
+    const withUser = {
+      ...row('abc'),
+      user: { display_name: 'Pana Studios', username: 'panastudios' },
+    };
+    const [first] = normalizeGifResults({ data: [withUser] });
+    assert.equal(first.creator, 'Pana Studios');
+  });
+
+  it('falls back through the uploader fields GIPHY actually populates', () => {
+    const handleOnly = { ...row('abc'), user: { username: 'panastudios' } };
+    assert.equal(
+      normalizeGifResults({ data: [handleOnly] })[0].creator,
+      'panastudios'
+    );
+
+    const topLevel = { ...row('abc'), username: 'legacyhandle' };
+    assert.equal(
+      normalizeGifResults({ data: [topLevel] })[0].creator,
+      'legacyhandle'
+    );
+  });
+
+  /* Most of GIPHY's catalogue is unattributed. An empty-string credit would
+     render as "... by  (via GIPHY)", so the field is absent rather than
+     blank and callers can branch on it. */
+  it('omits the credit entirely when GIPHY has no uploader', () => {
+    const [first] = normalizeGifResults({ data: [row('abc')] });
+    assert.equal(first.creator, undefined);
+    assert.equal('creator' in first, false);
+
+    const blank = { ...row('abc'), user: { display_name: '   ' } };
+    assert.equal('creator' in normalizeGifResults({ data: [blank] })[0], false);
+  });
+
+  /* Third-party text that ends up in alt text and in a stored attachment
+     name, so it is bounded here rather than wherever it lands. */
+  it('caps an absurd uploader name', () => {
+    const long = { ...row('abc'), user: { display_name: 'z'.repeat(500) } };
+    const [first] = normalizeGifResults({ data: [long] });
+    assert.equal(first.creator?.length, 60);
   });
 
   it('falls back when the preferred renditions are missing', () => {
@@ -381,5 +429,31 @@ describe('GIPHY attribution', () => {
   it('keeps the attribution wording exactly as GIPHY requires', () => {
     // Their capitalisation, not ours: "Powered By GIPHY".
     assert.equal(GIPHY_ATTRIBUTION, 'Powered By GIPHY');
+  });
+
+  /* Clause 4 of GIPHY's API Terms of Service asks for the words "Powered by
+     Giphy" *and* the Giphy logo -- a conjunction. Text alone satisfied the
+     developer docs but not the contract, which is what this pins. */
+  it('shows GIPHY their own logo, not just the words', () => {
+    assert.match(picker, /src=\{GIPHY_ATTRIBUTION_MARK\}/);
+    assert.match(picker, /alt=\{GIPHY_ATTRIBUTION\}/);
+  });
+
+  /* The mark is their artwork reproduced unmodified. If the file goes away
+     the picker renders a broken image where the required credit should be,
+     which is worse than no logo at all -- and nothing else would catch it,
+     because a missing public/ asset is not a build error. */
+  it('ships the logo file the picker points at', () => {
+    assert.match(GIPHY_ATTRIBUTION_MARK, /^\/[\w.-]+\.(png|svg)$/);
+    assert.ok(
+      existsSync(`public${GIPHY_ATTRIBUTION_MARK}`),
+      `missing public${GIPHY_ATTRIBUTION_MARK} -- GIPHY's attribution mark`
+    );
+  });
+
+  /* Clause 5 again, this time at the point of display: every tile in the
+     grid names its uploader when GIPHY gave us one. */
+  it('credits the uploader on each tile', () => {
+    assert.match(picker, /gif\.creator/);
   });
 });
