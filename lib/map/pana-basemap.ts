@@ -67,6 +67,13 @@ const INDIGO = '#303e8c';
 const NAVY = '#181c3d';
 
 /**
+ * The upstream flavour we start from. Everything we do not override is
+ * inherited from here — which is the whole reason the palette needs a test:
+ * a key we forget inherits a stock grey rather than failing loudly.
+ */
+const LIGHT_FLAVOR = namedFlavor('light');
+
+/**
  * Pana's flavour: warm land, genuinely blue water, everything else muted so
  * the pins stay the loudest thing on the map.
  *
@@ -77,7 +84,7 @@ const NAVY = '#181c3d';
  * window cut into it.
  */
 export const PANA_FLAVOR: Flavor = {
-  ...namedFlavor('light'),
+  ...LIGHT_FLAVOR,
 
   background: '#fdf4e6',
   earth: CREAM,
@@ -108,6 +115,12 @@ export const PANA_FLAVOR: Flavor = {
   buildings: '#f0e3cf',
   pier: '#f3e8d6',
 
+  // MIA, FLL, Opa-locka and Miami Executive are large enough to matter at the
+  // zooms this map opens at, and the stock pair is cold grey.
+  aerodrome: '#f4ece0',
+  runway: '#e9ddc8',
+  glacier: '#fdf6ea',
+
   // Roads: white for the ones you follow, warm cream casings instead of grey,
   // so nothing on the map goes colder than the page it sits on.
   other: '#fffaf1',
@@ -125,6 +138,37 @@ export const PANA_FLAVOR: Flavor = {
   major_casing_late: '#e7dac4',
   highway_casing_early: '#e3a978',
   highway_casing_late: '#e3a978',
+
+  // Bridges are their own layers, not a property of the road underneath. Left
+  // unset they inherit stock white-on-grey, so I-95 turned white at every
+  // overpass and the 195 went pale the moment it reached the causeway. The
+  // fills match the surface road exactly; the casings run a shade deeper than
+  // their road equivalents so a span still reads as lifted off the ground.
+  bridges_other: '#fffaf1',
+  bridges_minor: '#ffffff',
+  bridges_link: '#ffe9d2',
+  bridges_major: '#ffffff',
+  bridges_highway: '#fbdcbd',
+
+  bridges_other_casing: '#e8dcc6',
+  bridges_minor_casing: '#e3d6c0',
+  bridges_link_casing: '#dfb88c',
+  bridges_major_casing: '#ddcfb6',
+  bridges_highway_casing: '#d9975f',
+
+  // Tunnels keep the road's hue but drop contrast, so they read as passing
+  // underneath rather than as a different class of road.
+  tunnel_other: '#f8f1e4',
+  tunnel_minor: '#f9f3e9',
+  tunnel_link: '#f8e8d8',
+  tunnel_major: '#f9f3e9',
+  tunnel_highway: '#f7e3cd',
+
+  tunnel_other_casing: '#efe5d3',
+  tunnel_minor_casing: '#ede2cf',
+  tunnel_link_casing: '#eed3b4',
+  tunnel_major_casing: '#ede2cf',
+  tunnel_highway_casing: '#eec6a4',
 
   railway: '#d8cdb6',
   boundaries: '#b6a68a',
@@ -150,6 +194,15 @@ export const PANA_FLAVOR: Flavor = {
   // No italic glyphs are generated, so italic points at the regular face. A
   // missing fontstack is a 404 per label range, not a graceful fallback.
   italic: NUNITO,
+
+  // Low-zoom landcover, which paints before the detailed polygons arrive. The
+  // stock urban area is grey and the stock forest is a cool mint, so the metro
+  // read cold for the first few zoom levels until the warm layers took over.
+  landcover: {
+    ...(LIGHT_FLAVOR.landcover as NonNullable<Flavor['landcover']>),
+    urban_area: 'rgba(243, 234, 219, 1)',
+    forest: 'rgba(214, 229, 183, 1)',
+  },
 };
 
 /**
@@ -165,6 +218,24 @@ const DISPLAY_LABEL_LAYERS = new Set([
 ]);
 
 /**
+ * Layers upstream routes to the wrong colour family.
+ *
+ * `roads_bridges_link` is painted from `bridges_minor` rather than from a
+ * bridge-link colour, so a ramp changes from the link colour to the minor-road
+ * colour the moment it crosses a bridge — and at an interchange like I-95/395
+ * the ramps are on and off bridges constantly. One flavour key cannot serve
+ * both, since `bridges_minor` also paints actual minor roads on bridges and
+ * those should keep matching the minor roads either side.
+ *
+ * So the colour is corrected per layer here instead. Keyed by layer id, valued
+ * by the flavour colour the layer should have used.
+ */
+const BRIDGE_COLOR_FIXES: Record<string, string> = {
+  roads_bridges_link: PANA_FLAVOR.link,
+  roads_tunnels_link: PANA_FLAVOR.tunnel_link,
+};
+
+/**
  * The style document MapLibre renders.
  *
  * `maxzoom: 15` is the archive's own limit, not a cap on how far the viewer can
@@ -174,6 +245,11 @@ const DISPLAY_LABEL_LAYERS = new Set([
 export function panaMapStyle(): StyleSpecification {
   const styled = layers('protomaps', PANA_FLAVOR, { lang: 'en' }).map(
     (layer) => {
+      const fix = BRIDGE_COLOR_FIXES[layer.id];
+      if (fix && layer.type === 'line') {
+        return { ...layer, paint: { ...layer.paint, 'line-color': fix } };
+      }
+
       if (layer.type !== 'symbol' || !DISPLAY_LABEL_LAYERS.has(layer.id)) {
         return layer;
       }
