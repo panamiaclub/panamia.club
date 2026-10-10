@@ -1409,6 +1409,13 @@ export interface GifResult {
   height: number;
 }
 
+/* Re-exported so client components get Tenor's required attribution strings
+   without importing the server-only Tenor module (which reads the API key at
+   module scope). The constants live there because that is where the
+   obligation is documented; they surface here because that is where the UI
+   can reach them. */
+export { TENOR_ATTRIBUTION, TENOR_SEARCH_PLACEHOLDER } from '@/lib/gifs/tenor';
+
 /** Attachment metadata, already uploaded, ready to hang off a status. */
 export interface DraftAttachment {
   type: string;

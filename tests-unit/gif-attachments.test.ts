@@ -23,7 +23,18 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { isTenorMediaUrl, normalizeTenorResults } from '@/lib/gifs/tenor';
+import { readFileSync } from 'node:fs';
+import {
+  isTenorMediaUrl,
+  normalizeTenorResults,
+  readGifCache,
+  writeGifCache,
+  gifCacheKey,
+  GIF_CACHE_TTL_MS,
+  TENOR_ATTRIBUTION,
+  TENOR_SEARCH_PLACEHOLDER,
+  type GifCacheEntry,
+} from '@/lib/gifs/tenor';
 import { attachmentLabel } from '@/app/messages/_lib/format';
 import type { SocialStatusDisplay } from '@/lib/interfaces';
 
@@ -185,5 +196,103 @@ describe('attachmentLabel', () => {
 
   it('is not case-sensitive about media types', () => {
     assert.equal(attachmentLabel(att('Image', 'IMAGE/GIF')), 'GIF');
+  });
+});
+
+/* ------------------------------------------------------------------------ *
+ * Cache
+ *
+ * Tenor allows one request per second across the whole key, shared by every
+ * pana at once. These rules are what keep ordinary use below that line, so
+ * they are worth pinning down: a quiet regression here does not look like a
+ * bug, it looks like GIF search being flaky.
+ * ------------------------------------------------------------------------ */
+describe('GIF cache', () => {
+  const gif = {
+    id: '1',
+    description: 'dale',
+    previewUrl: 'https://media.tenor.com/a/tiny.gif',
+    url: 'https://media.tenor.com/a/medium.gif',
+    width: 200,
+    height: 200,
+  };
+
+  it('keys on term and limit together', () => {
+    assert.equal(gifCacheKey('Dale', 24), gifCacheKey('  dale  ', 24));
+    assert.notEqual(gifCacheKey('dale', 24), gifCacheKey('dale', 12));
+  });
+
+  it('returns a stored entry before it expires', () => {
+    const store = new Map<string, GifCacheEntry>();
+    writeGifCache(store, 'k', [gif], 1_000);
+    assert.deepEqual(readGifCache(store, 'k', 1_000 + GIF_CACHE_TTL_MS - 1), [
+      gif,
+    ]);
+  });
+
+  it('treats an expired entry as a miss and drops it', () => {
+    const store = new Map<string, GifCacheEntry>();
+    writeGifCache(store, 'k', [gif], 1_000);
+    assert.equal(readGifCache(store, 'k', 1_000 + GIF_CACHE_TTL_MS), null);
+    assert.equal(store.size, 0, 'expired entry should not linger');
+  });
+
+  it('misses cleanly on a key it has never seen', () => {
+    assert.equal(readGifCache(new Map(), 'nope', Date.now()), null);
+  });
+
+  /* Unbounded would be a slow memory leak in a long-lived isolate: every
+     distinct search anyone ever types, kept forever. */
+  it('evicts oldest-first once it is full', () => {
+    const store = new Map<string, GifCacheEntry>();
+    for (let i = 0; i < 5; i += 1) {
+      writeGifCache(store, `k${i}`, [gif], 1_000, 3);
+    }
+    assert.equal(store.size, 3);
+    assert.deepEqual([...store.keys()], ['k2', 'k3', 'k4']);
+  });
+
+  it('refreshes an existing key rather than duplicating it', () => {
+    const store = new Map<string, GifCacheEntry>();
+    writeGifCache(store, 'k', [gif], 1_000, 3);
+    writeGifCache(store, 'other', [gif], 1_000, 3);
+    writeGifCache(store, 'k', [gif], 5_000, 3);
+
+    assert.equal(store.size, 2);
+    // Re-written, so 'k' is now the newest and 'other' is next to go.
+    assert.deepEqual([...store.keys()], ['other', 'k']);
+    assert.equal(store.get('k')?.expiresAt, 5_000 + GIF_CACHE_TTL_MS);
+  });
+});
+
+/* ------------------------------------------------------------------------ *
+ * Attribution
+ *
+ * Tenor's terms require their mark to be visible wherever their GIFs are.
+ * It is the kind of thing that gets deleted during a tidy-up, so it is
+ * asserted at the source level: removing it has to fail a test, not just
+ * quietly put us out of compliance.
+ * https://developers.google.com/tenor/guides/attribution
+ * ------------------------------------------------------------------------ */
+describe('Tenor attribution', () => {
+  const picker = readFileSync(
+    'app/messages/_components/gif-picker.tsx',
+    'utf8'
+  );
+
+  it('names Tenor in the picker', () => {
+    /* Asserting the JSX interpolation, not the import -- an unused import
+       would satisfy a looser check while rendering nothing, which is exactly
+       the regression this is here to catch. */
+    assert.match(picker, /\{TENOR_ATTRIBUTION\}/);
+  });
+
+  it('uses the sanctioned search placeholder', () => {
+    assert.match(picker, /placeholder=\{TENOR_SEARCH_PLACEHOLDER\}/);
+    assert.equal(TENOR_SEARCH_PLACEHOLDER, 'Search Tenor');
+  });
+
+  it('keeps the attribution strings intact', () => {
+    assert.match(TENOR_ATTRIBUTION, /Tenor/);
   });
 });

@@ -13,7 +13,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { fetchGifs, isGifSearchEnabled } from '@/lib/gifs/tenor';
+import {
+  fetchGifsCached,
+  isGifSearchEnabled,
+  TenorRateLimitError,
+} from '@/lib/gifs/tenor';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const session = await auth();
@@ -28,9 +32,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const query = request.nextUrl.searchParams.get('q') ?? '';
 
   try {
-    const results = await fetchGifs(query);
+    const results = await fetchGifsCached(query);
     return NextResponse.json({ enabled: true, results });
   } catch (error) {
+    // Tenor allows one request per second across the whole key, so this is a
+    // condition the product has to have an answer for rather than an
+    // exception. The cache makes it rare; this makes it legible when it
+    // happens, because "too many people are searching right now" is a
+    // different and more honest thing to say than "something went wrong".
+    if (error instanceof TenorRateLimitError) {
+      return NextResponse.json(
+        {
+          enabled: true,
+          results: [],
+          error: 'Lots of GIF searches right now. Try again in a second.',
+        },
+        { status: 429 }
+      );
+    }
+
     // Tenor being down is not our member's problem to read a stack trace
     // about, but it is also not an empty result -- an empty grid would read
     // as "nothing matches", which is a different and wrong statement.

@@ -30,6 +30,29 @@ export interface GifResult {
 const TENOR_ENDPOINT = 'https://tenor.googleapis.com/v2';
 
 /**
+ * Tenor's attribution requirement, in code so it cannot be quietly dropped.
+ *
+ * Using their API obliges us to carry one of three marks: "Powered By Tenor"
+ * during browsing, "Search Tenor" as search-box placeholder text, or "Via
+ * Tenor" in the footer of a shared GIF. The picker shows the first two; the
+ * third rides along in the attachment's alt text. These are not decoration
+ * and should not be removed to tidy the UI -- they are the terms under which
+ * the GIFs are free.
+ *
+ * https://developers.google.com/tenor/guides/attribution
+ */
+export const TENOR_ATTRIBUTION = 'Powered by Tenor';
+export const TENOR_SEARCH_PLACEHOLDER = 'Search Tenor';
+
+/** Raised when Tenor refuses us for going too fast. See the cache below. */
+export class TenorRateLimitError extends Error {
+  constructor() {
+    super('Tenor rate limit reached');
+    this.name = 'TenorRateLimitError';
+  }
+}
+
+/**
  * Whether a URL is one we are willing to fetch on a member's say-so.
  *
  * This is the whole defence on the mirror route, and it is doing more than it
@@ -209,9 +232,190 @@ export async function fetchGifs(
 
   const res = await fetch(endpoint);
 
+  if (res.status === 429) {
+    throw new TenorRateLimitError();
+  }
+
   if (!res.ok) {
     throw new Error(`Tenor responded ${res.status}`);
   }
 
   return normalizeTenorResults(await res.json());
+}
+
+/* ------------------------------------------------------------------------ *
+ * Caching
+ *
+ * Tenor allows ONE request per second per key, and that key is shared by
+ * every pana using the app. A single person typing briskly can exceed it on
+ * their own; a handful searching at lunchtime would push the feature into
+ * constant failure. So the cache here is not an optimisation, it is what
+ * makes the feature work at all.
+ *
+ * Two tiers, both best-effort:
+ *
+ *   memory -- module scope, per isolate. Free, instant, and catches the
+ *             repeats that dominate real use ("lol", "gracias", "dale").
+ *   edge   -- caches.default, shared by everyone served from the same
+ *             Cloudflare colo, so one pana's search for "miami" answers the
+ *             next person's.
+ *
+ * Neither can guarantee we stay under 1 RPS globally -- that would need a
+ * single coordination point, and a Durable Object for GIF search is a worse
+ * trade than occasionally being told to slow down. What they do is turn N
+ * searches into roughly one upstream call per distinct term per ten minutes,
+ * which moves rate-limiting from "constant" to "rare". The route handles the
+ * rare case explicitly rather than pretending it cannot happen.
+ *
+ * Ten minutes sits inside both of Tenor's stated caching rules: refresh
+ * content URLs at least daily, and refresh API responses frequently because
+ * ranking shifts through the day.
+ * https://developers.google.com/tenor/guides/rate-limits-and-caching
+ * ------------------------------------------------------------------------ */
+
+export const GIF_CACHE_TTL_MS = 10 * 60_000;
+const GIF_CACHE_MAX_ENTRIES = 200;
+
+export interface GifCacheEntry {
+  results: GifResult[];
+  expiresAt: number;
+}
+
+export const gifCacheKey = (query: string, limit: number): string =>
+  `${query.trim().toLowerCase()}::${limit}`;
+
+/**
+ * Read, treating an expired entry as a miss and clearing it on the way past.
+ *
+ * Takes the store as an argument rather than closing over the module's own,
+ * so the expiry and eviction rules can be tested without reaching into
+ * private state or exporting a reset hook that only tests would ever call.
+ */
+export function readGifCache(
+  store: Map<string, GifCacheEntry>,
+  key: string,
+  now: number
+): GifResult[] | null {
+  const entry = store.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= now) {
+    store.delete(key);
+    return null;
+  }
+  return entry.results;
+}
+
+export function writeGifCache(
+  store: Map<string, GifCacheEntry>,
+  key: string,
+  results: GifResult[],
+  now: number,
+  max: number = GIF_CACHE_MAX_ENTRIES
+): void {
+  // Re-inserting moves the key to the end of the Map's iteration order, which
+  // is what makes the eviction below oldest-first rather than arbitrary.
+  store.delete(key);
+  store.set(key, { results, expiresAt: now + GIF_CACHE_TTL_MS });
+
+  while (store.size > max) {
+    const oldest = store.keys().next();
+    if (oldest.done) break;
+    store.delete(oldest.value);
+  }
+}
+
+const memoryCache = new Map<string, GifCacheEntry>();
+
+/** The Workers edge cache, or null anywhere that global is absent (plain Node). */
+const getEdgeCache = (): {
+  match: (key: string) => Promise<Response | undefined>;
+  put: (key: string, response: Response) => Promise<void>;
+} | null => {
+  const store = (
+    globalThis as {
+      caches?: {
+        default?: {
+          match: (key: string) => Promise<Response | undefined>;
+          put: (key: string, response: Response) => Promise<void>;
+        };
+      };
+    }
+  ).caches?.default;
+  return store ?? null;
+};
+
+/* The Cache API keys on a URL, so the term becomes one. The host is never
+   resolved -- nothing fetches this -- it only has to be a stable, valid URL
+   that cannot collide with a real route. */
+const edgeCacheUrl = (key: string): string =>
+  `https://gif-cache.pana.internal/${encodeURIComponent(key)}`;
+
+/**
+ * Search, through both cache tiers.
+ *
+ * Every cache interaction is wrapped: a cache that misbehaves must degrade to
+ * a slower search, never to a broken one.
+ */
+export async function fetchGifsCached(
+  query: string,
+  limit = 24
+): Promise<GifResult[]> {
+  if (!isGifSearchEnabled()) return [];
+
+  const key = gifCacheKey(query, limit);
+  const now = Date.now();
+
+  const local = readGifCache(memoryCache, key, now);
+  if (local) return local;
+
+  const edge = getEdgeCache();
+  if (edge) {
+    try {
+      const hit = await edge.match(edgeCacheUrl(key));
+      if (hit) {
+        const cached = normalizeTenorResults(await hit.json());
+        if (cached.length > 0) {
+          writeGifCache(memoryCache, key, cached, now);
+          return cached;
+        }
+      }
+    } catch {
+      // A cache read failing is not a reason to fail the search.
+    }
+  }
+
+  const fresh = await fetchGifs(query, limit);
+  writeGifCache(memoryCache, key, fresh, now);
+
+  if (edge && fresh.length > 0) {
+    try {
+      // Stored in Tenor's own payload shape so the read path above can run it
+      // back through the same parser rather than trusting a second format.
+      await edge.put(
+        edgeCacheUrl(key),
+        new Response(
+          JSON.stringify({
+            results: fresh.map((gif) => ({
+              id: gif.id,
+              content_description: gif.description,
+              media_formats: {
+                mediumgif: { url: gif.url, dims: [gif.width, gif.height] },
+                tinygif: { url: gif.previewUrl, dims: [gif.width, gif.height] },
+              },
+            })),
+          }),
+          {
+            headers: {
+              'content-type': 'application/json',
+              'cache-control': `max-age=${Math.floor(GIF_CACHE_TTL_MS / 1000)}`,
+            },
+          }
+        )
+      );
+    } catch {
+      // Likewise: failing to cache costs speed, not correctness.
+    }
+  }
+
+  return fresh;
 }

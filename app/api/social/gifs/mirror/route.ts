@@ -123,10 +123,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    /* "via Tenor" is the third of Tenor's three sanctioned attributions, the
+       one meant for a shared GIF. It lands in the attachment's alt text,
+       which is what a screen reader announces and what stands in for the
+       image if it fails to load. */
     const description =
       typeof body.description === 'string' && body.description.trim()
-        ? body.description.trim().slice(0, 200)
-        : 'GIF';
+        ? `${body.description.trim().slice(0, 180)} (via Tenor)`
+        : 'GIF (via Tenor)';
 
     return NextResponse.json({
       success: true,
