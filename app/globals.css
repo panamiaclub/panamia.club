@@ -5191,17 +5191,20 @@ body {
    in a column, and nothing has to be measured in JavaScript — the one place
    that already knows the answer is the layout itself.
 
-   Every slot is drawn whole. An earlier cut held them at a card's width and
-   let the overflow crop the last one, on the theory that a clipped slot
-   would read like the half card at the end of a real rail. It does not: a
-   cropped photograph reads as "there is more", but a cropped empty outline
-   just reads as half-drawn, which is the exact fault this was meant to fix.
-   So the slots shrink to share whatever space is left, and the container
-   queries below decide how many there are, which is the only way to pick a
-   count from the leftover width without hard-coding the column arithmetic.
+   Every slot is a card's width, and runs past the end of the reading column
+   into the page margin when the leftover strip is narrower than that. That
+   is what real cards do: a row with four of them reaches the edge of the
+   window, and the last one is cut off by the window rather than stopping
+   politely at the column. Cut off there reads as "sweep for more"; cut off
+   partway across the page reads as broken, which is what an earlier cut did
+   by cropping the slot at the column edge, and what the cut after that did
+   by shrinking it to fit, since a slot that is nearly a card reads as a card
+   drawn wrong. The width is the card's, and the count bends instead.
 
+   The container queries below pick that count from the leftover width, which
+   is the only way to choose one without hard-coding the column arithmetic.
    The first threshold is also what suppresses slivers: a strip narrower than
-   about half a card cannot hold a slot that looks deliberate, so below it
+   about half a card cannot start a slot that looks deliberate, so below it
    nothing is drawn and the space is simply empty, as it was before.
 
    Deliberately not a skeleton: no shimmer, no pulse, no fill. Those mean
@@ -5214,41 +5217,39 @@ body {
   min-width: 0;
   display: flex;
   gap: 1.1rem;
-  overflow: hidden;
   container-type: inline-size;
   pointer-events: none;
 }
 
 .events-rail-ghost {
-  /* Shares the leftover space with its siblings but never grows past a real
-     card, so a slot is always card-sized or narrower and never a wide panel
-     pretending to be one. `display: none` rather than a fade, so a slot that
-     is not shown does not leave its gap behind. */
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: min(21rem, 82vw);
-  display: none;
+  /* Exactly a card's width. A slot that is nearly a card reads as a card
+     drawn wrong, which is worse than no slot at all, so the width is the
+     card's and the count bends instead. */
+  flex: 0 0 min(21rem, 82vw);
   border: 2px dashed rgb(48 62 140 / 0.16);
   border-radius: 1.25rem;
+  display: none;
 }
 
 /* Measured on the leftover strip, not the viewport, because that is what
-   decides how many slots can look deliberate. One slot once there is half a
-   card to draw it in; a second once one alone would have to stop short and
-   leave a hole; a third once two have run out of room. */
+   decides how many slots there is room for. One once there is half a card
+   of space to start it in; a second only once the first has been laid down
+   and still left most of a card's worth of room behind it; a third on the
+   same rule again. Anything less and the row would gain a slot to open a
+   hole beside it. */
 @container (min-width: 10rem) {
   .events-rail-ghost:nth-child(1) {
     display: block;
   }
 }
 
-@container (min-width: 26rem) {
+@container (min-width: 31rem) {
   .events-rail-ghost:nth-child(2) {
     display: block;
   }
 }
 
-@container (min-width: 43rem) {
+@container (min-width: 53rem) {
   .events-rail-ghost:nth-child(3) {
     display: block;
   }

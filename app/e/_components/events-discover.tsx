@@ -585,10 +585,10 @@ export function EventsDiscover({
  * The empty slots at the end of a short row.
  *
  * Three of them because the widest column fits just under three cards, so
- * three is the most that can ever show; the flexbox and the container
- * queries in globals.css decide how many are actually drawn and how wide
- * each one is, and a row with enough cards to overflow collapses the whole
- * thing to nothing.
+ * three is the most that can ever show; each one is a card's width, and the
+ * container queries in globals.css decide how many of them are drawn from
+ * how much room is left over. A row with enough cards to overflow collapses
+ * the whole thing to nothing.
  *
  * Rendering a fixed three and letting layout do the arithmetic is the point.
  * The alternative is measuring the track and counting, which means a resize
