@@ -5177,6 +5177,56 @@ body {
   scroll-snap-align: start;
 }
 
+/* Empty slots at the end of a short row.
+   --------------------------------------------------------------------------
+   A row of two cards in a column that fits nearly three ends in a gap wide
+   enough to read as a rendering fault rather than as the end of the row.
+   These fill it with the shape of the cards that are not there.
+
+   Sized by the flexbox rather than by a count, which is what keeps it honest
+   at every width. The filler takes the free space and nothing else: real
+   cards are `flex: 0 0 auto` and never give any up, so the moment a row has
+   enough cards to overflow there is no free space left and this collapses to
+   zero of its own accord. No media query has to restate how many cards fit
+   in a column, and nothing has to be measured in JavaScript — the one place
+   that already knows the answer is the layout itself.
+
+   The container query is the other half of that: a leftover strip narrower
+   than about half a card is a sliver, and a sliver of dashed outline looks
+   like a bug rather than a slot, so below that the outlines stay hidden and
+   the space is simply empty, as it was before.
+
+   Deliberately not a skeleton: no shimmer, no pulse, no fill. Those mean
+   "loading", and this content has already loaded — there is just less of it
+   than the row is wide. Hidden from assistive tech for the same reason; it
+   is the shape of an absence, and announcing it would invent events that do
+   not exist. */
+.events-rail-ghosts {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  gap: 1.1rem;
+  overflow: hidden;
+  container-type: inline-size;
+  pointer-events: none;
+}
+
+.events-rail-ghost {
+  /* Same width and radius as a real card, so the empty slots keep the pitch
+     of the filled ones and the row reads as one rhythm. Clipped by the
+     overflow above exactly where a real rail clips its last card. */
+  flex: 0 0 min(21rem, 82vw);
+  border: 2px dashed rgb(48 62 140 / 0.16);
+  border-radius: 1.25rem;
+  opacity: 0;
+}
+
+@container (min-width: 10rem) {
+  .events-rail-ghost {
+    opacity: 1;
+  }
+}
+
 /* Rail cards are the same card with the prose dropped (see the `compact` prop
    on EventCard). What is left still has to survive a 21rem column.
 

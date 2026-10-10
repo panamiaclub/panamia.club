@@ -445,6 +445,7 @@ export function EventsDiscover({
                           />
                         </li>
                       ))}
+                      <RailGhosts />
                     </ul>
                   </section>
                 ))}
@@ -483,6 +484,7 @@ export function EventsDiscover({
                               <EventCard event={event} compact />
                             </li>
                           ))}
+                          <RailGhosts />
                         </ul>
                       </div>
                     ))}
@@ -569,12 +571,37 @@ export function EventsDiscover({
                     <EventCard event={event} compact />
                   </li>
                 ))}
+                <RailGhosts />
               </ul>
             </section>
           ))
         )}
       </div>
     </main>
+  );
+}
+
+/**
+ * The empty slots at the end of a short row.
+ *
+ * Three of them because the widest column fits just under three cards, so
+ * three is the most that can ever show; the flexbox and a container query in
+ * globals.css decide how many of those are actually visible, and a row with
+ * enough cards to overflow collapses the whole thing to nothing.
+ *
+ * Rendering a fixed three and letting layout do the arithmetic is the point.
+ * The alternative is measuring the track and counting, which means a resize
+ * observer, a number that is wrong for one frame after every resize, and a
+ * second copy of the column maths that has to be kept in step with the CSS
+ * that already does it.
+ */
+function RailGhosts() {
+  return (
+    <li className="events-rail-ghosts" aria-hidden="true">
+      <span className="events-rail-ghost" />
+      <span className="events-rail-ghost" />
+      <span className="events-rail-ghost" />
+    </li>
   );
 }
 
