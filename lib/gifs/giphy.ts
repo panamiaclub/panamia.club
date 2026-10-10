@@ -228,6 +228,18 @@ const giphyUrl = (path: string, params: Record<string, string>): string => {
   // made from the browser, since otherwise every request looks like it comes
   // from wherever Cloudflare happens to run it.
   url.searchParams.set('country_code', 'US');
+  /* Deliberately NOT sending `bundle`. GIPHY's renditions-on-demand looks
+     like free savings -- messaging_non_clips is named for exactly this use
+     case -- but that bundle returns original, fixed_height{,_downsampled,
+     _small} and fixed_width{,_downsampled,_small} and omits BOTH
+     downsized_medium and downsized. Our send chain prefers downsized_medium
+     (capped at 5MB by GIPHY) precisely so the mirror stays well under its
+     8MB limit; with the bundle applied those two are absent and every send
+     falls through to `original`, which is unbounded. The "optimization"
+     would trade a smaller JSON response for materially larger GIFs through
+     the mirror and more rejections at the size cap.
+     Revisit only alongside the rendition chain in normalizeGifResults.
+     https://developers.giphy.com/docs/optional-settings/ */
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);
   }
