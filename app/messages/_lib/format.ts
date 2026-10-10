@@ -137,14 +137,39 @@ export function plainTextSnippet(html: string): string {
     .trim();
 }
 
+/**
+ * What to call a message that is only an attachment.
+ *
+ * This used to be the single string "Sent a voice memo", which was true for
+ * as long as a voice memo was the only thing that could be attached. It is
+ * not any more: a GIF announcing itself in the sidebar as a voice memo is a
+ * small lie, but it is the kind that makes someone distrust the rest of the
+ * screen. The label now comes from what was actually sent.
+ */
+export function attachmentLabel(
+  attachments: SocialStatusDisplay['attachments']
+): string {
+  const first = attachments?.[0];
+  if (!first) return 'Message';
+
+  const mediaType = (first.mediaType ?? '').toLowerCase();
+  const type = (first.type ?? '').toLowerCase();
+
+  if (mediaType === 'image/gif') return 'GIF';
+  if (type === 'audio' || mediaType.startsWith('audio/'))
+    return 'Sent a voice memo';
+  if (type === 'video' || mediaType.startsWith('video/')) return 'Video';
+  if (type === 'image' || mediaType.startsWith('image/')) return 'Photo';
+  return 'Attachment';
+}
+
 export function conversationSnippet(
   message: SocialStatusDisplay,
   viewerActorId: string | null
 ): string {
   const mine = !!viewerActorId && message.actor.id === viewerActorId;
   const body = plainTextSnippet(message.content);
-  const text =
-    body || (message.attachments?.length ? 'Sent a voice memo' : 'Message');
+  const text = body || attachmentLabel(message.attachments);
   return mine ? `You: ${text}` : text;
 }
 

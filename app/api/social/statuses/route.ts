@@ -79,7 +79,22 @@ export async function POST(request: NextRequest) {
   const resolvedLicense =
     ccLicense && validLicenses.includes(ccLicense) ? ccLicense : 'cc-by-4';
 
-  if (!content || typeof content !== 'string') {
+  /* A status needs *something* in it, and an attachment is something.
+     Requiring text meant a GIF with no caption -- or a photo posted without
+     one, which is an ordinary thing to want -- was rejected as empty. The
+     check now asks whether the status carries anything at all, which is the
+     question it was always trying to ask. */
+  const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+  const text = typeof content === 'string' ? content : '';
+
+  if (!text.trim() && !hasAttachments) {
+    return NextResponse.json(
+      { success: false, error: 'Content is required' },
+      { status: 400 }
+    );
+  }
+
+  if (typeof content !== 'string' && content != null) {
     return NextResponse.json(
       { success: false, error: 'Content is required' },
       { status: 400 }
@@ -142,7 +157,10 @@ export async function POST(request: NextRequest) {
 
   const result = await createStatus(
     profile.socialActor.id,
-    content,
+    // `text`, not `content`: an attachment-only status arrives with content
+    // absent, and createStatus expects a string to run through the markdown
+    // and sanitiser pipeline.
+    text,
     contentWarning,
     inReplyTo,
     resolvedVisibility,

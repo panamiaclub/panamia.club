@@ -1399,6 +1399,77 @@ export const useConversation = (actorId: string | null) =>
     refetchOnWindowFocus: true,
   });
 
+/** A GIF as the picker sees it. Mirrors lib/gifs/tenor.ts. */
+export interface GifResult {
+  id: string;
+  description: string;
+  previewUrl: string;
+  url: string;
+  width: number;
+  height: number;
+}
+
+/** Attachment metadata, already uploaded, ready to hang off a status. */
+export interface DraftAttachment {
+  type: string;
+  mediaType: string;
+  url: string;
+  name?: string | null;
+}
+
+export interface DirectMessageDraft {
+  content: string;
+  attachments?: DraftAttachment[];
+}
+
+/**
+ * Search Tenor through our own proxy.
+ *
+ * `enabled` comes back from the server rather than being inferred here,
+ * because the key it depends on is deliberately not readable from the client.
+ * An unconfigured deployment reports `enabled: false` and the picker is never
+ * drawn at all.
+ */
+export const useGifSearch = (term: string, enabled: boolean = true) =>
+  useQuery({
+    queryKey: [socialQueryKey, 'gifs', term],
+    queryFn: async (): Promise<{ enabled: boolean; results: GifResult[] }> => {
+      const { data } = await axios.get('/api/social/gifs', {
+        params: term ? { q: term } : {},
+      });
+      return {
+        enabled: data?.enabled ?? false,
+        results: data?.results ?? [],
+      };
+    },
+    enabled,
+    // Tenor's results do not change minute to minute and the same few terms
+    // get typed constantly ("lol", "gracias"), so this is worth holding.
+    staleTime: 5 * 60_000,
+  });
+
+/**
+ * Copy a chosen GIF into our own bucket and get attachment metadata back.
+ *
+ * Deliberately a separate step from sending. The copy is the slow part and
+ * the part that can fail on someone else's availability, so doing it first
+ * means a send either has a working attachment in hand or never starts --
+ * rather than a message that posts with a broken image in it.
+ */
+export const useMirrorGif = () =>
+  useMutation({
+    mutationFn: async (gif: GifResult): Promise<DraftAttachment> => {
+      const { data } = await axios.post('/api/social/gifs/mirror', {
+        url: gif.url,
+        description: gif.description,
+      });
+      if (!data?.success) {
+        throw new Error(data?.error ?? 'Could not save that GIF');
+      }
+      return data.data as DraftAttachment;
+    },
+  });
+
 /**
  * Send one direct message.
  *
@@ -1414,15 +1485,23 @@ export const useConversation = (actorId: string | null) =>
 export const useSendDirectMessage = (counterpartyActorId: string | null) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async (input: string | DirectMessageDraft) => {
+      // Accepts a bare string so the many existing call sites that only ever
+      // send text do not have to learn about attachments.
+      const draft: DirectMessageDraft =
+        typeof input === 'string' ? { content: input } : input;
+
       // Defensive: the composer only renders with a thread open, but a null id
       // would POST `recipientActorIds: [null]`, which the statuses route would
       // reject with a validation error that reads like a bug rather than one.
       if (!counterpartyActorId) throw new Error('No conversation selected');
       const { data } = await axios.post('/api/social/statuses', {
-        content,
+        content: draft.content,
         visibility: 'direct',
         recipientActorIds: [counterpartyActorId],
+        ...(draft.attachments?.length
+          ? { attachments: draft.attachments }
+          : {}),
       });
       return data;
     },

@@ -9,6 +9,7 @@ import {
   useDeleteDmRequest,
   useDmRequests,
   useSendDirectMessage,
+  type DraftAttachment,
 } from '@/lib/query/social';
 import { ConversationList, type ListEntry } from './conversation-list';
 import { Transcript } from './transcript';
@@ -98,24 +99,30 @@ export function MessagesView() {
     setSendError(null);
   };
 
-  const handleSend = (text: string) => {
-    setPending(text);
+  const handleSend = (text: string, attachments?: DraftAttachment[]) => {
+    // A GIF sent with no caption has no text to echo, so the pending bubble
+    // says what is actually in flight. Without this it would be an empty
+    // bubble, which reads as a bug rather than as a message on its way.
+    setPending(text || (attachments?.length ? 'GIF' : ''));
     setSendError(null);
-    send.mutate(text, {
-      onSuccess: () => setPending(null),
-      onError: (error) => {
-        // createStatus answers a refused thread with 400 and the gate's single
-        // refusal string. Surfacing the server's own words rather than a
-        // generic failure matters because this is the one case where the
-        // message is not going to be delivered no matter how many times it is
-        // retried -- and the pending bubble has to go, or it implies a queue.
-        setPending(null);
-        setSendError(
-          (error as { response?: { data?: { error?: string } } })?.response
-            ?.data?.error ?? 'Could not send. Try again.'
-        );
-      },
-    });
+    send.mutate(
+      { content: text, attachments },
+      {
+        onSuccess: () => setPending(null),
+        onError: (error) => {
+          // createStatus answers a refused thread with 400 and the gate's single
+          // refusal string. Surfacing the server's own words rather than a
+          // generic failure matters because this is the one case where the
+          // message is not going to be delivered no matter how many times it is
+          // retried -- and the pending bubble has to go, or it implies a queue.
+          setPending(null);
+          setSendError(
+            (error as { response?: { data?: { error?: string } } })?.response
+              ?.data?.error ?? 'Could not send. Try again.'
+          );
+        },
+      }
+    );
   };
 
   // Accepting moves the thread out of Requests and into Messages, so the view
