@@ -23,10 +23,18 @@ import {
  * The consoles this page deliberately does not reimplement.
  *
  * Cloudflare already draws request volume and error rate better than this
- * page would, and reading those numbers here needs an account-scoped token
- * with Account Analytics: Read, which does not exist yet. The link is worth
- * more than a half-built chart in the meantime: it is where an admin would
- * go next regardless.
+ * page would, so the link is worth more than a half-built chart: it is where
+ * an admin would go next regardless.
+ *
+ * Embedding those numbers needs more than the permission Cloudflare's docs
+ * name. Account Analytics: Read is necessary but not sufficient, because a
+ * *user* API token is silently capped at the creating user's own role on the
+ * account. A token that looks correctly configured still answers
+ * `authorization denied` on every dataset while happily serving the ungated
+ * `settings` node, which makes the failure read like a bad token rather than
+ * a bad role. It takes an account-owned token, and only a Super Administrator
+ * can mint one. Checked against the live API in October 2026: panamia-next
+ * sits in an account where we do not hold that role, so this stays a link.
  *
  * The `?to=/:account/` form lets Cloudflare resolve the account itself, so
  * the account ID stays out of the HTML.
@@ -34,7 +42,7 @@ import {
 const CONSOLES: readonly ExternalConsole[] = [
   {
     name: 'Requests and errors',
-    blocked: 'needs a Cloudflare token with Account Analytics: Read.',
+    blocked: 'needs an account-owned Cloudflare token; a user token cannot grant it.',
     href: 'https://dash.cloudflare.com/?to=/:account/workers/services/view/panamia-next/production/metrics',
     linkLabel: 'Cloudflare metrics',
   },
