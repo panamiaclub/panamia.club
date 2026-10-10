@@ -5183,18 +5183,26 @@ body {
    enough to read as a rendering fault rather than as the end of the row.
    These fill it with the shape of the cards that are not there.
 
-   Sized by the flexbox rather than by a count, which is what keeps it honest
-   at every width. The filler takes the free space and nothing else: real
-   cards are `flex: 0 0 auto` and never give any up, so the moment a row has
-   enough cards to overflow there is no free space left and this collapses to
+   The filler is sized by the flexbox rather than by a count, which is what
+   keeps it honest at every width. It takes the free space and nothing else:
+   real cards are `flex: 0 0 auto` and never give any up, so the moment a row
+   has enough cards to overflow there is no free space and this collapses to
    zero of its own accord. No media query has to restate how many cards fit
    in a column, and nothing has to be measured in JavaScript — the one place
    that already knows the answer is the layout itself.
 
-   The container query is the other half of that: a leftover strip narrower
-   than about half a card is a sliver, and a sliver of dashed outline looks
-   like a bug rather than a slot, so below that the outlines stay hidden and
-   the space is simply empty, as it was before.
+   Every slot is drawn whole. An earlier cut held them at a card's width and
+   let the overflow crop the last one, on the theory that a clipped slot
+   would read like the half card at the end of a real rail. It does not: a
+   cropped photograph reads as "there is more", but a cropped empty outline
+   just reads as half-drawn, which is the exact fault this was meant to fix.
+   So the slots shrink to share whatever space is left, and the container
+   queries below decide how many there are, which is the only way to pick a
+   count from the leftover width without hard-coding the column arithmetic.
+
+   The first threshold is also what suppresses slivers: a strip narrower than
+   about half a card cannot hold a slot that looks deliberate, so below it
+   nothing is drawn and the space is simply empty, as it was before.
 
    Deliberately not a skeleton: no shimmer, no pulse, no fill. Those mean
    "loading", and this content has already loaded — there is just less of it
@@ -5212,18 +5220,37 @@ body {
 }
 
 .events-rail-ghost {
-  /* Same width and radius as a real card, so the empty slots keep the pitch
-     of the filled ones and the row reads as one rhythm. Clipped by the
-     overflow above exactly where a real rail clips its last card. */
-  flex: 0 0 min(21rem, 82vw);
+  /* Shares the leftover space with its siblings but never grows past a real
+     card, so a slot is always card-sized or narrower and never a wide panel
+     pretending to be one. `display: none` rather than a fade, so a slot that
+     is not shown does not leave its gap behind. */
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: min(21rem, 82vw);
+  display: none;
   border: 2px dashed rgb(48 62 140 / 0.16);
   border-radius: 1.25rem;
-  opacity: 0;
 }
 
+/* Measured on the leftover strip, not the viewport, because that is what
+   decides how many slots can look deliberate. One slot once there is half a
+   card to draw it in; a second once one alone would have to stop short and
+   leave a hole; a third once two have run out of room. */
 @container (min-width: 10rem) {
-  .events-rail-ghost {
-    opacity: 1;
+  .events-rail-ghost:nth-child(1) {
+    display: block;
+  }
+}
+
+@container (min-width: 26rem) {
+  .events-rail-ghost:nth-child(2) {
+    display: block;
+  }
+}
+
+@container (min-width: 43rem) {
+  .events-rail-ghost:nth-child(3) {
+    display: block;
   }
 }
 
