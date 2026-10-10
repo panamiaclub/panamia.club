@@ -584,13 +584,15 @@ export function EventsDiscover({
 /**
  * The empty slots at the end of a short row.
  *
- * Three of them because the widest column fits just under three cards, so
- * three is the most that can ever show; each one is a card's width, and the
- * container queries in globals.css decide how many of them are drawn from
- * how much room is left over. A row with enough cards to overflow collapses
- * the whole thing to nothing.
+ * Four of them, laid end to end and clipped by the window: the run reaches
+ * out of the reading column into the page margin, so on any ordinary screen
+ * it is the window that decides where the slots stop, exactly as it decides
+ * where the fourth card stops on a full row. Four is enough to outrun the
+ * widest leftover strip at a desktop width; anything past the edge is
+ * discarded by the clip and costs nothing. A row with enough cards to
+ * overflow has no leftover strip, which collapses the whole thing to nothing.
  *
- * Rendering a fixed three and letting layout do the arithmetic is the point.
+ * Rendering a fixed count and letting layout do the arithmetic is the point.
  * The alternative is measuring the track and counting, which means a resize
  * observer, a number that is wrong for one frame after every resize, and a
  * second copy of the column maths that has to be kept in step with the CSS
@@ -599,9 +601,12 @@ export function EventsDiscover({
 function RailGhosts() {
   return (
     <li className="events-rail-ghosts" aria-hidden="true">
-      <span className="events-rail-ghost" />
-      <span className="events-rail-ghost" />
-      <span className="events-rail-ghost" />
+      <span className="events-rail-ghost-run">
+        <span className="events-rail-ghost" />
+        <span className="events-rail-ghost" />
+        <span className="events-rail-ghost" />
+        <span className="events-rail-ghost" />
+      </span>
     </li>
   );
 }

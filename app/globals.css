@@ -5191,21 +5191,16 @@ body {
    in a column, and nothing has to be measured in JavaScript — the one place
    that already knows the answer is the layout itself.
 
-   Every slot is a card's width, and runs past the end of the reading column
-   into the page margin when the leftover strip is narrower than that. That
-   is what real cards do: a row with four of them reaches the edge of the
-   window, and the last one is cut off by the window rather than stopping
-   politely at the column. Cut off there reads as "sweep for more"; cut off
-   partway across the page reads as broken, which is what an earlier cut did
-   by cropping the slot at the column edge, and what the cut after that did
-   by shrinking it to fit, since a slot that is nearly a card reads as a card
-   drawn wrong. The width is the card's, and the count bends instead.
-
-   The container queries below pick that count from the leftover width, which
-   is the only way to choose one without hard-coding the column arithmetic.
-   The first threshold is also what suppresses slivers: a strip narrower than
-   about half a card cannot start a slot that looks deliberate, so below it
-   nothing is drawn and the space is simply empty, as it was before.
+   Every slot is a card's width, and the run of them carries on past the end
+   of the reading column and into the page margin until the window cuts it
+   off. That is what real cards do: a row with four of them reaches the edge
+   of the window and the last one is cut off there. Cut off by the window
+   reads as "sweep for more"; stopping short of it reads as broken, which is
+   what two earlier cuts did — one by cropping at the column edge, one by
+   laying down a count that fit inside the column and leaving the rest of the
+   page bare beside it. So nothing here counts: the run is simply longer than
+   any window, and where it ends is the window's decision, the same decision
+   that cuts the fourth card off on a full row.
 
    Deliberately not a skeleton: no shimmer, no pulse, no fill. Those mean
    "loading", and this content has already loaded — there is just less of it
@@ -5216,41 +5211,79 @@ body {
   flex: 1 1 0;
   min-width: 0;
   display: flex;
-  gap: 1.1rem;
   container-type: inline-size;
   pointer-events: none;
+}
+
+/* Reaches out of the reading column and into the page margin so the run ends
+   where the window cuts the row off, and clips itself there.
+
+   The reach has to be exact. Overflowing into a scroll container's padding is
+   free, but overrunning the end of its content is not, and everything else
+   that paints past the column was measured growing the scrollable area by a
+   thousand pixels: `overflow-clip-margin` contributes to the ancestor's
+   overflow, and so does an absolutely positioned run. Clipping a box that
+   stops exactly at the padding edge is the only version that costs nothing.
+
+   That edge is a constant, not a measurement. The track's inset is
+   `(100% - 58rem) / 2` of a Tailwind `container`, whose width only changes at
+   Tailwind's own breakpoints, so the inset only has three non-zero values:
+   (64rem - 2rem - 58rem) / 2, then the same at 80rem and 96rem. The queries
+   below are Tailwind's breakpoints in Tailwind's units so the two flip on the
+   same pixel. Below 64rem the column fills the container and the inset is
+   zero, which is why there is no rule for it.
+
+   The reach stops a hair short of that inset because the two do not flip on
+   quite the same width: a media query counts the scrollbar and the
+   container's `width: 100%` does not, so for a scrollbar's worth of viewports
+   above each breakpoint the container is still narrower than the max-width it
+   was just given. Measured at 6px of overrun in that band, so the hair is
+   wider than any scrollbar and the clip lands a few pixels inside the edge
+   everywhere else, where nothing is drawn anyway. */
+.events-rail-ghost-run {
+  --rail-reach: 0px;
+  flex: 0 0 auto;
+  width: calc(100% + max(0px, var(--rail-reach) - 0.75rem));
+  display: flex;
+  gap: 1.1rem;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .events-rail-ghost-run {
+    --rail-reach: 2rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .events-rail-ghost-run {
+    --rail-reach: 10rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .events-rail-ghost-run {
+    --rail-reach: 18rem;
+  }
 }
 
 .events-rail-ghost {
   /* Exactly a card's width. A slot that is nearly a card reads as a card
      drawn wrong, which is worse than no slot at all, so the width is the
-     card's and the count bends instead. */
+     card's and the window trims the run instead. */
   flex: 0 0 min(21rem, 82vw);
   border: 2px dashed rgb(48 62 140 / 0.16);
   border-radius: 1.25rem;
   display: none;
 }
 
-/* Measured on the leftover strip, not the viewport, because that is what
-   decides how many slots there is room for. One once there is half a card
-   of space to start it in; a second only once the first has been laid down
-   and still left most of a card's worth of room behind it; a third on the
-   same rule again. Anything less and the row would gain a slot to open a
-   hole beside it. */
+/* The only threshold, and it is measured on the leftover strip rather than on
+   the viewport. A strip narrower than about half a card cannot start a slot
+   that looks deliberate, so below this nothing is drawn and the space is
+   simply empty, as it was before. A row with enough cards to overflow has no
+   strip at all, which is what keeps full rows from drawing anything. */
 @container (min-width: 10rem) {
-  .events-rail-ghost:nth-child(1) {
-    display: block;
-  }
-}
-
-@container (min-width: 31rem) {
-  .events-rail-ghost:nth-child(2) {
-    display: block;
-  }
-}
-
-@container (min-width: 53rem) {
-  .events-rail-ghost:nth-child(3) {
+  .events-rail-ghost {
     display: block;
   }
 }
