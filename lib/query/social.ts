@@ -1399,7 +1399,7 @@ export const useConversation = (actorId: string | null) =>
     refetchOnWindowFocus: true,
   });
 
-/** A GIF as the picker sees it. Mirrors lib/gifs/tenor.ts. */
+/** A GIF as the picker sees it. Mirrors lib/gifs/giphy.ts. */
 export interface GifResult {
   id: string;
   description: string;
@@ -1409,12 +1409,12 @@ export interface GifResult {
   height: number;
 }
 
-/* Re-exported so client components get Tenor's required attribution strings
-   without importing the server-only Tenor module (which reads the API key at
+/* Re-exported so client components get GIPHY's required attribution strings
+   without importing the server-only GIPHY module (which reads the API key at
    module scope). The constants live there because that is where the
    obligation is documented; they surface here because that is where the UI
    can reach them. */
-export { TENOR_ATTRIBUTION, TENOR_SEARCH_PLACEHOLDER } from '@/lib/gifs/tenor';
+export { GIPHY_ATTRIBUTION, GIPHY_SEARCH_PLACEHOLDER } from '@/lib/gifs/giphy';
 
 /** Attachment metadata, already uploaded, ready to hang off a status. */
 export interface DraftAttachment {
@@ -1430,7 +1430,7 @@ export interface DirectMessageDraft {
 }
 
 /**
- * Search Tenor through our own proxy.
+ * Search GIPHY through our own proxy.
  *
  * `enabled` comes back from the server rather than being inferred here,
  * because the key it depends on is deliberately not readable from the client.
@@ -1450,9 +1450,12 @@ export const useGifSearch = (term: string, enabled: boolean = true) =>
       };
     },
     enabled,
-    // Tenor's results do not change minute to minute and the same few terms
-    // get typed constantly ("lol", "gracias"), so this is worth holding.
-    staleTime: 5 * 60_000,
+    /* An hour, matching the server's own cache window rather than guessing.
+       A GIPHY beta key allows a hundred calls an hour for the entire app, so
+       anything this layer can answer without a request is a call the whole
+       community gets to keep. Results do not move meaningfully within the
+       hour and the same few terms get typed constantly ("lol", "gracias"). */
+    staleTime: 60 * 60_000,
   });
 
 /**

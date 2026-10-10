@@ -47,9 +47,11 @@ export function Composer({
 
   const mirror = useMirrorGif();
 
-  /* Asked without a search term, which hits Tenor's featured endpoint. The
+  /* Asked without a search term, which hits GIPHY's trending endpoint. The
      answer that matters is `enabled` -- whether a key is configured at all --
-     and the results get cached for the picker's first paint on the way past. */
+     and the results get cached for the picker's first paint on the way past.
+     This fires on every composer mount, making it the most cache-hit request
+     in the system, which is exactly why the server caches it for an hour. */
   const gifAvailability = useGifSearch('', canSend === 'allow');
   const gifsEnabled = gifAvailability.data?.enabled ?? false;
 

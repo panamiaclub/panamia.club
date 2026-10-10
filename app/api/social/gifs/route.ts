@@ -1,7 +1,7 @@
 /**
  * GET /api/social/gifs?q=<term>
  *
- * Proxies Tenor so the API key stays on the server. Signed-in only: this
+ * Proxies GIPHY so the API key stays on the server. Signed-in only: this
  * spends our quota, and an open endpoint is a free GIF search API for anyone
  * who finds it.
  *
@@ -16,8 +16,8 @@ import { auth } from '@/auth';
 import {
   fetchGifsCached,
   isGifSearchEnabled,
-  TenorRateLimitError,
-} from '@/lib/gifs/tenor';
+  GifRateLimitError,
+} from '@/lib/gifs/giphy';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const session = await auth();
@@ -35,12 +35,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const results = await fetchGifsCached(query);
     return NextResponse.json({ enabled: true, results });
   } catch (error) {
-    // Tenor allows one request per second across the whole key, so this is a
-    // condition the product has to have an answer for rather than an
-    // exception. The cache makes it rare; this makes it legible when it
+    // A GIPHY beta key allows a hundred calls an hour for the whole app, so
+    // this is a condition the product has to have an answer for rather than
+    // an exception. The cache makes it rare; this makes it legible when it
     // happens, because "too many people are searching right now" is a
     // different and more honest thing to say than "something went wrong".
-    if (error instanceof TenorRateLimitError) {
+    if (error instanceof GifRateLimitError) {
       return NextResponse.json(
         {
           enabled: true,
@@ -51,10 +51,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Tenor being down is not our member's problem to read a stack trace
+    // GIPHY being down is not our member's problem to read a stack trace
     // about, but it is also not an empty result -- an empty grid would read
     // as "nothing matches", which is a different and wrong statement.
-    console.error('Tenor search failed:', error);
+    console.error('GIPHY search failed:', error);
     return NextResponse.json(
       { enabled: true, results: [], error: 'GIF search is unavailable' },
       { status: 502 }

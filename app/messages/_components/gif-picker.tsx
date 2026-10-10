@@ -7,8 +7,8 @@ import { useDebounce } from '@/hooks/use-debounce';
 import {
   useGifSearch,
   type GifResult,
-  TENOR_ATTRIBUTION,
-  TENOR_SEARCH_PLACEHOLDER,
+  GIPHY_ATTRIBUTION,
+  GIPHY_SEARCH_PLACEHOLDER,
 } from '@/lib/query/social';
 
 /**
@@ -32,11 +32,12 @@ export function GifPicker({
   isSaving: boolean;
 }) {
   const [query, setQuery] = useState('');
-  /* Half a second, not the 350ms used for the pana search next door. Tenor
-     allows one request per second across the entire key -- shared by every
-     pana at once -- so each keystroke here is a draw on a budget that is not
-     ours alone. The server caches on top of this; the debounce is what keeps
-     a single fast typist from spending the whole second by themselves. */
+  /* Half a second, not the 350ms used for the pana search next door. A GIPHY
+     beta key allows a hundred calls an HOUR for the whole app -- shared by
+     every pana at once -- so each keystroke here is a draw on a budget that
+     is both small and not ours alone. The server caches hard on top of this;
+     the debounce is what keeps a single fast typist from spending a visible
+     slice of the hour by themselves. */
   const term = useDebounce(query.trim(), 500);
   const gifs = useGifSearch(term);
 
@@ -50,8 +51,8 @@ export function GifPicker({
           autoFocus
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder={TENOR_SEARCH_PLACEHOLDER}
-          aria-label={TENOR_SEARCH_PLACEHOLDER}
+          placeholder={GIPHY_SEARCH_PLACEHOLDER}
+          aria-label={GIPHY_SEARCH_PLACEHOLDER}
           className="border-pana-ink/10 focus:border-pana-indigo text-pana-ink placeholder:text-pana-ink/45 min-w-0 flex-1 rounded-full border bg-white px-3 py-2 text-sm font-bold transition-colors outline-none"
         />
         <button
@@ -77,7 +78,7 @@ export function GifPicker({
         {!gifs.isLoading && gifs.isError && (
           <p className="text-pana-ink/55 py-8 text-center text-sm font-medium">
             {/* The server distinguishes "too many searches at once" from
-                "Tenor is down", and so should this -- the first is worth
+                "GIPHY is down", and so should this -- the first is worth
                 waiting a second for, the second is not. */}
             {(gifs.error as { response?: { data?: { error?: string } } })
               ?.response?.data?.error ??
@@ -101,7 +102,7 @@ export function GifPicker({
                   onClick={() => onPick(gif)}
                   className="border-pana-ink/10 hover:border-pana-indigo focus:border-pana-indigo block w-full overflow-hidden rounded-lg border-2 transition-colors disabled:opacity-50"
                 >
-                  {/* Plain <img>, not next/image: the src is on Tenor's CDN
+                  {/* Plain <img>, not next/image: the src is on GIPHY's CDN
                       rather than our own, so it is outside the configured
                       remote patterns, and these tiles are previews of
                       something being chosen rather than page content. */}
@@ -124,10 +125,10 @@ export function GifPicker({
         </p>
       )}
 
-      {/* Required by Tenor's terms, not decoration -- see TENOR_ATTRIBUTION.
+      {/* Required by GIPHY's terms, not decoration -- see GIPHY_ATTRIBUTION.
           Using their catalogue obliges us to say whose it is. */}
       <p className="text-pana-ink/40 border-pana-ink/10 border-t px-4 py-1.5 text-[10px] font-bold tracking-wide uppercase">
-        {TENOR_ATTRIBUTION}
+        {GIPHY_ATTRIBUTION}
       </p>
     </div>
   );

@@ -1,18 +1,18 @@
 /**
  * POST /api/social/gifs/mirror
  *
- * Copies a Tenor GIF into our own R2 bucket and returns attachment metadata
+ * Copies a GIPHY GIF into our own R2 bucket and returns attachment metadata
  * ready to hand to /api/social/statuses.
  *
- * Why mirror at all, when passing Tenor's URL straight through would cost
+ * Why mirror at all, when passing GIPHY's URL straight through would cost
  * nothing: a hotlinked GIF is fetched by the recipient's browser, which means
- * Tenor learns the IP address of everyone a GIF is sent to, and learns it
+ * GIPHY learns the IP address of everyone a GIF is sent to, and learns it
  * every time the conversation is reopened. Direct messages here are
  * deliberately members-only, deliberately expire after 30 days, and sit
  * behind a Requests folder built to keep strangers from reaching people. A
  * third party quietly collecting the readership of those messages undoes a
  * good part of that. Mirroring also means a DM cannot rot into a broken image
- * when Tenor reorganises its CDN, and that a message which is supposed to
+ * when GIPHY reorganises its CDN, and that a message which is supposed to
  * disappear is not still sitting on someone else's origin.
  *
  * Objects are keyed per actor, matching /api/social/media. Sharing one object
@@ -26,10 +26,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getActiveProfileWithActor } from '@/lib/server/active-profile';
 import { uploadFile } from '@/lib/blob/api';
-import { isTenorMediaUrl } from '@/lib/gifs/tenor';
+import { isGifMediaUrl } from '@/lib/gifs/giphy';
 
-/* Comfortably clears Tenor's mediumgif and stays under the 10 MB ceiling the
-   rest of the media pipeline is built around. */
+/* Comfortably clears GIPHY's downsized_medium and stays under the 10 MB
+   ceiling the rest of the media pipeline is built around. */
 const MAX_BYTES = 8 * 1024 * 1024;
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -61,12 +61,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const source = typeof body.url === 'string' ? body.url : '';
 
-  /* The allowlist check, before anything is fetched. See isTenorMediaUrl --
+  /* The allowlist check, before anything is fetched. See isGifMediaUrl --
      without it this route is an open proxy that makes requests from inside
      our network to any address a member names. */
-  if (!isTenorMediaUrl(source)) {
+  if (!isGifMediaUrl(source)) {
     return NextResponse.json(
-      { success: false, error: 'Not a Tenor URL' },
+      { success: false, error: 'Not a GIPHY URL' },
       { status: 400 }
     );
   }
@@ -123,14 +123,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    /* "via Tenor" is the third of Tenor's three sanctioned attributions, the
-       one meant for a shared GIF. It lands in the attachment's alt text,
-       which is what a screen reader announces and what stands in for the
-       image if it fails to load. */
+    /* GIPHY requires "Powered By GIPHY" wherever their API is used. The
+       picker carries the mark itself; this carries the credit onward with
+       the GIF once it leaves the picker, in the alt text, which is what a
+       screen reader announces and what stands in if the image fails. */
     const description =
       typeof body.description === 'string' && body.description.trim()
-        ? `${body.description.trim().slice(0, 180)} (via Tenor)`
-        : 'GIF (via Tenor)';
+        ? `${body.description.trim().slice(0, 180)} (via GIPHY)`
+        : 'GIF (via GIPHY)';
 
     return NextResponse.json({
       success: true,
