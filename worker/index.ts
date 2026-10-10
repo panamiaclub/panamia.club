@@ -21,6 +21,7 @@ import { hostnameFor, resolveSurface } from '../lib/panaverse/surfaces';
 import { assertPanaverseConfigured } from '../lib/panaverse/boot';
 import { runExpiryPurge } from '../lib/jobs/purge-expired';
 import { beginJobRun, completeJobRun, PURGE_JOB } from '../lib/jobs/ledger';
+import { recordSyntheticRun } from '../lib/jobs/synthetic-check';
 import { getDmStream } from '../lib/dm-stream';
 import { resolveUserIdFromHeaders } from '../auth';
 import { getActiveProfileWithActor } from '../lib/server/active-profile';
@@ -245,6 +246,13 @@ export default {
     // milliseconds regardless of outcome. Awaiting makes the dashboard's
     // duration and failure columns mean something.
     await runWithDb(env, async () => {
+      // Uptime probes first, and they cannot throw -- see the note in
+      // lib/jobs/synthetic-check.ts. Ahead of the purge rather than after it
+      // because the purge rethrows on failure: running second would mean a
+      // broken sweep also blinds the dashboard that reports on it, which is
+      // exactly when somebody is looking.
+      await recordSyntheticRun(event.cron);
+
       // Recorded in job_runs as well as logged. The console line is kept
       // because it is the only thing visible during a live tail; the ledger
       // row is the only thing visible an hour later. See lib/jobs/ledger.ts

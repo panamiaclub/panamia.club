@@ -1,7 +1,8 @@
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import { PURGE_JOB } from '@/lib/jobs/ledger';
+import { PURGE_JOB, SYNTHETIC_JOB } from '@/lib/jobs/ledger';
+import { PROBE_SLOW_MS } from '@/lib/jobs/synthetic-check';
 import { BUSINESS_INTAKE_SOURCE } from '@/lib/server/profile-owners';
 
 /**
@@ -864,3 +865,245 @@ export function databaseVerdict(snap: DatabaseSnapshot): DatabaseVerdict {
 }
 
 
+
+/* ---------------------------------------------------------------------------
+ * Band 4 -- Visitor experience
+ *
+ * The first band that is a request rather than a reading. The other three all
+ * look outward from inside the system, so every one of them can stay green
+ * while the site returns 500 to everybody.
+ *
+ * This reads the ledger rows written by lib/jobs/synthetic-check.ts. See that
+ * file for why these are synthetic probes rather than real user monitoring,
+ * and what that choice cannot see.
+ * ------------------------------------------------------------------------- */
+
+export interface UptimeProbe {
+  path: string;
+  label: string;
+  status: number | null;
+  ok: boolean;
+  ms: number;
+  error?: string;
+}
+
+export interface UptimeSnapshot {
+  /** False when job_runs does not exist. Same contract as the machinery band. */
+  migrated: boolean;
+  /** Null until the first probe run lands. */
+  checkedAt: Date | null;
+  secondsSinceCheck: number;
+  probes: UptimeProbe[];
+  failures: number;
+  slowestMs: number;
+  /** Probe runs in the last 24h that reported at least one failure. */
+  badRuns24h: number;
+  runs24h: number;
+}
+
+/** Narrow one probe out of the stored report blob, dropping anything malformed. */
+function parseProbes(report: unknown): UptimeProbe[] {
+  if (!report || typeof report !== 'object') return [];
+  const raw = (report as Record<string, unknown>).probes;
+  if (!Array.isArray(raw)) return [];
+
+  const probes: UptimeProbe[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') continue;
+    const e = entry as Record<string, unknown>;
+    if (typeof e.path !== 'string') continue;
+    probes.push({
+      path: e.path,
+      label: typeof e.label === 'string' ? e.label : e.path,
+      status: typeof e.status === 'number' ? e.status : null,
+      ok: e.ok === true,
+      ms: typeof e.ms === 'number' && Number.isFinite(e.ms) ? e.ms : 0,
+      ...(typeof e.error === 'string' ? { error: e.error } : {}),
+    });
+  }
+  return probes;
+}
+
+/**
+ * Read the visitor-experience band.
+ *
+ * Deliberately not machinerySnapshot(SYNTHETIC_JOB), even though that function
+ * takes the job name and would return rows. Its JobRunSummary carries the
+ * purge's vocabulary -- storiesDeleted, mediaDeleted -- which would be four
+ * permanent zeroes here, and it discards the report body, which for a probe
+ * run is the entire point. The staleness and failure logic it owns stays with
+ * the purge; what this band needs from a row is the blob.
+ */
+export async function uptimeSnapshot(): Promise<UptimeSnapshot> {
+  const empty: UptimeSnapshot = {
+    migrated: true,
+    checkedAt: null,
+    secondsSinceCheck: 0,
+    probes: [],
+    failures: 0,
+    slowestMs: 0,
+    badRuns24h: 0,
+    runs24h: 0,
+  };
+
+  let row: {
+    started_at: Date | null;
+    seconds_since: number | null;
+    report: unknown;
+    error_count: number | null;
+    runs_24h: number;
+    bad_runs_24h: number;
+  };
+
+  try {
+    const rows = (await db.execute(sql`
+      SELECT
+        (SELECT count(*) FROM job_runs
+          WHERE job = ${SYNTHETIC_JOB}
+            AND started_at >= now() - interval '24 hours')::int AS runs_24h,
+
+        (SELECT count(*) FROM job_runs
+          WHERE job = ${SYNTHETIC_JOB}
+            AND ok = false
+            AND started_at >= now() - interval '24 hours')::int AS bad_runs_24h,
+
+        l.started_at                                    AS started_at,
+        extract(epoch from (now() - l.started_at))::int  AS seconds_since,
+        l.report                                        AS report,
+        l.error_count                                   AS error_count
+
+      -- Same LEFT JOIN LATERAL shape as the machinery band, and for the same
+      -- reason: the counts above still need a row when the ledger is empty.
+      FROM (SELECT 1) AS one
+      LEFT JOIN LATERAL (
+        SELECT started_at, report, error_count
+        FROM job_runs
+        WHERE job = ${SYNTHETIC_JOB}
+        ORDER BY started_at DESC
+        LIMIT 1
+      ) l ON true
+    `)) as unknown as (typeof row)[];
+    row = rows[0];
+  } catch (error) {
+    // A missing table is a state, not a fault -- see machinerySnapshot.
+    if (isUndefinedTable(error)) return { ...empty, migrated: false };
+    throw error;
+  }
+
+  if (!row?.started_at) return empty;
+
+  const probes = parseProbes(row.report);
+  return {
+    migrated: true,
+    checkedAt: new Date(row.started_at),
+    secondsSinceCheck: row.seconds_since ?? 0,
+    probes,
+    // Counted from the probes themselves rather than trusting error_count, so
+    // the number always matches the list rendered beside it.
+    failures: probes.filter((p) => !p.ok).length,
+    slowestMs: probes.reduce((max, p) => Math.max(max, p.ms), 0),
+    runs24h: row.runs_24h,
+    badRuns24h: row.bad_runs_24h,
+  };
+}
+
+export interface UptimeVerdict {
+  tone: VerdictTone;
+  headline: string;
+  detail: string;
+}
+
+export function uptimeVerdict(snap: UptimeSnapshot): UptimeVerdict {
+  if (!snap.migrated) {
+    return {
+      tone: 'warn',
+      headline: 'No run ledger yet',
+      detail:
+        'The job_runs table is missing, so uptime probes have nowhere to ' +
+        'record. Apply migration 0063.',
+    };
+  }
+
+  if (!snap.checkedAt) {
+    return {
+      tone: 'warn',
+      headline: 'Not checked yet',
+      detail:
+        'Probes run at ten past the hour alongside the expiry sweep, so the ' +
+        'first result should appear within the hour of this going live.',
+    };
+  }
+
+  const age = describeGap(snap.secondsSinceCheck);
+
+  // Stale probes are worth more than the last result they left behind: an
+  // all-green check from six hours ago says nothing about now, and reading it
+  // as health is the specific way a dashboard lies.
+  if (snap.secondsSinceCheck > STALE_AFTER_SECONDS) {
+    return {
+      tone: 'warn',
+      headline: 'These results are stale',
+      detail:
+        `The last check ran ${age} ago and they are meant to run hourly. ` +
+        'This says the cron has stopped, not that the site is down -- the ' +
+        'machinery band above is where that gets diagnosed.',
+    };
+  }
+
+  if (snap.failures > 0) {
+    const broken = snap.probes.filter((p) => !p.ok);
+    const named = broken
+      .map((p) => `${p.label} (${p.error ?? 'failed'})`)
+      .join(', ');
+
+    // Every probe failing is a different claim from some of them failing, and
+    // worth separating because the probes run from inside the Worker that
+    // serves the site. If a Cloudflare Worker turns out not to be able to
+    // fetch its own zone, the symptom is all four failing at once from the
+    // first run onwards -- indistinguishable from a total outage on the
+    // numbers alone, but trivially distinguishable by whether the site
+    // answers when you open it. Saying so here stops a prober fault from
+    // being read as a site fault.
+    const everything = broken.length === snap.probes.length;
+
+    return {
+      tone: 'alarm',
+      headline: everything
+        ? 'Every visitor-facing check is failing'
+        : snap.failures === 1
+          ? 'A visitor-facing check is failing'
+          : `${snap.failures} visitor-facing checks are failing`,
+      detail:
+        `Checked ${age} ago: ${named}. ` +
+        (everything
+          ? 'All of them failed together, so open the site before treating ' +
+            'this as an outage -- the probes run from inside the Worker that ' +
+            'serves it, and a fault in the checking is the other explanation ' +
+            'for this shape.'
+          : 'These are anonymous requests to the live site, so anything ' +
+            'failing here is failing for real visitors too.'),
+    };
+  }
+
+  if (snap.slowestMs > PROBE_SLOW_MS) {
+    return {
+      tone: 'warn',
+      headline: 'The site is answering slowly',
+      detail:
+        `Everything answered ${age} ago, but the slowest took ` +
+        `${(snap.slowestMs / 1000).toFixed(1)}s. One slow sample is noise; ` +
+        'several in a row is a trend worth chasing.',
+    };
+  }
+
+  return {
+    tone: 'ok',
+    headline: 'The site is answering visitors',
+    detail:
+      `All ${snap.probes.length} checks passed ${age} ago, slowest ` +
+      `${(snap.slowestMs / 1000).toFixed(1)}s.` +
+      (snap.badRuns24h > 0
+        ? ` ${snap.badRuns24h} of ${snap.runs24h} checks in the last 24 hours had a failure.`
+        : ''),
+  };
+}

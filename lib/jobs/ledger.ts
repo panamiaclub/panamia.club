@@ -45,6 +45,23 @@ import { db } from '@/lib/db';
 export const PURGE_JOB = 'purge';
 
 /**
+ * The hourly uptime probes in lib/jobs/synthetic-check.ts.
+ *
+ * A second job name rather than a second table: `job` is already the
+ * discriminator here, `report` is already free-form jsonb, and the retention
+ * trim below is already indiscriminate. Everything a probe run needs to
+ * record fits what 0063 built, so this costs no migration -- and no entry in
+ * lib/legal/data-inventory.ts, which a new table would have required.
+ *
+ * The dashboard reads these through uptimeSnapshot() rather than
+ * machinerySnapshot(job), even though the latter takes a job name. That
+ * function's row shape is the purge's vocabulary -- storiesDeleted,
+ * mediaDeleted -- and it discards the report body, which for a probe run is
+ * the only part worth reading.
+ */
+export const SYNTHETIC_JOB = 'synthetic';
+
+/**
  * How long ledger history is kept.
  *
  * Hourly, so 30 days is about 720 rows -- small enough that the horizon is

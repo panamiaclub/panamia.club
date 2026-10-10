@@ -17,6 +17,8 @@ import {
   machinerySnapshot,
   machineryVerdict,
   trendNote,
+  uptimeSnapshot,
+  uptimeVerdict,
 } from '@/lib/admin/livesite';
 
 /**
@@ -116,10 +118,11 @@ export default async function LiveSitePage() {
   // Issued together so they parallelise if the Hyperdrive pool is ever
   // restored; at the current `max: 1` they simply queue, which is what two
   // sequential awaits would have done anyway.
-  const [snap, machinery, database] = await Promise.all([
+  const [snap, machinery, database, uptime] = await Promise.all([
     communitySnapshot(),
     machinerySnapshot(),
     databaseSnapshot(),
+    uptimeSnapshot(),
   ]);
 
   const verdict = machineryVerdict(machinery);
@@ -156,6 +159,19 @@ export default async function LiveSitePage() {
   }
 
   const infra = databaseVerdict(database);
+
+  const uptimeCheck = uptimeVerdict(uptime);
+
+  // One fact per probe, each carrying its own outcome, because "3 of 4 passed"
+  // is the least useful way to report this: the number an admin needs is which
+  // one broke. Timings stay visible on the passing ones so a page drifting
+  // from 200ms to 2s is readable before it becomes an outage.
+  const uptimeFacts: RunFact[] = uptime.probes.map((p) => ({
+    label: p.label,
+    value: p.ok
+      ? `${(p.ms / 1000).toFixed(1)}s`
+      : (p.error ?? `HTTP ${p.status ?? '—'}`),
+  }));
 
   // Connections lead because they are the number with a ceiling. Size follows
   // because it is the number that only moves one way.
@@ -258,6 +274,20 @@ export default async function LiveSitePage() {
             note: waiting.length ? 'across every queue' : 'all queues clear',
           },
         ]}
+      />
+
+      {/*
+        Ahead of the machinery and infrastructure bands because it is the only
+        one that answers the question somebody actually opened this page with.
+        The two below it explain *why* the site is down; this one is how you
+        learn that it is.
+      */}
+      <MachineryPanel
+        title="Visitor experience"
+        tone={uptimeCheck.tone}
+        headline={uptimeCheck.headline}
+        detail={uptimeCheck.detail}
+        facts={uptimeFacts}
       />
 
       <MachineryPanel

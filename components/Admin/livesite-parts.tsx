@@ -263,7 +263,13 @@ export function InfrastructurePanel({
 }
 
 /**
- * The machinery band: did the scheduled work actually happen.
+ * A scheduled-work band: did the thing that should have happened, happen.
+ *
+ * Shared by two bands with the same shape -- Machinery (did the hourly sweep
+ * run) and Visitor experience (did the hourly probes find the site up) --
+ * which is why the heading is a prop. They are two readings of the same
+ * ledger, so giving them two components would mean maintaining one layout
+ * twice and letting the two loud states drift apart visually.
  *
  * ## Why the fill carries the verdict
  *
@@ -288,11 +294,13 @@ export function MachineryPanel({
   headline,
   detail,
   facts,
+  title = 'Machinery',
 }: {
   tone: 'ok' | 'warn' | 'alarm';
   headline: string;
   detail: string;
   facts: readonly RunFact[];
+  title?: string;
 }) {
   // Ink on flame measures 7.50 and ink on butter is higher still, so body
   // copy stays at full ink on both fills rather than being faded to signal
@@ -315,7 +323,7 @@ export function MachineryPanel({
             quiet ? 'text-pana-ink/60' : 'text-pana-ink'
           }`}
         >
-          Machinery
+          {title}
         </h2>
         <p className="mt-2 text-base font-extrabold text-pana-ink">
           {headline}
