@@ -6081,6 +6081,29 @@ body {
   background: var(--color-pana-butter-2);
 }
 
+/* Esri ships a khaki basemap with saturated coral highways; the site is cream,
+   indigo and flame. Without this the map reads as a third-party embed dropped
+   into the page. Scoped to .pigeon-tiles-box because pigeon-maps keeps pins,
+   the zoom control and the attribution in *sibling* containers — so the wash
+   lands on the basemap only and the logo pins stay the most saturated thing on
+   screen, which is the whole point of the map.
+
+   Deliberately gentle, and that ceiling is a real constraint rather than
+   timidity: a filter transforms every pixel by the same rule, so it cannot
+   move land and water independently. Pushing hard enough to land exactly on
+   cream drags the bay to grey, and a little further makes it warmer than the
+   land — which for South Florida erases the coastline, the one thing the map
+   exists to show. Measured against real tiles, these values keep water's blue
+   delta at ~22 and water/land separation at ~30 while halving land's distance
+   to cream. brightness stays near 1 on purpose: anything higher clamps the
+   pale shallow-water colour (#dcf3fb) to white.
+
+   If the map ever needs land and water styled separately, that needs vector
+   tiles (see lib/map-tiles.tsx), not a bigger filter. */
+.pigeon-tiles-box {
+  filter: saturate(0.75) brightness(1.04) contrast(0.97);
+}
+
 /* Shaped like the card it stands in for, so the list does not jump when
    results arrive. A spinner would say "something is happening"; this says
    "results are coming, and roughly this many". */
