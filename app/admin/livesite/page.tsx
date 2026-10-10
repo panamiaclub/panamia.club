@@ -1,19 +1,50 @@
 ﻿import {
   AttentionStrip,
+  type ExternalConsole,
+  InfrastructurePanel,
   MachineryPanel,
-  Placeholder,
   type RunFact,
   type WaitingItem,
 } from '@/components/Admin/livesite-parts';
-import { Panel, StatBand } from '@/components/Admin/parts';
+import { StatBand } from '@/components/Admin/parts';
 import { requireAdmin } from '@/lib/admin/gate';
 import {
   communitySnapshot,
+  databaseSnapshot,
+  databaseVerdict,
+  describeBytes,
   describeGap,
   machinerySnapshot,
   machineryVerdict,
   trendNote,
 } from '@/lib/admin/livesite';
+
+/**
+ * The consoles this page deliberately does not reimplement.
+ *
+ * Cloudflare already draws request volume and error rate better than this
+ * page would, and reading those numbers here needs an account-scoped token
+ * with Account Analytics: Read, which does not exist yet. The link is worth
+ * more than a half-built chart in the meantime: it is where an admin would
+ * go next regardless.
+ *
+ * The `?to=/:account/` form lets Cloudflare resolve the account itself, so
+ * the account ID stays out of the HTML.
+ */
+const CONSOLES: readonly ExternalConsole[] = [
+  {
+    name: 'Requests and errors',
+    blocked: 'needs a Cloudflare token with Account Analytics: Read.',
+    href: 'https://dash.cloudflare.com/?to=/:account/workers/services/view/panamia-next/production/metrics',
+    linkLabel: 'Cloudflare metrics',
+  },
+  {
+    name: 'Query performance and logs',
+    blocked: 'lives in Supabase and is better read there.',
+    href: 'https://supabase.com/dashboard/project/_/reports/database',
+    linkLabel: 'Supabase reports',
+  },
+];
 
 /**
  * /admin/livesite -- is the site healthy, and is anything waiting on us?
@@ -43,13 +74,20 @@ import {
  *
  * ## Bands two and three
  *
- * Machinery (did the hourly job run?) now reads the `job_runs` ledger that
- * lib/jobs/ledger.ts writes from the scheduled handler. Infrastructure
- * (Cloudflare, the database) is still a dashed placeholder: it needs an API
- * token this app does not hold, so "we cannot tell" remains the honest
- * answer and showing it is the point. Same house pattern as `UNBUILT_TOOLS`
- * in lib/admin/views.ts -- write the gap down so it does not quietly become
- * folklore.
+ * Machinery (did the hourly job run?) reads the `job_runs` ledger that
+ * lib/jobs/ledger.ts writes from the scheduled handler.
+ *
+ * Infrastructure splits by whether the answer is reachable. The database half
+ * is measured, because Postgres will describe its own connection use and size
+ * over the connection this page already holds -- no credential, no setup. The
+ * Cloudflare half is not, because request volume and error rate need an
+ * account-scoped Analytics token that does not exist yet, so the band links
+ * to the console instead of drawing a worse version of the chart that lives
+ * there. Same house pattern as `UNBUILT_TOOLS` in lib/admin/views.ts -- write
+ * the gap down so it does not quietly become folklore.
+ *
+ * That split is also the answer to "what do we need to connect?". Supabase:
+ * nothing. Cloudflare: one token, and the band says which permission.
  */
 
 export const metadata = { title: 'Live site - Pana Admin' };
@@ -70,9 +108,10 @@ export default async function LiveSitePage() {
   // Issued together so they parallelise if the Hyperdrive pool is ever
   // restored; at the current `max: 1` they simply queue, which is what two
   // sequential awaits would have done anyway.
-  const [snap, machinery] = await Promise.all([
+  const [snap, machinery, database] = await Promise.all([
     communitySnapshot(),
     machinerySnapshot(),
+    databaseSnapshot(),
   ]);
 
   const verdict = machineryVerdict(machinery);
@@ -106,6 +145,37 @@ export default async function LiveSitePage() {
     if (last.trigger === 'manual') {
       facts.push({ label: 'Fired', value: 'by hand' });
     }
+  }
+
+  const infra = databaseVerdict(database);
+
+  // Connections lead because they are the number with a ceiling. Size follows
+  // because it is the number that only moves one way.
+  const infraFacts: RunFact[] = [];
+  if (database.available) {
+    const s = database.stats;
+    const usable = Math.max(0, s.maxConnections - s.reserved);
+    infraFacts.push({
+      label: 'Connections',
+      value: usable > 0 ? `${s.connections} of ${usable}` : `${s.connections}`,
+    });
+    infraFacts.push({
+      label: 'Active',
+      // Null means the role is not allowed to see connection state. Rendering
+      // that as 0 would read as a quiet server at exactly the moment it was
+      // busy, so it says so instead.
+      value: s.active === null ? 'hidden from this role' : `${s.active}`,
+    });
+    if (s.idleInTransaction !== null && s.idleInTransaction > 0) {
+      infraFacts.push({
+        label: 'Idle in transaction',
+        value: `${s.idleInTransaction}`,
+      });
+    }
+    infraFacts.push({
+      label: 'Database size',
+      value: describeBytes(s.sizeBytes),
+    });
   }
 
   const waiting: WaitingItem[] = [
@@ -189,13 +259,13 @@ export default async function LiveSitePage() {
         facts={facts}
       />
 
-      <Panel title="What this page cannot tell you yet">
-        <Placeholder
-          title="Infrastructure"
-          lead="Request volume, error rate, and how close the database is to its connection ceiling."
-          needs="Needs a Cloudflare API token with Analytics read. Deep-links out rather than rebuilding a dashboard Cloudflare already draws better."
-        />
-      </Panel>
+      <InfrastructurePanel
+        tone={infra.tone}
+        headline={infra.headline}
+        detail={infra.detail}
+        facts={infraFacts}
+        consoles={CONSOLES}
+      />
     </div>
   );
 }

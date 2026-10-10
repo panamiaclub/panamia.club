@@ -550,3 +550,317 @@ export function machineryVerdict(snap: MachinerySnapshot): MachineryVerdict {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Infrastructure
+// ---------------------------------------------------------------------------
+
+/**
+ * How close the database is to refusing work.
+ *
+ * Deliberately a ratio and not a count. Supabase instance sizes carry very
+ * different `max_connections` -- a micro sits around 60, larger tiers run into
+ * the hundreds -- so a hardcoded "20 connections is a lot" would be wrong on
+ * every tier but one. The server is asked what its own ceiling is.
+ */
+const CONNECTIONS_ALARM = 0.9;
+const CONNECTIONS_WARN = 0.75;
+
+export interface DatabaseStats {
+  /** Backends on the server right now, including the one reading this. */
+  connections: number;
+  /** The server's own ceiling, read from pg_settings. */
+  maxConnections: number;
+  /** Slots held back for superusers; ordinary roles cannot have these. */
+  reserved: number;
+  /**
+   * Connections running a query, or null when this role may not see the
+   * `state` column for other roles' backends. Null means "not allowed to
+   * say", which is a different thing from zero and must render differently.
+   */
+  active: number | null;
+  /**
+   * Connections holding a transaction open without doing anything. Null for
+   * the same reason as `active`.
+   *
+   * Worth its own number because it is the shape of connection exhaustion
+   * that is nobody's fault at the moment it happens: the slot is held, the
+   * locks are held, and the query that would explain it finished long ago.
+   */
+  idleInTransaction: number | null;
+  /** Whether this role can see other roles' backends in full. */
+  canReadAllStats: boolean;
+  /** Size on disk of the current database. */
+  sizeBytes: number;
+}
+
+export type DatabaseSnapshot =
+  | { available: true; stats: DatabaseStats }
+  | { available: false; reason: string };
+
+/** Postgres insufficient_privilege. */
+function isInsufficientPrivilege(error: unknown): boolean {
+  return (
+    !!error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    String((error as { code: unknown }).code) === '42501'
+  );
+}
+
+/**
+ * Read the database's own view of its health.
+ *
+ * ## Why this asks Postgres whether it is allowed to answer
+ *
+ * `pg_stat_activity` hides most columns of other roles' backends unless the
+ * reader belongs to `pg_read_all_stats`. The rows are still counted, so
+ * `count(*)` is always right, but `count(*) FILTER (WHERE state = 'active')`
+ * silently returns a number far too low when the columns are masked -- and a
+ * silently-too-low number on a health dashboard is worse than no number,
+ * because it reads as "quiet" exactly when the server is busy.
+ *
+ * So the statement asks for role membership directly rather than assuming
+ * either way. Whether Supabase grants that membership to the `postgres` role
+ * is a question about somebody else's platform that could change under us; a
+ * runtime answer cannot go stale.
+ *
+ * The membership test goes through pg_roles rather than naming the role in
+ * `pg_has_role`, because `pg_has_role('pg_read_all_stats', ...)` raises if the
+ * role does not exist. A subquery against the catalogue yields NULL instead,
+ * which is the honest answer to "are you a member of a role that is not
+ * there".
+ *
+ * ## What the connection count includes
+ *
+ * Client backends only. Postgres also runs background workers -- autovacuum,
+ * the WAL writer, pg_cron -- and those are not what `max_connections` governs,
+ * so counting them would inflate the number against its own ceiling. Supabase
+ * documents the same filter for the same reason.
+ *
+ * What it does include is every other client on the server, not just this app:
+ * Auth, Storage, PostgREST and the health checker all hold connections out of
+ * the same total, as do the backends Supavisor opens even though this app
+ * bypasses the pooler. That breadth is the point -- the question is whether the
+ * *server* is near its ceiling, not whether this Worker is.
+ *
+ * It does not include clients connected *to* the pooler, only the pooler's own
+ * connections onward to Postgres. Those are different limits and Supabase
+ * counts them separately.
+ *
+ * Note that the reader is part of what it measures. At `max: 1` per request
+ * this page contributes exactly one connection, so the number is one higher
+ * than it would be if nobody were looking.
+ */
+export async function databaseSnapshot(): Promise<DatabaseSnapshot> {
+  try {
+    const rows = (await db.execute(sql`
+      SELECT
+        (SELECT count(*) FROM pg_stat_activity
+          WHERE backend_type = 'client backend')::int  AS connections,
+
+        (SELECT setting::int FROM pg_settings
+          WHERE name = 'max_connections')                AS max_connections,
+
+        (SELECT setting::int FROM pg_settings
+          WHERE name = 'superuser_reserved_connections') AS reserved,
+
+        (SELECT count(*) FROM pg_stat_activity
+          WHERE backend_type = 'client backend'
+            AND state = 'active')::int                   AS active,
+
+        -- LIKE, not equality: there are two of these states, and
+        -- 'idle in transaction (aborted)' is the worse one. A connection
+        -- holding an aborted transaction open is doing nothing and will
+        -- never do anything, and it still owns the slot.
+        (SELECT count(*) FROM pg_stat_activity
+          WHERE backend_type = 'client backend'
+            AND state LIKE 'idle in transaction%')::int  AS idle_in_transaction,
+
+        -- NULL when the predefined role is absent, which reads as "no" below.
+        (SELECT pg_has_role(current_user, oid, 'member')
+           FROM pg_roles WHERE rolname = 'pg_read_all_stats') AS can_read_all_stats,
+
+        -- float8 rather than the native bigint: postgres.js hands int8 back as
+        -- a string to avoid precision loss, and a database would have to reach
+        -- nine petabytes before a double lost a byte of this.
+        pg_database_size(current_database())::float8 AS size_bytes
+    `)) as unknown as Array<{
+      connections: number;
+      max_connections: number | null;
+      reserved: number | null;
+      active: number;
+      idle_in_transaction: number;
+      can_read_all_stats: boolean | null;
+      size_bytes: number;
+    }>;
+
+    const row = rows[0];
+    if (!row) {
+      return { available: false, reason: 'The server returned no rows.' };
+    }
+
+    const full = row.can_read_all_stats === true;
+
+    return {
+      available: true,
+      stats: {
+        connections: row.connections,
+        // A server that will not state its own ceiling cannot be measured
+        // against it. Zero propagates to the verdict, which checks for it.
+        maxConnections: row.max_connections ?? 0,
+        reserved: row.reserved ?? 0,
+        active: full ? row.active : null,
+        idleInTransaction: full ? row.idle_in_transaction : null,
+        canReadAllStats: full,
+        sizeBytes: row.size_bytes,
+      },
+    };
+  } catch (error) {
+    // A refusal is a state to report, not a page to lose. Everything else
+    // propagates -- an unreachable database must not render as a permissions
+    // note, which would send somebody to fix the wrong thing.
+    if (isInsufficientPrivilege(error)) {
+      return {
+        available: false,
+        reason:
+          'This database role may not read server statistics, so connection ' +
+          'use and size cannot be shown.',
+      };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Bytes as something a person can hold in their head.
+ *
+ * Binary units, because that is what Postgres means and what every other tool
+ * in this stack will report. One decimal place above a megabyte: the second
+ * digit of a gigabyte figure is the one that moves week to week, and the ones
+ * after it are noise.
+ */
+export function describeBytes(bytes: number): string {
+  const safe = Math.max(0, bytes);
+  if (safe < 1024) return `${Math.round(safe)} B`;
+  const kb = safe / 1024;
+  if (kb < 1024) return `${Math.round(kb)} KB`;
+  const mb = kb / 1024;
+  if (mb < 1024) return `${Math.round(mb)} MB`;
+  const gb = mb / 1024;
+  return `${gb.toFixed(1)} GB`;
+}
+
+export interface DatabaseVerdict {
+  tone: VerdictTone;
+  headline: string;
+  detail: string;
+}
+
+/**
+ * Turn the database snapshot into one sentence and a tone.
+ *
+ * ## Why connections are the only thing that raises an alarm here
+ *
+ * Size is reported and never judged. The ceiling it would be judged against
+ * depends on the Supabase plan: Free projects go read-only at 500 MB of
+ * database size, while Pro has an auto-scaling disk and no single number to
+ * compare with. Picking one and rendering "X of Y" would be confidently wrong
+ * on whichever plan this project is not on, and a gauge that is wrong about
+ * headroom is worse than a number with no gauge at all.
+ *
+ * Connections have no such problem. The server states its own ceiling, so the
+ * ratio is true on every tier without anybody configuring anything.
+ *
+ * ## Why running out of connections is a live risk rather than a theoretical one
+ *
+ * Supabase's guidance is that serverless and edge runtimes should reach
+ * Postgres through the transaction pooler, precisely because they open many
+ * short-lived connections and scale horizontally. This app is a Worker and
+ * takes a direct connection instead -- the POSTGRES_URL secret short-circuits
+ * the Hyperdrive branch in lib/db.ts -- so every concurrent request is its own
+ * unpooled backend against a ceiling that starts at 60 on the smaller compute
+ * tiers.
+ *
+ * Which makes this number the one on the page most worth watching, and gives
+ * the band a second job: it is the evidence for fixing that, where previously
+ * there was only an argument.
+ */
+export function databaseVerdict(snap: DatabaseSnapshot): DatabaseVerdict {
+  if (!snap.available) {
+    return {
+      tone: 'warn',
+      headline: 'The database is not reporting on itself',
+      detail: snap.reason,
+    };
+  }
+
+  const s = snap.stats;
+  const size = describeBytes(s.sizeBytes);
+
+  // A server that would not state its own ceiling. The counts are still real,
+  // so they are worth showing, but nothing can be judged against nothing.
+  if (s.maxConnections <= 0) {
+    return {
+      tone: 'warn',
+      headline: 'Connection ceiling unknown',
+      detail:
+        `${s.connections} connections open and ${size} on disk, but the ` +
+        'server did not report max_connections, so there is nothing to ' +
+        'measure that against.',
+    };
+  }
+
+  // Ordinary roles cannot have the reserved slots, so the real ceiling for
+  // this app is lower than the headline number.
+  const usable = Math.max(1, s.maxConnections - s.reserved);
+  const ratio = s.connections / usable;
+  const headroom = usable - s.connections;
+
+  if (ratio >= CONNECTIONS_ALARM) {
+    return {
+      tone: 'alarm',
+      headline: 'The database is nearly out of connections',
+      detail:
+        `${s.connections} of ${usable} are in use, leaving ${headroom}. ` +
+        'New requests start failing outright at the ceiling, and this app ' +
+        'opens a connection per request without pooling.',
+    };
+  }
+
+  if (ratio >= CONNECTIONS_WARN) {
+    return {
+      tone: 'warn',
+      headline: 'Connection use is climbing',
+      detail:
+        `${s.connections} of ${usable} are in use. Auth, Storage and the ` +
+        'health checker draw on the same total, so the headroom is shared.',
+    };
+  }
+
+  // Only worth raising once the ceiling itself is not the story. A handful of
+  // these is ordinary; it is the shape of exhaustion that nobody notices,
+  // because the query that would explain the held slot finished long ago.
+  if (s.idleInTransaction !== null && s.idleInTransaction > 2) {
+    return {
+      tone: 'warn',
+      headline: `${s.idleInTransaction} connections idle in transaction`,
+      detail:
+        'These hold their slot and their locks without doing any work. A ' +
+        'few is normal; a number that climbs and never falls is a ' +
+        'transaction somebody forgot to close.',
+    };
+  }
+
+  return {
+    tone: 'ok',
+    headline: 'The database has room',
+    detail:
+      `${s.connections} of ${usable} connections in use, ${size} on disk.` +
+      (s.canReadAllStats
+        ? ''
+        : ' Connection states are hidden from this role, so only the total ' +
+          'is exact.'),
+  };
+}
+
+
