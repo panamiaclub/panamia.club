@@ -8,11 +8,10 @@
  * isolate would use each other's sockets, which workerd rejects as
  * cross-request I/O and then cancels the request as hung.
  *
- * In production a fresh postgres.js client is created per request — Hyperdrive
- * manages the actual Supabase connection pool, so a new local socket to
- * Hyperdrive is cheap and avoids stale-connection failures.
+ * A fresh postgres.js client is created per request on every path. Reusing one
+ * across requests trips workerd's cross-request I/O guard — see dbStore below.
  *
- * - Production (CF Workers): env.HYPERDRIVE.connectionString via Hyperdrive, max: 5
+ * - Production (CF Workers): env.POSTGRES_URL secret, max: 1 — see the warning below
  * - Local dev (vinext dev): env.POSTGRES_URL secret binding (from .dev.vars)
  * - Local dev (plain Node.js): process.env.POSTGRES_URL, cached
  *
@@ -21,7 +20,31 @@
  * We check env.POSTGRES_URL BEFORE HYPERDRIVE because in local dev miniflare rewrites
  * env.HYPERDRIVE.connectionString to use 127.0.0.1:<proxy_port> (not 'localhost'), so
  * a simple 'includes localhost' guard can't reliably detect the placeholder Hyperdrive.
- * In production env.POSTGRES_URL is never set, so Hyperdrive is always used there.
+ *
+ * This docblock used to end "in production env.POSTGRES_URL is never set, so
+ * Hyperdrive is always used there." That is false, and the error propagated:
+ * a later reader trusted it and annotated the first branch of getDb as the
+ * dev-only path, which is how max: 1 came to sit unnoticed on the production
+ * path. Verified 2026-10-10 via `wrangler secret list` — POSTGRES_URL is a
+ * deployed secret_text on the production Worker. Because it is checked first,
+ * the HYPERDRIVE branch never runs in production and the hyperdrive binding in
+ * wrangler.jsonc is dead code.
+ *
+ * What that actually costs, measured against production the same day:
+ *   - max: 1 applies deployed, so every `await Promise.all([...])` in this
+ *     codebase runs sequentially in production, not only in dev.
+ *   - prepare: false is NOT applied; only the Hyperdrive branch sets it.
+ *   - Supabase still pools, so this is a latency problem and not a capacity
+ *     cliff: the secret points at Supavisor, which fronts Postgres with ~15
+ *     backends and multiplexes over them. 75 concurrent requests to
+ *     /api/directory/scope-counts added zero connections — steady 20 of 57
+ *     usable (max_connections 60 less 3 reserved). Visitor concurrency does
+ *     not approach the ceiling; connection count tracks Worker isolates,
+ *     which is why wrangler.jsonc pins placement to one region.
+ *
+ * The fix is to delete the POSTGRES_URL secret so the Hyperdrive pool is used
+ * again; the `placement` comment in wrangler.jsonc says the same. Until then,
+ * read the first branch below as the production path.
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -30,8 +53,11 @@ import * as schema from './schema';
 
 export interface CloudflareEnv {
   HYPERDRIVE?: { connectionString: string };
-  // Available in local dev (vinext dev / wrangler dev) as a wrangler secret text binding,
-  // populated from .dev.vars via wrangler's automatic secret loading.
+  // Set in BOTH production and local dev, which the header docblock once
+  // denied. Locally it is a wrangler secret text binding populated from
+  // .dev.vars; in production it is a deployed secret (confirmed via
+  // `wrangler secret list`), and because getDb checks it first that makes the
+  // POSTGRES_URL branch the live production path.
   POSTGRES_URL?: string;
   // '1' turns on per-query logging in production. Off by default — see the
   // `debug` note in the Hyperdrive branch below.
@@ -73,12 +99,14 @@ export function runWithDb<T>(env: CloudflareEnv, fn: () => T): T {
 }
 
 export function getDb(env?: CloudflareEnv): DbInstance {
-  // Local dev (vinext dev): env.POSTGRES_URL is set from .dev.vars.
+  // Production AND local dev (vinext dev): env.POSTGRES_URL is set in both, so
+  // this branch is the deployed path today — not a dev-only one. See the
+  // header docblock for how that happened and what it costs.
   // Always create a fresh client per request — workerd prevents cross-request socket reuse.
   // (Sharing a postgres.js pool across requests causes "Cannot perform I/O on behalf of a
   // different request" because the pool's TCP sockets are bound to the creating request.)
-  // max: 1 — deliberately NOT the 5 the production path uses, and the
-  //   difference is not a pooling preference. Dev talks to a local Postgres
+  // max: 1 — NOT the 5 the Hyperdrive branch uses, and the difference is not a
+  //   pooling preference. Dev talks to a local Postgres
   //   through postgres.js's Cloudflare build, whose socket polyfill
   //   mis-pipelines the extended query protocol once more than one query is in
   //   flight: a Bind lands against another query's Parse and the server
@@ -86,12 +114,20 @@ export function getDb(env?: CloudflareEnv): DbInstance {
   //   statement \"\" requires N-1" (SQLSTATE 08P01). `prepare: false` does not
   //   avoid it; serialising onto one connection does.
   //
-  //   This was raised to 5 to make `Promise.all` behave in dev the way it does
-  //   deployed. It does the opposite. Deployed, the concurrency is absorbed by
-  //   Hyperdrive, which multiplexes properly; here it just crashes, and only
-  //   on pages that fan out — so the events discovery feed and the host page
-  //   both 500'd for signed-in readers while their signed-out versions, which
-  //   skip the viewer-shaped queries, rendered fine.
+  //   This was raised to 5 to make `Promise.all` behave in dev the way it was
+  //   believed to behave deployed. It does the opposite — the polyfill just
+  //   crashes, and only on pages that fan out, so the events discovery feed
+  //   and the host page both 500'd for signed-in readers while their
+  //   signed-out versions, which skip the viewer-shaped queries, rendered fine.
+  //
+  //   The sentence that stood here said the concurrency is "absorbed by
+  //   Hyperdrive" deployed. It is not: POSTGRES_URL is a production secret, so
+  //   this branch is the deployed path and max: 1 serialises fan-out in
+  //   production too. That is latency, not breakage — Supavisor still pools
+  //   behind the connection string, so the 60-connection ceiling stays far
+  //   away (see the header docblock for the measurements). Lifting the cap
+  //   belongs with removing the secret, not on its own: raising it here would
+  //   reintroduce the 08P01 crash in dev for no production benefit.
   if (env?.POSTGRES_URL) {
     const client = postgres(env.POSTGRES_URL, { max: 1 });
     const instance = drizzle(client, { schema });
@@ -99,7 +135,11 @@ export function getDb(env?: CloudflareEnv): DbInstance {
     return instance;
   }
 
-  // Production: use Hyperdrive for the Supabase connection pool.
+  // Hyperdrive path for the Supabase connection pool. This was written as the
+  // production path and is still the intended one, but it is unreachable in
+  // production today: POSTGRES_URL is a deployed secret and is checked above.
+  // Everything below describes how this behaves once that secret is deleted.
+  // Local dev still reaches it when .dev.vars omits POSTGRES_URL.
   if (env?.HYPERDRIVE) {
     // Always create a fresh postgres.js client for each Worker request.
     // Hyperdrive manages the actual connection pool to Supabase; a new client here is just
