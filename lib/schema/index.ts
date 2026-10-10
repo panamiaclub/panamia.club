@@ -91,6 +91,18 @@ export const notificationObjectType = pgEnum('notification_object_type', [
   'group',
 ]);
 
+/**
+ * Which push service a device token belongs to.
+ *
+ * Not cosmetic: the two tokens go to entirely different services with
+ * different auth, different payload shapes and different dead-token replies
+ * (see lib/push/). A token with the wrong platform is delivered nowhere, and
+ * the service answers as if it were simply unknown — so mislabelling is a
+ * silent failure rather than an error, which is why this is stored rather
+ * than guessed from the token's shape.
+ */
+export const devicePlatform = pgEnum('device_platform', ['ios', 'android']);
+
 export const ccLicense = pgEnum('cc_license', [
   'cc-by-4',
   'cc-by-sa-4',
@@ -759,6 +771,77 @@ export const notifications = pgTable(
       'notifications_target_context_created_idx'
     ).on(table.target, table.context, table.createdAt),
     expiresAtIdx: index('notifications_expires_at_idx').on(table.expiresAt),
+  })
+);
+
+/**
+ * A device that has agreed to receive push notifications, and the token the
+ * platform gave us to reach it.
+ *
+ * This is the native shell's half of the notifications table above. A
+ * notification row is the record that something happened; a row here is a
+ * lock screen it can be delivered to. Rows are written by
+ * /api/push/register when the app registers (see components/mobile/
+ * PushRegistration.tsx) and read by lib/push when a notification is created.
+ *
+ * `token` is UNIQUE across the whole table, and that single constraint is the
+ * most important line in this file.
+ *
+ * The token identifies a *device install*, not a person. Phones get handed
+ * down, shared between partners, and sold. If two rows could hold the same
+ * token, then signing out and signing in as somebody else would leave the old
+ * row in place, and the next notification for the previous account would be
+ * delivered to the new owner's lock screen — direct messages included, with
+ * sender and preview text. That is a private-message disclosure to a
+ * different person, caused by nothing more exotic than a second member
+ * signing in on the same handset.
+ *
+ * So registration upserts on `token` and overwrites `user_id` rather than
+ * inserting (see lib/push/tokens.ts). The device may belong to a different
+ * member tomorrow; it may only belong to one at a time.
+ *
+ * Deleted rather than disabled when a token dies. APNs and FCM both report
+ * unregistered tokens unambiguously, and a token the platform has disowned
+ * will never work again — keeping it would mean carrying a growing set of
+ * addresses that are known to be undeliverable through every send.
+ *
+ * ON DELETE CASCADE because these are personal data under every privacy
+ * regime that applies here: a token is a durable identifier for one person's
+ * physical handset. Account deletion must take them with it, and cascading
+ * means lib/server/delete-account.ts inherits that without having to know
+ * this table exists. See docs/PRIVACY-ROADMAP.md.
+ */
+export const deviceTokens = pgTable(
+  'device_tokens',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdateFn(() => new Date()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    token: text('token').notNull(),
+    platform: devicePlatform('platform').notNull(),
+    /* Refreshed every time the app re-registers, which it does on each
+     * launch. Gives a way to retire tokens for apps that were deleted without
+     * signing out — an uninstall produces no event anywhere, so staleness is
+     * the only signal that the install is gone. */
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    // The constraint the comment above is about. One device, one account.
+    tokenUnique: uniqueIndex('device_tokens_token_unique').on(table.token),
+    // Every send starts by resolving one member's devices.
+    userIdIdx: index('device_tokens_user_id_idx').on(table.userId),
   })
 );
 
@@ -2700,6 +2783,14 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   screennameHistory: many(screennameHistory),
   consentReceipts: many(consentReceipts),
   profilesOwned: many(profileOwners),
+  deviceTokens: many(deviceTokens),
+}));
+
+export const deviceTokensRelations = relations(deviceTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [deviceTokens.userId],
+    references: [users.id],
+  }),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({

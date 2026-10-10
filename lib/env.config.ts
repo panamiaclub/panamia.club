@@ -577,12 +577,96 @@ export const envConfig: Record<string, EnvVarConfig> = {
       'Apple Developer Team ID, served in /.well-known/apple-app-site-association ' +
       'so iOS verifies Universal Links for the app. Found on the membership page ' +
       'of the Apple Developer account. Not secret. Unset means the route 404s, so ' +
-      'links open in Safari rather than in the app.',
+      'links open in Safari rather than in the app. Also used as the JWT issuer ' +
+      'when signing APNs requests (see APNS_KEY_ID), so the same value serves ' +
+      'both deep links and push.',
     location: 'VAR',
     required: false,
     example: 'A1B2C3D4E5',
     docsUrl:
       'https://developer.apple.com/documentation/xcode/supporting-associated-domains',
+  },
+
+  // -----------------------------------------------------------------------------
+  // PUSH NOTIFICATIONS (see lib/push/ and docs/MOBILE-ROADMAP.md)
+  //
+  // Push is all-or-nothing per platform: each needs its full credential set
+  // before anything can be delivered, and a partial set is treated as unset
+  // rather than as an error. Missing credentials make a send a silent no-op,
+  // which is the same idiom as the association routes 404ing when their env
+  // var is absent — an environment with no push setup is a valid environment,
+  // and notifications still land in the database to be read in the app.
+  // -----------------------------------------------------------------------------
+  APNS_KEY_ID: {
+    description:
+      'Key ID of the APNs auth key (.p8) used to sign push requests for iOS. ' +
+      'Created under Certificates, Identifiers & Profiles > Keys with the Apple ' +
+      'Push Notifications service enabled, and shown in the key list afterwards. ' +
+      'Token-based auth is used rather than certificates because an APNs ' +
+      'certificate expires every year and takes push down with it when nobody ' +
+      'is watching; a key does not expire. Not secret on its own — the .p8 in ' +
+      'APNS_PRIVATE_KEY is the secret half. Requires APPLE_APP_TEAM_ID.',
+    location: 'VAR',
+    required: false,
+    example: 'ABC123DEFG',
+    docsUrl:
+      'https://developer.apple.com/documentation/usernotifications/establishing-a-token-based-connection-to-apns',
+  },
+  APNS_PRIVATE_KEY: {
+    description:
+      'Contents of the APNs auth key .p8 file, including the BEGIN/END PRIVATE ' +
+      'KEY lines. Apple lets this file be downloaded exactly once, so store it ' +
+      'somewhere durable at creation time — a lost key cannot be re-downloaded ' +
+      'and must be revoked and replaced. Newlines may be real or escaped as \\n; ' +
+      'both are accepted (see lib/push/jwt.ts).',
+    location: 'SECRET',
+    required: false,
+    example: '-----BEGIN PRIVATE KEY-----\\nMIGTAgEAMBMGByqG...\\n-----END PRIVATE KEY-----',
+  },
+  APNS_PRODUCTION: {
+    description:
+      'Set to "1" to send iOS push through api.push.apple.com, or leave unset ' +
+      'for api.sandbox.push.apple.com. This is NOT a convenience toggle: a token ' +
+      'minted by a development build is meaningless to the production host and ' +
+      'vice versa, and the mismatch returns BadDeviceToken rather than anything ' +
+      'that names the real problem. TestFlight and App Store builds are ' +
+      'production; builds installed from Xcode are sandbox.',
+    location: 'VAR',
+    required: false,
+    example: '1',
+  },
+  FCM_PROJECT_ID: {
+    description:
+      'Firebase project ID that owns the Android app, used in the FCM v1 send ' +
+      'URL. Found in Firebase console > Project settings. The same project ' +
+      'supplies mobile/android/app/google-services.json, which the Android build ' +
+      'reads to know where to register — the two must name the same project or ' +
+      'devices register against one and are sent to from another.',
+    location: 'VAR',
+    required: false,
+    example: 'pana-mia-12345',
+    docsUrl: 'https://firebase.google.com/docs/cloud-messaging/migrate-v1',
+  },
+  FCM_CLIENT_EMAIL: {
+    description:
+      'client_email from the Firebase service account JSON, used as the issuer ' +
+      'and subject of the OAuth assertion that buys an FCM access token. ' +
+      'Generated under Project settings > Service accounts > Generate new ' +
+      'private key. Not secret; FCM_PRIVATE_KEY is the secret half.',
+    location: 'VAR',
+    required: false,
+    example: 'firebase-adminsdk-x1y2z@pana-mia-12345.iam.gserviceaccount.com',
+  },
+  FCM_PRIVATE_KEY: {
+    description:
+      'private_key from the Firebase service account JSON, including the ' +
+      'BEGIN/END PRIVATE KEY lines. The JSON stores newlines escaped as \\n and ' +
+      'both forms are accepted, so the value may be pasted straight out of the ' +
+      'file (see lib/push/jwt.ts). Grants send access to the project — treat it ' +
+      'like a password.',
+    location: 'SECRET',
+    required: false,
+    example: '-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqh...\\n-----END PRIVATE KEY-----',
   },
 
   // =============================================================================

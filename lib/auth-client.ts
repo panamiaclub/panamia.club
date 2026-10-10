@@ -18,6 +18,7 @@ import {
 } from 'better-auth/client/plugins';
 import { useMemo, useSyncExternalStore } from 'react';
 import type { AppSession, BetterAuthServer } from '@/auth';
+import { unregisterThisDevice } from '@/lib/mobile/push-client';
 
 export const authClient = createAuthClient({
   plugins: [magicLinkClient(), customSessionClient<BetterAuthServer>()],
@@ -192,6 +193,24 @@ export async function signOut(options?: {
   callbackUrl?: string;
 }): Promise<void> {
   const callbackURL = options?.callbackUrl ?? '/';
+
+  /* Stop push to this device before the session is destroyed, not after.
+   *
+   * Ordering is the whole point. /api/push/unregister requires a session, so
+   * once better-auth has cleared the cookie there is no authenticated way to
+   * say "this device is no longer mine" — the call would 401 and the device
+   * would keep receiving the previous member's notifications, message
+   * previews included, until somebody else signed in on it.
+   *
+   * Awaited, but failure is ignored: signing out must succeed even when the
+   * network does not. The remaining protections for that case are that a new
+   * sign-in reassigns the token to its new owner (lib/push/tokens.ts) and
+   * that dead tokens are pruned on send (lib/push/index.ts).
+   *
+   * Does nothing in a browser — unregisterThisDevice returns immediately when
+   * there is no native push plugin to ask. */
+  await unregisterThisDevice().catch(() => {});
+
   await authClient.signOut({
     fetchOptions: {
       onSuccess: () => {

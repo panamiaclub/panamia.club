@@ -96,7 +96,8 @@ in the system browser, outside the app's cookie store, and three things break:
 | Association routes                      | Done, 404 until env vars are set                   |
 | App Links / Universal Links native side | Done (manifest + entitlements)                     |
 | App icons and splash images             | Generated from `mobile/assets/` (see below)        |
-| Built or run on a device                | **Not yet** — but both platforms compile in CI     |
+| Push notifications                      | Code done; needs APNs key + Firebase project       |
+| Built or run on a device                | Android: run on emulator. iOS: **not yet**         |
 | CI builds both platforms                | Done, green (`.github/workflows/mobile-build.yml`) |
 | Signing, store listings                 | **Not yet**                                        |
 | OAuth in WebView                        | Resolved — app is magic link only                  |
@@ -452,6 +453,111 @@ itself.
 
 ---
 
+## Push notifications
+
+Implemented end to end and inert until credentials exist. With no credentials
+`sendPushToUser()` returns before it touches the database, so nothing errors,
+nothing slows down, and no one gets a notification.
+
+### How it fits together
+
+`createNotification()` in `lib/notifications.ts` is the single chokepoint every
+in-app notification already flows through, so push hangs off that rather than
+off fourteen separate call sites. It reuses the same `getNotificationMessage()`
+copy the notification bell shows, which is what keeps the two from drifting.
+
+The send is **awaited**, not fire-and-forget. A Next.js route handler on Workers
+has no `executionCtx.waitUntil`, so unawaited work races the response and is
+usually killed — the same constraint documented in
+`app/api/getDirectorySearch/route.ts`. Cost is bounded instead: a five-second
+race that resolves rather than rejects, and an early return before any query
+when push is unconfigured.
+
+Device tokens live in `device_tokens`, one row per install, `UNIQUE` on the
+token itself. That uniqueness is a privacy control, not tidiness. A push token
+identifies a handset, not a person. If two rows could hold one token, signing
+out and signing in on a shared or resold phone would leave the old row behind
+and deliver the previous member's direct messages — sender name and preview, on
+the lock screen — to whoever has the phone now. Registration overwrites
+`user_id` instead. Dead tokens are deleted outright, since APNs `410` and FCM
+`UNREGISTERED` are definitive, and the table cascades on user delete so
+`lib/server/delete-account.ts` cleans it up without knowing it exists.
+
+There is deliberately no preference check. `users.notificationPreferences`
+exists in the schema but nothing reads or writes it; the OS-level permission is
+the real preference, and it is the one members already understand.
+
+### Apple (APNs)
+
+Requires the paid Developer Program membership.
+
+1. Certificates, Identifiers & Profiles → **Keys** → **+**. Name it, tick
+   **Apple Push Notifications service (APNs)**, continue, register.
+2. **Download the `.p8`.** It is offered exactly once and cannot be recovered —
+   losing it means revoking the key and issuing a new one.
+3. Note the **Key ID** from that page and your **Team ID** from the top right.
+4. Identifiers → `social.pana.app` → enable **Push Notifications** → Save.
+   Signing fails with an entitlement mismatch if the app is built with
+   `aps-environment` and the App ID lacks the capability.
+
+Then set:
+
+```
+APNS_KEY_ID        # the 10-character Key ID
+APPLE_APP_TEAM_ID  # already needed for Universal Links
+APNS_PRIVATE_KEY   # contents of the .p8, including the BEGIN/END lines
+APNS_PRODUCTION    # "1" for App Store and TestFlight builds; omit for Xcode debug builds
+```
+
+`APNS_PRODUCTION` must agree with the `aps-environment` value in
+`mobile/ios/App/App/App.entitlements`. Xcode rewrites that entitlement to
+`production` when it exports a release archive, so a TestFlight build talking to
+the sandbox host is the usual mismatch. It fails as `BadDeviceToken`, which
+reads exactly like an uninstalled app, which is why it is easy to chase in the
+wrong direction.
+
+### Google (FCM)
+
+1. Create a Firebase project and add an **Android** app with package name
+   `social.pana.app`.
+2. Download `google-services.json` into `mobile/android/app/`. The Gradle plugin
+   is applied conditionally on that file existing, so the build stays green
+   without it — which is also why its absence is silent rather than loud.
+3. Project settings → Service accounts → **Generate new private key**.
+
+From that JSON:
+
+```
+FCM_PROJECT_ID     # project_id
+FCM_CLIENT_EMAIL   # client_email
+FCM_PRIVATE_KEY    # private_key, newlines escaped or literal, both are handled
+```
+
+### Setting the secrets
+
+`APNS_PRIVATE_KEY` and `FCM_PRIVATE_KEY` are marked SECRET in
+`lib/env.config.ts` and must not go in `wrangler.jsonc`:
+
+```bash
+wrangler secret put APNS_PRIVATE_KEY
+wrangler secret put FCM_PRIVATE_KEY
+```
+
+The rest are ordinary vars. `yarn env:check` reports what is missing.
+
+### Verifying
+
+Push only registers for a signed-in member on a native build — there is nothing
+to notify an anonymous visitor about, and iOS allows exactly one permission
+prompt per install, so spending it before there is an account wastes it.
+
+Sign in on a device, accept the prompt, confirm a row appears in
+`device_tokens`, then have another account follow you. Dead tokens prune
+themselves on the next send, so a stale row after reinstalling is expected and
+resolves on its own.
+
+---
+
 ## Store submission
 
 ### Apple guideline 4.2 ("minimum functionality")
@@ -466,7 +572,8 @@ a ban on web-backed apps, it is a bar to clear. What already helps:
 
 What would clear it decisively is native capability the browser cannot offer —
 push notifications first, then camera-backed uploads and share-sheet targets.
-Push is the highest-value next step for the product regardless of review.
+Push is implemented; see "Push notifications" below for the credentials it
+still needs before it does anything.
 
 ### Both stores
 
@@ -493,11 +600,8 @@ Push is the highest-value next step for the product regardless of review.
 3. **Generate signing keys**, upload a first internal-test build, then set
    `ANDROID_APP_CERT_FINGERPRINTS` and `APPLE_APP_TEAM_ID` and verify deep links
    end to end. This is also when a release workflow becomes worth writing.
-4. **Push notifications** — the strongest answer to guideline 4.2 and the
-   clearest native win over the website. Needs `@capacitor/push-notifications`,
-   APNs and FCM credentials, and device-token storage tied to the account.
-   DMs now have a caller waiting for it: `handleNotify` in `worker/dm-stream.ts`
-   returns a `delivered` count, and `delivered === 0` means the recipient holds
-   no live socket — which is exactly the moment to push instead. See
-   [CHAT-ROADMAP.md](./CHAT-ROADMAP.md#background-delivery-needs-push-and-that-is-true-everywhere).
+4. **Finish push notifications** — the code is in place; what is missing is an
+   APNs key, a Firebase project, and the secrets. See the section above.
+   Background chat delivery also needs the `delivered === 0` fallback described
+   in [CHAT-ROADMAP.md](./CHAT-ROADMAP.md#background-delivery-needs-push-and-that-is-true-everywhere).
 5. **Replace `mobile/assets/icon.png`** with a true ≥1024×1024 master.

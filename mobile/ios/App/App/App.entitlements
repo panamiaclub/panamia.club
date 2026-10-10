@@ -37,5 +37,28 @@
 		<string>applinks:pana.social</string>
 		<string>applinks:social.pana.social</string>
 	</array>
+	<!--
+	  Push notifications.
+
+	  "development" is correct here even though the app ships to the App Store.
+	  Xcode rewrites this value to "production" when exporting a distribution
+	  build, taking it from the provisioning profile rather than from this
+	  file, so hand-setting "production" breaks local debugging without
+	  changing what is submitted.
+
+	  This value pairs with APNS_PRODUCTION on the server, and they must agree.
+	  A token minted by a build entitled for the sandbox is meaningless to the
+	  production APNs host and vice versa — the mismatch comes back as
+	  BadDeviceToken, which reads as "that device is gone" rather than "you are
+	  talking to the wrong host", and is the single most common way push
+	  appears to be broken for no reason. See lib/push/apns.ts.
+
+	  As with Associated Domains above, the Push Notifications capability must
+	  also be enabled for the App ID in the Apple Developer portal or signing
+	  fails with a provisioning error. Enabling it there is also what lets you
+	  create the APNs auth key that APNS_KEY_ID and APNS_PRIVATE_KEY refer to.
+	-->
+	<key>aps-environment</key>
+	<string>development</string>
 </dict>
 </plist>

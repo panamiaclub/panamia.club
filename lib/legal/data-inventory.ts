@@ -115,6 +115,18 @@ export const inventory: Record<TableExport, Classification> = {
 
   // --- Notifications / preferences ---
   notifications: ['notifications'],
+  // Push addresses for devices running the mobile app. Classified separately
+  // from `notifications` rather than folded into it, because the two differ on
+  // the facts the policy actually states: notification preferences are
+  // user-provided and shared with nobody, while a push token is issued by the
+  // operating system and is sent to Apple or Google on every delivery. Filing
+  // these under `notifications` would have left the published policy saying
+  // "You provide" and "sharedWith: None" about data that is neither.
+  //
+  // Personal data despite holding no name or message text: a push token is a
+  // durable identifier for one person's physical handset. Cascades on user
+  // delete, so it leaves with the account.
+  deviceTokens: ['device_tokens'],
 
   // --- Onboarding ---
   intakeForms: ['intake'],

@@ -13,6 +13,7 @@
 
 import { db } from '@/lib/db';
 import { profiles, notifications, socialActors } from '@/lib/schema';
+import { sendPushToUser } from '@/lib/push';
 import type {
   NotificationActivityType,
   NotificationContext,
@@ -106,6 +107,9 @@ export async function createNotification(
   // Determine expiration based on type and context
   const expiresAt = getExpirationDate(params.type, params.context);
 
+  const actorScreenname = actorProfile?.user?.screenname;
+  const actorName = actorProfile?.name;
+
   // Create notification
   await db.insert(notifications).values({
     type: params.type,
@@ -117,11 +121,40 @@ export async function createNotification(
     objectTitle: params.objectTitle,
     objectUrl: params.objectUrl,
     message: params.message,
-    actorScreenname: actorProfile?.user?.screenname,
-    actorName: actorProfile?.name,
+    actorScreenname,
+    actorName,
     read: false,
     emailSent: false,
     expiresAt,
+  });
+
+  // Deliver to the member's devices, if they have the app and agreed to be
+  // notified. Deliberately after the insert and deliberately not fatal: the
+  // row above is the system of record, and a push service having a bad minute
+  // must not turn a successful like or reply into a failed request.
+  //
+  // sendPushToUser never throws and no-ops when push is unconfigured or the
+  // member has no registered device, so the common case — a browser visitor —
+  // costs nothing beyond an environment variable check. See lib/push/.
+  //
+  // Reuses getNotificationMessage rather than composing its own copy. That
+  // function already covers every context and type pair in the system, so a
+  // separate string here would be a second place to update and a chance for
+  // the lock screen and the notifications page to disagree about what
+  // happened.
+  await sendPushToUser(params.targetId, {
+    title: 'Pana MIA Club',
+    body: getNotificationMessage({
+      type: params.type,
+      context: params.context,
+      actorScreenname,
+      actorName,
+      objectTitle: params.objectTitle,
+      message: params.message,
+    }),
+    // Falls back to the notifications page so a tap always lands somewhere
+    // relevant, even for notification types that carry no object URL.
+    url: params.objectUrl ?? '/updates',
   });
 
   // TODO: Check email preferences and send if enabled

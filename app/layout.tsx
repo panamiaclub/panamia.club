@@ -9,6 +9,7 @@ import MainHeader from '@/components/MainHeader';
 import MainFooter from '@/components/MainFooter';
 import ScreennameGate from '@/components/ScreennameGate';
 import { NativeShell } from '@/components/mobile/NativeShell';
+import { PushRegistration } from '@/components/mobile/PushRegistration';
 import {
   resolveSurface,
   originForFrom,
@@ -334,6 +335,12 @@ export default async function RootLayout({
                     and must not depend on which page happened to load first.
                     See components/mobile/NativeShell.tsx. */}
                 <NativeShell />
+                {/* Also renders nothing in a browser. Separate from
+                    NativeShell because it is the one piece of native wiring
+                    that depends on who is signed in: the permission prompt is
+                    spent after sign-in rather than on launch, since iOS only
+                    grants one. See components/mobile/PushRegistration.tsx. */}
+                <PushRegistration />
               </PanaSitesProvider>
             </Providers>
           </FlowerPowerProvider>
