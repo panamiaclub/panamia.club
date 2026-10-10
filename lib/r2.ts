@@ -10,6 +10,11 @@
  * - Local dev (plain Node.js): getStorage() returns null → lib/blob/api.ts falls back to S3 API
  */
 
+/** A single stored object, or the slice of one that a range read asked for. */
+export interface R2ObjectBody {
+  arrayBuffer(): Promise<ArrayBuffer>;
+}
+
 // Minimal R2Bucket interface — mirrors @cloudflare/workers-types
 export interface R2Bucket {
   put(
@@ -19,6 +24,18 @@ export interface R2Bucket {
     options?: { httpMetadata?: { contentType?: string } }
   ): Promise<unknown>;
   delete(keys: string | string[]): Promise<void>;
+  /**
+   * Read an object, optionally a byte range of one.
+   *
+   * The range form is what makes the map's PMTiles archive practical: it is a
+   * few hundred megabytes, and a single tile is a few kilobytes somewhere
+   * inside it. R2 serves the slice, so no request reads more than the tile it
+   * was asked for. Returns null when the key does not exist.
+   */
+  get(
+    key: string,
+    options?: { range?: { offset: number; length?: number } }
+  ): Promise<R2ObjectBody | null>;
 }
 
 export interface CloudflareEnv {

@@ -3,23 +3,32 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Map, Marker, Overlay, ZoomControl } from 'pigeon-maps';
+import dynamic from 'next/dynamic';
 import { ArrowRight, Globe, MapPin } from 'lucide-react';
 import type { SearchResultsInterface } from '@/lib/query/directory';
 import { isUnoptimizableImageSrc } from '@/lib/image-src';
-import { mapTiles, MapAttribution } from '@/lib/map-tiles';
 import { distanceInMiles, type Coords } from '@/app/p/[user]/_lib/profile-view';
 import {
   directoryRadiusMiles,
   type DirectoryRadius,
 } from '@/lib/directory-radius';
 import { formatDistance, resultCoords, resultHref } from '../_lib/format';
+import type { MapCanvasPin } from './map-canvas';
 import {
   FALLBACK_MAP_PX,
   frameForPoints,
   onResultsArrived,
   viewerFrame,
 } from '../_lib/map-frame';
+
+/**
+ * The map engine is client-only: maplibre-gl wants `window` and a WebGL
+ * context the moment it is imported, which the server has neither of.
+ */
+const MapCanvas = dynamic(() => import('./map-canvas'), {
+  ssr: false,
+  loading: () => <div className="dirsearch-mapcanvas" aria-hidden="true" />,
+});
 
 const FALLBACK_LOGO = '/img/bg_coconut_blue.jpg';
 
@@ -172,51 +181,46 @@ export function MapPanel({
     }
   };
 
+  // The pins' markup lives here, not in the canvas: the canvas should know how
+  // to place a node on the map, and nothing about what a result looks like.
+  const canvasPins = useMemo<MapCanvasPin[]>(
+    () =>
+      pins.map(({ result, coords }) => ({
+        id: result._id,
+        lat: coords.lat,
+        lng: coords.lng,
+        content: (
+          <button
+            type="button"
+            className="dirsearch-pin"
+            data-on={result._id === selectedId || result._id === highlightId}
+            onClick={() => select(result._id)}
+            aria-label={`${result.name}, ${result.primary_address?.city ?? 'South Florida'}`}
+          >
+            <Image
+              src={result.images?.primaryCDN || FALLBACK_LOGO}
+              alt=""
+              width={34}
+              height={34}
+              aria-hidden="true"
+              unoptimized={isUnoptimizableImageSrc(result.images?.primaryCDN)}
+            />
+          </button>
+        ),
+      })),
+    // Rebuilt when the pins or the two highlight ids change — not when
+    // `select` is recreated, which is every render.
+    [pins, selectedId, highlightId]
+  );
+
   return (
     <div className="dirsearch-map" ref={mapRef}>
-      <Map
-        center={view.center}
-        zoom={view.zoom}
-        onBoundsChanged={({ center, zoom }) => setView({ center, zoom })}
-        provider={mapTiles}
-        attribution={<MapAttribution />}
-        attributionPrefix={false}
-      >
-        <ZoomControl />
-
-        {viewerCoords && (
-          <Marker
-            anchor={[viewerCoords.lat, viewerCoords.lng]}
-            width={26}
-            color="#3b5bdb"
-          />
-        )}
-
-        {pins.map(({ result, coords }) => (
-          <Overlay
-            key={result._id}
-            anchor={[coords.lat, coords.lng]}
-            offset={[19, 19]}
-          >
-            <button
-              type="button"
-              className="dirsearch-pin"
-              data-on={result._id === selectedId || result._id === highlightId}
-              onClick={() => select(result._id)}
-              aria-label={`${result.name}, ${result.primary_address?.city ?? 'South Florida'}`}
-            >
-              <Image
-                src={result.images?.primaryCDN || FALLBACK_LOGO}
-                alt=""
-                width={34}
-                height={34}
-                aria-hidden="true"
-                unoptimized={isUnoptimizableImageSrc(result.images?.primaryCDN)}
-              />
-            </button>
-          </Overlay>
-        ))}
-      </Map>
+      <MapCanvas
+        view={view}
+        onViewChange={setView}
+        pins={canvasPins}
+        viewer={viewerCoords}
+      />
 
       {/* Online-only businesses match the search but cannot be plotted.
           Dropping them silently would make the map quietly lossy, so the count
