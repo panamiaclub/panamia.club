@@ -20,6 +20,39 @@
  * account deletion: that sweep deletes the media belonging to an actor's
  * statuses by URL, so a shared object would vanish out of other people's
  * conversations the first time any one sender closed their account.
+ *
+ * ---------------------------------------------------------------------------
+ * KNOWN DEVIATION FROM GIPHY'S TERMS -- read before changing or copying this.
+ *
+ * GIPHY's "Prohibited Integration Practices" say, in their words:
+ *
+ *   2. Do not cache media URLs or copies of GIPHY media assets unless your
+ *      integration has been explicitly approved by GIPHY for media caching
+ *      and follows GIPHY's required cache revalidation implementation.
+ *   3. Do not proxy requests to GIPHY, either API calls or media URL loads.
+ *      All requests to GIPHY should be made directly from the client side.
+ *
+ * and separately: "GIPHY media should be loaded directly from the media URLs
+ * returned by the API and should not be cached, proxied, rewritten, or stored
+ * by the partner."
+ *
+ * This route stores. /api/social/gifs proxies and caches. Both are deliberate
+ * and both are outside GIPHY's standard integration terms. The reason is the
+ * privacy property described above -- hotlinking would hand GIPHY the IP of
+ * every DM recipient on every thread open -- which we are not willing to give
+ * up quietly for a messaging surface that is members-only and expires.
+ *
+ * GIPHY does operate an approval path for exactly this ("in some approved
+ * high-scale integrations, GIPHY may allow a partner-operated caching layer
+ * for media delivery... requires prior written approval"), and they publish
+ * a Cloudflare cache-revalidation example, which is the stack we are on.
+ * Until that approval exists, the realistic downside is key revocation.
+ *
+ * Do not treat this comment as settled. If GIPHY declines, the compliant
+ * shape is client-side calls plus hotlinked media, and the privacy tradeoff
+ * has to be put back in front of the product owner rather than absorbed here.
+ * https://developers.giphy.com/docs/api/
+ * ---------------------------------------------------------------------------
  */
 
 import { NextRequest, NextResponse } from 'next/server';
