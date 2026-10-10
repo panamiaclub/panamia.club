@@ -19,6 +19,14 @@ interface FollowButtonProps {
   size?: 'default' | 'sm' | 'lg' | 'icon';
   variant?: 'default' | 'outline' | 'ghost';
   showIcon?: boolean;
+  /**
+   * Extra classes for the button itself. Surfaces with their own button
+   * language — the directory cards, where this sits between a pill-shaped Save
+   * and a pill-shaped View profile — need to restyle the control without
+   * reimplementing the follow and unfollow mutations, the actor checks and the
+   * toasts that live in here.
+   */
+  className?: string;
 }
 
 export function FollowButton({
@@ -28,6 +36,7 @@ export function FollowButton({
   size = 'sm',
   variant = 'default',
   showIcon = true,
+  className,
 }: FollowButtonProps) {
   const followActor = useFollowActor();
   const unfollowActor = useUnfollowActor();
@@ -65,6 +74,7 @@ export function FollowButton({
     <Button
       variant={isFollowing ? 'outline' : variant}
       size={size}
+      className={className}
       onClick={handleClick}
       disabled={isPending}
     >

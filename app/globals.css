@@ -5497,6 +5497,56 @@ body {
   color: var(--color-pana-butter);
 }
 
+/* Follow is the shared social control — it carries the follow and unfollow
+   mutations, the actor checks and the toasts, which is why the card reuses it
+   rather than growing its own. What it also carried was shadcn's button
+   language: a 6px corner, a 1px neutral border, medium weight, 14px. Standing
+   between Save and View profile, both fully round and both weight 800, it read
+   as a stray piece of another interface rather than as the middle of three
+   actions.
+
+   Restyled here rather than in the shared component because every other
+   surface that follows someone — profiles, timeline — wants the shadcn look it
+   already has. Scoped under `.dirsearch-card-actions` so the two-class
+   selector outranks the Tailwind utilities it is overriding without needing
+   `!important` or depending on which stylesheet is emitted first. */
+.dirsearch-card-actions .dirsearch-follow {
+  gap: 0.35rem;
+  height: auto;
+  padding: 0.42rem 0.9rem;
+  border-radius: 999px;
+  border: 2px solid rgb(48 62 140 / 0.25);
+  background-color: transparent;
+  color: var(--color-pana-indigo);
+  font-size: 0.8125rem;
+  /* `text-sm` sets line-height as a ratio rather than a length, so overriding
+     the font size above drags the line box down with it and leaves this a
+     pixel shorter than the Save pill beside it. */
+  line-height: 1.5;
+  font-weight: 800;
+}
+
+/* The icon ships with its own right margin, which would sit on top of the gap
+   above and space this wider than Save's bookmark. */
+.dirsearch-card-actions .dirsearch-follow svg {
+  margin-right: 0;
+}
+
+.dirsearch-card-actions .dirsearch-follow:hover {
+  background-color: transparent;
+  border-color: var(--color-pana-indigo);
+  color: var(--color-pana-indigo);
+}
+
+/* Already following is a settled state, and Saved already says so by filling
+   in. Matching it keeps the two toggles on this card reading alike. */
+.dirsearch-card-actions .dirsearch-follow-on,
+.dirsearch-card-actions .dirsearch-follow-on:hover {
+  background-color: var(--color-pana-indigo);
+  border-color: var(--color-pana-indigo);
+  color: var(--color-pana-butter);
+}
+
 .dirsearch-view {
   display: inline-flex;
   align-items: center;

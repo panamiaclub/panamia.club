@@ -53,6 +53,17 @@ export function DirectoryFollowButton({
       isFollowing={targetActorData.isFollowing || false}
       isFollowedBy={targetActorData.isFollowedBy || false}
       variant="outline"
+      // The shared button is a shadcn control and brings shadcn's language with
+      // it: a 6px corner, a 1px neutral border, medium weight. Dropped between
+      // Save and View profile — both fully round, both 2px, both weight 800 —
+      // it read as a stray piece of another interface rather than as the middle
+      // of three actions. The second class mirrors Save's filled `data-on`
+      // state, so "Following" looks as settled as "Saved" does.
+      className={
+        targetActorData.isFollowing
+          ? 'dirsearch-follow dirsearch-follow-on'
+          : 'dirsearch-follow'
+      }
     />
   );
 }
