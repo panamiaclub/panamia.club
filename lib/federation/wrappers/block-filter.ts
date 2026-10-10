@@ -95,6 +95,58 @@ export async function isBlockedEitherWay(
 }
 
 /**
+ * Which of a set of actors are blocked from one actor, in either direction.
+ *
+ * The batch twin of isBlockedEitherWay, and it must keep that function's
+ * semantics rather than filterHiddenActorIds': mutes are excluded. The two
+ * look interchangeable and are not. A mute is about what the muter sees, so
+ * folding mutes in here would mean an author who muted somebody silently
+ * stopped *that person's* notifications -- a one-directional preference
+ * reaching across and editing someone else's bell.
+ *
+ * Exists for fan-out. Notifying a whole group one createNotification at a
+ * time costs a block query per member; this answers for all of them at once,
+ * which is what keeps a post to a large group from turning into hundreds of
+ * round trips.
+ */
+export async function filterBlockedActorIds(
+  actorId: string,
+  candidateActorIds: string[]
+): Promise<Set<string>> {
+  const others = candidateActorIds.filter((id) => id !== actorId);
+  if (others.length === 0) return new Set();
+
+  const rows = await db
+    .select({
+      actorId: socialBlocks.actorId,
+      targetActorId: socialBlocks.targetActorId,
+    })
+    .from(socialBlocks)
+    .where(
+      and(
+        eq(socialBlocks.kind, 'block'),
+        or(
+          and(
+            eq(socialBlocks.actorId, actorId),
+            inArray(socialBlocks.targetActorId, others)
+          ),
+          and(
+            eq(socialBlocks.targetActorId, actorId),
+            inArray(socialBlocks.actorId, others)
+          )
+        )
+      )
+    );
+
+  const blocked = new Set<string>();
+  for (const row of rows) {
+    blocked.add(row.actorId === actorId ? row.targetActorId : row.actorId);
+  }
+
+  return blocked;
+}
+
+/**
  * What the viewer has done to one specific actor, for the profile menu.
  *
  * Only the viewer's own outgoing rows. Whether the other person blocked *you*

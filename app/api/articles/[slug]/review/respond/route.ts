@@ -11,16 +11,10 @@ import { articlesConsentGate } from '@/lib/article/consent';
 import { db } from '@/lib/db';
 import { articles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
-import { createNotification } from '@/lib/notifications';
 import type { ArticleStatus } from '@/lib/schema';
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
-}
-
-interface CoAuthor {
-  userId: string;
-  status: string;
 }
 
 interface ReviewComment {
@@ -168,41 +162,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         status: newStatus as ArticleStatus,
       })
       .where(eq(articles.id, articleDoc.id));
-
-    // Notify the author
-    if (articleDoc.authorId) {
-      await createNotification({
-        type: action === 'approve' ? 'Accept' : 'Update',
-        actorId: session.user.id,
-        targetId: articleDoc.authorId,
-        context: 'review',
-        objectId: articleDoc.id,
-        objectType: 'article',
-        objectTitle: articleDoc.title,
-        objectUrl: `/a/${articleDoc.slug}/edit`,
-        message:
-          action === 'approve'
-            ? 'Your article has been approved and is ready to publish!'
-            : comment || 'Revisions have been requested',
-      });
-    }
-
-    // Also notify co-authors
-    const coAuthors = (articleDoc.coAuthors as unknown as CoAuthor[]) || [];
-    for (const coAuthor of coAuthors) {
-      if (coAuthor.status === 'accepted' && coAuthor.userId) {
-        await createNotification({
-          type: action === 'approve' ? 'Accept' : 'Update',
-          actorId: session.user.id,
-          targetId: coAuthor.userId,
-          context: 'review',
-          objectId: articleDoc.id,
-          objectType: 'article',
-          objectTitle: articleDoc.title,
-          objectUrl: `/a/${articleDoc.slug}/edit`,
-        });
-      }
-    }
 
     return NextResponse.json({
       success: true,

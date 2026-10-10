@@ -137,17 +137,24 @@ interface ReviewComment {
 >
 > The notification system uses ActivityPub Activity types (`Invite`, `Accept`, `Create`, etc.) to enable future federation with [activities.next](https://github.com/llun/activities.next).
 
-Article-specific notification contexts:
+Article-specific notification contexts — **all retired.** Co-author invites,
+review requests and publishing no longer call `createNotification`. The
+contexts and their `case` blocks survive only so rows written before the change
+still render; see
+[NOTIFICATIONS-ROADMAP.md](./NOTIFICATIONS-ROADMAP.md#contexts-that-were-switched-off).
+`article` is still produced, but only by admin remove/restore.
 
-| Event               | ActivityPub Type | Context    |
-| ------------------- | ---------------- | ---------- |
-| Co-author invited   | `Invite`         | `coauthor` |
-| Invitation accepted | `Accept`         | `coauthor` |
-| Invitation declined | `Reject`         | `coauthor` |
-| Review requested    | `Invite`         | `review`   |
-| Review approved     | `Accept`         | `review`   |
-| Revision needed     | `Update`         | `review`   |
-| Article published   | `Create`         | `article`  |
+| Event               | ActivityPub Type | Context    | Still fires?            |
+| ------------------- | ---------------- | ---------- | ----------------------- |
+| Co-author invited   | `Invite`         | `coauthor` | No                      |
+| Invitation accepted | `Accept`         | `coauthor` | No                      |
+| Invitation declined | `Reject`         | `coauthor` | No                      |
+| Review requested    | `Invite`         | `review`   | No                      |
+| Review approved     | `Accept`         | `review`   | No                      |
+| Revision needed     | `Update`         | `review`   | No                      |
+| Article published   | `Create`         | `article`  | No                      |
+| Article removed     | `Delete`         | `article`  | Yes — admin moderation  |
+| Article restored    | `Create`         | `article`  | Yes — admin moderation  |
 | Article removed     | `Delete`         | `article`  |
 | Reply published     | `Create`         | `article`  |
 
@@ -311,22 +318,22 @@ Search users by screenname
        ↓
 Add personal message (optional)
        ↓
-Send invitation → Notification created
+Send invitation → row recorded, nobody notified
        ↓
-Invitee sees notification (flower icon badge)
+Author shares /a/<slug>/invite link out-of-band
        ↓
-Invitee clicks → lands on invitation page
+Invitee opens the link → lands on invitation page
        ↓
 Accept: gains edit access, can now see/edit draft
-Decline: removed from list, author notified
+Decline: removed from list, author not notified
 ```
 
 #### Reviewer Workflow
 
 ```
-Author requests review
+Author requests review → row recorded, nobody notified
        ↓
-Reviewer receives notification
+Author shares /a/<slug>/review link out-of-band
        ↓
 Reviewer opens article in review mode
        ↓
@@ -337,12 +344,19 @@ Reviewer can:
   • Check required boxes when satisfied
        ↓
 Approve: Article becomes publishable
-Request Revision: Status → 'revision_needed', authors notified
+Request Revision: Status → 'revision_needed', authors not notified
        ↓
 [If revision needed]
 Authors see comments, address issues
 Re-request review when ready
 ```
+
+> **Both flows lost their notifications.** The invitation and review pages are
+> still live and still work, but nothing announces them and there is no index of
+> invitations you have received, so the author has to pass the link along. The
+> editor's Collaboration panel still sends invites — it shows the author a
+> **Pending Invitations** list, which is now the only in-app evidence an
+> invitation exists.
 
 #### API Endpoints
 

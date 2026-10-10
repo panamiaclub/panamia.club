@@ -38,6 +38,7 @@ import {
   canViewStatusGroup,
 } from './group-visibility';
 import { notifyDirectMessage } from '@/lib/dm-stream';
+import { notifyGroupPosted } from './group-notify';
 import type { PostVisibility } from '@/lib/utils/getVisibility';
 import type { JsonValue } from '@/lib/types';
 
@@ -503,6 +504,27 @@ export async function createStatus(
       ],
       statusId
     );
+  }
+
+  /**
+   * Tell the group a new post arrived.
+   *
+   * Top-level posts only. A reply is a conversation between the people already
+   * in it, and announcing every one of them to the whole membership is how a
+   * single busy thread turns the bell into something people learn to ignore.
+   *
+   * Lives here rather than in the route because this function is the only door
+   * into a group post -- the membership gate above says so, and for the same
+   * reason: a second way in would otherwise be a second way to post silently.
+   *
+   * Awaited rather than fired and forgotten. There is no waitUntil on this
+   * path, and a floating promise is not guaranteed to survive the response
+   * being returned; it costs a fixed four queries no matter how large the
+   * group is. notifyGroupPosted swallows its own failures, so this cannot turn
+   * a successful post into an error.
+   */
+  if (groupId && !inReplyToId && actor.profile?.userId) {
+    await notifyGroupPosted(groupId, actorId, actor.profile.userId);
   }
 
   return { success: true, status: updatedStatus, heldRecipientActorIds };

@@ -10,7 +10,6 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { articles, users, profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
-import { createNotification } from '@/lib/notifications';
 import { isPublishable } from '@/lib/article';
 import { isAuthor as isArticleAuthor } from '@/lib/article/permissions';
 import { articlesConsentGate } from '@/lib/article/consent';
@@ -276,34 +275,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .set({ status: 'published', publishedAt, nostrEventId })
       .where(eq(articles.id, articleDoc.id))
       .returning();
-
-    // Notify co-authors that article is published
-    const acceptedCoAuthors = coAuthors?.filter(
-      (ca) => ca.status === 'accepted' && ca.userId
-    );
-
-    for (const coAuthor of acceptedCoAuthors || []) {
-      await createNotification({
-        type: 'Create',
-        context: 'article',
-        actorId: session.user.id,
-        targetId: coAuthor.userId,
-        objectUrl: `/a/${articleDoc.slug}`,
-        objectTitle: articleDoc.title,
-      });
-    }
-
-    // Notify reviewer if there was one
-    if (reviewedBy?.userId && reviewedBy.status === 'approved') {
-      await createNotification({
-        type: 'Create',
-        context: 'article',
-        actorId: session.user.id,
-        targetId: reviewedBy.userId,
-        objectUrl: `/a/${articleDoc.slug}`,
-        objectTitle: articleDoc.title,
-      });
-    }
 
     return NextResponse.json({
       success: true,

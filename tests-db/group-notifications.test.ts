@@ -40,6 +40,7 @@ const {
   profiles,
   notifications,
   socialActors,
+  socialBlocks,
   socialGroups,
   socialGroupMembers,
   screennameHistory,
@@ -53,8 +54,9 @@ const {
   banMember,
   unbanMember,
 } = await import('@/lib/federation/wrappers/group-moderation');
-const { notifyJoinRequested } =
+const { notifyJoinRequested, notifyGroupPosted, notifyGroupEventPublished } =
   await import('@/lib/federation/wrappers/group-notify');
+const { getNotificationMessage } = await import('@/lib/notifications');
 
 const suffix = Math.random().toString(36).slice(2, 8);
 const groupHandle = `nt${suffix}`;
@@ -160,6 +162,19 @@ async function inboxOf(userId: string) {
         eq(notifications.target, userId),
         eq(notifications.context, 'group_membership')
       )
+    );
+}
+
+/** Every notification of one context sent to one person. */
+async function inboxOfContext(
+  userId: string,
+  context: 'group' | 'event' | 'group_membership'
+) {
+  return db
+    .select()
+    .from(notifications)
+    .where(
+      and(eq(notifications.target, userId), eq(notifications.context, context))
     );
 }
 
@@ -615,5 +630,171 @@ test('notifying does not touch member_count', async () => {
     await storedCount(),
     before,
     'a role change moves nobody in or out'
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Announcements to the whole group
+//
+// Everything above lands on one person or on the leaders. These two land on
+// every active member, which makes the question "who is NOT told" the one
+// worth proving: the author, anyone not actually in the room, and anyone a
+// block stands between.
+// ---------------------------------------------------------------------------
+
+test('a post is announced to the other active members, not to its author', async () => {
+  await notifyGroupPosted(groupId, memberId, memberUserId);
+
+  const adminInbox = await inboxOfContext(adminUserId, 'group');
+  const modInbox = await inboxOfContext(modUserId, 'group');
+  const authorInbox = await inboxOfContext(memberUserId, 'group');
+
+  assert.equal(adminInbox.length, 1, 'the admin should hear about it');
+  assert.equal(modInbox.length, 1, 'so should the moderator');
+  assert.equal(
+    authorInbox.length,
+    0,
+    'nobody needs telling about their own post'
+  );
+
+  assert.equal(adminInbox[0].type, 'Create');
+  assert.equal(adminInbox[0].actor, memberUserId);
+  assert.equal(adminInbox[0].objectType, 'group');
+  assert.equal(adminInbox[0].objectTitle, groupName);
+
+  // The group, not the individual post: the feed is where the next one will
+  // be too, and the handle outlives any single status id.
+  assert.equal(adminInbox[0].objectUrl, `/g/${groupHandle}`);
+
+  assert.equal(
+    getNotificationMessage({
+      type: adminInbox[0].type,
+      context: adminInbox[0].context,
+      actorScreenname: adminInbox[0].actorScreenname,
+      actorName: adminInbox[0].actorName,
+      objectTitle: adminInbox[0].objectTitle,
+      message: adminInbox[0].message,
+    }),
+    // `nb`, not `nb${suffix}`: the sentence prefers the actor's display name
+    // over its screenname, and makeActor sets the name to the bare label.
+    `nb posted in "${groupName}"`,
+    'the group Create arm must render, not fall through to the generic sentence'
+  );
+});
+
+test('a post says nothing to people who are not active members', async () => {
+  await db
+    .update(socialGroupMembers)
+    .set({ status: 'pending' })
+    .where(
+      and(
+        eq(socialGroupMembers.groupId, groupId),
+        eq(socialGroupMembers.actorId, modId)
+      )
+    );
+
+  await notifyGroupPosted(groupId, memberId, memberUserId);
+
+  assert.equal(
+    (await inboxOfContext(modUserId, 'group')).length,
+    0,
+    'someone still waiting at the door is not in the room'
+  );
+  assert.equal(
+    (await inboxOfContext(adminUserId, 'group')).length,
+    1,
+    'the active admin still hears it'
+  );
+});
+
+test('a post is not announced to someone a block stands between', async () => {
+  await db.insert(socialBlocks).values({
+    actorId: adminId,
+    targetActorId: memberId,
+    kind: 'block',
+  });
+
+  try {
+    await notifyGroupPosted(groupId, memberId, memberUserId);
+
+    assert.equal(
+      (await inboxOfContext(adminUserId, 'group')).length,
+      0,
+      'a block is the one thing a notification is most clearly meant to stop'
+    );
+    assert.equal(
+      (await inboxOfContext(modUserId, 'group')).length,
+      1,
+      'and it stops nothing for anybody else'
+    );
+  } finally {
+    await db
+      .delete(socialBlocks)
+      .where(
+        and(
+          eq(socialBlocks.actorId, adminId),
+          eq(socialBlocks.targetActorId, memberId)
+        )
+      );
+  }
+});
+
+test('a member with no user behind it costs the others nothing', async () => {
+  await addMember(userlessId, 'member', 'active');
+
+  await notifyGroupPosted(groupId, memberId, memberUserId);
+
+  // There is no inbox to check -- that is the point. What must still hold is
+  // that an unreachable member does not take the announcement down with it.
+  assert.equal((await inboxOfContext(adminUserId, 'group')).length, 1);
+  assert.equal((await inboxOfContext(modUserId, 'group')).length, 1);
+});
+
+test('a published group event reaches the members and credits the group', async () => {
+  await notifyGroupEventPublished({
+    groupId,
+    publisherUserId: adminUserId,
+    eventId: `evt-${suffix}`,
+    eventSlug: `ev-${suffix}`,
+    eventTitle: 'Block Party',
+  });
+
+  const modInbox = await inboxOfContext(modUserId, 'event');
+  const memberInbox = await inboxOfContext(memberUserId, 'event');
+  const publisherInbox = await inboxOfContext(adminUserId, 'event');
+
+  assert.equal(modInbox.length, 1, 'the moderator should hear about it');
+  assert.equal(memberInbox.length, 1, 'so should the plain member');
+  assert.equal(
+    publisherInbox.length,
+    0,
+    'the admin who pressed publish already knows'
+  );
+
+  assert.equal(modInbox[0].type, 'Create');
+  assert.equal(modInbox[0].objectType, 'event');
+  assert.equal(modInbox[0].objectUrl, `/e/ev-${suffix}`);
+
+  // The group hosts it, not the admin who published it. The default sentence
+  // would say "<admin> is hosting", which credits the wrong party.
+  const rendered = getNotificationMessage({
+    type: modInbox[0].type,
+    context: modInbox[0].context,
+    actorScreenname: modInbox[0].actorScreenname,
+    actorName: modInbox[0].actorName,
+    objectTitle: modInbox[0].objectTitle,
+    message: modInbox[0].message,
+  });
+  assert.ok(
+    rendered.includes(groupName),
+    `expected the group to be named, got: ${rendered}`
+  );
+  assert.ok(
+    rendered.includes('Block Party'),
+    `expected the event title, got: ${rendered}`
+  );
+  assert.ok(
+    !rendered.startsWith('na'),
+    `expected the publisher not to be credited as host, got: ${rendered}`
   );
 });

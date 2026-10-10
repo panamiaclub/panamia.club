@@ -6,8 +6,6 @@ import type { SessionType, SessionStatus } from '@/lib/schema';
 import { and, eq, or } from 'drizzle-orm';
 import { ProfileMentoring } from '@/lib/interfaces';
 import { createSessionSchema } from '@/lib/validations/session';
-import { createNotification } from '@/lib/notifications';
-import { getScheduleUrl } from '@/lib/mentoring';
 import { nanoid } from 'nanoid';
 
 // GET - List sessions for current user
@@ -103,19 +101,6 @@ export async function POST(request: NextRequest) {
       status: 'pending',
     })
     .returning();
-
-  // Notify mentor of the session request
-  // actorId = mentee (current user), targetId = mentor
-  await createNotification({
-    type: 'Invite',
-    actorId: session.user.id,
-    targetId: mentor.userId,
-    context: 'mentoring',
-    objectId: newSession.id,
-    objectType: 'session',
-    objectTitle: topic,
-    objectUrl: getScheduleUrl(),
-  });
 
   return NextResponse.json({ session: newSession }, { status: 201 });
 }

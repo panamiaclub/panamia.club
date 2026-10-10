@@ -39,8 +39,11 @@ import {
   socialGroups,
 } from '@/lib/schema';
 import type { SocialGroupRole } from '@/lib/schema';
-import { and, eq, inArray } from 'drizzle-orm';
-import { createNotification } from '@/lib/notifications';
+import { and, eq, inArray, ne } from 'drizzle-orm';
+import {
+  createNotification,
+  createNotificationsForTargets,
+} from '@/lib/notifications';
 
 /** Display data every notification needs, read once per call. */
 interface GroupRef {
@@ -355,4 +358,170 @@ export async function notifyBanned(
     targetUserId: resolved.targetUserId,
     group: resolved.group,
   });
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Announcements to the whole group
+ *
+ * Everything above lands on one person, or on the handful of leaders who can
+ * answer a join request. The two below land on every active member, which
+ * makes them a different kind of thing and worth keeping visibly separate.
+ *
+ * Two rules apply to both and to anything added beside them:
+ *
+ *   - Only `active` members. A pending row is somebody still waiting at the
+ *     door and a banned row is a tombstone; neither should hear the group's
+ *     news. This is the same predicate the members list uses.
+ *   - Go through createNotificationsForTargets, never a loop over
+ *     createNotification. The per-recipient cost of the single path is fine
+ *     for one leader and is hundreds of queries for one group.
+ *
+ * What is deliberately NOT here: replies, edits, reactions, joins and leaves.
+ * A notification that arrives for everything a group does is one people turn
+ * off, and turning it off is not currently possible -- there is no per-group
+ * mute, so the only way out of a noisy group is to leave it. Until that
+ * exists, every addition here should have to argue for itself.
+ *
+ * @see docs/NOTIFICATIONS-ROADMAP.md  the mute gap, written down
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * The user id behind every active member, optionally skipping one actor.
+ *
+ * Resolved in a single join rather than through userIdsForActors, because the
+ * caller here never needs the actor ids themselves -- it needs the audience.
+ * Members whose actor has no local user drop out for the same ordinary
+ * reasons described on userIdsForActors.
+ *
+ * excludeActorId skips the person who caused the notification. Leaving them in
+ * would also work, since createNotificationsForTargets refuses to notify the
+ * sender about themselves, but filtering in SQL means the author of a post in
+ * a thousand-member group is not carried through three steps to be dropped at
+ * the last one.
+ */
+async function activeMemberUserIds(
+  groupId: string,
+  excludeActorId?: string
+): Promise<string[]> {
+  const conditions = [
+    eq(socialGroupMembers.groupId, groupId),
+    eq(socialGroupMembers.status, 'active'),
+  ];
+
+  if (excludeActorId) {
+    conditions.push(ne(socialGroupMembers.actorId, excludeActorId));
+  }
+
+  const rows = await db
+    .select({ userId: profiles.userId })
+    .from(socialGroupMembers)
+    .innerJoin(socialActors, eq(socialGroupMembers.actorId, socialActors.id))
+    .innerJoin(profiles, eq(socialActors.profileId, profiles.id))
+    .where(and(...conditions));
+
+  return rows
+    .map((row) => row.userId)
+    .filter((id): id is string => Boolean(id));
+}
+
+/**
+ * Somebody posted in the group. Tell the other members.
+ *
+ * Top-level posts only -- the caller is responsible for not calling this for a
+ * reply, and does so by checking inReplyToId. The distinction is the whole
+ * difference between a group that is worth having notifications for and one
+ * where a single busy thread rings everybody a dozen times in an afternoon.
+ *
+ * Points at the group rather than the individual post. A post is read in the
+ * context of the feed it is in, the feed is where the next one will be too,
+ * and the group handle survives in a way that makes the link stable.
+ */
+export async function notifyGroupPosted(
+  groupId: string,
+  authorActorId: string,
+  authorUserId: string
+): Promise<void> {
+  try {
+    const [group, memberUserIds] = await Promise.all([
+      groupRef(groupId),
+      activeMemberUserIds(groupId, authorActorId),
+    ]);
+
+    if (!group || memberUserIds.length === 0) return;
+
+    await createNotificationsForTargets({
+      type: 'Create',
+      actorId: authorUserId,
+      targetIds: memberUserIds,
+      context: 'group',
+      objectId: group.id,
+      objectType: 'group',
+      objectTitle: group.name,
+      objectUrl: `/g/${group.handle}`,
+    });
+  } catch (error) {
+    // The post is already written and visible in the feed. Failing the request
+    // now would tell the author their post did not happen, which is worse than
+    // a quiet group.
+    console.error('[group-notify] failed to announce post', {
+      groupId,
+      error,
+    });
+  }
+}
+
+/**
+ * A group's event went live. Tell the members.
+ *
+ * Fires on publish rather than on creation, and the difference matters: events
+ * are born as drafts, and a draft is visible only to the group's managers. A
+ * notification sent at creation would announce something most of its audience
+ * could not open.
+ *
+ * The message is written here rather than left to getNotificationMessage
+ * because that sentence names the actor as the host, and for a group event the
+ * host is the group -- not the admin who happened to press the button. Putting
+ * their name on it credits the wrong party, exactly as the publish route
+ * already avoids doing for the Nostr mirror.
+ *
+ * Unlisted events still notify. Unlisted governs whether the event leaves
+ * pana.social, not whether the group it belongs to may hear about it; members
+ * are the intended audience either way.
+ */
+export async function notifyGroupEventPublished(params: {
+  groupId: string;
+  publisherUserId: string;
+  eventId: string;
+  eventSlug: string;
+  eventTitle: string;
+}): Promise<void> {
+  try {
+    const [group, memberUserIds] = await Promise.all([
+      groupRef(params.groupId),
+      activeMemberUserIds(params.groupId),
+    ]);
+
+    if (!group || memberUserIds.length === 0) return;
+
+    await createNotificationsForTargets({
+      type: 'Create',
+      actorId: params.publisherUserId,
+      targetIds: memberUserIds,
+      context: 'event',
+      objectId: params.eventId,
+      objectType: 'event',
+      objectTitle: params.eventTitle,
+      objectUrl: `/e/${params.eventSlug}`,
+      message: `New event in "${group.name}": "${params.eventTitle}"`,
+    });
+  } catch (error) {
+    // Same reasoning as the post announcement: the event is published and
+    // mirrored by now, and a failure here must not report otherwise.
+    console.error('[group-notify] failed to announce event', {
+      groupId: params.groupId,
+      error,
+    });
+  }
 }

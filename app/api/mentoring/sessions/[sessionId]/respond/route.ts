@@ -9,11 +9,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { mentorSessions, profiles } from '@/lib/schema';
+import { mentorSessions } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { respondSessionSchema } from '@/lib/validations/session';
-import { createNotification } from '@/lib/notifications';
-import { getSessionUrl, getScheduleUrl } from '@/lib/mentoring';
 
 interface RouteParams {
   params: Promise<{ sessionId: string }>;
@@ -74,19 +72,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  // Get mentee's userId from their profile
-  const menteeProfile = await db.query.profiles.findFirst({
-    where: eq(profiles.email, mentorSession.menteeEmail),
-    columns: { userId: true },
-  });
-
-  if (!menteeProfile?.userId) {
-    return NextResponse.json(
-      { error: 'Mentee account not properly configured' },
-      { status: 400 }
-    );
-  }
-
   // Update session based on action
   if (action === 'accept') {
     const [updatedSession] = await db
@@ -94,18 +79,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .set({ status: 'scheduled' })
       .where(eq(mentorSessions.id, mentorSession.id))
       .returning();
-
-    // Notify mentee of acceptance
-    await createNotification({
-      type: 'Accept',
-      actorId: session.user.id,
-      targetId: menteeProfile.userId,
-      context: 'mentoring',
-      objectId: updatedSession.id,
-      objectType: 'session',
-      objectTitle: updatedSession.topic,
-      objectUrl: getSessionUrl(sessionId),
-    });
 
     return NextResponse.json({
       success: true,
@@ -124,19 +97,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       })
       .where(eq(mentorSessions.id, mentorSession.id))
       .returning();
-
-    // Notify mentee of decline
-    await createNotification({
-      type: 'Reject',
-      actorId: session.user.id,
-      targetId: menteeProfile.userId,
-      context: 'mentoring',
-      objectId: updatedSession.id,
-      objectType: 'session',
-      objectTitle: updatedSession.topic,
-      objectUrl: getScheduleUrl(),
-      message: reason,
-    });
 
     return NextResponse.json({
       success: true,

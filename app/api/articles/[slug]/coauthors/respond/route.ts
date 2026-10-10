@@ -11,7 +11,6 @@ import { articlesConsentGate } from '@/lib/article/consent';
 import { db } from '@/lib/db';
 import { articles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
-import { createNotification } from '@/lib/notifications';
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -101,20 +100,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .update(articles)
       .set({ coAuthors: updatedCoAuthors })
       .where(eq(articles.id, articleDoc.id));
-
-    // Notify the author
-    if (articleDoc.authorId) {
-      await createNotification({
-        type: action === 'accept' ? 'Accept' : 'Reject',
-        actorId: session.user.id,
-        targetId: articleDoc.authorId,
-        context: 'coauthor',
-        objectId: articleDoc.id,
-        objectType: 'article',
-        objectTitle: articleDoc.title,
-        objectUrl: `/a/${articleDoc.slug}/edit`,
-      });
-    }
 
     return NextResponse.json({
       success: true,

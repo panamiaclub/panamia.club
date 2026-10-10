@@ -11,7 +11,6 @@ import { articlesConsentGate } from '@/lib/article/consent';
 import { db } from '@/lib/db';
 import { articles, profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
-import { createNotification } from '@/lib/notifications';
 import {
   isAuthor as isArticleAuthor,
   isAcceptedCoAuthor,
@@ -170,19 +169,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         status: 'pending_review',
       })
       .where(eq(articles.id, articleDoc.id));
-
-    // Create notification for reviewer
-    await createNotification({
-      type: 'Invite',
-      actorId: session.user.id,
-      targetId: userId,
-      context: 'review',
-      objectId: articleDoc.id,
-      objectType: 'article',
-      objectTitle: articleDoc.title,
-      objectUrl: `/a/${articleDoc.slug}/review`,
-      message: message || undefined,
-    });
 
     return NextResponse.json({
       success: true,

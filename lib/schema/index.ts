@@ -55,6 +55,14 @@ export const notificationActivityType = pgEnum('notification_activity_type', [
 ]);
 
 export const notificationContext = pgEnum('notification_context', [
+  // coauthor, review and mentoring are retired: nothing creates them any more.
+  // The writing collaboration routes (co-author invites, review requests) and
+  // the mentoring session routes stopped notifying, but the values have to
+  // stay, and in this order. Postgres has no DROP VALUE for an enum, the
+  // declared order is the type's sort order, and rows already written still
+  // reference them -- Invite, Accept and Reject never expire, so some of
+  // these outlive every retention window. getNotificationMessage still
+  // renders all three.
   'coauthor',
   'review',
   'article',

@@ -28,7 +28,7 @@ The Pana Mia Club mentoring feature enables **peer-to-peer video mentoring** wit
 - **Session Types**: Four session types (artistic, knowledge transfer, pana planning, pana support)
 - **Session Booking**: Schedule sessions with a calendar interface
 - **Mentor Confirmation**: Sessions require mentor approval before scheduling
-- **Notifications**: Notifications for session requests, confirmations, and cancellations
+- **Notifications**: ~~Notifications for session requests, confirmations, and cancellations~~ — retired, see [Notification System](#notification-system)
 - **WebRTC Video**: Peer-to-peer video calls via Durable Object signaling
 - **Real-time Chat**: Text messaging during sessions (persisted in DO SQLite)
 - **Peer-to-Peer File Transfer**: Send files directly between participants via WebRTC data channels
@@ -98,7 +98,6 @@ The _Elements of Effective Practice for Mentoring™_ outlines six core standard
 **Community Safety**
 
 - Session requests require mentor confirmation
-- Notification system keeps all parties informed
 - Cancellation tracking for accountability
 
 ---
@@ -156,7 +155,8 @@ Each mentor card shows name, bio, expertise tags, languages, and rate. Click **B
 5. **Describe the Topic** (5–200 characters)
 6. Click **Request Session**
 
-The mentor receives a notification. Your session shows as "Pending" until they accept.
+Your session shows as "Pending" until the mentor accepts. They are **not**
+notified — see [Notification System](#notification-system).
 
 ### Joining a Video Session
 
@@ -277,7 +277,18 @@ Files are sent peer-to-peer via `RTCDataChannel` — no server-side limit. Pract
 
 ## Notification System
 
-### Session Request Flow
+**Retired.** Mentoring sessions no longer create notifications — the request,
+accept, decline and cancel routes still move a session through its states, but
+none of them tells the other party. This was switched off along with the
+writing-collaboration notifications; see
+[NOTIFICATIONS-ROADMAP.md](./NOTIFICATIONS-ROADMAP.md).
+
+The `mentoring` context survives in the `notification_context` enum and in
+`getNotificationMessage` so rows written before the change still render.
+Retiring a context is not the same as deleting it — Postgres has no
+`DROP VALUE`, and `Invite`/`Accept`/`Reject` rows never expire.
+
+### What used to fire
 
 ```
 Mentee requests session → status: 'pending'   → Mentor notified (Invite)
@@ -292,6 +303,11 @@ Either party cancels    → status: 'cancelled'  → Other party notified (Delet
 | Session accepted  | `Accept`         | `mentoring` |
 | Session declined  | `Reject`         | `mentoring` |
 | Session cancelled | `Delete`         | `mentoring` |
+
+Re-wiring these is cheap — the sentences are still written. The harder gap is
+that there is no member-facing mentoring surface to read them on: `app/mentoring`
+does not exist, only the admin views under `app/admin/mentoring` and
+`app/account/admin/mentoring`.
 
 ---
 

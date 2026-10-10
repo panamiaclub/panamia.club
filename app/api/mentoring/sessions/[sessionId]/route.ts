@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { mentorSessions, profiles } from '@/lib/schema';
+import { mentorSessions } from '@/lib/schema';
 import { and, eq, or } from 'drizzle-orm';
 import {
   updateSessionNotesSchema,
   cancelSessionSchema,
 } from '@/lib/validations/session';
-import { createNotification } from '@/lib/notifications';
-import { getScheduleUrl } from '@/lib/mentoring';
 
 // GET - Get session details
 export async function GET(
@@ -128,32 +126,6 @@ export async function PATCH(
       })
       .where(eq(mentorSessions.id, mentorSession.id))
       .returning();
-
-    // Determine who to notify (the other party)
-    const isMentor = mentorSession.mentorEmail === session.user.email;
-    const otherPartyEmail = isMentor
-      ? mentorSession.menteeEmail
-      : mentorSession.mentorEmail;
-
-    // Get the other party's userId from their profile
-    const otherPartyProfile = await db.query.profiles.findFirst({
-      where: eq(profiles.email, otherPartyEmail),
-      columns: { userId: true },
-    });
-
-    if (otherPartyProfile?.userId) {
-      await createNotification({
-        type: 'Delete',
-        actorId: session.user.id,
-        targetId: otherPartyProfile.userId,
-        context: 'mentoring',
-        objectId: updatedSession.id,
-        objectType: 'session',
-        objectTitle: updatedSession.topic,
-        objectUrl: getScheduleUrl(),
-        message: `Session cancelled: ${validation.data.reason}`,
-      });
-    }
 
     return NextResponse.json({ session: updatedSession });
   }

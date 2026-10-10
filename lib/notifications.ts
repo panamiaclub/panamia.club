@@ -18,7 +18,10 @@ import type {
   NotificationContext,
 } from './interfaces';
 import { and, eq, inArray, lt, sql } from 'drizzle-orm';
-import { isBlockedEitherWay } from './federation/wrappers/block-filter';
+import {
+  isBlockedEitherWay,
+  filterBlockedActorIds,
+} from './federation/wrappers/block-filter';
 
 // Retention periods in milliseconds
 const RETENTION = {
@@ -123,6 +126,119 @@ export async function createNotification(
 
   // TODO: Check email preferences and send if enabled
   // await maybeSendNotificationEmail(notification);
+}
+
+/**
+ * One notification, many recipients, a fixed number of queries.
+ *
+ * createNotification is written for the case it was built for: one person
+ * learning about something that happened to them. It spends three queries per
+ * call -- a block check, an actor lookup, an insert -- which is the right
+ * shape when there is one recipient and the wrong shape when there are two
+ * hundred. Announcing a post to a whole group that way would cost six hundred
+ * round trips inside a request that the member is waiting on.
+ *
+ * This does the same work set-at-a-time instead:
+ *
+ *   1. resolve every user id to its actor in one query
+ *   2. ask once which of those actors are blocked
+ *   3. look up the sender's denormalized name once, not once per recipient
+ *   4. insert every row in a single statement
+ *
+ * Four queries whether the group has three members or three thousand.
+ *
+ * The guarantees callers inherit from createNotification are preserved
+ * deliberately, because a second way to write this table is a second place for
+ * them to be forgotten:
+ *
+ *   - blocks still stop a notification, in either direction, mutes excluded
+ *   - the sender is never notified about their own action, which the
+ *     single-recipient path leaves to its callers and this one cannot, since
+ *     the sender is usually a member of the group being notified
+ *
+ * Returns how many rows were written, which is what a caller needs to log
+ * something useful about a fan-out that was mostly filtered away.
+ */
+export async function createNotificationsForTargets(
+  params: Omit<CreateNotificationParams, 'targetId'> & { targetIds: string[] }
+): Promise<number> {
+  // Dedupe before anything else: a person can hold one membership row, but
+  // callers assembling recipients from several sources should not have to
+  // prove it, and a duplicate here is a duplicate bell.
+  const targetIds = [...new Set(params.targetIds)].filter(
+    (id) => id && id !== params.actorId
+  );
+  if (targetIds.length === 0) return 0;
+
+  // Both sides in one round trip. Users with no actor row simply do not
+  // appear, which is the same "nothing to find, nothing to block" outcome
+  // isBlockedBetweenUsers treats as fail-open.
+  const actorRows = await db
+    .select({ actorId: socialActors.id, userId: profiles.userId })
+    .from(socialActors)
+    .innerJoin(profiles, eq(socialActors.profileId, profiles.id))
+    .where(inArray(profiles.userId, [params.actorId, ...targetIds]));
+
+  const senderActorId = actorRows.find(
+    (r) => r.userId === params.actorId
+  )?.actorId;
+
+  let allowedIds = targetIds;
+
+  // No actor for the sender means no blocks can exist against them -- the
+  // same fail-open the single path takes for accounts that never touched the
+  // social layer.
+  if (senderActorId) {
+    const actorByUser = new Map<string, string>();
+    for (const row of actorRows) {
+      if (row.userId && row.userId !== params.actorId) {
+        actorByUser.set(row.userId, row.actorId);
+      }
+    }
+
+    const blockedActorIds = await filterBlockedActorIds(senderActorId, [
+      ...actorByUser.values(),
+    ]);
+
+    if (blockedActorIds.size > 0) {
+      allowedIds = targetIds.filter((userId) => {
+        const actorId = actorByUser.get(userId);
+        return !actorId || !blockedActorIds.has(actorId);
+      });
+    }
+  }
+
+  if (allowedIds.length === 0) return 0;
+
+  const actorProfile = await db.query.profiles.findFirst({
+    where: eq(profiles.userId, params.actorId),
+    with: { user: { columns: { screenname: true } } },
+  });
+
+  // Identical for every row, so computed once. Taking it per row would also
+  // drift the timestamps apart by however long the loop took.
+  const expiresAt = getExpirationDate(params.type, params.context);
+
+  await db.insert(notifications).values(
+    allowedIds.map((targetId) => ({
+      type: params.type,
+      actor: params.actorId,
+      target: targetId,
+      context: params.context,
+      object: params.objectId,
+      objectType: params.objectType,
+      objectTitle: params.objectTitle,
+      objectUrl: params.objectUrl,
+      message: params.message,
+      actorScreenname: actorProfile?.user?.screenname,
+      actorName: actorProfile?.name,
+      read: false,
+      emailSent: false,
+      expiresAt,
+    }))
+  );
+
+  return allowedIds.length;
 }
 
 /**
@@ -280,12 +396,15 @@ function getExpirationDate(
     return new Date(Date.now() + RETENTION.DAYS_30!);
   }
 
-  // Article lifecycle expires after 90 days
+  // Article lifecycle expires after 90 days. Only 'article' can still reach
+  // this: coauthor and review are retired, so those two arms are unreachable
+  // for new rows and stay purely to document what the old ones were given.
   if (context === 'article' || context === 'coauthor' || context === 'review') {
     return new Date(Date.now() + RETENTION.DAYS_90!);
   }
 
-  // Mentoring notifications expire after 90 days
+  // Mentoring notifications expire after 90 days. Also unreachable now --
+  // mentoring is retired. Kept for the same reason as the arms above.
   if (context === 'mentoring') {
     return new Date(Date.now() + RETENTION.DAYS_90!);
   }
@@ -314,6 +433,11 @@ export function getNotificationMessage(notif: {
   const object = notif.objectTitle || 'content';
 
   switch (notif.context) {
+    // coauthor, review and mentoring are retired -- nothing creates rows with
+    // those contexts any more. The cases stay because rows already in the
+    // table still have to render, and Invite, Accept and Reject never expire,
+    // so these outlive every retention window. Dropping the cases would
+    // quietly rewrite someone's history into "Someone performed an action".
     case 'coauthor':
       if (notif.type === 'Invite') {
         return `${actor} invited you to co-author "${object}"`;
@@ -326,6 +450,7 @@ export function getNotificationMessage(notif: {
       }
       break;
 
+    // Retired alongside coauthor -- see the note at the top of the switch.
     case 'review':
       if (notif.type === 'Invite') {
         return `${actor} requested your review of "${object}"`;
@@ -338,6 +463,9 @@ export function getNotificationMessage(notif: {
       }
       break;
 
+    // Admin moderation only now that publishing no longer notifies: Delete is
+    // app/api/admin/articles/[slug]/remove, Create is .../restore. Both tell
+    // an author what was done to their piece.
     case 'article':
       if (notif.type === 'Create') {
         return `${actor} published "${object}"`;
@@ -347,6 +475,7 @@ export function getNotificationMessage(notif: {
       }
       break;
 
+    // Retired alongside coauthor -- see the note at the top of the switch.
     case 'mentoring':
       if (notif.type === 'Invite') {
         return `${actor} requested a mentoring session: "${object}"`;
@@ -378,6 +507,9 @@ export function getNotificationMessage(notif: {
       return notif.message || 'System notification';
 
     case 'group':
+      if (notif.type === 'Create') {
+        return `${actor} posted in "${object}"`;
+      }
       if (notif.type === 'Invite') {
         return `${actor} invited you to the group "${object}"`;
       }
@@ -428,7 +560,12 @@ export function getNotificationMessage(notif: {
         return `${actor} declined your organizer invitation for "${object}"`;
       }
       if (notif.type === 'Create') {
-        return `${actor} is hosting a new event: "${object}"`;
+        // A group's event is hosted by the group, not by the admin who
+        // happened to press publish, so that caller writes its own sentence
+        // naming the group. Rows without one predate group hosting and still
+        // read correctly, which is why this falls back rather than requiring
+        // the message.
+        return notif.message || `${actor} is hosting a new event: "${object}"`;
       }
       if (notif.type === 'Delete') {
         return notif.message || `"${object}" has been cancelled`;

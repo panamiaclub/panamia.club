@@ -94,14 +94,17 @@ Co-authors can edit your article and share credit when published.
 2. Scroll to the **Collaboration** section
 3. Search for a user by their screenname
 4. Optionally add a personal message explaining why you're inviting them
-5. The user will receive a notification
+5. Send them the invitation link yourself — `/a/<your-slug>/invite`
+
+> **Inviting no longer notifies anyone.** Co-author and review notifications
+> were switched off, and there is no index of invitations you have received, so
+> the link is the only way the person finds out.
 
 **When someone invites you:**
 
-1. You'll see a notification (flower icon in header)
-2. Click the notification to view the invitation
-3. Review the article preview and personal message
-4. Click **Accept** to join as co-author, or **Decline** to pass
+1. Open the invitation link the author sent you
+2. Review the article preview and personal message
+3. Click **Accept** to join as co-author, or **Decline** to pass
 
 Once accepted, you can edit the article alongside the original author.
 
@@ -114,19 +117,19 @@ Reviewers verify your article's accuracy without becoming co-authors.
 1. Save your draft first
 2. Scroll to the **Collaboration** section under **Review**
 3. Search for a user by their screenname
-4. They'll receive a notification to review your article
+4. Send them the review link yourself — `/a/<your-slug>/review`. Requesting a
+   review does not notify them
 
 **When someone requests your review:**
 
-1. You'll see a notification (flower icon in header)
-2. Click to open the review interface
-3. Read the full article
-4. Complete the review checklist:
+1. Open the review link the author sent you
+2. Read the full article
+3. Complete the review checklist:
    - Facts and claims have been verified
    - Sources are credible and properly attributed
    - Meets community standards and guidelines
-5. Add comments if you have feedback
-6. Click **Approve Article** or **Request Revisions**
+4. Add comments if you have feedback
+5. Click **Approve Article** or **Request Revisions**
 
 ### Tracking Pending Invitations
 

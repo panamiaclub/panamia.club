@@ -923,6 +923,87 @@ a conversation the organiser owns. See the docblock in `lib/server/delete-group.
 
 ---
 
+## Phase 11 — Announcements to the whole group
+
+Phase 10 told people what happened _to them_. This tells them what happened _in the group_: a new
+post in the feed, and an event going live. Two triggers, no schema change — `group` + `Create` and
+`event` + `Create` were both already valid combinations, the first falling through to the generic
+fallback and the second a sentence with no caller.
+
+### Why these two and not more
+
+A group's feed and its calendar are the two things people join a group _for_. Everything else that
+happens in a group is either already addressed to an individual (phase 10) or is noise at this
+volume. Explicitly not announced: replies, edits, reactions, and people joining or leaving.
+
+**Replies are the important exclusion.** `createStatus` accepts `inReplyToId` and group threads
+exist, so without a guard a single busy conversation would ring every member a dozen times in an
+afternoon. The trigger is top-level posts only.
+
+### Two corrections the code forced
+
+1. **Publish, not create.** `POST /api/events` writes `status: 'draft'`, and the group's event
+   list passes `includeUnpublished: isManager` — a draft is invisible to ordinary members.
+   Announcing at creation would tell two hundred people about something they cannot open. The
+   notification fires from the publish route instead, which already loads `event.hostGroup` for
+   the Nostr mirror, so the group is in hand. It is guarded on `status !== 'published'` because
+   republishing is how a host re-mirrors after a relay failure and must not ring everyone twice.
+
+2. **The group hosts the event, not the admin who published it.** The `event` + `Create` sentence
+   was `"<actor> is hosting a new event"`, which would credit whichever admin happened to click
+   the button. It now prefers `notif.message` when one is present, and the caller writes
+   `New event in "<Group>": "<Title>"`. Rows written before this have no message and render
+   exactly as they did. The publish route already avoids crediting the publisher on the Nostr
+   mirror for the same reason.
+
+### Fan-out
+
+`createNotification` costs three queries — block check, actor lookup, insert — which is fine for
+one recipient and indefensible for two hundred. `createNotificationsForTargets` is the
+set-at-a-time version: one query to resolve users to actors, one batch block filter, one actor
+lookup, one bulk insert. **Four queries regardless of group size.**
+
+Being a second door into the `notifications` table, it has to carry the same guarantees as the
+first, and one the first does not:
+
+- blocks still apply, both directions, mutes excluded
+- **the sender is excluded**, which `createNotification` leaves to its callers. Here it cannot be
+  optional — the sender is nearly always a member of the group being announced to. Filtered in the
+  helper _and_ excluded in SQL by `activeMemberUserIds`.
+
+**`filterBlockedActorIds`, not `filterHiddenActorIds`.** The existing batch filter folds in mutes,
+and a mute describes what the _muter_ wants to see. Reusing it would have meant an author who muted
+somebody silently suppressing _that person's_ notifications. The new filter is the batch twin of
+`isBlockedEitherWay`: `kind = 'block'` only, both directions.
+
+### Decisions worth keeping
+
+- **`notifyGroupPosted` is called from `createStatus`, not the route.** Same reasoning as the
+  membership gate that already lives there — it is the only door into the table, so a second route
+  that one day passes a `groupId` inherits the announcement rather than forgetting it.
+- **Only `active` members.** Pending is someone still at the door, banned is a tombstone. Same
+  predicate the members list uses.
+- **Unlisted events still announce.** Unlisted governs whether an event leaves pana.social, not
+  whether its own group may hear about it.
+- **Awaited, not fire-and-forget**, for the reason phase 10 gives. Both functions swallow their own
+  errors, so a failed notification cannot turn a successful post into a 500.
+- **30-day retention**, the default bucket, which is right for an announcement that stops being
+  interesting once the post is read.
+
+### The gap this leaves
+
+**There is no per-group mute.** A member of a busy group cannot turn these off; the only exit is
+leaving, which is a far larger decision than "stop telling me about every post".
+`profiles.notification_preferences` is a `jsonb` column that has existed since the initial schema
+and is read by nothing — it is the obvious home, and needs no migration. Until it exists, every
+proposed addition to this list has to argue for itself, because the volume cannot be declined.
+
+Covered by `tests-db/group-notifications.test.ts`. Three of the five new cases assert a silence:
+the author is not told about their own post, non-active members hear nothing, and a block stops an
+announcement the same way it stops a direct one.
+
+---
+
 ## Risks & Open Questions
 
 ### Handle namespace collision — fixed in phase 1

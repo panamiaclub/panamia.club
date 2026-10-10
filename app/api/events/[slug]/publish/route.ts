@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm';
 import { isPublishable } from '@/lib/event';
 import { crosspostEvent } from '@/lib/relay/crosspost-client';
 import { canManageEvent } from '@/lib/server/event-host';
+import { notifyGroupEventPublished } from '@/lib/federation/wrappers/group-notify';
 import type { EventStatus } from '@/lib/schema';
 
 interface RouteParams {
@@ -180,6 +181,32 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       .set({ status: 'published', nostrEventId })
       .where(eq(events.id, event.id))
       .returning();
+
+    /**
+     * A group's event going live is news for its members.
+     *
+     * Gated on the event not already being published, because this route is
+     * reachable again on an event that is live -- republishing is how a host
+     * re-mirrors to Nostr after a relay failure, and that must not ring every
+     * member a second time for an event they were already told about.
+     *
+     * Announced here rather than at creation: events are born as drafts, and
+     * the group's event list shows drafts only to its managers. Notifying on
+     * create would send most of the group to something they cannot open.
+     *
+     * Awaited, and internally failure-swallowing. The event is published and
+     * mirrored by this point; a notification problem must not be reported as
+     * a publish problem.
+     */
+    if (event.hostGroup?.id && event.status !== 'published') {
+      await notifyGroupEventPublished({
+        groupId: event.hostGroup.id,
+        publisherUserId: session.user.id,
+        eventId: event.id,
+        eventSlug: updated.slug,
+        eventTitle: updated.title,
+      });
+    }
 
     return NextResponse.json({
       success: true,

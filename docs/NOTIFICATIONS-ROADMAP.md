@@ -309,14 +309,117 @@ a `case`, not a new table or a new surface.
 
 ### Where each domain stands
 
-| Domain          | Contexts in use                       | State                                                                    |
-| --------------- | ------------------------------------- | ------------------------------------------------------------------------ |
-| **Pana Social** | `follow`, `mention`, `article`        | Partial — `mention` has no `case` in `getNotificationMessage`; reply and boost-of-your-post are unwritten |
-| **Events**      | `event`                               | Organizer lifecycle done (Invite/Accept/Reject/Create/Update/Delete); RSVP and reminders missing; `venue` is an objectType with no context |
-| **Groups**      | `group`, `group_membership`           | Complete — invitations, join requests, role changes, removal, bans       |
-| **Messages**    | `message`                             | Context and retention exist; needs per-conversation collapsing           |
-| **Connectors**  | —                                     | **No context.** `app/connectors/{join,hq,admin}` notify nobody           |
-| **Admin**       | `system` (outbound only)              | **No inbound context.** Report queues and verification requests reach admins only by visiting `app/admin/reports` |
+A context counts as in use below only when something calls `createNotification`
+with it. A `case` in `getNotificationMessage` is not evidence of that — several
+sentences are written for events that nothing fires, and three more are left
+over from domains that have been switched off. Reading the switch alone will
+overstate what ships. Both lists are in the next section.
+
+| Domain          | Contexts that fire          | State                                                                                                                                                                                                                                                                                      |
+| --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Writing**     | —                           | **Retired.** Co-author invite and response, review request and verdict, and publishing-notifies-contributors all used to fire; every one of those calls has been removed. `coauthor` and `review` survive as enum values and `case` blocks only so rows already in the table stay readable      |
+| **Mentoring**   | —                           | **Retired.** Request, accept, decline and cancel all used to fire; those calls have been removed. `mentoring` survives for the same reason                                                                                                                                                      |
+| **Pana Social** | —                           | Thin — the social graph itself notifies nobody. `follow` and `mention` have no caller, and `mention` has no `case` either, so it would fall through to the generic fallback; reply and boost-of-your-post are unwritten. The `message` rows that do fire belong to Messages below               |
+| **Events**      | `event` (Create, Delete)    | Two paths fire. A group's event going live announces itself to the group's members — on **publish**, not creation, because events are born as drafts and a draft is visible only to the group's managers. The other is an admin suspending a venue, which cancels its future events and tells going/maybe attendees. The organizer lifecycle is written but unwired — there is no co-organizer endpoint. RSVP and reminders missing; `venue` is an objectType with no context |
+| **Groups**      | `group`, `group_membership` | The widest coverage of any domain — invitations, join requests, role changes, removal, bans, and two announcements that reach the whole membership: a top-level post in the group feed, and a group event going live. The one thing missing is a way to turn the last two off; see "Announcing to a whole group" below |
+| **Messages**    | `message`                   | Voice memos only, suppressed when the sender is held in the recipient's Requests folder; needs per-conversation collapsing                                                                                                                                                                      |
+| **Connectors**  | —                           | **No context.** `app/connectors/{join,hq,admin}` notify nobody                                                                                                                                                                                                                                 |
+| **Admin**       | `article`, `event`          | **Outbound only.** Admins can remove or restore an article and suspend a venue, and each tells the people affected. Since publishing stopped notifying, admin moderation is the _only_ producer of `article`. Nothing travels the other way: report queues and verification requests reach admins only by visiting `app/admin/reports`, and `system` has a sentence with no caller |
+
+### Contexts that were switched off
+
+`coauthor`, `review` and `mentoring` are retired. The routes that created them
+no longer call `createNotification`, but none of the supporting machinery was
+deleted, and that is deliberate:
+
+| What stays                       | Why                                                                                                                          |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| The three `notification_context` enum values | Postgres has no `DROP VALUE`, the declared order is the type's sort order, and live rows still reference them |
+| Their `case` blocks in `getNotificationMessage` | Rows already written have to keep rendering. Invite, Accept and Reject never expire, so some of these outlive every retention window. Deleting the cases would rewrite somebody's history into "Someone performed an action" |
+| Their arms in `getExpirationDate` | Unreachable for new rows, kept to document what the existing ones were given                                                 |
+
+Retiring a context is therefore not the same as removing it. The sentences stay
+until the rows do, which for the non-expiring types is indefinitely.
+
+**What this cost.** Two pages lost their only entry point. `/a/<slug>/invite`
+and `/a/<slug>/review` still work, but they were reachable only by clicking the
+notification, and there is no index of invitations you have _received_ — the
+editor's Pending Invitations panel is the author's view of who they invited, not
+the invitee's. `ArticleEditor` still sends invitations, so an author can create
+one that the other person has no in-app way to find; the link has to be passed
+along out-of-band. Mentoring has the opposite problem and so lost nothing:
+there is no member-facing surface at all (`app/mentoring` does not exist), only
+the admin views. If writing collaboration is ever picked back up, the fix is an
+invitations index rather than re-wiring the bell.
+
+### Sentences written for events that never fire
+
+Distinct from the above: `getNotificationMessage` handles these and no route
+has _ever_ called them. They are a promise the switch makes and the API does
+not keep, so a reader checking coverage there will count domains that are not
+wired:
+
+| Context  | Types                                  | Missing piece                                                           |
+| -------- | -------------------------------------- | ----------------------------------------------------------------------- |
+| `event`  | Invite, Accept, Reject, Update | No co-organizer endpoint. `Create` used to sit in this list and no longer does — a group event announces itself on publish |
+| `follow` | Follow                                 | The follow action does not notify                                       |
+| `system` | (passthrough `message`)                | Nothing creates a system notification                                   |
+
+Either wire them or delete the cases; leaving both is what made the table above
+wrong the first time it was written.
+
+### Announcing to a whole group
+
+Every notification described above lands on one person, or on the handful of
+leaders who can answer a join request. Two do not: a top-level post in a group
+feed, and a group's event going live. Those go to every active member, which
+makes them a different kind of thing with its own failure modes.
+
+**Why they are not a loop over `createNotification`.** That function spends
+three queries per call — a block check, an actor lookup for denormalization,
+and the insert. That is the right shape for one recipient and the wrong one for
+two hundred: a single post to a mid-sized group would be six hundred round
+trips inside a request somebody is waiting on. `createNotificationsForTargets`
+does the same work set-at-a-time — resolve every user to its actor once, ask
+once which are blocked, look the sender up once, insert every row in one
+statement. Four queries whether the group has three members or three thousand.
+
+It is a second way to write the `notifications` table, so it deliberately
+carries the same two guarantees the single path has, because a second door is a
+second place to forget them:
+
+- blocks still stop a notification, in either direction, mutes excluded
+- the sender is never notified about their own action — which the single path
+  leaves to its callers and this one cannot, since the sender is almost always
+  a member of the group being announced to
+
+**What is deliberately excluded.** Only `active` members hear anything: a
+`pending` row is somebody still waiting at the door and a `banned` row is a
+tombstone. Replies are excluded too — `notifyGroupPosted` is called only for
+top-level posts, because announcing every reply to the whole membership is how
+one busy thread turns the bell into something people learn to ignore. Edits,
+reactions, joins and leaves are all unannounced for the same reason.
+
+**Blocks, specifically.** The batch filter is `filterBlockedActorIds`, not
+`filterHiddenActorIds`. The two look interchangeable and are not: the latter
+folds in mutes, and a mute is about what the *muter* sees. Using it here would
+mean an author who muted somebody had silently switched off *that person's*
+notifications — a one-directional preference reaching across to edit someone
+else's bell.
+
+**The gap this opens: there is no mute.** A member of a busy group cannot turn
+these two off. The only exit is leaving the group, which is a much larger
+decision than "stop telling me about every post." `profiles.notification_preferences`
+is a `jsonb` column that has existed since the initial schema and is read by
+nothing — it is the obvious home for a per-group opt-out and would need no
+migration. Until it is wired, treat every addition to the whole-group
+announcements as something that has to argue for itself, because the volume it
+creates cannot currently be declined.
+
+A second, smaller gap: these are one row per member per event, with no
+collapsing. Ten posts in a day is ten rows per member rather than one "10 new
+posts in X". The same per-conversation collapsing that Messages needs would
+apply here.
 
 ### The two real gaps
 
@@ -328,11 +431,13 @@ This is the same shape `group_membership` already solved, including the
 direction problem — `Join` travels applicant→org while `Accept` travels
 org→applicant, so the sentences are written from different sides.
 
-**Admin** currently only broadcasts. `system` carries announcements *to* users;
-nothing carries work *to* moderators. A `moderation` context would let a filed
-report (`Create`), a verification request (`Invite`), and a resolution
-(`Accept`/`Reject`) reach the people who act on them. The target for these is a
-role rather than a person, which the current schema cannot express —
+**Admin** currently only reaches users by side effect. Removing an article and
+suspending a venue both notify the people affected, but nothing carries work
+*to* moderators, and `system` — the context meant for announcements — has a
+sentence and no caller, so there is no broadcast either. A `moderation` context
+would let a filed report (`Create`), a verification request (`Invite`), and a
+resolution (`Accept`/`Reject`) reach the people who act on them. The target for
+these is a role rather than a person, which the current schema cannot express —
 `notifications.target` is a single actor. Fanning out one row per admin is the
 cheap answer and is correct while the admin list is small; it stops being
 correct the moment it isn't.
