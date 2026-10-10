@@ -10,15 +10,9 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { profiles, articles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
-import { createNotification } from '@/lib/notifications';
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
-}
-
-interface CoAuthor {
-  userId: string;
-  status: string;
 }
 
 /**
@@ -71,7 +65,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Store previous removal info for audit trail
     const previousRemovalReason = articleDoc.deletionReason;
 
-    // Restore article to published
+    // Restore article to published. Like removal, this notifies no one; the
+    // article simply reappears at its old URL.
     const [updatedArticle] = await db
       .update(articles)
       .set({
@@ -80,38 +75,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       })
       .where(eq(articles.id, articleDoc.id))
       .returning();
-
-    // Notify the author
-    if (articleDoc.authorId) {
-      await createNotification({
-        actorId: session.user.id,
-        targetId: articleDoc.authorId,
-        type: 'Undo',
-        objectType: 'article',
-        objectId: articleDoc.id,
-        objectTitle: articleDoc.title,
-        objectUrl: `/a/${articleDoc.slug}`,
-        context: 'article',
-      });
-    }
-
-    // Notify co-authors
-    const coAuthors = (articleDoc.coAuthors as unknown as CoAuthor[]) || [];
-    const acceptedCoAuthors = coAuthors.filter(
-      (ca) => ca.status === 'accepted' && ca.userId
-    );
-    for (const coAuthor of acceptedCoAuthors) {
-      await createNotification({
-        actorId: session.user.id,
-        targetId: coAuthor.userId,
-        type: 'Undo',
-        objectType: 'article',
-        objectId: articleDoc.id,
-        objectTitle: articleDoc.title,
-        objectUrl: `/a/${articleDoc.slug}`,
-        context: 'article',
-      });
-    }
 
     return NextResponse.json({
       success: true,

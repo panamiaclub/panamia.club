@@ -324,17 +324,17 @@ overstate what ships. Both lists are in the next section.
 | **Groups**      | `group`, `group_membership` | The widest coverage of any domain — invitations, join requests, role changes, removal, bans, and two announcements that reach the whole membership: a top-level post in the group feed, and a group event going live. The one thing missing is a way to turn the last two off; see "Announcing to a whole group" below |
 | **Messages**    | `message`                   | Voice memos only, suppressed when the sender is held in the recipient's Requests folder; needs per-conversation collapsing                                                                                                                                                                      |
 | **Connectors**  | —                           | **No context.** `app/connectors/{join,hq,admin}` notify nobody                                                                                                                                                                                                                                 |
-| **Admin**       | `article`, `event`          | **Outbound only.** Admins can remove or restore an article and suspend a venue, and each tells the people affected. Since publishing stopped notifying, admin moderation is the _only_ producer of `article`. Nothing travels the other way: report queues and verification requests reach admins only by visiting `app/admin/reports`, and `system` has a sentence with no caller |
+| **Admin**       | `event`                     | **Outbound only, and down to one path.** Suspending a venue cancels its future events and tells going/maybe attendees. Article remove and restore used to notify too; those calls are gone, which retired `article` entirely. Nothing travels the other way: report queues and verification requests reach admins only by visiting `app/admin/reports`, and `system` has a sentence with no caller |
 
 ### Contexts that were switched off
 
-`coauthor`, `review` and `mentoring` are retired. The routes that created them
-no longer call `createNotification`, but none of the supporting machinery was
-deleted, and that is deliberate:
+`coauthor`, `review`, `mentoring` and `article` are retired. The routes that
+created them no longer call `createNotification`, but none of the supporting
+machinery was deleted, and that is deliberate:
 
 | What stays                       | Why                                                                                                                          |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| The three `notification_context` enum values | Postgres has no `DROP VALUE`, the declared order is the type's sort order, and live rows still reference them |
+| The four `notification_context` enum values | Postgres has no `DROP VALUE`, the declared order is the type's sort order, and live rows still reference them |
 | Their `case` blocks in `getNotificationMessage` | Rows already written have to keep rendering. Invite, Accept and Reject never expire, so some of these outlive every retention window. Deleting the cases would rewrite somebody's history into "Someone performed an action" |
 | Their arms in `getExpirationDate` | Unreachable for new rows, kept to document what the existing ones were given                                                 |
 
@@ -351,6 +351,22 @@ along out-of-band. Mentoring has the opposite problem and so lost nothing:
 there is no member-facing surface at all (`app/mentoring` does not exist), only
 the admin views. If writing collaboration is ever picked back up, the fix is an
 invitations index rather than re-wiring the bell.
+
+**Moderation is now silent.** Retiring `article` has a sharper edge than the
+other three, because admin remove was the only thing that ever told an author
+their piece had been taken down. The reason is still required at the API — at
+least ten characters — and still written to `articles.deletion_reason`, but
+that column is read in exactly one place, `app/admin/articles/page.tsx`, which
+is an admin screen. So the reason survives as an audit trail for other
+moderators and reaches the author nowhere. From the author's side a published
+article now simply stops resolving at `/a/<slug>`, with no message and no
+record they can see. Restore is the same in reverse: it comes back without
+announcement.
+
+That is a deliberate choice, not an oversight, and the thing to change if it
+turns out to be the wrong one is to surface `deletion_reason` on the author's
+own article list — a moderation decision is better explained where the work
+lives than in a bell that expires after ninety days.
 
 ### Sentences written for events that never fire
 
@@ -431,8 +447,9 @@ This is the same shape `group_membership` already solved, including the
 direction problem — `Join` travels applicant→org while `Accept` travels
 org→applicant, so the sentences are written from different sides.
 
-**Admin** currently only reaches users by side effect. Removing an article and
-suspending a venue both notify the people affected, but nothing carries work
+**Admin** currently only reaches users by side effect, and barely. Suspending a
+venue tells the attendees of the events it cancels; that is the whole of it
+now, since article remove and restore stopped notifying. Nothing carries work
 *to* moderators, and `system` — the context meant for announcements — has a
 sentence and no caller, so there is no broadcast either. A `moderation` context
 would let a filed report (`Create`), a verification request (`Invite`), and a

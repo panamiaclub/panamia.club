@@ -396,9 +396,10 @@ function getExpirationDate(
     return new Date(Date.now() + RETENTION.DAYS_30!);
   }
 
-  // Article lifecycle expires after 90 days. Only 'article' can still reach
-  // this: coauthor and review are retired, so those two arms are unreachable
-  // for new rows and stay purely to document what the old ones were given.
+  // Article lifecycle expires after 90 days. All three arms are now
+  // unreachable for new rows -- article joined coauthor and review in
+  // retirement when admin remove/restore stopped notifying -- and stay purely
+  // to document what the old ones were given.
   if (context === 'article' || context === 'coauthor' || context === 'review') {
     return new Date(Date.now() + RETENTION.DAYS_90!);
   }
@@ -463,9 +464,10 @@ export function getNotificationMessage(notif: {
       }
       break;
 
-    // Admin moderation only now that publishing no longer notifies: Delete is
-    // app/api/admin/articles/[slug]/remove, Create is .../restore. Both tell
-    // an author what was done to their piece.
+    // Retired alongside coauthor. Publishing never notified, and admin
+    // remove/restore stopped notifying too, so nothing writes an article row
+    // any more. Note the old restore used Undo, which had no arm here and
+    // always fell through to the generic sentence below.
     case 'article':
       if (notif.type === 'Create') {
         return `${actor} published "${object}"`;
