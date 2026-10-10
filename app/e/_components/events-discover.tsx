@@ -233,10 +233,15 @@ export function EventsDiscover({
     /* `.dirscope` is load-bearing, not decoration: the --story-* palette is
        scoped to `body:has(.dirsearch), body:has(.dirscope)` in globals.css, so
        a page carrying neither renders on a transparent background with nothing
-       in the console to say why. */
-    <main className="dirscope">
+       in the console to say why.
+
+       `.events-bleed-scope` is what the rails below measure the window with,
+       so that a row can run to the edge of the screen while everything else
+       stays in the 58rem reading column. It has to sit out here, outside that
+       column, for the measurement to mean anything. */
+    <main className="dirscope events-bleed-scope">
       <div className="dirsearch-band">
-        <div className="container mx-auto px-4">
+        <div className="w-full px-4">
           <div className="mx-auto max-w-[58rem]">
             <span className="section-eyebrow">Events</span>
 
@@ -358,7 +363,13 @@ export function EventsDiscover({
         </div>
       </div>
 
-      <div className="container mx-auto px-4 pb-16">
+      {/* Gutter without a cap. A Tailwind `container` would step the page's
+          width at its own breakpoints, and the rails below centre their
+          columns on the window — between 768 and 960 the two disagree and a
+          heading ends up 58px to the right of the card it names. Everything
+          in here already carries `max-w-[58rem]`, so the cap was doing
+          nothing above that width and fighting the rails below it. */}
+      <div className="w-full px-4 pb-16">
         {tab === 'foryou' ? (
           <>
             {/* Undo rather than a confirmation. A dismissal that cannot be

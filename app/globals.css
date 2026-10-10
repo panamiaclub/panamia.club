@@ -5133,22 +5133,49 @@ body {
   margin-top: 1.75rem;
 }
 
+/* The measuring stick for the rails below, and its only job.
+   --------------------------------------------------------------------------
+   The page body sits in a Tailwind `container`, which stops growing at
+   1536px. The reading column wants that cap. A rail does not: a row that ends
+   at the cap leaves a dead strip of background between the last card and the
+   side of the window — measured at 201px on a 1920 screen — which reads as
+   the row having failed to load rather than as a row you can sweep.
+
+   So the rails break out, and this is what they measure themselves against.
+   It has to be an ancestor of the container rather than the container itself,
+   because `cqw` is 1% of the query container's content box and the point is
+   to get at the width the container is refusing to use.
+
+   `cqw` rather than `vw` because `vw` includes the scrollbar. Breaking out
+   with viewport units overhangs the page by a scrollbar's width and turns a
+   gap on the right into a horizontal scrollbar at the bottom. */
+.events-bleed-scope {
+  container-type: inline-size;
+}
+
 .events-rail-track {
   display: flex;
   gap: 1.1rem;
   overflow-x: auto;
   list-style: none;
-  margin: 0.875rem 0 0;
-  /* Inset matches the headings' max-width so the first card starts on the
-     same line as the title it belongs to, then the padding lets the last one
-     clear the right edge instead of butting against it.
+  margin-block: 0.875rem 0;
+  /* Out of the reading column and across the whole window, so a row ends
+     where the window ends. The negative margin is the distance from this
+     track's own edge back to the page edge: half the difference between the
+     box it was given and the window it wants. */
+  width: 100cqw;
+  margin-inline: calc(50% - 50cqw);
+  /* Which immediately hands the inset back. The first card starts on the same
+     line as the heading it belongs to, so the inset is whatever it takes to
+     centre a 58rem column in the window — the same sum the headings' own
+     `mx-auto max-w-[58rem]` is doing one level up, which is why the two land
+     on the same pixel at every width.
 
-     Clamped at 0 rather than at a gutter: the track is already inside the
-     page's padded container, so a minimum here is added to that gutter rather
-     than replacing it, and the first card ends up indented past its own
-     heading on narrow screens. Below 58rem the container's padding is the
-     whole inset, which is what makes a rail run to the edge on a phone. */
-  padding: 0.125rem max(0px, calc((100% - 58rem) / 2)) 0.5rem;
+     Floored at the page gutter rather than at 0, because escaping the
+     container escaped its padding too: below 58rem there is no centring left
+     to do and without a floor the first card would sit flat against the edge
+     of the screen while its heading kept the gutter. */
+  padding: 0.125rem max(1rem, calc((100cqw - 58rem) / 2)) 0.5rem;
   scrollbar-width: none;
   /* Snap so a flick lands on a card rather than halfway through one. Proximity
      rather than mandatory: mandatory fights a deliberate small nudge and makes
@@ -5160,7 +5187,7 @@ body {
      — landing the first card hard against the left edge while its heading stays
      in the content column. scroll-padding moves the snapport itself inward, so
      "start" means the same place the heading starts. */
-  scroll-padding-inline: max(0px, calc((100% - 58rem) / 2));
+  scroll-padding-inline: max(1rem, calc((100cqw - 58rem) / 2));
   overscroll-behavior-x: contain;
 }
 
@@ -5225,46 +5252,26 @@ body {
    overflow, and so does an absolutely positioned run. Clipping a box that
    stops exactly at the padding edge is the only version that costs nothing.
 
-   That edge is a constant, not a measurement. The track's inset is
-   `(100% - 58rem) / 2` of a Tailwind `container`, whose width only changes at
-   Tailwind's own breakpoints, so the inset only has three non-zero values:
-   (64rem - 2rem - 58rem) / 2, then the same at 80rem and 96rem. The queries
-   below are Tailwind's breakpoints in Tailwind's units so the two flip on the
-   same pixel. Below 64rem the column fills the container and the inset is
-   zero, which is why there is no rule for it.
+   That edge is the track's own inset, so this is the same sum: centre a 58rem
+   column in the window, floored at the gutter. It cannot be the same *units*,
+   though. The track measures in `cqw`, and `cqw` resolves against the nearest
+   query container — which from in here is the leftover strip, not the page.
+   Container units cannot be aimed at a particular ancestor, and neither a
+   percentage nor a custom property helps, because both resolve where they are
+   used rather than where they are written.
 
-   The reach stops a hair short of that inset because the two do not flip on
-   quite the same width: a media query counts the scrollbar and the
-   container's `width: 100%` does not, so for a scrollbar's worth of viewports
-   above each breakpoint the container is still narrower than the max-width it
-   was just given. Measured at 6px of overrun in that band, so the hair is
-   wider than any scrollbar and the clip lands a few pixels inside the edge
-   everywhere else, where nothing is drawn anyway. */
+   So this one measures in `vw` and then gives a little back. `vw` counts the
+   scrollbar and `cqw` does not, which puts the reach half a scrollbar long;
+   the shave is wider than any scrollbar, so the clip lands a few pixels inside
+   the edge instead of a few pixels past it. Those few pixels are inside the
+   gutter, where nothing is drawn anyway. */
 .events-rail-ghost-run {
-  --rail-reach: 0px;
+  --rail-reach: max(1rem, calc((100vw - 58rem) / 2));
   flex: 0 0 auto;
   width: calc(100% + max(0px, var(--rail-reach) - 0.75rem));
   display: flex;
   gap: 1.1rem;
   overflow: hidden;
-}
-
-@media (min-width: 1024px) {
-  .events-rail-ghost-run {
-    --rail-reach: 2rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .events-rail-ghost-run {
-    --rail-reach: 10rem;
-  }
-}
-
-@media (min-width: 1536px) {
-  .events-rail-ghost-run {
-    --rail-reach: 18rem;
-  }
 }
 
 .events-rail-ghost {
