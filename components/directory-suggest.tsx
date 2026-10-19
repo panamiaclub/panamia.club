@@ -895,15 +895,11 @@ export function DirectorySuggest({
             // the spinner with the state a screen reader can act on.
             disabled={navigating}
             aria-busy={navigating}
+            aria-label={layout === 'pill' ? buttonLabel : undefined}
             className={
               layout === 'pill' ? 'directory-suggest-pill-button' : 'px-8'
             }
           >
-            {/* The pill layout is text-only, as in the mock — the bar itself
-                already reads as a search field. The spinner is the one thing
-                allowed to break that, because it is not chrome: it is only on
-                screen while a navigation is in flight, and the whole point of
-                the rule is that nothing permanent competes with the label. */}
             {navigating ? (
               <Loader2
                 className={cn(
@@ -912,12 +908,25 @@ export function DirectorySuggest({
                 )}
                 aria-hidden="true"
               />
+            ) : layout === 'stacked' ? (
+              <Search className="mr-2 h-5 w-5" aria-hidden="true" />
             ) : (
-              layout === 'stacked' && (
-                <Search className="mr-2 h-5 w-5" aria-hidden="true" />
+              layout === 'pill' && (
+                <Search
+                  className="directory-suggest-pill-button-icon h-5 w-5"
+                  aria-hidden="true"
+                />
               )
             )}
-            {buttonLabel}
+            <span
+              className={
+                layout === 'pill'
+                  ? 'directory-suggest-pill-button-label'
+                  : undefined
+              }
+            >
+              {buttonLabel}
+            </span>
           </Button>
         )}
       </div>

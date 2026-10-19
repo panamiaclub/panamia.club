@@ -469,6 +469,7 @@
   margin: 0.375rem;
   padding: 0.8125rem 1.625rem;
   height: auto;
+  flex: none;
   border-radius: 9999px;
   background-color: var(--color-pana-indigo);
   color: var(--color-pana-cream);
@@ -482,37 +483,56 @@
   background-color: var(--color-pana-ink);
 }
 
+.directory-suggest-pill-button .directory-suggest-pill-button-icon {
+  display: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
 /* The inset the pill's own text sits at, shared so the rotating placeholder
    can line up on the same edge as the typed term. It has to agree with the
-   `px-4` the hero passes in `inputClassName`; the narrow override below moves
-   both together. */
+   `px-4` the hero passes in `inputClassName`; the narrowest override below
+   moves both together. */
 .directory-suggest-pill {
   --dsp-text-inset: 1rem;
 }
 
-/* Under ~360px the pill runs out of room. The magnifier's margin, the field's
-   own padding and the button's padding come to roughly 200px of chrome, which
-   leaves the input about 68px to show text in — narrow enough to cut even the
-   short "Search Local" label the hero switches to on a phone.
+/* At the shared mobile breakpoint the submit becomes the pill's magnifier.
+   Removing the leading duplicate and visible button label gives their width to
+   the flexible field, while the fixed-size button stays a 44px touch target.
+   Named hooks keep the stacked and masthead layouts out of this trade. */
+@media (max-width: 39.99rem) {
+  .directory-suggest-pill-icon,
+  .directory-suggest-pill-button-label {
+    display: none;
+  }
 
-   So the chrome gives the width back rather than the field, since the field is
-   the only part of the pill that is carrying words. The button keeps its
-   margin so it still reads as a pill inside a pill. */
+  .directory-suggest-pill-button,
+  .directory-suggest-pill-lead .directory-suggest-pill-button {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0;
+    flex-basis: 2.75rem;
+    border-radius: 9999px;
+  }
+
+  .directory-suggest-pill-button .directory-suggest-pill-button-icon {
+    display: block;
+  }
+}
+
+/* The narrowest phones also trim the field inset. The normal mobile rule above
+   has already returned the large pieces of chrome, so the input keeps all
+   remaining width rather than shrinking the touch target. */
 @media (max-width: 22.5rem) {
   .directory-suggest-pill {
     --dsp-text-inset: 0.625rem;
   }
 
-  .directory-suggest-pill-icon {
-    margin-left: 0.75rem;
-  }
-
   .directory-suggest-pill .directory-suggest-field input {
     padding-inline: var(--dsp-text-inset);
-  }
-
-  .directory-suggest-pill-button {
-    padding-inline: 1rem;
   }
 }
 

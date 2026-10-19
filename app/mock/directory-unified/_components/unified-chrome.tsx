@@ -200,9 +200,16 @@ export function UnifiedChrome({
                 <Button
                   type="submit"
                   size="lg"
+                  aria-label="Search"
                   className="directory-suggest-pill-button"
                 >
-                  Search
+                  <Search
+                    className="directory-suggest-pill-button-icon h-5 w-5"
+                    aria-hidden="true"
+                  />
+                  <span className="directory-suggest-pill-button-label">
+                    Search
+                  </span>
                 </Button>
               </div>
             </form>

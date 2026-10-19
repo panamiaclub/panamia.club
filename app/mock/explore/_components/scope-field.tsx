@@ -132,8 +132,17 @@ export function ScopeField({
           </div>
         </div>
 
-        <Button type="submit" size="lg" className="directory-suggest-pill-button">
-          Search
+        <Button
+          type="submit"
+          size="lg"
+          aria-label="Search"
+          className="directory-suggest-pill-button"
+        >
+          <Search
+            className="directory-suggest-pill-button-icon h-5 w-5"
+            aria-hidden="true"
+          />
+          <span className="directory-suggest-pill-button-label">Search</span>
         </Button>
       </div>
 
@@ -219,7 +228,10 @@ export function ScopeField({
                         knowing the page exists is most of why anyone would
                         sign in for it. */}
                     <span className="mt-1 flex items-center gap-1 font-mono text-[0.68rem] font-bold tracking-tight opacity-55">
-                      <ArrowRight className="h-3 w-3 flex-none" aria-hidden="true" />
+                      <ArrowRight
+                        className="h-3 w-3 flex-none"
+                        aria-hidden="true"
+                      />
                       {SCOPE_DESTINATION[option]}
                     </span>
                   </span>
