@@ -1,5 +1,18 @@
 @import 'tailwindcss';
 
+/* MapLibre's own stylesheet, for the directory map's canvas, controls, markers
+   and attribution.
+ *
+ * Imported here rather than from the component that uses it. The map component
+ * is loaded through `next/dynamic`, and importing a node_modules stylesheet
+ * from inside that lazily-loaded client module drags PostCSS into the browser
+ * graph, where it fails to resolve and takes the whole lazy boundary — the map
+ * — down with it. Routing it through the app's own CSS pipeline, which is what
+ * builds this file, avoids that entirely and keeps every rule the map depends
+ * on in one place: the overrides that restyle these controls to the site's
+ * palette are further down this same file. */
+@import 'maplibre-gl/dist/maplibre-gl.css';
+
 /* next-themes toggles a `.dark` class on <html> (attribute="class"), but Tailwind
    v4 defaults the `dark:` variant to `@media (prefers-color-scheme: dark)` and does
    NOT read `darkMode` from tailwind.config.js (the JS config is ignored unless
@@ -6367,10 +6380,80 @@ body {
   transform: scale(1.18);
 }
 
-/* Tiles paint their own background; the mock's illustrative gradient would
-   show through the seams while they load. */
-.dirsearch-map:has(.pigeon-tiles) {
+/* The basemap paints its own cream land, but it arrives a frame or two after
+   the canvas does; the mock's illustrative gradient would flash through in
+   between. */
+.dirsearch-map:has(.dirsearch-mapcanvas) {
+  background: var(--color-pana-cream);
+}
+
+.dirsearch-mapcanvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* The viewer's own position. Deliberately the one blue thing on a warm map,
+   and deliberately not a logo pin: it is the only marker that is not a
+   business, so it should not look like one. */
+.dirsearch-viewerdot {
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: #3b5bdb;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px rgb(24 28 61 / 0.25);
+}
+
+/* MapLibre ships its controls in its own grey-on-white house style. Left
+   alone they are the one part of the map that still looks bought rather than
+   built, which defeats the point of styling the basemap at all. */
+.maplibregl-ctrl-group {
+  background: var(--color-pana-cream);
+  border: 1.5px solid rgb(48 62 140 / 0.16);
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 10px rgb(24 28 61 / 0.12);
+  overflow: hidden;
+}
+
+.maplibregl-ctrl-group button {
+  width: 2rem;
+  height: 2rem;
+  background: transparent;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top: 1.5px solid rgb(48 62 140 / 0.12);
+}
+
+.maplibregl-ctrl-group button:hover {
   background: var(--color-pana-butter-2);
+}
+
+.maplibregl-ctrl-group button:focus-visible {
+  outline: 2px solid var(--color-pana-flame);
+  outline-offset: -2px;
+}
+
+/* MapLibre draws the control icons as inline-SVG background images with a
+   hard-coded grey; this tints them to the site's navy without replacing the
+   assets. */
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(12%) sepia(28%) saturate(2400%) hue-rotate(216deg)
+    brightness(92%) contrast(96%);
+}
+
+/* Attribution is a legal requirement (ODbL), so it cannot be hidden — but it
+   can at least be set in the site's own typeface rather than Arial. */
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib a {
+  font-family: var(--font-nunito);
+  color: var(--color-pana-navy);
+}
+
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  background: rgb(255 247 236 / 0.92);
+  border-radius: 0.75rem;
 }
 
 /* Esri ships a khaki basemap with saturated coral highways; the site is cream,
@@ -6390,8 +6473,10 @@ body {
    to cream. brightness stays near 1 on purpose: anything higher clamps the
    pale shallow-water colour (#dcf3fb) to white.
 
-   If the map ever needs land and water styled separately, that needs vector
-   tiles (see lib/map-tiles.tsx), not a bigger filter. */
+   This is the raster compromise, and it now applies only to the profile map.
+   The directory map no longer needs it: it draws vector tiles it styles
+   directly (see lib/map/pana-basemap.ts), which is what "style land and water
+   separately" actually requires. */
 .pigeon-tiles-box {
   filter: saturate(0.75) brightness(1.04) contrast(0.97);
 }

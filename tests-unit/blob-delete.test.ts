@@ -41,6 +41,9 @@ const fake: FakeBucket = {
           fake.calls.push(Array.isArray(keys) ? keys : [keys]);
           if (shouldThrow) throw new Error('R2 unavailable');
         },
+        // Unused here — this suite is about deletion — but the bucket type
+        // requires it, because the map's tile route reads byte ranges.
+        get: async () => null,
       },
     });
   },

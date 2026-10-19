@@ -43,6 +43,10 @@ interface Env {
       options?: { httpMetadata?: { contentType?: string } }
     ): Promise<unknown>;
     delete(keys: string | string[]): Promise<void>;
+    get(
+      key: string,
+      options?: { range?: { offset: number; length?: number } }
+    ): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
   };
   // Optional: the "images" binding in wrangler.jsonc is currently commented
   // out, so this is undefined at runtime. Typed optional so the call site is

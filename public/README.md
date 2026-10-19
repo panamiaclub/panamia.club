@@ -8,6 +8,7 @@ Static assets served directly by Next.js.
 public/
 ├── img/             # Static images and photos
 ├── logos/           # Brand logos
+├── map/             # Basemap glyphs and sprite for the directory map
 ├── favicon.ico      # Site favicon
 ├── favicon.png      # PNG favicon
 ├── meta_image.jpg   # Default Open Graph image
@@ -41,6 +42,17 @@ Static images that don't need to be processed:
 ### logos
 
 Brand logos in various formats and sizes.
+
+### map
+
+Assets MapLibre needs to draw the directory basemap itself:
+
+- `map/glyphs/{fontstack}/{range}.pbf` - Nunito and Montserrat, pre-rendered
+  per Unicode range, so place names are set in the site's own typefaces
+- `map/sprite/basemap{,@2x}.{json,png}` - icon sheet for shields and markers
+
+These are served from our origin on purpose. The basemap stays up even if a
+third-party tile or font CDN does not, and no visitor's IP is handed to one.
 
 ## SEO Files
 

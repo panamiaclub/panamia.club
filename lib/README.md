@@ -95,7 +95,7 @@ contract — they never throw, because a failed notification must not fail the
 request that triggered it.
 
 `admin-auth.ts` exposes two gates, not one: `checkAdminAuth()` for ordinary
-admin work and `checkSuperAdminAuth()` for anything that changes *who* is an
+admin work and `checkSuperAdminAuth()` for anything that changes _who_ is an
 admin. See [docs/ADMIN-ACCESS.md](../docs/ADMIN-ACCESS.md) for the two tiers,
 how to grant admin, and why the bootstrap step is deliberately outside the
 product.
@@ -116,6 +116,19 @@ Cloudflare R2 integration for file uploads:
 | File     | Description                                 |
 | -------- | ------------------------------------------- |
 | `api.ts` | `uploadFile()` and `deleteFile()` functions |
+
+## Basemap (`map/`)
+
+Styling for the directory map, which MapLibre renders from vector tiles we
+host ourselves rather than raster tiles from a third party:
+
+| File              | Description                                                         |
+| ----------------- | ------------------------------------------------------------------- |
+| `pana-basemap.ts` | Palette overrides and `panaMapStyle()`, the MapLibre style document |
+
+The style points at `/api/map/tiles`, glyphs under `public/map/glyphs/`, and
+the sprite under `public/map/sprite/`, so the map depends on no third-party
+CDN at runtime. `BASEMAP_ATTRIBUTION` is an ODbL licence term, not decoration.
 
 ## Feature Utilities
 

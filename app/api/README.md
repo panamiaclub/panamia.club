@@ -110,6 +110,17 @@ Community articles feature:
 | `/api/getFeaturedPanas`   | GET    | Get featured profiles |
 | `/api/getProfile`         | GET    | Get public profile    |
 
+## Map Tiles (`/api/map/*`)
+
+| Endpoint                     | Method | Description                                |
+| ---------------------------- | ------ | ------------------------------------------ |
+| `/api/map/tiles/{z}/{x}/{y}` | GET    | Vector basemap tiles for the directory map |
+
+Reads a PMTiles archive in R2 with HTTP range requests. Coordinates are
+bounds-checked before R2 is touched; tiles the archive does not cover answer
+`204`, malformed or over-max coordinates `404`. Responses are immutable and
+cached for a week.
+
 ## Social (`/api/social/*`)
 
 The social timeline (microblogging) feature, surfaced at the `/s` page. Built on
