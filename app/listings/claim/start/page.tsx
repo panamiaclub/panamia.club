@@ -151,9 +151,9 @@ function ClaimStartContent() {
                   No longer have access to that address? Email us at{' '}
                   <a
                     className="text-pana-indigo dark:text-pana-flame font-semibold underline"
-                    href="mailto:hola@pana.social"
+                    href="mailto:hola@panamia.club"
                   >
-                    hola@pana.social
+                    hola@panamia.club
                   </a>
                   .
                 </p>

@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'Someone else claimed this listing first. Contact us at hola@pana.social if that is wrong.',
+            'Someone else claimed this listing first. Contact us at hola@panamia.club if that is wrong.',
         },
         { status: 409 }
       );

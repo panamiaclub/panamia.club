@@ -2,7 +2,7 @@
  * WebFinger Endpoint
  *
  * Implements RFC 7033 WebFinger for ActivityPub actor discovery.
- * When someone searches for @username@pana.social, their server
+ * When someone searches for @username@panamia.club, their server
  * queries this endpoint to find the actor's profile URL.
  *
  * @see https://tools.ietf.org/html/rfc7033

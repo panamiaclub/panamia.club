@@ -2,7 +2,7 @@
  * Demo events, hosted by the real listings and groups already in the database.
  *
  * ---------------------------------------------------------------------------
- * Read this before running it against pana.social
+ * Read this before running it against panamia.club
  * ---------------------------------------------------------------------------
  *
  * `scripts/seed-demo.ts` deliberately creates no events. Its argument is worth
@@ -677,7 +677,7 @@ async function main(): Promise<void> {
         mode: 'offline',
         attendeeCap: null,
         attendeeCount: 0,
-        icalUid: `${id}@events.pana.social`,
+        icalUid: `${id}@events.panamia.club`,
         tags: template.tags,
       };
 

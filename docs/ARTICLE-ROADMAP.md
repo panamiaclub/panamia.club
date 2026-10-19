@@ -517,20 +517,20 @@ Add new section to existing homepage:
 <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
     <title>Pana MIA Community Articles</title>
-    <link>https://pana.social/a</link>
+    <link>https://panamia.club/a</link>
     <description>Community articles from South Florida</description>
     <language>en-us</language>
     <lastBuildDate>RFC 822 date</lastBuildDate>
 
     <item>
       <title>Article Title</title>
-      <link>https://pana.social/a/slug</link>
+      <link>https://panamia.club/a/slug</link>
       <description><![CDATA[Excerpt or first paragraph...]]></description>
       <dc:creator>Author Screenname</dc:creator>
       <pubDate>RFC 822 date</pubDate>
       <category>tag1</category>
       <category>tag2</category>
-      <guid isPermaLink="true">https://pana.social/a/slug</guid>
+      <guid isPermaLink="true">https://panamia.club/a/slug</guid>
     </item>
   </channel>
 </rss>
@@ -711,10 +711,10 @@ mastodonPostUrl?: string; // URL to the Mastodon post
 
 **Option A: activities.next Sidecar (Recommended)**
 
-Deploy activities.next as a separate instance at `social.pana.social`:
+Deploy activities.next as a separate instance at `social.panamia.club`:
 
 ```
-pana.social                         social.pana.social
+panamia.club                         social.panamia.club
 (Next.js app)                        (activities.next)
      │                                      │
      │ Article published ──────────→ Create Note activity
@@ -743,7 +743,7 @@ Implement ActivityPub directly in Pana MIA using patterns from activities.next.
 
 Instead of building a custom comment system:
 
-1. Article published → Post created on `social.pana.social`
+1. Article published → Post created on `social.panamia.club`
 2. Mastodon users reply to the post
 3. Fetch replies via Mastodon API
 4. Display below article as comments

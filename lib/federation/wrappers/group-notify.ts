@@ -487,7 +487,7 @@ export async function notifyGroupPosted(
  * already avoids doing for the Nostr mirror.
  *
  * Unlisted events still notify. Unlisted governs whether the event leaves
- * pana.social, not whether the group it belongs to may hear about it; members
+ * panamia.club, not whether the group it belongs to may hear about it; members
  * are the intended audience either way.
  */
 export async function notifyGroupEventPublished(params: {

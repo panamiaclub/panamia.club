@@ -173,7 +173,7 @@ switched off because it needs credentials. To enable it:
 
 1. **Pick the right Google account first — this is hard to undo.** The OAuth
    client belongs to a Google Cloud project owned by one Google account, and the
-   binding that matters is Search Console: `pana.social` has to be listed as an
+   binding that matters is Search Console: `panamia.club` has to be listed as an
    **Authorized domain** before Google will accept the redirect URI, and
    authorized domains are verified from the owning account. Lose the account and
    nobody can edit the consent screen or the redirect URIs, so there is no way
@@ -191,12 +191,12 @@ switched off because it needs credentials. To enable it:
    [DOMAINS.md](./DOMAINS.md), whose future is an open product decision. If it
    is ever retired _and_ the Workspace subscription is cancelled with it, the
    account owning this OAuth client disappears and Google sign-in on
-   `pana.social` breaks. Retiring the website while keeping the domain and
+   `panamia.club` breaks. Retiring the website while keeping the domain and
    Workspace is fine; cancelling both is not. Decide that before building on it.
 
-   `pana.social` itself has no Workspace — mail is Cloudflare — so
-   `hola@pana.social` is not a Google identity and cannot own the project or be
-   selected as the support email. Do not add `pana.social` as a Workspace
+   `panamia.club` itself has no Workspace — mail is Cloudflare — so
+   `hola@panamia.club` is not a Google identity and cannot own the project or be
+   selected as the support email. Do not add `panamia.club` as a Workspace
    secondary domain just to obtain a matching address: that repoints MX at
    Google and disturbs the Cloudflare email setup for no OAuth benefit.
 
@@ -205,7 +205,7 @@ switched off because it needs credentials. To enable it:
    _Create credentials_ → _OAuth client ID_ → _Web application_.
 
    Consent screen settings that catch people out:
-   - **Every URL on the consent screen must be `pana.social`.** Publishing asks
+   - **Every URL on the consent screen must be `panamia.club`.** Publishing asks
      for homepage, privacy policy and terms links, and the instinct is to use
      the email domain. Do not: the `panamia.club` apex has served an expired TLS
      certificate since 2024-07-24, so those links land on a browser security
@@ -220,15 +220,15 @@ switched off because it needs credentials. To enable it:
    - **User support email is a dropdown**, offering only the owning account or a
      Google Group it belongs to, and it is shown publicly on the consent screen.
      `jose@panamia.club` works; a Workspace group such as `hola@panamia.club` is
-     nicer. `hola@pana.social` will not be listed. The separate _Developer
+     nicer. `hola@panamia.club` will not be listed. The separate _Developer
      contact information_ field is free text and not shown to users, so
-     `hola@pana.social` belongs there.
+     `hola@panamia.club` belongs there.
 
 3. **Register the redirect URI.** better-auth serves every provider from one
    mount, so the authorised redirect URI is:
 
    ```text
-   https://pana.social/api/auth/callback/google
+   https://panamia.club/api/auth/callback/google
    ```
 
    Add one entry per origin you sign in from, including

@@ -17,7 +17,7 @@ export function profileNotPublished(params: Record<string, unknown>) {
           After review, we were unable to approve your profile at this time. This could be due to incomplete information or content that doesn't meet our community guidelines.
         </p>
         <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-          If you have questions, please reach out to us at <a href="mailto:hola@pana.social" style="color: #4ab3ea;">hola@pana.social</a>.
+          If you have questions, please reach out to us at <a href="mailto:hola@panamia.club" style="color: #4ab3ea;">hola@panamia.club</a>.
         </p>`,
     }),
     text: [
@@ -31,10 +31,10 @@ export function profileNotPublished(params: Record<string, unknown>) {
       'After review, we were unable to approve your profile at this time.',
       "This could be due to incomplete information or content that doesn't meet our community guidelines.",
       '',
-      'If you have questions, please reach out to us at hola@pana.social.',
+      'If you have questions, please reach out to us at hola@panamia.club.',
       '',
       '---',
-      'Pana MIA · pana.social · hola@pana.social',
+      'Pana MIA · panamia.club · hola@panamia.club',
     ].join('\n'),
   };
 }

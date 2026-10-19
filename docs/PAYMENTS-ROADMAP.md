@@ -1,6 +1,6 @@
 # Payments Roadmap
 
-How artists get paid for platform-allowed services on pana.social, and how
+How artists get paid for platform-allowed services on panamia.club, and how
 Pana MIA sustains itself from that activity without becoming a bank.
 
 This is a policy document. It records decisions, the reasoning behind them, and
@@ -55,10 +55,10 @@ forgone revenue. It does create a structural incentive problem, which is the
 single most important thing in this document — see
 [Risk 1](#risk-1-fee-avoidance).
 
-### Why Pana MIA does not issue `member@pana.social` Lightning Addresses
+### Why Pana MIA does not issue `member@panamia.club` Lightning Addresses
 
 Pana MIA already runs the community relay, serves Nostr identity lookups at
-`pana.social`, and walks members through Nostr onboarding. It feels natural
+`panamia.club`, and walks members through Nostr onboarding. It feels natural
 that Lightning Addresses would be the next thing served from the same place.
 
 **The resemblance is misleading.** The two lookups share a `user@domain` shape
@@ -76,7 +76,7 @@ Two real options:
 
 |                            | **Artist brings their own** | **Pana MIA issues and holds**                 |
 | -------------------------- | --------------------------- | --------------------------------------------- |
-| Address shown              | `alice@getalby.com`         | `alice@pana.social`                           |
+| Address shown              | `alice@getalby.com`         | `alice@panamia.club`                           |
 | Who generates the invoice  | artist's wallet provider    | **Pana MIA**                                  |
 | Who receives the bitcoin   | artist                      | **Pana MIA**                                  |
 | Is this money transmission | no                          | **yes**                                       |
@@ -85,10 +85,10 @@ Two real options:
 | Ongoing operations         | none                        | a payment node, liquidity, a hot wallet, 24/7 |
 
 A third arrangement is technically possible and not worth pursuing: hosting
-`alice@pana.social` as a pass-through to the artist's real address without ever
+`alice@panamia.club` as a pass-through to the artist's real address without ever
 holding funds. The protocols force such a pass-through to be almost entirely
 transparent, so it buys the appearance of a unified identity and no actual
-control, while making pana.social a point of failure in a payment path it does
+control, while making panamia.club a point of failure in a payment path it does
 not operate. Mechanics in [Note 4](#note-4-lightning-address-mechanics).
 
 **Issuing and holding is money transmission.** Receiving funds from a payer in
@@ -500,7 +500,7 @@ to already be in the product.
 
 The no-custody invariant holds only as long as nobody implements an
 obvious-seeming convenience. Each of these quietly breaks it: holding bitcoin
-"just until the session completes"; issuing `member@pana.social` addresses
+"just until the session completes"; issuing `member@panamia.club` addresses
 backed by a Pana MIA wallet; an internal balance members accrue and withdraw;
 splitting a payment on the server.
 
@@ -795,7 +795,7 @@ Cloudflare Workers, with a `max:1` Hyperdrive connection pool.
 
 ### Note 4. Lightning Address mechanics
 
-Why a non-custodial pass-through at `pana.social` buys nothing:
+Why a non-custodial pass-through at `panamia.club` buys nothing:
 
 - The LNURL `metadata` string is hashed into the invoice's `description_hash`,
   so a pass-through must forward the upstream metadata verbatim or wallets
@@ -805,7 +805,7 @@ Why a non-custodial pass-through at `pana.social` buys nothing:
   are signed by the upstream provider, not by Pana MIA.
 
 The result is an almost entirely transparent proxy: the address members publish
-reads `alice@pana.social`, and Pana MIA controls nothing about the payment
+reads `alice@panamia.club`, and Pana MIA controls nothing about the payment
 while becoming a dependency in its path.
 
 **Insertion point for the artist's own address:** add

@@ -5,7 +5,7 @@ import { notifyAdminsOfReport } from '@/lib/server/relay-reports';
 import { denyPublicRequest } from '@/lib/server/internal-auth';
 
 // NIP-56 abuse-report endpoint. Receives kind 1984 reports forwarded from
-// relay.pana.social and records them for the admin moderation console.
+// relay.panamia.club and records them for the admin moderation console.
 //
 // Reached only via Cloudflare Service Binding from panamia-nosflare
 // (env.PANAMIA.fetch). Service Bindings bypass the public network, so no

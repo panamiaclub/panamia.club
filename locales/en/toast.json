@@ -32,7 +32,7 @@
 
   "submissionFailed": "Submission Failed",
   "submissionError": "Submission Error",
-  "submissionErrorBecomePana": "There was a problem submitting the form. Please contact us at hola@pana.social",
+  "submissionErrorBecomePana": "There was a problem submitting the form. Please contact us at hola@panamia.club",
   "submissionErrorContact": "There was a problem submitting your message. Please try again.",
   "submissionErrorGeneral": "There was a problem submitting the form. Please refresh the page and try again.",
   "submissionErrorFormGeneric": "There was a problem submitting the form: {{error}}",

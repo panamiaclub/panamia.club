@@ -7,7 +7,7 @@
  * the site is doing its own rendering exactly as it does in a browser. What it
  * is not doing by default is any of the things a browser normally handles on
  * its behalf: dismissing the launch screen, answering the Android back button,
- * and turning a tapped link to pana.social into in-app navigation rather than
+ * and turning a tapped link to panamia.club into in-app navigation rather than
  * a page the member never arrives at. This component is where those are wired.
  *
  * Renders nothing. It is mounted for its effects, beside ScreennameGate in the
@@ -89,7 +89,7 @@ export function NativeShell() {
         })
       );
 
-      /* Universal Links and App Links: a pana.social URL tapped in another app
+      /* Universal Links and App Links: a panamia.club URL tapped in another app
        * opens this one, and the OS hands over the URL that did it.
        *
        * Navigating explicitly is what makes that land somewhere useful.
@@ -101,7 +101,7 @@ export function NativeShell() {
        * What counts as "ours" is any https host on the panaverse root domain,
        * NOT just the origin currently loaded. That distinction is the whole
        * point of shipping both surfaces in one app: this WebView may be
-       * showing pana.social when a social.pana.social link arrives, and those
+       * showing panamia.club when a social.panamia.club link arrives, and those
        * are different origins. Comparing against window.location.origin would
        * silently drop exactly half the deep links — the cross-surface half —
        * and produce the ignored-link behaviour this listener exists to fix.

@@ -276,7 +276,7 @@ export interface PanaverseRoom {
  * The rooms the switcher offers.
  *
  * Paths are relative, so following one from Pana Social keeps the member on
- * social.pana.social and the page arrives wearing the guest chrome
+ * social.panamia.club and the page arrives wearing the guest chrome
  * (`SurfaceGuestHeader`). That is the same call `SurfaceGuestFooter` makes for
  * the legal links, and for the same reason: bouncing a member to another
  * hostname to look at Pana Mia content is exactly the "two separate products"
@@ -293,7 +293,7 @@ export const SHARED_ROOMS: readonly PanaverseRoom[] = [
    *
    * This is the promotion path the type promised, run once: a registry entry,
    * a mark, and a line deleted from here. No DNS record, unlike the surfaces
-   * that came before it — Events is path-only, served from pana.social/e. A
+   * that came before it — Events is path-only, served from panamia.club/e. A
    * surface is a thing with its own name and tone, not a thing with its own
    * hostname. */
   {

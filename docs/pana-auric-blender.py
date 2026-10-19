@@ -1083,7 +1083,7 @@ def create_callouts():
     sttl = bpy.context.active_object
     sttl.name        = "SubtitleText"
     sttl.data.body   = ("The flower represents the Directory -- it ties together all modules.\n"
-                        "Visit us at pana.social")
+                        "Visit us at panamia.club")
     sttl.data.size   = 0.55
     sttl.data.align_x = 'CENTER'
     sttl.data.align_y = 'CENTER'

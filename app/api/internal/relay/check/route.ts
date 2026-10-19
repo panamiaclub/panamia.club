@@ -5,7 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { maturedLeaveExists } from '@/lib/relay/group-maturation';
 import { denyPublicRequest } from '@/lib/server/internal-auth';
 
-// Membership gate for relay.pana.social. A pubkey is allowed to publish iff
+// Membership gate for relay.panamia.club. A pubkey is allowed to publish iff
 // it appears in relay_group_members for at least one group. This collapses
 // "is the user a panamia member" and "do they belong to any group" into one
 // check — there is no profile-level pubkey provisioning yet, so group

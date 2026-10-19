@@ -159,7 +159,7 @@ function ArchitectureNotes() {
       >
         A session cookie scoped to <code>.panamia.club</code> covers the main
         site and every surface under it. It cannot reach{' '}
-        <code>pana.social</code> — a different registrable domain — which is why
+        <code>panamia.club</code> — a different registrable domain — which is why
         the handles live there and the UI does not.
       </NoteCard>
 
@@ -181,7 +181,7 @@ function ArchitectureNotes() {
         to <code>{SHARED_ROOMS[0].couldBecome}</code> is a registry entry plus a
         DNS record — not a second application to maintain. Events was listed
         here until recently and is now a surface in its own right, served at{' '}
-        <code>pana.social/e</code>, which is what that promotion costs in
+        <code>panamia.club/e</code>, which is what that promotion costs in
         practice: the registry entry did the work, and the DNS record turned out
         to be optional.
       </NoteCard>

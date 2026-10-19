@@ -12,7 +12,7 @@ import { getProfileReadiness } from '@/lib/relay/profile-readiness';
 // the kind 0 we hand out is always coherent (screenname + completed
 // become-a-pana profile). In normal flow the gate has already passed by
 // the time this is called; the 412 path is defensive.
-const NIP05_DOMAIN = 'pana.social';
+const NIP05_DOMAIN = 'panamia.club';
 
 export async function GET() {
   const session = await auth();

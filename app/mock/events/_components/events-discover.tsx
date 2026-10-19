@@ -189,7 +189,7 @@ function learned(reason: Reason): string {
  * makes a surface read as a picture of a website. That warning is about
  * `/mock/feed`, where the question was "does this feel like its own site".
  * Here the address bar *is* half the proposal — the mock was drawn when Events
- * was going to be `events.pana.social`, and shipped as `pana.social/e` instead,
+ * was going to be `events.panamia.club`, and shipped as `panamia.club/e` instead,
  * so the bar is the part of the picture that changed.
  */
 export function EventsDiscover() {

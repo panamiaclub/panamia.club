@@ -21,7 +21,7 @@ public/
 
 Files in this directory are served from the root URL:
 
-- `public/img/photo.png` → `https://pana.social/img/photo.png`
+- `public/img/photo.png` → `https://panamia.club/img/photo.png`
 
 In code:
 

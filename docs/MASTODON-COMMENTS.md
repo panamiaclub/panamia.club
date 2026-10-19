@@ -33,7 +33,7 @@ New article: "The State of Miami's Music Scene"
 I explore the underground venues, emerging artists, and what makes
 our local music community unique.
 
-Read it here: https://pana.social/articles/miami-music-scene
+Read it here: https://panamia.club/articles/miami-music-scene
 
 What's your favorite local venue?
 ```

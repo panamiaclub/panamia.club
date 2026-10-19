@@ -555,7 +555,7 @@ export const SORT_OPTIONS: {
  * toolbar address, the masthead, and the Events tile in the account menu — and
  * the whole point of the mock is that those three agree.
  *
- * This said `directory.pana.social/events` while the mock was an argument.
+ * This said `directory.panamia.club/events` while the mock was an argument.
  * The argument was settled the other way: events became the fifth surface in
  * its own right rather than a room inside a promoted directory, because what
  * this page turned into is not a filtered list of the directory's fourth kind
@@ -563,10 +563,10 @@ export const SORT_OPTIONS: {
  * are not reasons about makers. `events` is registered in
  * `lib/panaverse/surfaces.ts` and the shipped page is `/e`.
  *
- * It then said `events.pana.social` for a while, which is now also wrong. The
+ * It then said `events.panamia.club` for a while, which is now also wrong. The
  * surface carries `subdomain: null`: it is a surface with its own mark and
  * masthead that lives on the root domain at `/e` rather than a hostname of its
  * own. The address bar here draws what the shipped page actually answers to.
  */
-export const MOCK_HOST = 'pana.social';
+export const MOCK_HOST = 'panamia.club';
 export const MOCK_PATH = '/e';

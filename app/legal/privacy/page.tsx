@@ -5,7 +5,7 @@ import { LegalJsonLd } from '@/components/legal/JsonLd';
 import { tiers, policyVersion, policyStatus } from '@/lib/legal/privacy-policy';
 
 // Live web origin for this app — not a stale federation value to "correct".
-// Never find-and-replace `pana.social`; most occurrences are federated
+// Never find-and-replace `panamia.club`; most occurrences are federated
 // identity and repointing those is permanent. See docs/DOMAINS.md.
 const SITE = 'https://panamia.club';
 
@@ -259,7 +259,7 @@ export default function PrivacyPolicyPage() {
           <p>
             Pana MIA Club, Corp.
             <br />
-            Email: <a href="mailto:hola@pana.social">hola@pana.social</a>
+            Email: <a href="mailto:hola@panamia.club">hola@panamia.club</a>
           </p>
         </section>
 

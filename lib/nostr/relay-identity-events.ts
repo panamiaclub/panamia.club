@@ -9,7 +9,7 @@ import axios from 'axios';
 import { publishWithAuth } from './publish-browser';
 import type { UnsignedEvent } from './sign';
 
-const RELAY = 'wss://relay.pana.social';
+const RELAY = 'wss://relay.panamia.club';
 
 // Default group set a panamia member belongs to. Mirrors AUTO_ENROLL_GROUPS in
 // /api/relay/enroll and /api/relay/rotate — keep in sync.
@@ -61,7 +61,7 @@ export async function publishProfileMetadata(
   }
 }
 
-// NIP-65/NIP-17/NIP-EE relay lists declaring relay.pana.social as this pubkey's
+// NIP-65/NIP-17/NIP-EE relay lists declaring relay.panamia.club as this pubkey's
 // preferred relay so DM and MLS clients can find where to reach the user.
 export async function publishRelayLists(skHex: string): Promise<StepResult> {
   const events: UnsignedEvent[] = [
@@ -129,7 +129,7 @@ export async function publishIdentityEvents(
   if (!relays.ok) {
     warnings.push(
       `Relay list kind(s) ${relays.failedKinds?.join(', ')} were not published — ` +
-        'some clients may use their default relays instead of relay.pana.social.'
+        'some clients may use their default relays instead of relay.panamia.club.'
     );
   }
 

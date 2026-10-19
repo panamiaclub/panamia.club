@@ -169,9 +169,9 @@ async function main() {
   const created = await call('POST', '/contacts/', {
     firstName: 'DND',
     lastName: `Probe ${runId}`,
-    email: `dnd-probe-${runId}@invalid.test.pana.social`,
+    email: `dnd-probe-${runId}@invalid.test.panamia.club`,
     locationId: LOCATION_ID,
-    source: 'pana.social dnd probe',
+    source: 'panamia.club dnd probe',
   });
   const contactId = (created.body as { contact?: { id?: string } })?.contact
     ?.id;

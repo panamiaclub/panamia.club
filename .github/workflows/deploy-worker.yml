@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   deploy:
-    if: github.repository == 'unitedcolorsofg/panamia-next'
+    if: github.repository == 'panamiaclub/panamia.club'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:

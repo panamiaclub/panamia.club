@@ -53,7 +53,7 @@ export async function lookupScreennames(
   // "no panamia profile". Label it when RELAY_PUBLIC_KEY is configured.
   const relayPubkey = process.env.RELAY_PUBLIC_KEY?.toLowerCase();
   if (relayPubkey && unique.includes(relayPubkey) && !map[relayPubkey]) {
-    map[relayPubkey] = 'relay.pana.social';
+    map[relayPubkey] = 'relay.panamia.club';
   }
   return map;
 }
@@ -99,7 +99,7 @@ function buildReportEmail(
   const reportedKindLabel =
     report.reportedKind != null ? kindName(report.reportedKind) : '—';
   const adminUrl =
-    (process.env.NEXT_PUBLIC_HOST_URL || 'https://daydream.pana.social') +
+    (process.env.NEXT_PUBLIC_HOST_URL || 'https://daydream.panamia.club') +
     '/admin/reports';
 
   const subject = `[Pana abuse report] ${type} — reported by ${
@@ -165,7 +165,7 @@ function buildReportEmail(
 
   const html = `<!DOCTYPE html><html><body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;max-width:640px;margin:0 auto;padding:24px;">
   <h2 style="margin:0 0 4px;font-size:20px;">New abuse report</h2>
-  <p style="margin:0 0 20px;color:#666;font-size:14px;">A NIP-56 report was filed on relay.pana.social.</p>
+  <p style="margin:0 0 20px;color:#666;font-size:14px;">A NIP-56 report was filed on relay.panamia.club.</p>
   <table style="border-collapse:collapse;font-size:14px;margin-bottom:20px;">${tableRows}</table>
   <h3 style="margin:0 0 6px;font-size:15px;">Reporter's context</h3>
   <p style="margin:0 0 20px;white-space:pre-wrap;font-size:14px;">${
@@ -180,7 +180,7 @@ function buildReportEmail(
 </body></html>`;
 
   const text = [
-    'New abuse report on relay.pana.social',
+    'New abuse report on relay.panamia.club',
     '',
     ...rows.map(([k, v]) => `${k}: ${v.replace(/<[^>]+>/g, '')}`),
     '',

@@ -36,7 +36,7 @@ export function adminAffiliate(params: Record<string, unknown>) {
       `Affiliate Code: ${String(params.affiliate || 'n/a')}`,
       '',
       '---',
-      'Pana MIA · pana.social',
+      'Pana MIA · panamia.club',
     ].join('\n'),
   };
 }

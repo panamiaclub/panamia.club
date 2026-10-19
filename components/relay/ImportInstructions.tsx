@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ExternalLink } from 'lucide-react';
 
 const NOSTRORD_DEEPLINK =
-  'https://web.nostrord.com/?relay=relay.pana.social&group=panamia-test';
+  'https://web.nostrord.com/?relay=relay.panamia.club&group=panamia-test';
 
 export function ImportInstructions() {
   return (

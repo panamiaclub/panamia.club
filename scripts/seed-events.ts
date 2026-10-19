@@ -3,7 +3,7 @@
  * Seed Events
  *
  * The events layer: hosts, venues, RSVPs and the follow graph that
- * events.pana.social reasons over. Runs after scripts/seed-dev-data.ts, which
+ * events.panamia.club reasons over. Runs after scripts/seed-dev-data.ts, which
  * owns the users and profiles this file hangs everything off.
  *
  * WHY THIS FILE EXISTS
@@ -599,7 +599,7 @@ async function main(): Promise<void> {
       visibility: 'public',
       mode: 'offline',
       attendeeCount: 20,
-      icalUid: `${id}@events.pana.social`,
+      icalUid: `${id}@events.panamia.club`,
       tags: [...p.g],
     });
     if ('viewerAttended' in p && p.viewerAttended) {
@@ -626,7 +626,7 @@ async function main(): Promise<void> {
       visibility: 'public',
       mode: 'offline',
       attendeeCount: 20,
-      icalUid: `${id}@events.pana.social`,
+      icalUid: `${id}@events.panamia.club`,
       tags: [...p.g],
     });
     pastCount += 1;
@@ -653,7 +653,7 @@ async function main(): Promise<void> {
       mode: e.online ? 'online' : 'offline',
       attendeeCap: e.cap ?? null,
       attendeeCount: e.going,
-      icalUid: `${id}@events.pana.social`,
+      icalUid: `${id}@events.panamia.club`,
       tags: e.tags,
     });
 

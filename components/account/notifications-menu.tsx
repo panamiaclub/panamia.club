@@ -108,7 +108,7 @@ function NotificationRow({
  * because there are two mastheads and only one of them could. MainHeader is a
  * client component and gated this on `useSession`; SurfaceMemberHeader — the
  * masthead a surface wears over its own rooms, and the one a member on
- * social.pana.social actually lives under — renders on the server and has no
+ * social.panamia.club actually lives under — renders on the server and has no
  * session to check. The bell was therefore absent from the feed entirely, and
  * with it the only link to /messages. Owning the gate here is what lets a
  * server component mount this safely; every query below stays disabled

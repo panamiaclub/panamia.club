@@ -83,7 +83,7 @@ Contacts enter GHL only through explicit opt-in or legitimate interaction:
 | Source           | Mechanism                                                                |
 | ---------------- | ------------------------------------------------------------------------ |
 | Event check-in   | Organizer scans QR / enters email; GHL contact created with event tag    |
-| Opt-in forms     | GHL-hosted or embedded forms on pana.social                              |
+| Opt-in forms     | GHL-hosted or embedded forms on panamia.club                              |
 | Referral         | Existing member shares link with UTM; landing page submits to GHL        |
 | Abandoned signup | User starts Panamia signup but doesn't complete; email captured pre-auth |
 | Manual import    | Admin imports attendee list from off-platform event (with consent)       |

@@ -38,8 +38,8 @@ export const CONTACT_CATEGORY_ROLE: Record<ContactCategory, ContactRole> = {
 // address that bounces silently drops the inquiries this routing exists to
 // protect (Goal 2).
 const ROLE_ADDRESSES: Record<ContactRole, string> = {
-  operators: 'hola@pana.social',
-  team: 'hola@pana.social',
+  operators: 'hola@panamia.club',
+  team: 'hola@panamia.club',
 };
 
 export function roleForCategory(category: ContactCategory): ContactRole {

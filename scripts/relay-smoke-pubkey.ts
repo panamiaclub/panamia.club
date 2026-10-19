@@ -1,4 +1,4 @@
-// One-off smoke test for an arbitrary nsec against relay.pana.social.
+// One-off smoke test for an arbitrary nsec against relay.panamia.club.
 // Usage: yarn tsx scripts/relay-smoke-pubkey.ts <nsec> [npub]
 //
 // Group set is discovered, not hardcoded. After NIP-42 AUTH, a REQ for

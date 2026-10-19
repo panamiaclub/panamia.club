@@ -4,7 +4,7 @@ import { moduleDefinitions, ModuleContent } from './module-content';
 import { LegalJsonLd } from '@/components/legal/JsonLd';
 
 // Live web origin for this app — not a stale federation value to "correct".
-// Never find-and-replace `pana.social`; most occurrences are federated
+// Never find-and-replace `panamia.club`; most occurrences are federated
 // identity and repointing those is permanent. See docs/DOMAINS.md.
 const SITE = 'https://panamia.club';
 
@@ -220,7 +220,7 @@ export default function TermsPage() {
           <p>
             <strong>Community-drafted:</strong> These terms were mutually
             prepared with the community. You may propose changes by emailing{' '}
-            <a href="mailto:hola@pana.social">hola@pana.social</a>.
+            <a href="mailto:hola@panamia.club">hola@panamia.club</a>.
           </p>
         </div>
       </section>
@@ -234,7 +234,7 @@ export default function TermsPage() {
             community. They shall not be construed against either party as the
             drafter. Community members may request revisions or propose
             alterations to these terms by contacting{' '}
-            <a href="mailto:hola@pana.social">hola@pana.social</a>. Proposals
+            <a href="mailto:hola@panamia.club">hola@panamia.club</a>. Proposals
             are reviewed and, where adopted, incorporated into the next
             versioned release with changelog attribution.
           </p>
@@ -453,7 +453,7 @@ export default function TermsPage() {
           <p>
             Pana MIA Club, Corp. (d/b/a Pana MIA)
             <br />
-            Email: <a href="mailto:hola@pana.social">hola@pana.social</a>
+            Email: <a href="mailto:hola@panamia.club">hola@panamia.club</a>
           </p>
         </section>
       </article>

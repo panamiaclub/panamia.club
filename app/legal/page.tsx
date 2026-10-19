@@ -6,7 +6,7 @@ import { LegalJsonLd } from '@/components/legal/JsonLd';
 export const revalidate = 3600;
 
 // Live web origin for this app — not a stale federation value to "correct".
-// Never find-and-replace `pana.social`; most occurrences are federated
+// Never find-and-replace `panamia.club`; most occurrences are federated
 // identity and repointing those is permanent. See docs/DOMAINS.md.
 const SITE = 'https://panamia.club';
 

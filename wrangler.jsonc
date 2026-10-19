@@ -193,12 +193,12 @@
   "vars": {
     "BETTER_AUTH_URL": "https://panamia.club",
     "EMAIL_ENV": "PROD",
-    "EMAIL_SENDER_ADDRESS": "hola@pana.social",
+    "EMAIL_SENDER_ADDRESS": "hola@panamia.club",
     "EMAIL_SENDER_NAME": "Pana MIA Testing Environment",
-    // Pinned identity domain. This is what makes @user@pana.social handles
+    // Pinned identity domain. This is what makes @user@panamia.club handles
     // stable if/when the UI moves to another hostname. Do not change it once
     // actors have federated — see lib/federation/domain.ts.
-    "FEDERATION_DOMAIN": "pana.social",
+    "FEDERATION_DOMAIN": "panamia.club",
     // Public half of the Google OAuth credential pair: it travels in the
     // browser's authorization URL, so it is config rather than a secret. The
     // matching GOOGLE_CLIENT_SECRET is a Cloudflare secret and must never
@@ -213,7 +213,7 @@
     // is exactly why it lives here. Turn the button off by setting "false".
     "NEXT_PUBLIC_GOOGLE_ENABLED": "false",
     // Public web root. Federation identities remain pinned independently to
-    // FEDERATION_DOMAIN=pana.social and must not follow this cutover.
+    // FEDERATION_DOMAIN=panamia.club and must not follow this cutover.
     "PANAVERSE_ROOT_DOMAIN": "panamia.club",
     // Keep every surface on panamia.club during the initial cutover. Enable
     // subdomains only after social/connectors/admin.panamia.club are bound.

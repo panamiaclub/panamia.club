@@ -37,11 +37,11 @@ const KEYS = [
   'GOOGLE_CLIENT_ID',
   'GOOGLE_CLIENT_SECRET',
   // Must be carried through even when empty: wrangler.jsonc sets this to
-  // ".pana.social" for production, and browsers reject that cookie domain on
+  // ".panamia.club" for production, and browsers reject that cookie domain on
   // a localhost host. An empty value here restores host-only cookies so local
   // sign-in works. Without it, sign-in redirects correctly but lands signed out.
   'PANAVERSE_COOKIE_DOMAIN',
-  // Not a live break today: wrangler.jsonc pins this to the same "pana.social"
+  // Not a live break today: wrangler.jsonc pins this to the same "panamia.club"
   // that .env.local.example ships, so dropping it changed nothing. Carried
   // through so an *explicit* local override survives `dev:setup` — and because
   // an unset value is not inert: lib/federation/domain.ts falls back to the UI

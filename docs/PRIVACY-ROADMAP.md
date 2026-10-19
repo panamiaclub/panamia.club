@@ -522,7 +522,7 @@ Satisfies disclosure requirements from:
    the drafter. (Negates the contra proferentem doctrine that would otherwise
    interpret ambiguity against the platform.) Community members may request
    revisions or propose alterations to these terms by contacting
-   hola@pana.social. Proposals are reviewed and, where adopted, incorporated
+   hola@panamia.club. Proposals are reviewed and, where adopted, incorporated
    into the next versioned release with changelog attribution.
 2. **Acceptance required** — By creating an account or using any Panamia Club
    service, you agree to these terms. If you do not agree to these terms, you

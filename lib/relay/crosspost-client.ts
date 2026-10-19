@@ -86,7 +86,7 @@ function relayBase(): string {
   return (
     cachedHttpUrl?.replace(/\/internal\/.*$/, '') ??
     process.env.RELAY_INTERNAL_URL?.replace(/\/internal\/.*$/, '') ??
-    'https://relay.pana.social'
+    'https://relay.panamia.club'
   );
 }
 
@@ -98,7 +98,7 @@ export function getRelay(env?: RelayEnv): void {
 
 // Pana articles are a multi-author publishing model, not single-author: a
 // first author, accepted co-authors, and an approved reviewer ("reviewed
-// by"). Mirrors pana.social's articles.{authorId, coAuthors, reviewedBy}.
+// by"). Mirrors panamia.club's articles.{authorId, coAuthors, reviewedBy}.
 // Each contributor with an enrolled Nostr key becomes a ["p", ...] tag, and
 // all are named in the article's byline footer.
 export type ContributorRole = 'author' | 'coauthor' | 'reviewer';
@@ -156,7 +156,7 @@ export async function crosspostArticle(
     'https://internal/internal/articles/crosspost',
     cachedHttpUrl ??
       process.env.RELAY_INTERNAL_URL ??
-      'https://relay.pana.social/internal/articles/crosspost',
+      'https://relay.panamia.club/internal/articles/crosspost',
     { method: 'POST', headers, body }
   );
 

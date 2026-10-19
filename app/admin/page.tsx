@@ -4,7 +4,7 @@ import { AdminOverview } from '@/components/Admin/overview';
  * The admin overview at its named path.
  *
  * The page itself is `components/Admin/overview.tsx`. This file exists to give
- * it a route and metadata. `admin.pana.social/` redirects here rather than
+ * it a route and metadata. `admin.panamia.club/` redirects here rather than
  * rendering the overview itself, so the sidebar in `app/admin/layout.tsx`
  * applies and there is one canonical URL for this page.
  */

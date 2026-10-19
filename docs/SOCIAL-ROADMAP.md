@@ -1,10 +1,10 @@
 # Social Roadmap
 
-Integrated social features for pana.social using [activities.next](https://github.com/llun/activities.next) as a capability provider.
+Integrated social features for panamia.club using [activities.next](https://github.com/llun/activities.next) as a capability provider.
 
 ## Overview
 
-This document outlines the plan to add native social features to pana.social. Behind the scenes, the social layer federates with Mastodon, Pixelfed, and other ActivityPub servers.
+This document outlines the plan to add native social features to panamia.club. Behind the scenes, the social layer federates with Mastodon, Pixelfed, and other ActivityPub servers.
 
 ### Design Philosophy
 
@@ -17,7 +17,7 @@ This document outlines the plan to add native social features to pana.social. Be
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│                          pana.social                              │
+│                          panamia.club                              │
 ├────────────────────────────────────────────────────────────────────┤
 │                                                                    │
 │  ┌─────────────────┐     ┌─────────────────────────────────────┐   │
@@ -25,12 +25,12 @@ This document outlines the plan to add native social features to pana.social. Be
 │  │  "My New Post"  │     │  ┌─────────────────────────────┐    │   │
 │  │                 │     │  │ @author: Check out my new   │    │   │
 │  │  [content...]   │     │  │ article about...            │    │   │
-│  │                 │     │  │ [link] pana.social/a/...│    │   │
+│  │                 │     │  │ [link] panamia.club/a/...│    │   │
 │  │  ─────────────  │     │  └─────────────────────────────┘    │   │
 │  │  Comments:      │     │  ┌─────────────────────────────┐    │   │
 │  │  ┌───────────┐  │     │  │ @coauthor: Excited to share │    │   │
 │  │  │ @user@mast│◄─┼─────┼──│ this new article...         │    │   │
-│  │  │ Great!    │  │     │  │ [link] pana.social/a/...│    │   │
+│  │  │ Great!    │  │     │  │ [link] panamia.club/a/...│    │   │
 │  │  └───────────┘  │     │  └─────────────────────────────┘    │   │
 │  │  ┌───────────┐  │     │  ┌─────────────────────────────┐    │   │
 │  │  │ @local    │◄─┼─────┼──│ @someone@mastodon.social    │    │   │
@@ -138,7 +138,7 @@ export const socialActors = pgTable(
       .primaryKey()
       .$defaultFn(() => createId()),
     username: text('username').notNull(), // screenname
-    domain: text('domain').notNull(), // pana.social for local
+    domain: text('domain').notNull(), // panamia.club for local
     profileId: text('profile_id').unique(),
     publicKey: text('public_key').notNull(),
     privateKey: text('private_key'), // null for remote actors
@@ -686,7 +686,7 @@ Optional variables for ActivityPub metadata (shown to remote servers):
 # Optional: Instance metadata for ActivityPub
 SOCIAL_INSTANCE_NAME="Pana Mia Club"
 SOCIAL_INSTANCE_DESCRIPTION="Panama's creative community"
-SOCIAL_ADMIN_EMAIL=admin@pana.social
+SOCIAL_ADMIN_EMAIL=admin@panamia.club
 ```
 
 ## User Experience
@@ -702,7 +702,7 @@ SOCIAL_ADMIN_EMAIL=admin@pana.social
 ### For Social Users
 
 1. Enable social features in account settings
-2. Choose a handle (@screenname@pana.social)
+2. Choose a handle (@screenname@panamia.club)
 3. Post updates, follow others, engage with content
 4. See posts from followed accounts in timeline
 5. Follow accounts from other servers (@user@mastodon.social)

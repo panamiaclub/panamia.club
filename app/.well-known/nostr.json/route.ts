@@ -2,7 +2,7 @@
  * NIP-05 endpoint: maps a panamia screenname to its Nostr hex pubkey.
  *
  * Other Nostr clients fetch /.well-known/nostr.json?name=<local> from
- * arbitrary origins to verify that "alice@pana.social" really controls a
+ * arbitrary origins to verify that "alice@panamia.club" really controls a
  * given pubkey, so CORS must be permissive (NIP-05 §"DNS-based internet
  * identifiers").
  *
@@ -21,7 +21,7 @@ import { profiles, users } from '@/lib/schema';
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
 import { corsHeaders } from '@/lib/federation/cors';
 
-const RELAY_URL = 'wss://relay.pana.social';
+const RELAY_URL = 'wss://relay.panamia.club';
 
 // Conservative local-part shape: ASCII alphanumerics, dot, dash, underscore.
 // NIP-05 explicitly forbids characters outside [a-z0-9-_.]; rejecting other

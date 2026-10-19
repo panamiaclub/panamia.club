@@ -1,11 +1,11 @@
 # Events Roadmap
 
-Community events on pana.social — in-person and online gatherings hosted by the
+Community events on panamia.club — in-person and online gatherings hosted by the
 Pana MIA network.
 
 ## Design principle: Postgres-authoritative, Nostr as an outbound mirror
 
-pana.social is the accessible front for most users. Unlike the `external/nostrlab`
+panamia.club is the accessible front for most users. Unlike the `external/nostrlab`
 reference (where Nostr is the source of truth and RSVPs are signed Nostr events),
 this module **inverts** that:
 
@@ -227,7 +227,7 @@ too, but it is already wrong and should be fixed on its own.
 
 ## Phase 2 — inbound RSVP sync (implemented)
 
-Changing an RSVP in a Nostr client now updates the RSVP on pana.social, using
+Changing an RSVP in a Nostr client now updates the RSVP on panamia.club, using
 the **same inbound pattern as NIP-56 abuse reports**: when the relay
 (`external/nosflare`) ingests a kind-31925 RSVP that targets one of our own
 kind-31923 listings, its Durable Object fires a detached, fail-open
@@ -264,7 +264,7 @@ kind-31923 listings, its Durable Object fires a detached, fail-open
 - **Co-organizers** (`event_organizers`), **photos** (`event_photos`,
   `/e/[slug]/photos`), **organizer notes** (`event_notes`).
 - **Cloudflare streaming** (`stream_status`, `cf_stream_*`) for live events.
-- Richer fields deferred from pana.social: `age_restriction`, `photo_policy`,
+- Richer fields deferred from panamia.club: `age_restriction`, `photo_policy`,
   `dresscode`, `panamia_co_organizer`, `tos_accepted_at`.
 
 ## Verification (run on Cloudflare after deploy)
@@ -275,7 +275,7 @@ kind-31923 listings, its Durable Object fires a detached, fail-open
    `/e/[slug]/edit`, `/e/[slug]/manage/attendees`.
 3. The header navigation shows **Events**, keyboard-reachable, routing to `/e`.
 4. Create → edit → publish an event; publish returns a `nostrEventId` and the
-   kind-31923 event is queryable on `wss://relay.pana.social` by its `d` (slug)
+   kind-31923 event is queryable on `wss://relay.panamia.club` by its `d` (slug)
    tag; the detail page shows "· on Nostr".
 5. Anonymous RSVP: name + email → magic link → click → attendee verified, count
    increments, capacity blocks at `min(cap, fire_capacity)`.

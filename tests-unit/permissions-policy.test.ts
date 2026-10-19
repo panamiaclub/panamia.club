@@ -24,7 +24,7 @@ import { NextRequest } from 'next/server';
 import { proxy } from '@/proxy';
 
 function policyFor(path = '/directory'): string {
-  const response = proxy(new NextRequest(`https://pana.social${path}`));
+  const response = proxy(new NextRequest(`https://panamia.club${path}`));
   const header = response.headers.get('Permissions-Policy');
   assert.ok(header, 'expected a Permissions-Policy header');
   return header;

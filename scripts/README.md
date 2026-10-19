@@ -413,7 +413,7 @@ npx tsx scripts/repair-social-actors.ts
 npx tsx scripts/repair-social-actors.ts --apply
 
 # Target a domain other than the configured federation domain
-npx tsx scripts/repair-social-actors.ts --domain pana.social
+npx tsx scripts/repair-social-actors.ts --domain panamia.club
 ```
 
 **What was wrong.** `getActorByScreenname` matches on `username` _and_

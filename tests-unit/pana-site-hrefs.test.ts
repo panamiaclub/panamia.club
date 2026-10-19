@@ -5,17 +5,17 @@
  * `resolvePanaSites` rewrites each registry tile against the host being
  * served. For a tile that points at a surface's *root* it also decides whether
  * to name the prefix or a bare "/", because a surface's front door wears a
- * different URL depending on where you are standing: social.pana.social/ and
- * pana.social/s are the same feed, and only the first is the one a member
+ * different URL depending on where you are standing: social.panamia.club/ and
+ * panamia.club/s are the same feed, and only the first is the one a member
  * would repeat out loud.
  *
  * The rule that was wrong, and the reason this file exists: crossing origins
  * used to assume "/". That holds for a surface with its own subdomain, since
- * arriving on social.pana.social puts you at the feed by construction. It is
+ * arriving on social.panamia.club puts you at the feed by construction. It is
  * false for a surface with `subdomain: null`, which is served from the shared
  * root domain — whose "/" belongs to the main site. Events is path-only (see
  * the SURFACES entry, which explains why), so the account menu on
- * admin.pana.social and social.pana.social sent every reader to the homepage
+ * admin.panamia.club and social.panamia.club sent every reader to the homepage
  * instead of to the calendar. The surface was reachable the whole time; the
  * only broken thing was the link.
  *
@@ -38,7 +38,7 @@ import {
   type PanaverseSurface,
 } from '@/lib/panaverse/surfaces';
 
-const ROOT = 'pana.social';
+const ROOT = 'panamia.club';
 
 /* The flag gates whether cross-surface links may leave the host in hand at
    all; with it off every tile stays relative and the bug under test cannot

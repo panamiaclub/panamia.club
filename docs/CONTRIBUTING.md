@@ -62,4 +62,4 @@ A great starting point for contributing is to review the existing code, especial
 
 ## Contact Us
 
-If you have any questions, please [contact us](https://pana.social/form/contact-us/).
+If you have any questions, please [contact us](https://panamia.club/form/contact-us/).

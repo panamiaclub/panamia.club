@@ -146,7 +146,7 @@ export function IdentitySection({
      renders as a derived value directly beneath — which is the only way a
      member finds out, before they type, that renaming here renames them across
      the fediverse. */
-  const projectedHandle = `@${screenname || MOCK_ACCOUNT.screenname}@pana.social`;
+  const projectedHandle = `@${screenname || MOCK_ACCOUNT.screenname}@panamia.club`;
 
   return (
     <Section id="identity">

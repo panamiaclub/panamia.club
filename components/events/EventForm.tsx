@@ -375,8 +375,8 @@ export default function EventForm({ initial, editSlug }: Props) {
       <p className="text-xs text-gray-500">
         Drafts stay hidden until you publish.{' '}
         {visibility === 'unlisted'
-          ? 'Unlisted events stay on pana.social (reachable by direct link) and are not published to Nostr.'
-          : 'Publishing a public event also mirrors it to Nostr (relay.pana.social).'}
+          ? 'Unlisted events stay on panamia.club (reachable by direct link) and are not published to Nostr.'
+          : 'Publishing a public event also mirrors it to Nostr (relay.panamia.club).'}
       </p>
     </form>
   );

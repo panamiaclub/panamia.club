@@ -74,7 +74,7 @@ export interface PanaverseSurface {
  * cannot be shared across registrable domains.
  *
  * The web root and federation identity domain are intentionally independent.
- * The UI is served from panamia.club while permanent @user@pana.social
+ * The UI is served from panamia.club while permanent @user@panamia.club
  * identities remain pinned by FEDERATION_DOMAIN.
  */
 export const DEFAULT_ROOT_DOMAIN = 'panamia.club';
@@ -142,8 +142,8 @@ export const SURFACES: readonly PanaverseSurface[] = [
     // No subdomain at all, and that is the whole of what makes this surface
     // path-only. `originFor` and `originForFrom` both fall through to the root
     // domain for a surface without one, so a link to Events resolves to
-    // pana.social/e from whatever host is in hand — including admin.pana.social
-    // and social.pana.social, which would otherwise have kept the reader on
+    // panamia.club/e from whatever host is in hand — including admin.panamia.club
+    // and social.panamia.club, which would otherwise have kept the reader on
     // their own hostname wearing their own masthead. `www` has always worked
     // this way; Events is the second surface to want it.
     subdomain: null,
@@ -189,13 +189,13 @@ export const SURFACES: readonly PanaverseSurface[] = [
     // masthead enumerates SURFACES, so a surface becomes visible only when
     // something deliberately links it. See lib/panaverse/sites.ts.
     //
-    // The doubled path in admin.pana.social/admin/connectors is real and is
+    // The doubled path in admin.panamia.club/admin/connectors is real and is
     // the accepted cost. Paths are global — every route answers on every
     // hostname, and the Worker deliberately does not rewrite them (see
     // worker/index.ts: vinext has no middleware-rewrite signalling, so serving
     // /admin/connectors under the URL /connectors would leave the client
     // router fetching RSC payloads for a path that does not exist). So
-    // admin.pana.social/connectors cannot mean the admin console; it would
+    // admin.panamia.club/connectors cannot mean the admin console; it would
     // serve the public Connectors landing page, which is what /connectors
     // already is for everyone. Social dodges this by owning short top-level
     // paths it claimed first; /connectors was taken before this surface
@@ -233,10 +233,10 @@ export function originFor(
  *
  * A surface's root path is fixed in the registry; the URL its front door
  * actually wears is not. On its own hostname the surface is served at `/` —
- * social.pana.social/ is the feed, see app/page.tsx — and only from elsewhere
+ * social.panamia.club/ is the feed, see app/page.tsx — and only from elsewhere
  * does it need its prefix. A masthead that always linked `rootPath` would send
- * a member on social.pana.social from `/` to `/s`, the same page one URL
- * uglier; one that always linked `/` would send a member reading pana.social/s
+ * a member on social.panamia.club from `/` to `/s`, the same page one URL
+ * uglier; one that always linked `/` would send a member reading panamia.club/s
  * to the main site's homepage instead of back to the feed.
  */
 export function frontDoorPath(
@@ -299,10 +299,10 @@ export function originForFrom(
 
   // `base` has to be the domain the panaverse actually hangs off. When it is
   // not, the current host is some other subdomain under the root — today
-  // relay.pana.social, tomorrow an api.* — and swapping labels would invent
-  // social.relay.pana.social. Those hosts have no sibling, so they take the
+  // relay.panamia.club, tomorrow an api.* — and swapping labels would invent
+  // social.relay.panamia.club. Those hosts have no sibling, so they take the
   // canonical origin. This only became reachable when the root domain moved to
-  // pana.social and brought the relay under it.
+  // panamia.club and brought the relay under it.
   if (!isLocal && base !== root) return originFor(target, rootDomain);
 
   const host = target.subdomain ? `${target.subdomain}.${base}` : base;

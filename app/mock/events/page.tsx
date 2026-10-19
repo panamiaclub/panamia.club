@@ -31,7 +31,7 @@ import { EventsDiscover } from './_components/events-discover';
  * events is not a filtered view of the directory's fourth kind, so events
  * became the fifth surface rather than a room inside a promoted directory,
  * registered in `lib/panaverse/surfaces.ts`. It was drawn as
- * `events.pana.social` and shipped as `pana.social/e` with `subdomain: null`,
+ * `events.panamia.club` and shipped as `panamia.club/e` with `subdomain: null`,
  * which is the one thing the browser frame around this mock now shows
  * differently from the shipped page — the chrome was part of what was under
  * review, and the verdict was a path.

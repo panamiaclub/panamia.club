@@ -192,7 +192,7 @@ export default {
       }
 
       // Panaverse host routing: a surface hostname serves that surface's front
-      // door at its own root, so social.pana.social/ is the feed and the URL
+      // door at its own root, so social.panamia.club/ is the feed and the URL
       // says so. The page is chosen from the hostname in app/page.tsx — one
       // route tree, two front doors — so the canonical host needs no redirect
       // here. Every other route stays reachable from every hostname, so /api,

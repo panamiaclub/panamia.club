@@ -30,7 +30,7 @@ import { EventsFrontDoor } from './e/_components/events-front-door';
  * It used to read `surface.rootPath === '/' ? <HomePage /> : <FeedPage />`,
  * which quietly meant "anything that is not the main site is the feed". That
  * was true while there were two surfaces and became a bug the moment there
- * were more: `connectors.pana.social/` served the Pana Social feed. It was
+ * were more: `connectors.panamia.club/` served the Pana Social feed. It was
  * only ever latent because subdomain links are behind `PANAVERSE_SUBDOMAINS`,
  * but the hostname branch does not consult that flag — `connectors.localhost`
  * resolves without DNS, so the wrong page was one dev URL away the whole time.
@@ -49,7 +49,7 @@ export default async function RootPage() {
     case 'events':
       // Unreachable by hostname since Events became path-only: with
       // `subdomain: null` no host resolves to this surface, and its front door
-      // is reached at `pana.social/e` through app/e/page.tsx instead. The
+      // is reached at `panamia.club/e` through app/e/page.tsx instead. The
       // branch stays because the switch is exhaustive over surface.id — that
       // exhaustiveness is the point of the switch — and because it remains the
       // right answer if a host is ever aliased here.

@@ -7,7 +7,7 @@ second implementation of the product.
 
 The Android and iOS apps are a **native shell around the live deploy**. Both
 stores receive a real, signed, installable app; what that app renders is
-`https://pana.social`, served by the same Worker that serves the website.
+`https://panamia.club`, served by the same Worker that serves the website.
 
 This is deliberate, and the alternative was considered and rejected. The site is
 server-rendered React Server Components running on Cloudflare Workers. There is
@@ -42,8 +42,8 @@ screen has exactly one implementation, and it is the one already in `app/`.
 │  Native shell (Capacitor)                    │
 │  ┌────────────────────────────────────────┐  │
 │  │  WKWebView / Android WebView           │  │
-│  │      →  https://pana.social            │  │──── same Worker as the website
-│  │      →  https://social.pana.social     │  │
+│  │      →  https://panamia.club            │  │──── same Worker as the website
+│  │      →  https://social.panamia.club     │  │
 │  └────────────────────────────────────────┘  │
 │  splash · offline page · back button         │
 │  deep links · status bar                     │
@@ -76,7 +76,7 @@ material on top, because Capacitor's template leaves keystores **un**ignored.
 The list in `capacitor.config.ts` is not a convenience. Anything not on it opens
 in the system browser, outside the app's cookie store, and three things break:
 
-1. **`*.pana.social`** — the surface switcher links between Pana Mia and Pana
+1. **`*.panamia.club`** — the surface switcher links between Pana Mia and Pana
    social by absolute cross-origin URL. Without this entry, tapping "Pana
    social" ejects the member into Chrome or Safari and "one app, both surfaces"
    is not true.
@@ -196,7 +196,7 @@ ones.
 
 ## Deep links
 
-A tapped `pana.social` link should open the app rather than the browser. This
+A tapped `panamia.club` link should open the app rather than the browser. This
 requires **two** claims that must agree, and the failure mode when they do not
 is silent — no error anywhere, links simply keep opening in the browser.
 
@@ -369,7 +369,7 @@ verifies every change, that one runs on tags. See **Next Steps** below.
 
 The app has now been built, installed, and launched on an emulator. This
 required no Mac, no device, and no dev server — `server.url` points at
-`https://pana.social`, so the emulator loads production exactly as a phone
+`https://panamia.club`, so the emulator loads production exactly as a phone
 would.
 
 ```bash

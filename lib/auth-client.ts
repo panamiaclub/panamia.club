@@ -147,8 +147,8 @@ export async function signIn(
   }
 ): Promise<void> {
   // better-auth resolves a relative callbackURL against the server's baseURL,
-  // which is one fixed origin. A member signing in on social.pana.social is
-  // therefore redirected to pana.social — the surface they weren't using.
+  // which is one fixed origin. A member signing in on social.panamia.club is
+  // therefore redirected to panamia.club — the surface they weren't using.
   // Resolving against the surface in hand keeps them where they started; the
   // origin is accepted because every surface is in trustedOrigins.
   const requestedCallback = options?.callbackUrl ?? '/';

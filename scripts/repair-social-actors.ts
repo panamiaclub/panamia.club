@@ -50,7 +50,7 @@
  *
  * Usage:
  *   POSTGRES_URL=... npx tsx scripts/repair-social-actors.ts [--apply]
- *   POSTGRES_URL=... npx tsx scripts/repair-social-actors.ts --domain pana.social --apply
+ *   POSTGRES_URL=... npx tsx scripts/repair-social-actors.ts --domain panamia.club --apply
  *
  * Defaults to a dry run. Pass --apply to write. Safe to run repeatedly: a
  * second run reports nothing to do.
@@ -146,7 +146,7 @@ async function main() {
   const domainArg = domainIdx === -1 ? undefined : process.argv[domainIdx + 1];
   if (domainIdx !== -1 && (!domainArg || domainArg.startsWith('--'))) {
     console.error(
-      'Error: --domain requires a value, e.g. --domain pana.social'
+      'Error: --domain requires a value, e.g. --domain panamia.club'
     );
     process.exit(1);
   }

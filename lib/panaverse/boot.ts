@@ -104,7 +104,7 @@ export function assertPanaverseConfigured(host: string | null | undefined) {
         '',
         'Set FEDERATION_DOMAIN explicitly — the `vars` block in wrangler.jsonc',
         'for Worker deploys, or the process environment otherwise. It ships',
-        'pinned to "pana.social"; if you are reading this, that entry was',
+        'pinned to "panamia.club"; if you are reading this, that entry was',
         'removed or is not reaching the runtime.',
         '',
         'See lib/federation/domain.ts and lib/panaverse/boot.ts.',

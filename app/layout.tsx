@@ -37,7 +37,7 @@ import { resolvePanaSites } from '@/lib/panaverse/sites';
  *
  * Pana Social's pages are mostly client components with no metadata export, so
  * every one of them inherited the literal string "Pana Mia" — a member on
- * social.pana.social got a browser tab, a bookmark, and a shared link all
+ * social.panamia.club got a browser tab, a bookmark, and a shared link all
  * branded as the main site.
  *
  * Deliberately sets only `title`, with no `title.template`. Every page in this
@@ -54,7 +54,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const pathname = requestHeaders.get(PATHNAME_HEADER);
 
   /* Same rule the chrome uses, for the same reason: while PANAVERSE_SUBDOMAINS
-   * is off, pana.social/s resolves to the default surface, so a host-keyed
+   * is off, panamia.club/s resolves to the default surface, so a host-keyed
    * title names the feed "Pana Mia". See `resolveChromeSurface`. */
   const chromeSurface = resolveChromeSurface(surface, pathname);
 
@@ -62,7 +62,7 @@ export async function generateMetadata(): Promise<Metadata> {
    * owns it.
    *
    * Every route answers on every hostname, so the directory genuinely returns
-   * 200 on both pana.social and social.pana.social. To a crawler that is two
+   * 200 on both panamia.club and social.panamia.club. To a crawler that is two
    * URLs with identical content competing for the same ranking, and the
    * directory is the main site's most valuable page — exactly the wrong thing
    * to split. A redirect would have settled it by definition; keeping the
@@ -103,7 +103,7 @@ export async function generateMetadata(): Promise<Metadata> {
            * metadata beats layout metadata, and the directory sets its own —
            * relative, as `/directory/search`. A relative canonical resolves
            * against `metadataBase`, falling back to the host being served, so
-           * on social.pana.social it would resolve to social's own origin and
+           * on social.panamia.club it would resolve to social's own origin and
            * cheerfully declare the borrowed copy the original. Pointing
            * `metadataBase` at the owning surface fixes every relative URL a
            * borrowed page emits, including ones written before this existed,
@@ -155,7 +155,7 @@ export default async function RootLayout({
 
   /* Which panaverse surface is serving this request.
    *
-   * The Worker already routes hostnames — social.pana.social sends `/` to the
+   * The Worker already routes hostnames — social.panamia.club sends `/` to the
    * social front door — but the layout did not know surfaces existed, so every
    * host got the Pana Mia Club masthead and footer. That is the single reason
    * Pana Social still read as a section of the main site rather than a place of
@@ -167,7 +167,7 @@ export default async function RootLayout({
    * those are properties of the account, not of the room it is being used in.
    *
    * Exercise this locally at social.localhost:3002; `resolveSurface` maps
-   * *.localhost the same way it maps *.pana.social. */
+   * *.localhost the same way it maps *.panamia.club. */
   const surface = resolveSurface(host);
 
   /* A few routes are doorways rather than rooms and frame themselves on every
@@ -179,7 +179,7 @@ export default async function RootLayout({
   const pathname = requestHeaders.get(PATHNAME_HEADER);
 
   /* Which surface's chrome to wear, which is not always the surface the
-   * hostname names. While PANAVERSE_SUBDOMAINS is off, pana.social/s resolves
+   * hostname names. While PANAVERSE_SUBDOMAINS is off, panamia.club/s resolves
    * to the default surface, so the two predicates below would both decline it
    * and the feed would fall through to the Pana Mia masthead — newsletter bar,
    * footer and all — on the one page built to read as somewhere else. See
@@ -193,14 +193,14 @@ export default async function RootLayout({
   /* Pages this surface is borrowing from another one get a slim bar and a slim
    * footer instead. See lib/panaverse/chrome.ts — the short version is that
    * every route answers on every hostname, so without this the main site's
-   * directory rendered on social.pana.social with no chrome at all and no way
+   * directory rendered on social.panamia.club with no chrome at all and no way
    * back to the feed. The footer is not symmetry: it carries the legal links
    * that MainFooter would otherwise have been the only source of. */
   const guest = wearsGuestChrome(chromeSurface, pathname);
 
   /* A surface over one of its own rooms wears its own masthead. This is the
    * case the other two predicates left uncovered, and it was the one members
-   * actually lived in: social.pana.social/s matched neither `wearsMainChrome`
+   * actually lived in: social.panamia.club/s matched neither `wearsMainChrome`
    * nor `guest`, so the timeline rendered with no header at all — no mark, no
    * account, no way back to Pana Mia. See lib/panaverse/chrome.ts. */
   const ownSurface = wearsSurfaceChrome(chromeSurface, pathname);

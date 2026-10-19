@@ -10,7 +10,7 @@ import { SURFACE_TONE } from '@/lib/panaverse/branding';
  *
  * `SurfaceMemberHeader` alone would have left the gap this closes. A surface
  * renders neither MainFooter nor the guest footer over its own pages, so
- * social.pana.social/s and every public profile at /p/* had no route to the
+ * social.panamia.club/s and every public profile at /p/* had no route to the
  * terms or the privacy policy at all. The profiles are the part that makes it
  * a compliance gap rather than a missing flourish: they are public, indexable
  * pages that a signed-out visitor can reach, and on the social surface they

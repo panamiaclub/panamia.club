@@ -1,4 +1,4 @@
-// Prove relay.pana.social accepts and serves kind:445 (MLS group event)
+// Prove relay.panamia.club accepts and serves kind:445 (MLS group event)
 // over an unauthenticated socket — i.e. the AUTH carve-out works end to
 // end. Publishes a synthetic 445 with a unique h-tag, then reads it back
 // on a separate unauthenticated connection.
@@ -7,7 +7,7 @@ import { schnorr } from '@noble/curves/secp256k1.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { signEvent } from '../lib/nostr/sign';
 
-const RELAY = 'wss://relay.pana.social';
+const RELAY = 'wss://relay.panamia.club';
 const WS_OPTIONS = {
   headers: { 'User-Agent': 'panamia-mls-capability-probe/1.0' },
 };
@@ -100,7 +100,7 @@ async function main() {
     `req:     received ${reqResult.events.length} event(s); match=${hit ? 'yes' : 'no'}`
   );
   if (!hit) process.exit(1);
-  console.log('PASS — relay.pana.social can carry MLS group traffic alone.');
+  console.log('PASS — relay.panamia.club can carry MLS group traffic alone.');
 }
 
 main().catch((e) => {
