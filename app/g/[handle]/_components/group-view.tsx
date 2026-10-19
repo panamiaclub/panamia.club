@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import {
   CalendarDays,
@@ -9,7 +8,6 @@ import {
   Globe,
   Loader2,
   Lock,
-  Send,
   Settings,
   Shield,
   UserPlus,
@@ -18,8 +16,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { FeedPostCard } from '@/app/s/_components/feed-post-card';
 import { MemberRow } from '@/components/social/member-row';
+import { PostComposer } from '@/components/social/PostComposer';
 import {
-  useCreateGroupPost,
   useGroup,
   useGroupPosts,
   useGroupEvents,
@@ -332,51 +330,22 @@ function GroupEvents({
  */
 function GroupPosts({ handle, canPost }: { handle: string; canPost: boolean }) {
   const { data, isLoading } = useGroupPosts(handle);
-  const create = useCreateGroupPost();
-  const [draft, setDraft] = useState('');
 
   const statuses = data?.statuses ?? [];
-
-  const submit = () => {
-    const content = draft.trim();
-    if (!content || create.isPending) return;
-    create.mutate({ handle, content }, { onSuccess: () => setDraft('') });
-  };
 
   return (
     <div className="space-y-4">
       {canPost && (
         <section className="border-pana-ink/10 rounded-2xl border bg-white p-4">
-          <label htmlFor="group-composer" className="sr-only">
-            Write a post in this group
-          </label>
-          <textarea
-            id="group-composer"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+          {/* The same composer as the feed, pinned to this group. It used to
+              be a bare textarea, which quietly meant a member could not add a
+              content warning, a photo or a licence to anything they wrote
+              here -- the group write endpoint accepted all three the whole
+              time. */}
+          <PostComposer
+            lockedGroupHandle={handle}
             placeholder="Share something with the group"
-            rows={3}
-            className="text-pana-ink placeholder:text-pana-ink/40 w-full resize-none bg-transparent text-[15px] font-medium outline-none"
           />
-          <div className="mt-2 flex justify-end">
-            <Button
-              onClick={submit}
-              disabled={!draft.trim() || create.isPending}
-              className="bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 rounded-full font-extrabold"
-            >
-              {create.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Send className="h-4 w-4" aria-hidden="true" />
-              )}
-              Post
-            </Button>
-          </div>
-          {create.isError && (
-            <p className="mt-2 text-[13px] font-bold text-red-700">
-              That did not post. Try again.
-            </p>
-          )}
         </section>
       )}
 

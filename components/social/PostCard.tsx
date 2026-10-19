@@ -17,6 +17,7 @@ import { AttachmentGrid } from './AttachmentGrid';
 import { CollapsibleContent } from './CollapsibleContent';
 import { StoryRing } from './StoryRing';
 import { SocialStatusDisplay } from '@/lib/interfaces';
+import { useCanReplyToGroup } from '@/lib/query/social';
 import { getVisibilityFromRecipients } from '@/lib/utils/getVisibility';
 import { formatDistanceToNow } from 'date-fns';
 import { AlertTriangle, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
@@ -38,6 +39,7 @@ export function PostCard({
 }: PostCardProps) {
   const [showCWContent, setShowCWContent] = useState(false);
   const [showReplyBox, setShowReplyBox] = useState(false);
+  const canReply = useCanReplyToGroup(status.group);
 
   const publishedDate = status.published
     ? new Date(status.published)
@@ -182,7 +184,7 @@ export function PostCard({
                 likesCount={status.likesCount}
                 repliesCount={status.repliesCount}
                 onReply={() => setShowReplyBox(!showReplyBox)}
-                showReplyButton={!isDetail}
+                showReplyButton={!isDetail && canReply}
               />
               {status.ccLicense &&
                 getVisibilityFromRecipients(
@@ -193,8 +195,9 @@ export function PostCard({
                 )}
             </div>
 
-            {/* Reply composer */}
-            {(showReplyBox || showReplyComposer) && (
+            {/* Reply composer. Withheld from a non-member on a group post:
+                the reply would inherit the group and be refused on submit. */}
+            {canReply && (showReplyBox || showReplyComposer) && (
               <div className="border-muted mt-3 border-l-2 pl-2">
                 <PostComposer
                   inReplyTo={status.id}

@@ -129,7 +129,7 @@ export async function createStatus(
    */
   options?: { groupId?: string }
 ): Promise<CreateStatusResult> {
-  const groupId = options?.groupId;
+  const requestedGroupId = options?.groupId;
   let groupRow: {
     id: string;
     visibility: SocialGroupVisibility;
@@ -144,6 +144,55 @@ export async function createStatus(
 
   if (!actor) {
     return { success: false, error: 'Actor not found' };
+  }
+
+  /**
+   * Resolve the parent here, ahead of the group gate, because a reply belongs
+   * to the group of the post it answers and the gate below has to test the
+   * group the reply will actually be written with.
+   *
+   * This lookup used to sit after the content checks and read `parent.uri`
+   * alone, which meant a reply to a group post was written with
+   * `group_id = NULL`. Two things followed. The reply vanished from the group
+   * it was written in, because the group timeline filters on `group_id`. And a
+   * reply to a *private* group's post became an ordinary post that non-members
+   * could read -- the parent stayed gated, so what escaped was the replier's
+   * own words and the existence of the thread, but that is still group content
+   * leaving the group. Inheriting here fixes both at the one door into the
+   * table, rather than at each of the callers that can reach it.
+   */
+  let parentStatus: typeof socialStatuses.$inferSelect | undefined;
+  if (inReplyToId) {
+    parentStatus = await db.query.socialStatuses.findFirst({
+      where: eq(socialStatuses.id, inReplyToId),
+    });
+    if (!parentStatus) {
+      return { success: false, error: 'Parent status not found' };
+    }
+  }
+
+  /**
+   * A reply's group is its parent's group exactly, never the caller's claim.
+   *
+   * Disagreement is rejected rather than reconciled, because neither way of
+   * reconciling it is safe: honouring the caller would move a reply out of the
+   * private thread it answers, and silently overriding the caller would file a
+   * reply somewhere the client did not ask for and will not render. A client
+   * that disagrees with the parent is wrong about something a server should not
+   * be guessing at.
+   */
+  let groupId: string | undefined;
+  if (parentStatus) {
+    const parentGroupId = parentStatus.groupId ?? undefined;
+    if (requestedGroupId && requestedGroupId !== parentGroupId) {
+      return {
+        success: false,
+        error: 'A reply belongs to the same group as the post it answers',
+      };
+    }
+    groupId = parentGroupId;
+  } else {
+    groupId = requestedGroupId;
   }
 
   /**
@@ -211,17 +260,8 @@ export async function createStatus(
   // Convert markdown to HTML
   const htmlContent = await renderStatusMarkdown(content.trim());
 
-  // If replying, validate the parent exists
-  let inReplyToUri: string | undefined;
-  if (inReplyToId) {
-    const parent = await db.query.socialStatuses.findFirst({
-      where: eq(socialStatuses.id, inReplyToId),
-    });
-    if (!parent) {
-      return { success: false, error: 'Parent status not found' };
-    }
-    inReplyToUri = parent.uri;
-  }
+  // Resolved above, together with the group this reply inherits from it.
+  const inReplyToUri: string | undefined = parentStatus?.uri;
 
   /**
    * Resolve and gate direct-message recipients BEFORE anything is written.

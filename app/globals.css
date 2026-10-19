@@ -2536,6 +2536,169 @@ button.bizprofile-update-action:hover {
   color: var(--color-pana-cream);
 }
 
+/* ---- Destination menu -----------------------------------------------------
+   The "where does this go" picker: timeline audiences and the viewer's groups
+   as two sections of one menu.
+
+   Positioning is deliberately absent. This renders inside a Radix dropdown,
+   which portals the content and owns placement, flipping and collision
+   padding. An earlier hand-rolled version set `position: absolute; right: 0`
+   here and overflowed the left edge of a 390px viewport by 17px, clipping the
+   icons -- re-adding any of those properties would take that bug back.
+
+   Scrolls rather than grows. Group membership is unbounded -- six today, forty
+   for an active organiser -- and a menu that sizes to its contents eventually
+   runs off the bottom of the viewport, taking the Post button with it. The
+   max-height is also capped by Radix's own available-height variable, so the
+   smaller of the two wins on a short screen. */
+
+.destination-menu {
+  width: 17.5rem;
+  max-height: 23.5rem;
+  overflow-y: auto;
+  padding: 0.5rem;
+  border-radius: 1rem;
+  border: 2px solid rgb(17 13 13 / 0.14);
+  background-color: #fff;
+  box-shadow: 0 14px 34px rgb(17 13 13 / 0.16);
+}
+
+.destination-menu-heading {
+  padding: 0.375rem 0.5rem 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(17 13 13 / 0.45);
+}
+
+.destination-menu-separator {
+  margin: 0.375rem 0.5rem 0.125rem;
+  height: 2px;
+  background-color: rgb(17 13 13 / 0.08);
+}
+
+.destination-menu-empty {
+  padding: 0.25rem 0.5rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: rgb(17 13 13 / 0.55);
+}
+
+.destination-option {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.destination-option:hover,
+.destination-option:focus-visible,
+.destination-option[data-highlighted] {
+  background-color: rgb(17 13 13 / 0.05);
+  outline: none;
+}
+
+/* The selected row carries a tinted background as well as the check, so the
+   current destination is still legible to anyone who cannot resolve a small
+   monochrome glyph against white. */
+.destination-option[aria-checked='true'] {
+  background-color: color-mix(
+    in srgb,
+    var(--color-pana-indigo) 10%,
+    transparent
+  );
+}
+
+.destination-option-icon {
+  margin-top: 0.125rem;
+  height: 0.875rem;
+  width: 0.875rem;
+  flex: none;
+  color: rgb(17 13 13 / 0.5);
+}
+
+.destination-option[aria-checked='true'] .destination-option-icon {
+  color: var(--color-pana-indigo);
+}
+
+.destination-option-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.destination-option-hint {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: rgb(17 13 13 / 0.5);
+}
+
+.destination-option-check {
+  margin-top: 0.125rem;
+  margin-left: auto;
+  height: 0.875rem;
+  width: 0.875rem;
+  flex: none;
+  color: var(--color-pana-indigo);
+}
+
+/* The selected row carries a tinted background as well as the check, so the
+   current destination is still legible to anyone who cannot resolve a small
+   monochrome glyph against white. */
+.destination-option[aria-checked='true'] {
+  background-color: color-mix(
+    in srgb,
+    var(--color-pana-indigo) 10%,
+    transparent
+  );
+}
+
+.destination-option-icon {
+  margin-top: 0.125rem;
+  height: 0.875rem;
+  width: 0.875rem;
+  flex: none;
+  color: rgb(17 13 13 / 0.5);
+}
+
+.destination-option[aria-checked='true'] .destination-option-icon {
+  color: var(--color-pana-indigo);
+}
+
+.destination-option-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.destination-option-hint {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: rgb(17 13 13 / 0.5);
+}
+
+.destination-option-check {
+  margin-top: 0.125rem;
+  margin-left: auto;
+  height: 0.875rem;
+  width: 0.875rem;
+  flex: none;
+  color: var(--color-pana-indigo);
+}
+
 /* The real composer's prompt.
  *
  * The mock can style its textarea as a bare `.feed-composer-prompt` because it
@@ -2639,11 +2802,22 @@ button.bizprofile-update-action:hover {
   color: rgb(17 13 13 / 0.42);
 }
 
+/* The consequence line under the composer. Slightly darker than .composer-foot
+   because it is the one sentence that says who ends up seeing the post --
+   the markdown cheatsheet below it is reference, this is a statement about
+   reach, and they should not read as the same weight. */
+.composer-reach {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgb(17 13 13 / 0.6);
+}
+
 /* Line the controls up under the prompt rather than under the avatar, so the
    left edge of everything the viewer types or presses is the same. 2.5rem
    avatar + 0.75rem gap. */
 @media (min-width: 640px) {
   .composer-actions[data-indent],
+  .composer-reach[data-indent],
   .composer-foot[data-indent] {
     padding-left: 3.25rem;
   }
@@ -3488,6 +3662,7 @@ button.bizprofile-update-action:hover {
   .feed-new-pill,
   .feed-new-pill:hover,
   .composer-chip,
+  .destination-option,
   .voice-memo-play,
   .voice-memo-play:hover,
   .link-preview,
