@@ -1,7 +1,20 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 // Note: tests marked [requires-migration] will return 500 instead of the expected
 // response until `npx drizzle-kit migrate` has been run (events/venues tables must exist).
+
+async function openMastheadScopeMenu(page: Page) {
+  const trigger = page
+    .getByRole('banner')
+    .getByRole('button', { name: /Search scope/ });
+  const menu = page.getByRole('menu', { name: /Search scope/i });
+  // Retry until hydration attaches the server-rendered trigger's handler.
+  await expect(async () => {
+    if (!(await menu.isVisible())) await trigger.click();
+    await expect(menu).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 30_000 });
+  return menu;
+}
 
 test.describe('Events — Public Pages', () => {
   test('events discovery page route exists', async ({ page }) => {
@@ -12,6 +25,65 @@ test.describe('Events — Public Pages', () => {
     // is the discovery feed and leads with the question it answers.
     // Matched with a regex because the apostrophe is a typographic one.
     await expect(page.locator('h1').first()).toContainText(/What.s on/);
+    const masthead = page.getByRole('banner');
+    await expect(
+      masthead.getByRole('combobox', { name: 'Search events', exact: true })
+    ).toHaveAttribute('placeholder', 'Search events');
+    await expect(masthead.getByRole('search')).toHaveAttribute('action', '/e');
+    await expect(
+      masthead.getByRole('button', {
+        name: /Search scope, currently Events/,
+      })
+    ).toBeVisible();
+  });
+
+  test('events masthead scopes suggestions and submits to events', async ({
+    page,
+  }) => {
+    await page.route('**/api/directory/suggest?*', (route) =>
+      route.fulfill({ json: { success: true, data: [] } })
+    );
+    await page.goto('/e');
+    await openMastheadScopeMenu(page);
+    await page.keyboard.press('Escape');
+    const input = page
+      .getByRole('banner')
+      .getByRole('combobox', { name: 'Search events', exact: true });
+    const [suggestionRequest] = await Promise.all([
+      page.waitForRequest((request) => {
+        const url = new URL(request.url());
+        return (
+          url.pathname === '/api/directory/suggest' &&
+          url.searchParams.get('q') === 'market'
+        );
+      }),
+      input.fill('market'),
+    ]);
+    expect(new URL(suggestionRequest.url()).searchParams.get('scope')).toBe(
+      'event'
+    );
+    await input.press('Enter');
+    await expect(page).toHaveURL(/\/e\?q=market$/);
+    await expect(page.locator('h1').first()).toContainText('market');
+  });
+
+  test('events masthead still lets visitors choose another scope', async ({
+    page,
+  }) => {
+    await page.goto('/e');
+    const masthead = page.getByRole('banner');
+    const trigger = masthead.getByRole('button', { name: /Search scope/ });
+    const menu = await openMastheadScopeMenu(page);
+    await menu.getByRole('menuitem', { name: /Groups/ }).click();
+    await expect(trigger).toHaveAttribute('aria-label', /currently Groups/i);
+    await expect(
+      masthead.getByRole('combobox', { name: 'Search groups', exact: true })
+    ).toHaveAttribute('placeholder', 'Search groups');
+    await expect(masthead.getByRole('search')).toHaveAttribute(
+      'action',
+      '/groups'
+    );
+    await expect(page).toHaveURL(/\/e$/);
   });
 
   test('events page searches by term', async ({ page }) => {
@@ -24,20 +96,35 @@ test.describe('Events — Public Pages', () => {
     expect(res?.status()).toBe(200);
     await expect(page.locator('h1').first()).toContainText('market');
 
-    // Named down to the Events scope rather than matching /Search scope/ alone,
-    // which now resolves to two controls here and fails Playwright's strict
-    // mode. Both are meant to be on the page: Events became a Panaverse surface
-    // in this change, so /e wears the Events masthead, and `SurfaceSearch`
-    // deliberately renders on every page of a surface and deliberately defaults
-    // to Groups. That masthead control is navigation — a question not yet
-    // asked. The one named here is the results page's own, which reports the
-    // scope these results were drawn from, so it is the control this test
-    // actually cares about. /e is the first surface route to carry both.
-    // tests/e2e/public-navigation.spec.ts scopes the same selector to the
-    // banner for the mirror-image reason.
+    // Both the masthead and results field default to Events. Scope this to
+    // the main content so the masthead cannot satisfy a missing results control.
     await expect(
-      page.getByRole('button', { name: /Search scope, currently Events/ })
+      page
+        .getByRole('main')
+        .getByRole('button', { name: /Search scope, currently Events/ })
     ).toBeVisible();
+  });
+
+  test.describe('Events — Masthead without JavaScript', () => {
+    test.use({ javaScriptEnabled: false });
+
+    test('event search works as a native GET form', async ({ page }) => {
+      await page.goto('/e');
+      const masthead = page.getByRole('banner');
+      const input = masthead.getByRole('combobox', {
+        name: 'Search events',
+        exact: true,
+      });
+      await expect(input).toHaveAttribute('placeholder', 'Search events');
+      await expect(masthead.getByRole('search')).toHaveAttribute(
+        'action',
+        '/e'
+      );
+      await input.fill('market');
+      await input.press('Enter');
+      await expect(page).toHaveURL(/\/e\?q=market$/);
+      await expect(page.locator('h1').first()).toContainText('market');
+    });
   });
 
   test('venues discovery page route exists', async ({ page }) => {

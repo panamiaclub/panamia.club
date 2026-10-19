@@ -47,24 +47,21 @@ import { scopePlaceholderShortKey, type Scope } from '@/lib/directory-scopes';
  * visitor is never offered a door that will not open, and the homepage has
  * shown this same menu to guests on the same terms since it shipped.
  *
- * GROUPS REMAINS THE DEFAULT, for the reasons that never depended on any of
- * the above: it is the social surface's native kind, it is the half that is
- * public, and it is what everyone's muscle memory already expects from this
- * field. The menu changes what a member can ask for; it does not change where
- * a bare submit lands. That also keeps the no-JS path honest — unhydrated, the
- * form's action is still `scopePath('group', '')`, so submitting with
- * scripting off degrades to groups rather than to a dead form.
+ * The masthead supplies the initial scope: Events starts with events, while
+ * Social keeps its groups default. This is server-rendered, so the placeholder,
+ * menu and GET action agree even without JavaScript. The menu can still change
+ * what the visitor searches after hydration.
  *
  * Client rather than server, which it was: the chosen scope is state, and it
  * has to narrow the placeholder and retarget the form between renders.
  */
-export function SurfaceSearch() {
+export function SurfaceSearch({ initialScope }: { initialScope: Scope }) {
   const { t: tCommon } = useTranslation('common');
 
   /* Held here rather than in the URL, the same way the home hero holds it.
      Nothing has been searched yet from a masthead — picking a scope is
      choosing a question, and submitting is asking it. */
-  const [scope, setScope] = useState<Scope>('group');
+  const [scope, setScope] = useState<Scope>(initialScope);
 
   /* The visible placeholder and the accessible name, one string from one key,
      exactly as the hero does it. Reused rather than given its own strings

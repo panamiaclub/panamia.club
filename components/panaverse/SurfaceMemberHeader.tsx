@@ -78,7 +78,9 @@ export function SurfaceMemberHeader({
           />
         </Link>
 
-        <SurfaceSearch />
+        <SurfaceSearch
+          initialScope={surface.id === 'events' ? 'event' : 'group'}
+        />
 
         <div className="panaverse-masthead-right">
           {/* Both gate themselves on the session — this header renders on the

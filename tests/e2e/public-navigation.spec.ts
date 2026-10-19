@@ -74,6 +74,15 @@ test.describe('Public Navigation', () => {
     // Groups is the default, so a bare submit still lands where it always did.
     await expect(trigger).toBeVisible();
     await expect(trigger).toHaveAttribute('aria-label', /currently Groups/i);
+    await expect(
+      page
+        .getByRole('banner')
+        .getByRole('combobox', { name: 'Search groups', exact: true })
+    ).toHaveAttribute('placeholder', 'Search groups');
+    await expect(page.getByRole('banner').getByRole('search')).toHaveAttribute(
+      'action',
+      '/groups'
+    );
 
     const menu = page.getByRole('menu', { name: /Search scope/i });
 
@@ -99,9 +108,10 @@ test.describe('Public Navigation', () => {
     // Panas is the only gated scope. Locked rather than absent, and locked
     // rather than live, is the whole safety argument for putting a menu in
     // chrome that does not know who is looking.
-    await expect(
-      menu.getByRole('menuitem', { name: /Panas/ })
-    ).toHaveAttribute('aria-disabled', 'true');
+    await expect(menu.getByRole('menuitem', { name: /Panas/ })).toHaveAttribute(
+      'aria-disabled',
+      'true'
+    );
   });
 
   test('panas search page loads', async ({ page }) => {
