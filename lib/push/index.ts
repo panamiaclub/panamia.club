@@ -47,7 +47,7 @@
  */
 import { sendApns } from './apns';
 import { sendFcm } from './fcm';
-import { getDeviceTokensForUser, pruneDeadTokens } from './tokens';
+import { getDeviceTokensForUsers, pruneDeadTokens } from './tokens';
 import type { PushMessage } from './types';
 
 export type { PushMessage, PushResult } from './types';
@@ -97,16 +97,25 @@ export async function sendPushToUser(
   userId: string,
   message: PushMessage
 ): Promise<number> {
+  return sendPushToUsers([userId], message);
+}
+
+/** Batch equivalent, with one indexed token lookup and one shared deadline. */
+export async function sendPushToUsers(
+  userIds: string[],
+  message: PushMessage
+): Promise<number> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     /* Checked before the query so that an environment with no push setup —
      * local development, preview deploys, CI — does no database work at all
      * on a path that runs for every notification in the system. */
-    if (!isPushConfigured()) return 0;
-
-    const devices = await getDeviceTokensForUser(userId);
-    if (devices.length === 0) return 0;
+    if (userIds.length === 0 || !isPushConfigured()) return 0;
 
     const delivery = (async () => {
+      const devices = await getDeviceTokensForUsers([...new Set(userIds)]);
+      if (devices.length === 0) return 0;
+
       const results = await Promise.all(
         devices.map(async (device) => {
           try {
@@ -123,6 +132,15 @@ export async function sendPushToUser(
           }
         })
       );
+
+      for (const [i, result] of results.entries()) {
+        if (result.status === 'failed') {
+          console.error('[push] delivery failed', {
+            platform: devices[i].platform,
+            reason: result.reason,
+          });
+        }
+      }
 
       const dead = devices
         .filter((_, i) => results[i].status === 'dead')
@@ -143,12 +161,17 @@ export async function sendPushToUser(
      * a late delivery is still a delivery. */
     return await Promise.race([
       delivery,
-      new Promise<number>((resolve) =>
-        setTimeout(() => resolve(0), PUSH_TIMEOUT_MS)
-      ),
+      new Promise<number>((resolve) => {
+        timer = setTimeout(() => {
+          console.error('[push] delivery timed out');
+          resolve(0);
+        }, PUSH_TIMEOUT_MS);
+      }),
     ]);
   } catch (error) {
     console.error('[push] send failed', error);
     return 0;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }

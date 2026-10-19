@@ -46,7 +46,7 @@ export async function unregisterThisDevice(): Promise<void> {
   currentToken = null;
 
   try {
-    await fetch('/api/push/unregister', {
+    const response = await fetch('/api/push/unregister', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
@@ -55,7 +55,10 @@ export async function unregisterThisDevice(): Promise<void> {
        * between this usually working and usually being cancelled. */
       keepalive: true,
     });
-  } catch {
-    // Best effort; see the note on the caller.
+    if (!response.ok) {
+      console.error('[push] device unregistration failed', response.status);
+    }
+  } catch (error) {
+    console.error('[push] device unregistration request failed', error);
   }
 }

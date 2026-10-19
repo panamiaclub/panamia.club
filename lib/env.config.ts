@@ -621,7 +621,8 @@ export const envConfig: Record<string, EnvVarConfig> = {
       'both are accepted (see lib/push/jwt.ts).',
     location: 'SECRET',
     required: false,
-    example: '-----BEGIN PRIVATE KEY-----\\nMIGTAgEAMBMGByqG...\\n-----END PRIVATE KEY-----',
+    example:
+      '-----BEGIN PRIVATE KEY-----\\nMIGTAgEAMBMGByqG...\\n-----END PRIVATE KEY-----',
   },
   APNS_PRODUCTION: {
     description:
@@ -666,7 +667,8 @@ export const envConfig: Record<string, EnvVarConfig> = {
       'like a password.',
     location: 'SECRET',
     required: false,
-    example: '-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqh...\\n-----END PRIVATE KEY-----',
+    example:
+      '-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqh...\\n-----END PRIVATE KEY-----',
   },
 
   // =============================================================================

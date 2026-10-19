@@ -8,6 +8,7 @@
  */
 import { MOBILE_APP_ID } from '@/lib/mobile/app-identity';
 import { getApnsToken } from './jwt';
+import { boundPushMessage } from './payload';
 import type { PushMessage, PushResult } from './types';
 
 /**
@@ -45,15 +46,16 @@ export async function sendApns(
   const jwt = await getApnsToken();
   if (!jwt) return { status: 'failed', reason: 'apns-not-configured' };
 
+  const bounded = boundPushMessage(message);
   const payload = {
     aps: {
-      alert: { title: message.title, body: message.body },
+      alert: { title: bounded.title, body: bounded.body },
       sound: 'default',
       ...(message.badge !== undefined ? { badge: message.badge } : {}),
     },
     /* Custom keys sit alongside `aps`, not inside it. Anything inside is
      * interpreted by the system; anything outside is handed to the app. */
-    ...(message.url ? { url: message.url } : {}),
+    ...(bounded.url ? { url: bounded.url } : {}),
   };
 
   const response = await fetch(`${apnsHost()}/3/device/${deviceToken}`, {

@@ -13,7 +13,7 @@
 
 import { db } from '@/lib/db';
 import { profiles, notifications, socialActors } from '@/lib/schema';
-import { sendPushToUser } from '@/lib/push';
+import { sendPushToUsers, type PushMessage } from '@/lib/push';
 import type {
   NotificationActivityType,
   NotificationContext,
@@ -42,6 +42,21 @@ export interface CreateNotificationParams {
   objectTitle?: string;
   objectUrl?: string;
   message?: string; // Personal message (invitation text)
+}
+
+function notificationPushMessage(
+  params: Omit<CreateNotificationParams, 'targetId'>,
+  actor: { screenname?: string | null; name?: string | null }
+): PushMessage {
+  return {
+    title: 'Pana MIA Club',
+    body: getNotificationMessage({
+      ...params,
+      actorScreenname: actor.screenname,
+      actorName: actor.name,
+    }),
+    url: params.objectUrl ?? '/updates',
+  };
 }
 
 /**
@@ -133,7 +148,7 @@ export async function createNotification(
   // row above is the system of record, and a push service having a bad minute
   // must not turn a successful like or reply into a failed request.
   //
-  // sendPushToUser never throws and no-ops when push is unconfigured or the
+  // sendPushToUsers never throws and no-ops when push is unconfigured or the
   // member has no registered device, so the common case — a browser visitor —
   // costs nothing beyond an environment variable check. See lib/push/.
   //
@@ -142,20 +157,13 @@ export async function createNotification(
   // separate string here would be a second place to update and a chance for
   // the lock screen and the notifications page to disagree about what
   // happened.
-  await sendPushToUser(params.targetId, {
-    title: 'Pana MIA Club',
-    body: getNotificationMessage({
-      type: params.type,
-      context: params.context,
-      actorScreenname,
-      actorName,
-      objectTitle: params.objectTitle,
-      message: params.message,
-    }),
-    // Falls back to the notifications page so a tap always lands somewhere
-    // relevant, even for notification types that carry no object URL.
-    url: params.objectUrl ?? '/updates',
-  });
+  await sendPushToUsers(
+    [params.targetId],
+    notificationPushMessage(params, {
+      screenname: actorScreenname,
+      name: actorName,
+    })
+  );
 
   // TODO: Check email preferences and send if enabled
   // await maybeSendNotificationEmail(notification);
@@ -269,6 +277,14 @@ export async function createNotificationsForTargets(
       emailSent: false,
       expiresAt,
     }))
+  );
+
+  await sendPushToUsers(
+    allowedIds,
+    notificationPushMessage(params, {
+      screenname: actorProfile?.user?.screenname,
+      name: actorProfile?.name,
+    })
   );
 
   return allowedIds.length;

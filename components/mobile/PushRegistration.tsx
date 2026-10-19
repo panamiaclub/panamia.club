@@ -60,9 +60,8 @@ export function PushRegistration() {
     let cancelled = false;
 
     void (async () => {
-      const { PushNotifications } = await import(
-        '@capacitor/push-notifications'
-      );
+      const { PushNotifications } =
+        await import('@capacitor/push-notifications');
 
       if (cancelled) return;
 
@@ -97,11 +96,20 @@ export function PushRegistration() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: token.value, platform }),
-          }).catch((error) => {
-            /* Not surfaced to the member. They did not ask for this and
-             * cannot act on it; the next launch retries. */
-            console.error('[push] registration request failed', error);
-          });
+          })
+            .then((response) => {
+              if (!response.ok) {
+                console.error(
+                  '[push] device registration failed',
+                  response.status
+                );
+              }
+            })
+            .catch((error) => {
+              /* Not surfaced to the member. They did not ask for this and
+               * cannot act on it; the next launch retries. */
+              console.error('[push] registration request failed', error);
+            });
         })
       );
 
@@ -138,12 +146,18 @@ export function PushRegistration() {
       );
 
       await PushNotifications.register();
-    })();
+    })().catch((error) => {
+      console.error('[push] setup failed', error);
+    });
 
     return () => {
       cancelled = true;
       for (const handle of pending) {
-        void handle.then((h) => h.remove()).catch(() => {});
+        void handle
+          .then((h) => h.remove())
+          .catch((error) => {
+            console.error('[push] listener cleanup failed', error);
+          });
       }
     };
     /* Keyed on the member, so signing in as somebody else re-registers and

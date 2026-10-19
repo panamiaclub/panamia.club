@@ -62,21 +62,26 @@ export async function unregisterDeviceToken(
 ): Promise<void> {
   await db
     .delete(deviceTokens)
-    .where(
-      and(eq(deviceTokens.userId, userId), eq(deviceTokens.token, token))
-    );
+    .where(and(eq(deviceTokens.userId, userId), eq(deviceTokens.token, token)));
 }
 
 /** Every device currently registered to a member. */
 export async function getDeviceTokensForUser(
   userId: string
 ): Promise<StoredDeviceToken[]> {
-  const rows = await db
+  return getDeviceTokensForUsers([userId]);
+}
+
+/** One lookup for a batch notification, not one query per recipient. */
+export async function getDeviceTokensForUsers(
+  userIds: string[]
+): Promise<StoredDeviceToken[]> {
+  if (userIds.length === 0) return [];
+
+  return db
     .select({ token: deviceTokens.token, platform: deviceTokens.platform })
     .from(deviceTokens)
-    .where(eq(deviceTokens.userId, userId));
-
-  return rows as StoredDeviceToken[];
+    .where(inArray(deviceTokens.userId, userIds));
 }
 
 /**

@@ -455,16 +455,22 @@ itself.
 
 ## Push notifications
 
-Implemented end to end and inert until credentials exist. With no credentials
+Delivery for in-app notifications is implemented; device verification still
+needs credentials. With no credentials
 `sendPushToUser()` returns before it touches the database, so nothing errors,
 nothing slows down, and no one gets a notification.
 
 ### How it fits together
 
-`createNotification()` in `lib/notifications.ts` is the single chokepoint every
-in-app notification already flows through, so push hangs off that rather than
-off fourteen separate call sites. It reuses the same `getNotificationMessage()`
-copy the notification bell shows, which is what keeps the two from drifting.
+Both `createNotification()` and `createNotificationsForTargets()` in
+`lib/notifications.ts` deliver push after persisting the notification. The batch
+path reuses its block-filtered, deduplicated recipient list and does one token
+lookup for the whole batch, not one query per member. Both reuse the same
+`getNotificationMessage()` copy the notification bell shows.
+
+Text chat uses a separate live-delivery path in `lib/dm-stream.ts`. Its offline
+`delivered === 0` push fallback is **not included here**; see
+[CHAT-ROADMAP.md](./CHAT-ROADMAP.md#background-delivery-needs-push-and-that-is-true-everywhere).
 
 The send is **awaited**, not fire-and-forget. A Next.js route handler on Workers
 has no `executionCtx.waitUntil`, so unawaited work races the response and is
@@ -482,6 +488,21 @@ the lock screen — to whoever has the phone now. Registration overwrites
 `user_id` instead. Dead tokens are deleted outright, since APNs `410` and FCM
 `UNREGISTERED` are definitive, and the table cascades on user delete so
 `lib/server/delete-account.ts` cleans it up without knowing it exists.
+
+Migration `0064_device_tokens` appends after canonical main's `0063_job_runs`.
+Deploy it before enabling registration or configuring delivery credentials.
+
+FCM errors are classified using the typed
+`google.firebase.fcm.v1.FcmError` detail. Only `UNREGISTERED` or a typed
+invalid-registration `INVALID_ARGUMENT` without a `google.rpc.BadRequest`
+violation prunes a token. Generic `INVALID_ARGUMENT`, generic HTTP 404, malformed
+payloads, authentication/configuration failures and transient errors keep it.
+See [FCM's error examples](https://firebase.google.com/docs/cloud-messaging/error-codes).
+
+Both transports bound title, body and deep-link fields to 256, 1536 and 1024
+serialized UTF-8 bytes respectively, including JSON escaping. Unicode code
+points are not split. Oversized deep links fall back to `/updates` rather than
+being truncated into a broken route.
 
 There is deliberately no preference check. `users.notificationPreferences`
 exists in the schema but nothing reads or writes it; the OS-level permission is
@@ -544,6 +565,9 @@ wrangler secret put FCM_PRIVATE_KEY
 ```
 
 The rest are ordinary vars. `yarn env:check` reports what is missing.
+Because they are optional, the general environment check does not prove push
+is configured. Add the non-secret identifiers to `wrangler.jsonc`'s `vars`
+before deploying; do not put private keys there or commit service-account JSON.
 
 ### Verifying
 
@@ -555,6 +579,10 @@ Sign in on a device, accept the prompt, confirm a row appears in
 `device_tokens`, then have another account follow you. Dead tokens prune
 themselves on the next send, so a stale row after reinstalling is expected and
 resolves on its own.
+
+Keep the PR in draft until APNs/FCM credentials, Android's
+`google-services.json`, signed builds and device delivery have been verified.
+Neither unit tests nor an unsigned simulator build proves provider delivery.
 
 ---
 

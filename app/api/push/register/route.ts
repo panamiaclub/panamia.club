@@ -16,8 +16,14 @@
  * matters when a handset is shared.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { auth } from '@/auth';
 import { registerDeviceToken } from '@/lib/push';
+
+const registrationSchema = z.object({
+  token: z.string().trim().min(1).max(4096),
+  platform: z.enum(['ios', 'android']),
+});
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -28,31 +34,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { token?: unknown; platform?: unknown };
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
-  }
-
-  const token = typeof body.token === 'string' ? body.token.trim() : '';
-  const platform = body.platform;
-
-  if (!token) {
-    return NextResponse.json({ error: 'token is required' }, { status: 400 });
-  }
-
-  /* Validated against the enum rather than cast. The value decides which
-   * service the token is sent to, and a wrong one is not an error anywhere —
-   * the other service simply reports an unknown token, which looks exactly
-   * like a device that has been uninstalled. */
-  if (platform !== 'ios' && platform !== 'android') {
     return NextResponse.json(
-      { error: 'platform must be "ios" or "android"' },
+      { error: 'Invalid request body' },
       { status: 400 }
     );
   }
 
+  const parsed = registrationSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        error:
+          'A token (up to 4096 characters) and ios/android platform are required',
+      },
+      { status: 400 }
+    );
+  }
+
+  const { token, platform } = parsed.data;
   try {
     await registerDeviceToken(session.user.id, token, platform);
     return NextResponse.json({ ok: true });

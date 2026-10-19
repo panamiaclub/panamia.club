@@ -305,4 +305,18 @@ describe('sendApns — request construction', () => {
 
     assert.ok(!('badge' in payload.aps));
   });
+
+  test('bounds serialized payload bytes, including Unicode and JSON escapes', async () => {
+    await sendApns('devicetoken', {
+      title: '\u{1f600}'.repeat(10_000),
+      body: '\u0000"\\\n'.repeat(10_000),
+      url: `/${'a'.repeat(1023)}`,
+      badge: 100,
+    });
+    assert.ok(Buffer.byteLength(String(captured!.init.body)) < 4096);
+    const payload = JSON.parse(String(captured!.init.body));
+    assert.notEqual(payload.aps.alert.body, '');
+    assert.equal(payload.url.length, 1024);
+    assert.equal(payload.aps.badge, 100);
+  });
 });

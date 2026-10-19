@@ -9050,6 +9050,7 @@ __metadata:
     stripe: "npm:22.6.2"
     tailwind-merge: "npm:^3.7.0"
     tailwindcss: "npm:4.3.3"
+    tsx: "npm:^4.21.0"
     typescript: "npm:^6.0.3"
     vinext: "npm:1.2.1"
     vite: "npm:8.3.4"

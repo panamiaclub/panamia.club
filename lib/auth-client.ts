@@ -208,8 +208,8 @@ export async function signOut(options?: {
    * that dead tokens are pruned on send (lib/push/index.ts).
    *
    * Does nothing in a browser — unregisterThisDevice returns immediately when
-   * there is no native push plugin to ask. */
-  await unregisterThisDevice().catch(() => {});
+   * there is no remembered device token. */
+  await unregisterThisDevice();
 
   await authClient.signOut({
     fetchOptions: {
