@@ -97,7 +97,7 @@ function html(params: { url: string; host: string; email: string }) {
                 If you did not request this, you can safely ignore this email. The link will expire on its own and your account will not be affected.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.5;">
-                Pana MIA &middot; <a href="https://pana.social" style="color: #9ca3af; text-decoration: underline;">pana.social</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
+                Pana MIA &middot; <a href="https://panamia.club" style="color: #9ca3af; text-decoration: underline;">panamia.club</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
               </p>
             </td>
           </tr>
@@ -218,7 +218,7 @@ export function emailMigrationVerificationHtml(params: {
                 If you did not request this email change, please ignore this message. Your account will not be affected. If you believe someone else is attempting to access your account, contact us at <a href="mailto:hola@pana.social" style="color: #9ca3af;">hola@pana.social</a>.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.5;">
-                Pana MIA &middot; <a href="https://pana.social" style="color: #9ca3af; text-decoration: underline;">pana.social</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
+                Pana MIA &middot; <a href="https://panamia.club" style="color: #9ca3af; text-decoration: underline;">panamia.club</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
               </p>
             </td>
           </tr>
@@ -330,7 +330,7 @@ export function emailMigrationConfirmationHtml(params: {
                 This automated security notification was sent to ${escapedOldEmail} because it was the address on your account at the time of the change.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.5;">
-                Pana MIA &middot; <a href="https://pana.social" style="color: #9ca3af; text-decoration: underline;">pana.social</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
+                Pana MIA &middot; <a href="https://panamia.club" style="color: #9ca3af; text-decoration: underline;">panamia.club</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
               </p>
             </td>
           </tr>
@@ -448,7 +448,7 @@ export function oauthVerificationHtml(params: {
                 If you did not attempt to sign in using ${providerName}, you can safely ignore this email. The link will expire on its own.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.5;">
-                Pana MIA &middot; <a href="https://pana.social" style="color: #9ca3af; text-decoration: underline;">pana.social</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
+                Pana MIA &middot; <a href="https://panamia.club" style="color: #9ca3af; text-decoration: underline;">panamia.club</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
               </p>
             </td>
           </tr>

@@ -12,7 +12,7 @@ import { articles, users } from '@/lib/schema';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { ArticleType } from '@/lib/schema';
 
-const SITE_URL = process.env.NEXT_PUBLIC_HOST_URL || 'https://pana.social';
+const SITE_URL = process.env.NEXT_PUBLIC_HOST_URL || 'https://panamia.club';
 
 interface RouteParams {
   params: Promise<{ type: string }>;

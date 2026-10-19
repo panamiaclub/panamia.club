@@ -24,7 +24,7 @@ export interface PanaverseSurface {
   tagline: string;
   /**
    * Label under the root domain, or null for the apex.
-   * `social` → social.pana.social
+   * `social` → social.panamia.club
    */
   subdomain: string | null;
   /**
@@ -73,13 +73,11 @@ export interface PanaverseSurface {
  * of this, which is what lets one session cookie cover all of them — cookies
  * cannot be shared across registrable domains.
  *
- * Equal to DEFAULT_FEDERATION_DOMAIN by design, not by accident: pana.social
- * both serves this app and mints @user@pana.social handles. Keeping them equal
- * is what lets a surface cookie cover the identity host, and it means the
- * federation domain survives a UI move — see lib/federation/domain.ts.
- * panamia.club is a different, older deployment; it is not this app.
+ * The web root and federation identity domain are intentionally independent.
+ * The UI is served from panamia.club while permanent @user@pana.social
+ * identities remain pinned by FEDERATION_DOMAIN.
  */
-export const DEFAULT_ROOT_DOMAIN = 'pana.social';
+export const DEFAULT_ROOT_DOMAIN = 'panamia.club';
 
 export function getRootDomain(): string {
   return process.env.PANAVERSE_ROOT_DOMAIN?.trim() || DEFAULT_ROOT_DOMAIN;
@@ -256,7 +254,7 @@ export function frontDoorPath(
  *
  * `originFor` always points at the configured root domain, which is right in
  * production and wrong everywhere else: on social.localhost:3002 it would send
- * a member to https://pana.social — the live site — for what should be a link
+ * a member to https://panamia.club — the live site — for what should be a link
  * across the hall. This swaps the surface label on the host in hand instead,
  * keeping scheme and port, so cross-surface links behave in dev and in prod
  * without a branch at every call site.
@@ -264,8 +262,7 @@ export function frontDoorPath(
  * Hosts that are not under the root domain — *.workers.dev previews, and any
  * future alias — have no sibling to swap to, so they fall back to the
  * canonical origin. That fallback is only safe while the root domain is the
- * host that actually serves production: while it named panamia.club, every
- * link out of here pointed at a different app behind an expired certificate.
+ * host that actually serves production.
  */
 export function originForFrom(
   target: PanaverseSurface,

@@ -10,7 +10,7 @@ import { db } from '@/lib/db';
 import { articles, users } from '@/lib/schema';
 import { eq, inArray } from 'drizzle-orm';
 
-const SITE_URL = process.env.NEXT_PUBLIC_HOST_URL || 'https://pana.social';
+const SITE_URL = process.env.NEXT_PUBLIC_HOST_URL || 'https://panamia.club';
 
 async function generateFeed() {
   const feed = new Feed({

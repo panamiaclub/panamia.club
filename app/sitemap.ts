@@ -12,7 +12,7 @@ type SitemapEntry = {
   priority?: number;
 };
 
-const SITE_URL = process.env.NEXT_PUBLIC_HOST_URL ?? 'https://pana.social';
+const SITE_URL = process.env.NEXT_PUBLIC_HOST_URL ?? 'https://panamia.club';
 
 /**
  * The six offerings' front pages.

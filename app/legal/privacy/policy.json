@@ -5,7 +5,7 @@
   "version": "0.2",
   "status": "draft",
   "effectiveDate": null,
-  "url": "https://pana.social/legal/privacy",
+  "url": "https://panamia.club/legal/privacy",
   "gpcSupported": true,
   "_comment": "SOURCE OF TRUTH for the privacy framework. The Privacy at a Glance grid (components/legal/PrivacyAtAGlance.tsx) and the prose tier list (app/legal/privacy/page.tsx) are both derived from this file via lib/legal/privacy-policy.ts -- do not hand-maintain category lists there. Machine-readable fields (name, data, source, purpose, retention) are snake_case and stable; the `display` object carries presentation copy only. `module` links a category to its legal terms module id in ../terms/namespaces.json.",
   "dataTiers": ["persistent", "temporary", "peer_networking"],

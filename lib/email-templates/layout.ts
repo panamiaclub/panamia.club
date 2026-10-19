@@ -41,7 +41,7 @@ export function emailLayout(opts: {
           <tr>
             <td style="padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;">
               <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.5;">
-                Pana MIA &middot; <a href="https://pana.social" style="color: #9ca3af; text-decoration: underline;">pana.social</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
+                Pana MIA &middot; <a href="https://panamia.club" style="color: #9ca3af; text-decoration: underline;">panamia.club</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
               </p>
             </td>
           </tr>

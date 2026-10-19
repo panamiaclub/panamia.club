@@ -2,30 +2,30 @@
 
 This document describes which domains serve Pana Mia, which domain federation identity is minted under, and why the string `pana.social` must never be changed with a find-and-replace.
 
-Read this before repointing any domain constant. Two separate sessions independently concluded that the hardcoded `pana.social` on the legal pages was a stale federation value that should be "corrected" to `panamia.club`. Both were wrong, and the change would have taken the compliance-critical pages down.
+Read this before repointing any domain constant. The public web origin moved to `panamia.club` on 2026-10-19, but federated identities remain permanently pinned to `pana.social`.
 
 ## Live topology
 
-Measured 2026-10-07 unless noted. Verify before acting on it; deployments move.
+Measured 2026-10-19 unless noted. Verify before acting on it; deployments move.
 
 | Host                     | Status                           | What it serves                                                                                                                                                     |
 | ------------------------ | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pana.social`            | **200** (Cloudflare)             | **This app.** The live production deployment.                                                                                                                      |
-| `social.pana.social`     | **200**                          | Pana Social. Bound as a Worker Custom Domain 2026-09-24.                                                                                                           |
-| `connectors.pana.social` | **200**                          | Pana Connectors. Bound as a Worker Custom Domain 2026-10-07.                                                                                                       |
-| `admin.pana.social`      | **200** at `/admin`              | The admin console. Bound as a Worker Custom Domain 2026-10-07.                                                                                                     |
+| `panamia.club`           | **200** (Cloudflare)             | **Primary web origin.** Bound to `panamia-next` in the Panamia Cloudflare account on 2026-10-19.                                                                   |
+| `pana.social`            | **500** (legacy account)         | Permanent federation identity origin; blocked on legacy-account credential deployment or moving the zone to the Panamia account.                                   |
+| `social.pana.social`     | **200**                          | Legacy-account Pana Social hostname.                                                                                                                               |
+| `connectors.pana.social` | **200**                          | Legacy-account Pana Connectors hostname.                                                                                                                           |
+| `admin.pana.social`      | **200** at `/admin`              | Legacy-account admin hostname.                                                                                                                                     |
 | `events.pana.social`     | **Not planned**                  | Nothing. Pana Events is served from `pana.social/e` instead — see [Events is path-only](#events-is-path-only).                                                     |
 | `relay.pana.social`      | Resolves                         | The **separate** `panamia-nosflare` Worker, not this one.                                                                                                          |
-| `www.panamia.club`       | **200**                          | A **different, older site** — "All Things Local In SoFlo"                                                                                                          |
-| `panamia.club` (apex)    | **Fails** — timed out            | Nothing reachable. TLS cert expired when measured 2026-09-22; a bare timeout now. Both are consistent with the split A record — see [Known issues](#known-issues). |
+| `www.panamia.club`       | **308 → `panamia.club`**         | Bound to the new Worker and redirected path-for-path to the apex.                                                                                                  |
 | `social.panamia.club`    | **Fails** — timeout (2026-09-22) | Parked domain. Not part of the plan; see below.                                                                                                                    |
 
-Every app surface that is getting a subdomain has one; `events.pana.social` is deliberately not among them. The bound ones still answer on the apex as well, at `pana.social/connectors` and `pana.social/admin` — binding a subdomain adds a front door, it does not move a route. Events only ever uses that apex door, at `pana.social/e`.
+The new account launches with `PANAVERSE_SUBDOMAINS=0`, so every surface remains reachable by path on `panamia.club` while the old `*.pana.social` hostnames remain in the legacy account. Bind the corresponding `*.panamia.club` custom domains before enabling subdomain links.
 
-`www.panamia.club` is not this codebase. It is a Next.js **Pages Router** app; this one is App Router. The titles are similar enough to mislead, so tell them apart by markup:
+Before the 2026-10-19 cutover, `www.panamia.club` was the older Next.js **Pages Router** app while the apex was unserved. It now redirects to this App Router codebase. The historical markup distinction was:
 
 ```
-                                www.panamia.club   pana.social
+                                www.panamia.club   panamia.club
 __NEXT_DATA__                          1               0
 /_next/static/chunks/pages/            2               0
 <script type="module">                 0               4
@@ -34,18 +34,9 @@ self.__next_f  (RSC marker)            0               0   <- does NOT discrimin
 
 Counting RSC markers is the obvious test and is worthless here — this build emits none either, so "zero RSC markers" matches both sites. Use `__NEXT_DATA__`, which only the Pages Router ships.
 
-### The surface root is `pana.social`, not `panamia.club`
+### The surface root is `panamia.club`
 
-`PANAVERSE_ROOT_DOMAIN` named `panamia.club` until this was corrected, so the root domain named a host this app does not serve. `originForFrom` builds every cross-surface link, `metadataBase` and `canonical` from it, and falls back to the configured root whenever the current host is not under it. Production runs on `pana.social`, which was not under `panamia.club`, so that fallback fired on every request:
-
-```
-host=pana.social -> www    : https://panamia.club         curl exit 35  (cert expired)
-                 -> social : https://social.panamia.club  curl exit 28  (timeout)
-```
-
-Both cross-surface targets were dead. It was never live — the deployed build predates the panaverse work — so this was caught before shipping rather than after.
-
-Pana Social is therefore `social.pana.social`. Making the surface root equal the identity domain also retires a standing hazard instead of arming one; see `lib/federation/domain.ts`.
+`PANAVERSE_ROOT_DOMAIN=panamia.club` now matches the Worker custom domain. `PANAVERSE_SUBDOMAINS=0` deliberately keeps links and canonicals on the apex until the new account has certificates and Worker bindings for each surface hostname.
 
 ## The two roles of `pana.social`
 
@@ -73,7 +64,7 @@ total 'pana.social'        114  in 66 files
 
 **85 of 114 occurrences are identity.** A global replace corrupts 85 correct values in order to fix 20. It will look obviously right in review, and federation breakage is silent and permanent — remote servers never re-resolve a URI they have already stored.
 
-**Under the current plan, none of the 20 need editing.** They already name `pana.social`, which is both the live host and the surface root, so there is no pending migration — the inventory below is a map for a hypothetical future move, not a task list. If the web surface ever does move, migrate those 20 explicitly, by hand, and leave the other 94 alone.
+The 2026-10-19 web cutover updated web-origin occurrences explicitly while leaving federation identifiers untouched. Future changes must preserve that distinction.
 
 ## Inventory of hardcoded web origins
 
@@ -91,17 +82,23 @@ These have no environment variable to follow, so they must be edited directly at
 | `app/legal/privacy/policy.json`             | 8                                     | **JSON — cannot carry a warning comment**   |
 | `components/legal/JsonLd.tsx`               | 36                                    | structured-data publisher URL               |
 | `lib/email-templates/layout.ts`             | 44                                    | email footer link                           |
+| `auth.ts`                                   | email footers                         | website link only; keep `hola@pana.social`  |
 | `app/api/federation/events/[slug]/route.ts` | 42                                    | **Federation — correct as-is, do not move** |
 
 The two `policy.json` files are machine-readable policy documents and cannot hold an inline warning. `lib/email-templates/layout.ts` is likewise uncommentable at the line itself — the URL sits inside an HTML template literal, where a comment would render into the email. Those twelve occurrences are listed here precisely because the code cannot warn you in place.
 
 Every other site in this table carries an inline comment pointing back to this document.
 
-The env-guarded sites (`app/sitemap.ts`, `app/robots.ts`, the five feed routes, `app/.well-known/privacy-policy/route.ts`) need **no edit** — set `NEXT_PUBLIC_HOST_URL` and they follow it.
+The env-guarded sites (`app/sitemap.ts`, `app/robots.ts`, the five feed routes, `app/.well-known/privacy-policy/route.ts`) follow `NEXT_PUBLIC_HOST_URL`; their safe fallback is also `panamia.club`.
 
-## Launching `social.pana.social`
+## Legacy account: `social.pana.social`
 
-The repo side is done: `PANAVERSE_ROOT_DOMAIN` is `pana.social` in `wrangler.jsonc`, and `DEFAULT_ROOT_DOMAIN` matches. Hostname binding lives outside the repo — this Worker has no `routes` or `custom_domain` block, so `social.pana.social` was bound as a Custom Domain in the Cloudflare dashboard (2026-09-24) rather than from config.
+> Historical deployment record. The active new-account configuration uses
+> `PANAVERSE_ROOT_DOMAIN=panamia.club` and `PANAVERSE_SUBDOMAINS=0`. Keep the
+> information below while `pana.social` remains in the legacy account because
+> it documents the compatibility hostnames and their original launch order.
+
+In the legacy account, `PANAVERSE_ROOT_DOMAIN` was `pana.social` and `social.pana.social` was bound as a Custom Domain in the Cloudflare dashboard on 2026-09-24.
 
 **`PANAVERSE_SUBDOMAINS` is now `"1"` and Pana Social's front door is `https://social.pana.social`.** That flag gates links only, never routing: with it on, `originForFrom` returns the surface subdomain, so the surface switcher, `metadataBase` and every `canonical` point there. **`/s` keeps working on every hostname regardless** — flipping this moved the front door without moving a single route, so existing `/s` links are not broken. Set it back to `"0"` if the subdomain ever stops resolving; that setting keeps every link on the host in hand, because a link to a host with no record is a dead end rather than a slower route. `*.localhost` is exempt from the flag entirely, so `social.localhost:3002` exercises the subdomain path in dev either way.
 

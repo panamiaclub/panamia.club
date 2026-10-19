@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const tier = monthlyTier ? monthlyTier : 0;
     const dedicated_to = dedicate ? dedicate : '';
 
-    const origin = request.headers.get('origin') || 'https://pana.social';
+    const origin = request.headers.get('origin') || 'https://panamia.club';
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],

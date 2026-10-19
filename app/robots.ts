@@ -18,6 +18,6 @@ export default function robots(): RobotsResult {
       allow: '/',
       disallow: ['/account', '/admin', '/api'],
     },
-    sitemap: `${process.env.NEXT_PUBLIC_HOST_URL ?? 'https://pana.social'}/sitemap.xml`,
+    sitemap: `${process.env.NEXT_PUBLIC_HOST_URL ?? 'https://panamia.club'}/sitemap.xml`,
   };
 }

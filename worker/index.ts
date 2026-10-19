@@ -33,8 +33,9 @@ export { DmStream } from './dm-stream';
 
 interface Env {
   ASSETS: Fetcher;
-  HYPERDRIVE: { connectionString: string };
-  POSTGRES_URL?: string; // local dev only: wrangler secret binding from .env.local
+  HYPERDRIVE?: { connectionString: string };
+  POSTGRES_URL?: string;
+  PANAVERSE_ROOT_DOMAIN?: string;
   R2_BUCKET?: {
     put(
       key: string,
@@ -72,6 +73,13 @@ interface Env {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    const rootDomain = env.PANAVERSE_ROOT_DOMAIN?.trim().toLowerCase();
+    if (rootDomain && url.hostname.toLowerCase() === `www.${rootDomain}`) {
+      url.hostname = rootDomain;
+      return Response.redirect(url, 308);
+    }
+
     /* Configuration that must hold before this deployment serves anybody.
      *
      * Runs here rather than at module scope because Worker bindings are not

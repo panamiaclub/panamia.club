@@ -11,7 +11,7 @@ import { db } from '@/lib/db';
 import { articles, users } from '@/lib/schema';
 import { and, eq } from 'drizzle-orm';
 
-const SITE_URL = process.env.NEXT_PUBLIC_HOST_URL || 'https://pana.social';
+const SITE_URL = process.env.NEXT_PUBLIC_HOST_URL || 'https://panamia.club';
 
 interface RouteParams {
   params: Promise<{ screenname: string }>;
