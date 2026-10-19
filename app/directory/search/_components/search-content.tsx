@@ -14,6 +14,13 @@ import { ArrowRight } from 'lucide-react';
 import { useSearch, type DirectorySort } from '@/lib/query/directory';
 import { forceInt } from '@/lib/standardized';
 import { searchPath } from '@/lib/directory-search-path';
+import {
+  DEFAULT_DIRECTORY_RADIUS,
+  effectiveDirectoryRadius,
+  isDirectoryRadius,
+  parseDirectoryRadius,
+  type DirectoryRadius,
+} from '@/lib/directory-radius';
 import { useViewerLocation } from '@/app/p/[user]/_lib/use-viewer-location';
 import { DirectoryViewerProvider } from './directory-viewer';
 import { SearchBand } from './search-band';
@@ -25,10 +32,8 @@ import { SearchPagination } from './search-pagination';
 
 const SORTS: DirectorySort[] = ['relevance', 'nearest', 'recommended', 'name'];
 
-function toSort(raw: string | null): DirectorySort {
-  return SORTS.includes(raw as DirectorySort)
-    ? (raw as DirectorySort)
-    : 'relevance';
+function toSort(raw: string | null): DirectorySort | null {
+  return SORTS.includes(raw as DirectorySort) ? (raw as DirectorySort) : null;
 }
 
 /** `a+b+c` is the directory's existing multi-value encoding. Kept as-is. */
@@ -42,8 +47,6 @@ function getSearchParams(searchParams: URLSearchParams, pathTerm?: string) {
   // A term in the path wins over ?q=. Both forms stay readable so existing
   // links and bookmarks keep working; the path form is the canonical one.
   const searchTerm = pathTerm || searchParams.get('q') || '';
-  const random = forceInt(searchParams.get('random') || '', 0);
-  const filterLocations = searchParams.get('floc') || '';
   const filterCategories = searchParams.get('fcat') || '';
   const mentorsOnly = searchParams.get('mentors') === 'true';
   const expertise = searchParams.get('expertise') || '';
@@ -54,14 +57,13 @@ function getSearchParams(searchParams: URLSearchParams, pathTerm?: string) {
     pageNum,
     pageLimit,
     searchTerm,
-    filterLocations,
     filterCategories,
-    random,
     mentorsOnly,
     expertise,
     languages,
     freeOnly,
     sort: toSort(searchParams.get('sort')),
+    radius: parseDirectoryRadius(searchParams.get('radius')),
     certifiedOnly: searchParams.get('certified') === 'true',
     withEventsOnly: searchParams.get('events') === 'true',
     view: (searchParams.get('view') === 'map' ? 'map' : 'list') as ResultView,
@@ -83,23 +85,36 @@ export function DirectorySearchContent({
     initialTerm
   );
 
-  // Precise coordinates, held in the browser and never sent anywhere. Only a
-  // 2dp version reaches the server, and only to order results — see
-  // searchParamsToString.
+  // Precise coordinates stay in the browser. Only a 2dp version reaches the
+  // server for radius filtering and ordering — see searchParamsToString.
   const { coords, status: locationStatus, request } = useViewerLocation();
   const locationShared = coords !== null;
 
-  // Nearest with nothing to measure from is not a sort, it is a label over an
-  // arbitrary order. If a shared location goes away — an expired cache, or a
-  // link someone else sent — fall back rather than keep the claim.
+  // A radius without coordinates cannot narrow anything. Keep the configured
+  // URL state private-coordinate-free, but make the effective public fallback
+  // the complete South Florida directory until cached or click-granted
+  // coordinates are available.
+  const effectiveRadius: DirectoryRadius = effectiveDirectoryRadius(
+    params.radius,
+    locationShared
+  );
+
+  // A missing sort means "use the product default for this scope": nearest for
+  // a finite local radius, relevance everywhere else. A valid URL sort remains
+  // explicit and wins, except nearest when there is nothing to measure from.
+  const defaultSort: DirectorySort =
+    locationShared && effectiveRadius !== 'all' ? 'nearest' : 'relevance';
   const sort: DirectorySort =
-    params.sort === 'nearest' && !locationShared ? 'relevance' : params.sort;
+    params.sort === 'nearest' && !locationShared
+      ? 'relevance'
+      : (params.sort ?? defaultSort);
 
   const { data: searchResult, isLoading } = useSearch({
     ...params,
     sort,
     geolat: coords?.lat ?? 0,
     geolng: coords?.lng ?? 0,
+    radius: effectiveRadius,
   });
 
   const results = useMemo(() => searchResult?.data ?? [], [searchResult]);
@@ -139,6 +154,15 @@ export function DirectorySearchContent({
     [router]
   );
 
+  const replaceSearch = useCallback(
+    (term: string, nextParams: URLSearchParams) => {
+      nextParams.delete('q');
+      const qs = nextParams.toString();
+      router.replace(`${searchPath(term)}${qs ? `?${qs}` : ''}`);
+    },
+    [router]
+  );
+
   /** Change some keys, keeping every key this page does not own. */
   const patch = useCallback(
     (changes: Record<string, string | null>, term = params.searchTerm) => {
@@ -152,32 +176,67 @@ export function DirectorySearchContent({
     [params.searchTerm, pushSearch, searchParams]
   );
 
-  // Drop a stale "nearest" out of the URL too, so the select and the address
-  // bar do not disagree about what the page is doing.
+  // County filtering was removed from the public directory. Old links remain
+  // valid, but stale or invalid state is stripped with replace() so it cannot
+  // hide results or linger in copied URLs.
+  const rawSearchParams = searchParams?.toString() || '';
   useEffect(() => {
-    if (params.sort === 'nearest' && locationStatus === 'denied') {
-      patch({ sort: null });
+    const next = new URLSearchParams(rawSearchParams);
+    let changed = false;
+    if (next.has('floc')) {
+      next.delete('floc');
+      changed = true;
     }
-  }, [params.sort, locationStatus, patch]);
+    const rawRadius = next.get('radius');
+    if (rawRadius !== null && !isDirectoryRadius(rawRadius)) {
+      next.delete('radius');
+      changed = true;
+    }
+    if (params.sort === 'nearest' && locationStatus === 'denied') {
+      next.delete('sort');
+      changed = true;
+    }
+    if (locationStatus === 'denied' && params.radius !== 'all') {
+      next.set('radius', 'all');
+      changed = true;
+    }
+    if (!changed) return;
+    replaceSearch(params.searchTerm, next);
+  }, [
+    locationStatus,
+    params.radius,
+    params.searchTerm,
+    params.sort,
+    rawSearchParams,
+    replaceSearch,
+  ]);
 
   const filters: FilterState = {
     categories: splitList(params.filterCategories),
-    counties: splitList(params.filterLocations),
+    radius: params.radius,
     certifiedOnly: params.certifiedOnly,
     withEventsOnly: params.withEventsOnly,
     sort,
   };
 
   const applyFilters = (next: FilterState) => {
-    patch({
+    const changes: Record<string, string | null> = {
       fcat: next.categories.join('+') || null,
-      floc: next.counties.join('+') || null,
       certified: next.certifiedOnly ? 'true' : null,
       events: next.withEventsOnly ? 'true' : null,
-      sort: next.sort === 'relevance' ? null : next.sort,
       // Any change to what is being asked invalidates which page you were on.
       p: null,
-    });
+    };
+    // Only persist radius when the radius control changed. An unrelated
+    // category or checkbox change must preserve the configured URL mode.
+    if (next.radius !== params.radius) {
+      changes.radius =
+        next.radius === DEFAULT_DIRECTORY_RADIUS ? null : next.radius;
+    }
+    // Preserve implicit dynamic defaults across unrelated filter changes.
+    // Only write a sort when the visitor actually changed the sort control.
+    if (next.sort !== sort) changes.sort = next.sort;
+    patch(changes);
   };
 
   const handleSearch = (term: string) => {
@@ -214,6 +273,7 @@ export function DirectorySearchContent({
   // and the old selection is about a business that may not even be in it.
   useEffect(() => {
     listRef.current?.scrollTo({ top: 0 });
+    setHoveredId(null);
     setSelectedId(null);
   }, [searchResult]);
 
@@ -262,6 +322,7 @@ export function DirectorySearchContent({
           totalCount={totalResults}
           loading={busy}
           locationStatus={locationStatus}
+          radius={effectiveRadius}
           nearestFirst={sort === 'nearest'}
           onSearch={handleSearch}
           onShareLocation={request}
@@ -299,6 +360,7 @@ export function DirectorySearchContent({
                   <EmptyState
                     term={params.searchTerm}
                     filters={filters}
+                    radiusActive={locationShared}
                     onChange={applyFilters}
                     onTermChange={handleSearch}
                   />
@@ -393,6 +455,7 @@ export function DirectorySearchContent({
             <MapPanel
               results={results}
               viewerCoords={coords}
+              radius={effectiveRadius}
               highlightId={hoveredId}
               onPinSelect={handlePinSelect}
             />

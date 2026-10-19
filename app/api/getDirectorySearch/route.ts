@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { forceInt, forceString } from '@/lib/standardized';
 import { getSearch, isDirectorySort } from '@/lib/server/directory';
+import { parseDirectoryRadius } from '@/lib/directory-radius';
 
 /**
  * The Workers edge cache, when there is one.
@@ -54,14 +55,6 @@ export async function GET(request: NextRequest) {
     20
   );
   const searchTerm = forceString(searchParams.get('q') || undefined, '');
-  const paramRandom = forceInt(
-    forceString(searchParams.get('random') || undefined, '0'),
-    0
-  );
-  const filterLocations = forceString(
-    searchParams.get('floc') || undefined,
-    ''
-  );
   const filterCategories = forceString(
     searchParams.get('fcat') || undefined,
     ''
@@ -77,6 +70,7 @@ export async function GET(request: NextRequest) {
   // An unrecognised sort falls back to relevance rather than erroring: it
   // arrives from a URL somebody may have edited or a link from an older build.
   const sort = isDirectorySort(sortParam) ? sortParam : 'relevance';
+  const radius = parseDirectoryRadius(searchParams.get('radius'));
   const certifiedOnly = searchParams.get('certified') === 'true';
   const withEventsOnly = searchParams.get('events') === 'true';
   const mentorsOnly = searchParams.get('mentors') === 'true';
@@ -87,12 +81,9 @@ export async function GET(request: NextRequest) {
   // Public, anonymous directory data — cacheable at the edge. Keyed by full
   // URL, so each distinct search caches separately.
   //
-  // Term searches only. An empty query takes the browse path below, which
-  // picks a random sample using a seed generated here rather than taken from
-  // the URL; caching it would pin one shuffle in front of every visitor for
-  // the whole TTL and turn "a rotating sample of the directory" into a fixed
-  // list that changes every five minutes.
-  const cache = searchTerm ? edgeCache() : null;
+  // Empty searches are ordinary paginated directory results now, so browse
+  // responses are as cacheable as term searches.
+  const cache = edgeCache();
   const cacheKey = cache ? new Request(request.url, { method: 'GET' }) : null;
   if (cache && cacheKey) {
     // Never let a cache fault take the endpoint down with it — a miss is a
@@ -101,20 +92,14 @@ export async function GET(request: NextRequest) {
     if (hit) return hit;
   }
 
-  let random = paramRandom;
-  if (searchTerm.length == 0 && random == 0) {
-    random = Math.ceil(Math.random() * 100000);
-  }
-
   const params = {
     pageNum,
     pageLimit,
     searchTerm,
-    filterLocations,
     filterCategories,
-    random,
     geolat,
     geolng,
+    radius,
     resultsView,
     sort,
     certifiedOnly,
@@ -125,7 +110,7 @@ export async function GET(request: NextRequest) {
     freeOnly,
   };
 
-  // Read by the browser and, for term searches, by the edge cache above.
+  // Read by the browser and by the edge cache above.
   const cacheHeaders = {
     'Cache-Control':
       'public, max-age=300, s-maxage=300, stale-while-revalidate=600',

@@ -1,4 +1,8 @@
 import type { Coords } from '@/app/p/[user]/_lib/profile-view';
+import {
+  DEFAULT_DIRECTORY_RADIUS,
+  directoryRadiusMiles,
+} from '@/lib/directory-radius';
 
 /**
  * What the directory map should be looking at.
@@ -15,7 +19,7 @@ export interface MapFrame {
   zoom: number;
 }
 
-/** Centre of the three counties the directory covers, for an empty map. */
+/** Centre of the South Florida directory area, for an empty map. */
 export const DEFAULT_CENTER: [number, number] = [26.1, -80.2];
 
 /**
@@ -23,10 +27,11 @@ export const DEFAULT_CENTER: [number, number] = [26.1, -80.2];
  *
  * A radius, not a width: five miles is visible in every direction, so the
  * frame answers "what is near me" rather than "what is near me, to the east".
- * Five rather than the county-wide default because the question a shared
+ * Five rather than the region-wide default because the question a shared
  * location asks is which of these could I get to now.
  */
-export const VIEWER_RADIUS_MILES = 5;
+export const VIEWER_RADIUS_MILES =
+  directoryRadiusMiles(DEFAULT_DIRECTORY_RADIUS) ?? 5;
 
 /**
  * Stand-in for the map's size when it cannot be measured.
@@ -48,7 +53,7 @@ const EARTH_CIRCUMFERENCE_MILES = 24901;
 const TILE_PX = 256;
 
 // Past 15 the tiles outrun the data — street level on a geocoded address is
-// false precision. Below 8 the three counties no longer fill the pane.
+// false precision. Below 8 South Florida no longer fills the pane.
 const MIN_ZOOM = 8;
 const MAX_ZOOM = 15;
 
@@ -79,11 +84,15 @@ export function zoomForRadius(
   return clampZoom(Math.log2(milesPerPixelAtZoom0 / milesPerPixelWanted));
 }
 
-/** Centred on the viewer, zoomed so VIEWER_RADIUS_MILES is visible around them. */
-export function viewerFrame(coords: Coords, sizePx: number): MapFrame {
+/** Centred on the viewer, with the selected radius visible around them. */
+export function viewerFrame(
+  coords: Coords,
+  sizePx: number,
+  radiusMiles = VIEWER_RADIUS_MILES
+): MapFrame {
   return {
     center: [coords.lat, coords.lng],
-    zoom: zoomForRadius(coords.lat, VIEWER_RADIUS_MILES, sizePx),
+    zoom: zoomForRadius(coords.lat, radiusMiles, sizePx),
   };
 }
 
@@ -103,7 +112,7 @@ export interface ResultFrameDecision {
  * Sharing a location changes the search's cache key, so the results blank out
  * and refill: the map sees an empty set and then the real one, back to back.
  * Spending the viewer's precedence on that empty beat would hand the map
- * straight back to the three-county frame it was meant to outrank, so it is
+ * straight back to the region-wide frame it was meant to outrank, so it is
  * only spent once there is a real result set to outrank.
  *
  * The precedence lasts one result set, not forever: by the time a *later* one

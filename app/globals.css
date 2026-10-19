@@ -4775,12 +4775,11 @@ body {
 }
 
 /* --- Filter menus ------------------------------------------------------- */
-/* The row the three menus and the view toggle share.
+/* The row the menus, compact toggles and view switch share.
 
-   This replaced four stacked rows — Category, Where, a footer for sort, and
-   the list/map toggle — which on a 390px screen ran to 220px of controls and
-   pushed the first business card to y=627 of 844. Everything here is one line
-   tall at every width, and wraps to two only when the toggle will not fit. */
+   This replaced four full-width labelled rows. The controls wrap as pills
+   instead: still compact on a phone, but never clipped when the split-view
+   result column is narrower than their combined labels. */
 .dirsearch-menurow {
   display: flex;
   flex-wrap: wrap;
@@ -4830,6 +4829,36 @@ body {
   background-color: var(--color-pana-indigo);
   border-color: var(--color-pana-indigo);
   color: var(--color-pana-cream);
+}
+
+.dirsearch-checkfilter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-height: 2rem;
+  padding-inline: 0.7rem;
+  border: 2px solid rgb(48 62 140 / 0.2);
+  border-radius: 999px;
+  color: var(--color-pana-indigo);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dirsearch-checkfilter:hover {
+  border-color: var(--color-pana-indigo);
+}
+
+.dirsearch-checkfilter[data-on='true'] {
+  background-color: rgb(48 62 140 / 0.08);
+  border-color: var(--color-pana-indigo);
+}
+
+.dirsearch-checkinput {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-pana-indigo);
 }
 
 .dirsearch-menuname {
@@ -8989,15 +9018,10 @@ body:has(.dirsearch) {
     padding-block: 0.4rem 0.35rem;
   }
 
-  /* Every row above the results is a row of results you cannot see. Stacked,
-     the toolbar and the filters came to 282px of a 900px window — two and a
-     bit cards — so the active filters move out of a row of their own and into
-     the space to the right of the menus, which was empty. Worth about 40px.
-
-     The grid below is the mock routes', which still lay their filters out as
-     labelled chip rows and need two tracks. The shipped bar opts out of it
-     with --menus: three menu pills and a chip row fit on one line, so it gets
-     a flex row instead and the whole bar is a single line tall. */
+  /* The grid below is the mock routes', which still lay their filters out as
+     labelled chip rows and need two tracks. The shipped bar opts out with
+     --menus: its compact controls wrap to the pane width, and category chips
+     use a separate scrolling line only when present. */
   .dirsearch-split .dirsearch-filterinner {
     display: grid;
     /* Capped, not `auto`. The sort track sizes to its widest option, and
@@ -9010,30 +9034,24 @@ body:has(.dirsearch) {
 
   .dirsearch-split .dirsearch-filterinner--menus {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.85rem;
   }
 
   .dirsearch-split .dirsearch-filterinner--menus .dirsearch-menurow {
-    flex: 0 0 auto;
-    flex-wrap: nowrap;
+    flex: 1 1 100%;
+    min-width: 0;
+    flex-wrap: wrap;
     padding-block: 0.1rem;
   }
 
-  /* Takes the rest of the line and scrolls inside it, so a sixth filter
-     lengthens the chip row rather than wrapping the menus onto a second line.
-     A rule above the chips reads as a divider between two rows; beside them it
-     reads as a stray line ending in the middle of the bar — so the separation
-     turns ninety degrees, matching the mock's footer column. */
+  /* Category chips get their own compact scrolling line. Keeping them beside
+     the controls forced the controls past the split pane's edge at its narrow
+     desktop widths. */
   .dirsearch-split .dirsearch-filterinner--menus .dirsearch-activerow {
-    flex: 1 1 auto;
+    flex: 1 1 100%;
     min-width: 0;
     flex-wrap: nowrap;
-    padding-top: 0;
-    margin-top: 0;
-    border-top: 0;
-    padding-left: 0.85rem;
-    border-left: 1px solid rgb(2 8 17 / 0.1);
   }
 
   .dirsearch-split .dirsearch-filterrow {

@@ -9,6 +9,10 @@ import type { SearchResultsInterface } from '@/lib/query/directory';
 import { isUnoptimizableImageSrc } from '@/lib/image-src';
 import { mapTiles, MapAttribution } from '@/lib/map-tiles';
 import { distanceInMiles, type Coords } from '@/app/p/[user]/_lib/profile-view';
+import {
+  directoryRadiusMiles,
+  type DirectoryRadius,
+} from '@/lib/directory-radius';
 import { formatDistance, resultCoords, resultHref } from '../_lib/format';
 import {
   FALLBACK_MAP_PX,
@@ -22,6 +26,7 @@ const FALLBACK_LOGO = '/img/bg_coconut_blue.jpg';
 interface MapPanelProps {
   results: SearchResultsInterface[];
   viewerCoords: Coords | null;
+  radius: DirectoryRadius;
   /**
    * The result the cursor is over in the results column, if any. Highlights
    * the matching pin without moving the map.
@@ -58,6 +63,7 @@ const pointsOf = (pins: Pin[]) => pins.map((pin) => pin.coords);
 export function MapPanel({
   results,
   viewerCoords,
+  radius,
   highlightId = null,
   onPinSelect,
 }: MapPanelProps) {
@@ -129,18 +135,26 @@ export function MapPanel({
 
   // Drop to the viewer's own neighbourhood the moment their location is known.
   // Fitting every pin is the right default while the map is about the results,
-  // but once it can be about *them* a three-county frame is too far out to act
+  // but once it can be about *them* a region-wide frame is too far out to act
   // on: at that span the nearest coffee and one forty minutes away sit a few
   // pixels apart. Keyed on the numbers rather than the object so this runs
   // when the location actually changes, not whenever the parent re-renders.
   const viewerLat = viewerCoords?.lat ?? null;
   const viewerLng = viewerCoords?.lng ?? null;
+  const radiusMiles = directoryRadiusMiles(radius);
   useEffect(() => {
-    if (viewerLat === null || viewerLng === null) return;
+    if (viewerLat === null || viewerLng === null || radiusMiles === null) {
+      viewerFramePending.current = false;
+      setView(frameForPoints(pointsOf(pinsRef.current)));
+      setSelectedId(null);
+      return;
+    }
     viewerFramePending.current = true;
-    setView(viewerFrame({ lat: viewerLat, lng: viewerLng }, mapSizePx()));
+    setView(
+      viewerFrame({ lat: viewerLat, lng: viewerLng }, mapSizePx(), radiusMiles)
+    );
     setSelectedId(null);
-  }, [viewerLat, viewerLng]);
+  }, [viewerLat, viewerLng, radiusMiles]);
 
   const selected = pins.find((pin) => pin.result._id === selectedId) ?? null;
 

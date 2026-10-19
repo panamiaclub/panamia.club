@@ -101,6 +101,17 @@ describe('viewerFrame', () => {
     );
   });
 
+  it('frames each selectable radius', () => {
+    for (const radius of [5, 10, 25, 50]) {
+      const frame = viewerFrame(MIAMI, 600, radius);
+      const across = milesAcross(MIAMI.lat, frame.zoom, 600);
+      assert.ok(
+        Math.abs(across - radius * 2) < 0.05,
+        `expected ~${radius * 2} miles across, got ${across}`
+      );
+    }
+  });
+
   it('is a five-mile radius', () => {
     // Pinned on purpose. This is a product decision, not an implementation
     // detail, so changing it should be a deliberate edit to this line.
@@ -124,7 +135,7 @@ describe('viewerFrame', () => {
 });
 
 describe('frameForPoints', () => {
-  it('falls back to the covered counties when there is nothing to show', () => {
+  it('falls back to the covered region when there is nothing to show', () => {
     const frame = frameForPoints([]);
     assert.deepEqual(frame.center, DEFAULT_CENTER);
   });
@@ -227,7 +238,7 @@ describe('onResultsArrived', () => {
 
   it('holds the viewer rather than falling back to the whole region', () => {
     // Their location is the only thing worth showing on an empty search, and
-    // it is better than the three-county default they just came out of.
+    // it is better than the region-wide default they just came out of.
     const map = mapFrame();
     map.locationShared();
     map.results(0);

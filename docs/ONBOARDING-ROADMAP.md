@@ -262,21 +262,22 @@ settings round trip — the edit page sent it, `saveSessionUser` wrote it,
 `getSessionUser` handed it back — under a label reading "Used to personalize
 search results and site features." Nothing personalized anything with it.
 
-It is also redundant. The directory already answers "near me" two ways, and
-neither wants a zip:
+It is also redundant. The directory already answers "near me" directly and
+does not need a zip:
 
 - **Distance** comes from shared browser coordinates: `geolat`/`geolng` through
-  `calcDistance` in `lib/geolocation.ts`, driving the `nearest` sort.
-- **Coarse locality** comes from the county filter: `filterLocations` matched
-  against `countyKeys(p.counties)` in `lib/server/directory.ts`. This needs no
-  permission at all, which makes it the existing answer for a member who
-  declines the location prompt.
+  `calcDistance` in `lib/geolocation.ts`, driving the finite radius filter and
+  the `nearest` sort. Coordinates are cached for a day and sent to the search
+  API only at two decimal places.
+- **No location** means the complete South Florida directory. The browser is
+  prompted only after an explicit "Use my location" click; denied, unsupported
+  and unavailable location all keep the directory usable without a geographic
+  fallback filter.
 
-A zip is a coarser proxy for the first and a different vocabulary from the
-second, so making it useful would mean shipping a zip→county or zip→coordinates
-table purely to synthesize a signal the browser already provides. Asking again
-at search time would also have meant asking a second time for a string the
-account panel already collected and ignored.
+A zip is a coarser proxy for the browser coordinates, so making it useful would
+mean shipping a zip→coordinates table purely to synthesize a signal the browser
+already provides. Asking again at search time would also have meant asking a
+second time for a string the account panel already collected and ignored.
 
 The column survives with a comment in `lib/schema/index.ts`; existing rows hold
 real data and dropping it is a migration for no benefit.
@@ -285,14 +286,9 @@ real data and dropping it is a migration for no benefit.
 while this work was in flight and re-created the input in
 `app/account/user/edit/_components/user-settings-view.tsx`, under a nav section
 called "Where you are" whose lede promised "A ZIP code is enough to sort the
-directory and the events near you." That is the same promise the old copy made
-and the same one nothing kept. If a future settings pass wants a locality
-control, the thing to surface is the county filter, which is real.
-
-**The gap this leaves.** A member who declines the location prompt gets
-`nearest` disabled and no visible alternative. The county chips are the answer,
-but nothing says so at that moment. That is a discoverability fix in
-`app/directory/search/_components/filter-bar.tsx`, not a data problem.
+directory and the events near you." That is the same promise the old copy made and the same one nothing kept. The
+directory now keeps location discovery in context: an explicit location CTA,
+finite radius choices when coordinates exist, and all South Florida otherwise.
 
 ---
 

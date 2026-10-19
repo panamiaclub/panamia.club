@@ -8,6 +8,11 @@ import { extractCoordinates } from './profile';
 import { calcDistance } from '@/lib/geolocation';
 import { countyList, profileCategoryList } from '@/lib/lists';
 import {
+  effectiveDirectoryRadius,
+  matchesDirectoryRadius,
+  type DirectoryRadius,
+} from '@/lib/directory-radius';
+import {
   getHostsWithUpcomingEvents,
   getNextEventForHosts,
   getRecommenderAvatarsForProfiles,
@@ -34,11 +39,10 @@ interface SearchInterface {
   pageNum: number;
   pageLimit: number;
   searchTerm: string;
-  filterLocations: string;
   filterCategories: string;
-  random: number;
   geolat: string;
   geolng: string;
+  radius: DirectoryRadius;
   resultsView: string;
   sort?: DirectorySort;
   certifiedOnly?: boolean;
@@ -211,7 +215,7 @@ const TRIGRAM_LIMIT = 50;
  * relevance ordering still means anything: nobody pages to result 480, and
  * anything below that is matching on a single low-weight token.
  *
- * The trade-off is real and worth stating. Category, county, certification and
+ * The trade-off is real and worth stating. Category, radius, certification and
  * mentoring filters run in memory after this, so a filter that only matches
  * listings ranked below 500 for the term will not see them. That is the same
  * bargain the trigram arm already makes at 50, and it only bites when a term
@@ -310,19 +314,17 @@ async function searchRanking(term: string): Promise<Map<string, number>> {
  * Profile directory search.
  *
  * The term arm runs in Postgres against the search_vector added in migration
- * 0040. Everything else — categories, counties, mentoring, certification —
- * is still filtered in memory, because those columns hold several shapes and
- * vocabularies that only `canonical()` below knows how to reconcile.
+ * 0040. Categories, radius, mentoring and certification are still filtered in
+ * memory after the candidate rows are loaded.
  */
 export const getSearch = async ({
   pageNum,
   pageLimit,
   searchTerm,
-  filterLocations,
   filterCategories,
-  random,
   geolat,
   geolng,
+  radius,
   resultsView: _resultsView,
   sort = 'relevance',
   certifiedOnly,
@@ -332,18 +334,6 @@ export const getSearch = async ({
   languages,
   freeOnly,
 }: SearchInterface) => {
-  const isBrowse = !searchTerm;
-
-  // Browse mode only makes sense with a random seed; without one there is
-  // nothing to show.
-  if (isBrowse && random <= 0) {
-    return {
-      success: false,
-      data: [],
-      pagination: { page: 1, limit: pageLimit, total: 0, totalPages: 0 },
-    };
-  }
-
   const viewerLat = Number(geolat);
   const viewerLng = Number(geolng);
   const hasViewerLocation =
@@ -365,8 +355,8 @@ export const getSearch = async ({
     };
   }
 
-  // Load the candidate profiles, then filter in memory for the conditions
-  // whose stored shapes only `canonical()` can reconcile.
+  // Load the candidate profiles, then apply filters before pagination and
+  // enrichment so totals and page boundaries describe the actual result set.
   const allProfiles = await db.query.profiles.findMany({
     // Named explicitly rather than taking the default of every column. The
     // profiles table is wide — roughly fifteen JSONB columns covering
@@ -430,15 +420,6 @@ export const getSearch = async ({
 
   let filtered = allProfiles;
 
-  // Filter by location (counties)
-  if (filterLocations) {
-    const locs = filterLocations.split('+').filter(Boolean);
-    filtered = filtered.filter((p) => {
-      const counties = countyKeys(p.counties);
-      return locs.some((loc) => counties.includes(loc));
-    });
-  }
-
   // Filter by categories
   if (filterCategories) {
     const cats = filterCategories.split('+').filter(Boolean);
@@ -468,31 +449,31 @@ export const getSearch = async ({
     filtered = filtered.filter((p) => p.panaCertifiedAt != null);
   }
 
+  // A finite radius describes places the viewer can visit. Online-only
+  // listings and listings without coordinates therefore do not match it.
+  // Without usable viewer coordinates the public fallback is the full South
+  // Florida directory, even if a stale client asks for a finite radius.
+  const locationContext = {
+    hasViewerLocation,
+    viewerLat,
+    viewerLng,
+  };
+  const effectiveRadius = effectiveDirectoryRadius(radius, hasViewerLocation);
+  if (effectiveRadius !== 'all') {
+    filtered = filtered.filter((p) =>
+      matchesDirectoryRadius(
+        distanceFor(p, locationContext),
+        effectiveRadius,
+        p.onlineOnly === true
+      )
+    );
+  }
+
   // Applied before pagination, so it has to look at every survivor rather than
   // the page. One query for the whole set of hosts, not one per listing.
   if (withEventsOnly) {
     const hosts = await getHostsWithUpcomingEvents();
     filtered = filtered.filter((p) => hosts.has(p.id));
-  }
-
-  // Browse: a random sample of whatever survived the filters. Filters are
-  // applied first so that browsing with filters narrows the sample rather
-  // than ignoring it.
-  if (isBrowse) {
-    const page = shuffle(filtered).slice(0, pageLimit);
-    const data = await enrichPage(page);
-    // A random sample has no further pages: walking to page 2 would reshuffle
-    // and repeat profiles, so browse always reports a single page.
-    return {
-      success: true,
-      data,
-      pagination: {
-        page: 1,
-        limit: pageLimit,
-        total: data.length,
-        totalPages: 1,
-      },
-    };
   }
 
   // Order the whole filtered set before slicing. Sorting the page instead
@@ -510,9 +491,7 @@ export const getSearch = async ({
   const ordered = sortProfiles(filtered, {
     sort,
     ranking,
-    hasViewerLocation,
-    viewerLat,
-    viewerLng,
+    ...locationContext,
     counts: countsForSort,
   });
 
@@ -548,7 +527,7 @@ interface LocationContext {
 }
 
 /**
- * Miles from the viewer, used only to order "Nearest".
+ * Miles from the viewer, used for finite-radius filtering and "Nearest".
  *
  * Never sent to the client. The card computes its own "x miles away" in the
  * browser from the viewer's precise coordinates, the same way the profile
@@ -659,19 +638,6 @@ async function enrichPage(
       nextEvent: nextEvents.get(row.id) ?? null,
     })
   );
-}
-
-/**
- * Fisher-Yates on a copy. `.sort(() => Math.random() - 0.5)` is both
- * statistically biased and mutates the array it is given.
- */
-function shuffle<T>(items: T[]): T[] {
-  const out = [...items];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
 }
 
 /**

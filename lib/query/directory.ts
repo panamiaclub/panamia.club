@@ -1,17 +1,17 @@
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
+import type { DirectoryRadius } from '@/lib/directory-radius';
 
 export type DirectorySort = 'relevance' | 'nearest' | 'recommended' | 'name';
 
-interface SearchInterface {
+export interface DirectorySearchParams {
   pageNum: number;
   pageLimit: number;
   searchTerm: string;
-  filterLocations: string;
   filterCategories: string;
-  random: number;
   geolat: number;
   geolng: number;
+  radius: DirectoryRadius;
   sort?: DirectorySort;
   certifiedOnly?: boolean;
   withEventsOnly?: boolean;
@@ -85,7 +85,7 @@ const emptyResponse: SearchResponseInterface = {
   pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
 };
 
-export const searchParamsToString = (params: SearchInterface) => {
+export const searchParamsToString = (params: DirectorySearchParams) => {
   const qs = new URLSearchParams();
   qs.append('q', params.searchTerm);
   if (params.pageNum > 1) {
@@ -94,12 +94,10 @@ export const searchParamsToString = (params: SearchInterface) => {
   if (params.pageLimit !== 20) {
     qs.append('limit', params.pageLimit.toString());
   }
-  if (params.filterLocations) {
-    qs.append('floc', params.filterLocations);
-  }
   if (params.filterCategories) {
     qs.append('fcat', params.filterCategories);
   }
+  qs.append('radius', params.radius);
   // Sent at two decimal places so the edge cache key stays low-cardinality and
   // the CDN never sees a precise location. Omitted entirely when absent, so a
   // visitor who has not shared one produces the same URL as everybody else.
@@ -135,7 +133,7 @@ export const searchParamsToString = (params: SearchInterface) => {
 
 export const directorySearchKey = 'directorySearch';
 
-export async function fetchSearch(query: SearchInterface) {
+export async function fetchSearch(query: DirectorySearchParams) {
   const response = await axios
     .get<SearchResponseInterface>(
       `/api/getDirectorySearch?${searchParamsToString(query)}`,
@@ -155,7 +153,7 @@ export async function fetchSearch(query: SearchInterface) {
   return emptyResponse;
 }
 
-export const useSearch = (filters: SearchInterface) => {
+export const useSearch = (filters: DirectorySearchParams) => {
   return useQuery<SearchResponseInterface, Error>({
     queryKey: [directorySearchKey, filters],
     queryFn: () => fetchSearch(filters),

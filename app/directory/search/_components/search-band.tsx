@@ -2,9 +2,12 @@
 
 import { Crosshair, MapPin } from 'lucide-react';
 import type { LocationStatus } from '@/app/p/[user]/_lib/use-viewer-location';
+import {
+  directoryRadiusMiles,
+  type DirectoryRadius,
+} from '@/lib/directory-radius';
 import { DirectorySuggest } from '@/components/directory-suggest';
 import { ScopeMenuLive } from '@/components/scope-menu-live';
-import { COUNTY_FILTER_ID } from './filter-bar';
 
 interface SearchBandProps {
   term: string;
@@ -12,6 +15,7 @@ interface SearchBandProps {
   totalCount: number;
   loading: boolean;
   locationStatus: LocationStatus;
+  radius: DirectoryRadius;
   /** True only when the active sort is distance-based. */
   nearestFirst: boolean;
   onSearch: (term: string) => void;
@@ -66,11 +70,13 @@ export function SearchBand({
   totalCount,
   loading,
   locationStatus,
+  radius,
   nearestFirst,
   onSearch,
   onShareLocation,
 }: SearchBandProps) {
   const shared = locationStatus === 'granted';
+  const radiusMiles = directoryRadiusMiles(radius);
 
   return (
     <section className="dirsearch-band">
@@ -126,7 +132,9 @@ export function SearchBand({
                   for <em>{term}</em>
                 </>
               ) : null}{' '}
-              in South Florida
+              {shared && radiusMiles !== null
+                ? ` within ${radiusMiles} miles`
+                : ' in South Florida'}
               {/* Only claim an ordering the page is actually using. Saying
                   "closest first" under Best match is the kind of small lie
                   that makes people stop trusting the sort. */}
@@ -151,28 +159,31 @@ export function SearchBand({
         </div>
 
         {/* The local-first control. One sentence and one button rather than a
-            permissions-style dialog, because the honest ask is small: we want
-            to sort a list, and the coordinates never leave the browser. */}
+            permissions-style dialog, because the honest ask is small. Precise
+            coordinates stay in the browser; only the existing 2dp coarse
+            version reaches directory search. */}
         <div className="dirsearch-locbar">
           {shared ? (
             <>
               <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span>
-                Distances from <strong>your location</strong>
+                {radiusMiles === null ? (
+                  <>
+                    Showing <strong>all South Florida</strong>, with distances
+                    from your location
+                  </>
+                ) : (
+                  <>
+                    Showing listings within <strong>{radiusMiles} miles</strong>{' '}
+                    of your location
+                  </>
+                )}
               </span>
             </>
           ) : locationStatus === 'denied' ? (
             <>
               <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {/* Not a dead end. A declined permission is sticky and usually
-                  deliberate, so "turn it on in your browser" is advice most
-                  people will not take and some cannot. The county chips answer
-                  the same question — what is near me — and need no permission
-                  at all, so that is the offer worth leading with. */}
-              <span>Location is off, so distances are hidden.</span>
-              <a className="dirsearch-locshare" href={`#${COUNTY_FILTER_ID}`}>
-                Pick a county
-              </a>
+              <span>Location is unavailable. Showing all South Florida.</span>
             </>
           ) : (
             <>
