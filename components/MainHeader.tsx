@@ -139,6 +139,7 @@ export default function MainHeader({
   const isEs = i18n.language === 'es';
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  const showDirectoryJoin = pathname === '/' || pathname === '/mock/home';
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -245,7 +246,17 @@ export default function MainHeader({
                   hidden below 560px and narrow phones were left with a lone
                   "Sign Up". */}
               {status !== 'loading' && !session && (
-                <AuthMenu triggerClassName={styles.cta} />
+                <>
+                  {showDirectoryJoin && (
+                    <Link
+                      href="/form/get-listed"
+                      className={styles.directoryJoin}
+                    >
+                      Join the directory
+                    </Link>
+                  )}
+                  <AuthMenu triggerClassName={styles.cta} />
+                </>
               )}
 
               {status !== 'loading' && session && (
