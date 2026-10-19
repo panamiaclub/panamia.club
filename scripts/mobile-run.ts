@@ -31,9 +31,15 @@
  */
 
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
-import { homedir, platform } from 'node:os';
+import { homedir, platform, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { MOBILE_APP_ID } from '../lib/mobile/app-identity';
@@ -247,6 +253,21 @@ function sleep(ms: number): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
+/** Last non-empty lines of a log, for including in a startup error. */
+function tail(path: string, lines: number): string {
+  try {
+    return (
+      readFileSync(path, 'utf8')
+        .split(/\r?\n/)
+        .filter((line) => line.trim())
+        .slice(-lines)
+        .join('\n') || '(no output)'
+    );
+  } catch {
+    return '(no output)';
+  }
+}
+
 /** Serial numbers of everything `adb` currently considers usable. */
 function attachedDevices(): string[] {
   return capture(adb, ['devices'])
@@ -299,13 +320,26 @@ function startEmulator(preferred?: string): void {
 
   console.log(`Starting emulator ${avd}...`);
 
+  /* A file descriptor, rather than a pipe, lets the detached emulator outlive
+   * this script without keeping an IPC channel open. */
+  const logPath = join(tmpdir(), `emulator-${avd}.log`);
+  const log = openSync(logPath, 'w');
+
   /* Detached and unref'd because the emulator outlives this script on purpose:
-   * the next run should find it already up rather than pay the boot cost again. */
-  spawn(emulatorBin, ['-avd', avd], {
-    detached: true,
-    stdio: 'ignore',
-    env,
-  }).unref();
+   * the next run should find it already up rather than pay the boot cost again.
+   * `-no-snapshot-load` avoids stale quickboot snapshots left by upgrades or
+   * interrupted hosts; the reliable cold boot is worth the extra startup time. */
+  try {
+    spawn(emulatorBin, ['-avd', avd, '-no-snapshot-load'], {
+      detached: true,
+      stdio: ['ignore', log, log],
+      env,
+    }).unref();
+  } finally {
+    /* spawn duplicates/inherits the descriptor for the child on every supported
+     * platform, so the parent must release its copy while it waits for boot. */
+    closeSync(log);
+  }
 
   const deadline = Date.now() + EMULATOR_BOOT_TIMEOUT_MS;
   while (Date.now() < deadline) {
@@ -322,7 +356,14 @@ function startEmulator(preferred?: string): void {
   }
 
   fail(
-    `Emulator ${avd} did not finish booting within ${EMULATOR_BOOT_TIMEOUT_MS / 1000}s.`
+    [
+      `Emulator ${avd} did not finish booting within ${EMULATOR_BOOT_TIMEOUT_MS / 1000}s.`,
+      '',
+      'Last output from the emulator:',
+      tail(logPath, 20),
+      '',
+      `Full log: ${logPath}`,
+    ].join('\n')
   );
 }
 
