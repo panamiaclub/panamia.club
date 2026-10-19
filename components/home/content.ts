@@ -299,6 +299,7 @@ export function useStoryBeats(): StoryBeat[] {
     },
     {
       id: 'local',
+      anchor: 'why-local',
       side: 'left',
       accent: 'paper',
       question: t('beats.local.question'),
