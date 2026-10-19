@@ -22,6 +22,16 @@ test.describe('Stripe Configuration', () => {
     expect(hasHardcodedVersion).toBe(false);
   });
 
+  test('checkout sessions use the donation submit type', async () => {
+    const checkoutRoutePath = path.join(
+      process.cwd(),
+      'app/api/create-checkout-session/route.ts'
+    );
+    const checkoutRouteContent = fs.readFileSync(checkoutRoutePath, 'utf-8');
+
+    expect(checkoutRouteContent).toMatch(/submit_type:\s*['"]donate['"]/);
+  });
+
   test('Stripe package is installed', async () => {
     const projectRoot = process.cwd();
 
