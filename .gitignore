@@ -62,6 +62,9 @@ scripts/auth-data-export-*.json
 scripts/id-mapping-*.json
 scripts/unmapped-user-ids-*.json
 
+# Relay test keypairs (contain private keys)
+.relay-test-keypairs.json
+
 # GHL probe logs — capture staff user IDs/emails and the location ID
 scripts/ghl-verify-logs/
 
