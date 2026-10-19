@@ -15,6 +15,7 @@ import {
 } from '@/components/legal/CCLicensePicker';
 import { getVisibilityFromRecipients } from '@/lib/utils/getVisibility';
 import type { SocialStatusDisplay } from '@/lib/interfaces';
+import { useCanReplyToGroup } from '@/lib/query/social';
 
 const PostComposer = dynamic(
   () =>
@@ -46,6 +47,7 @@ const PostComposer = dynamic(
 export function FeedPostCard({ status }: { status: SocialStatusDisplay }) {
   const [cwOpen, setCwOpen] = useState(false);
   const [replyOpen, setReplyOpen] = useState(false);
+  const canReply = useCanReplyToGroup(status.group);
 
   const hasCW = Boolean(status.contentWarning?.trim());
 
@@ -236,11 +238,11 @@ export function FeedPostCard({ status }: { status: SocialStatusDisplay }) {
               likesCount={status.likesCount}
               repliesCount={status.repliesCount}
               onReply={() => setReplyOpen((open) => !open)}
-              showReplyButton
+              showReplyButton={canReply}
             />
           </div>
 
-          {replyOpen && (
+          {canReply && replyOpen && (
             <div className="border-pana-ink/10 mt-3.5 border-l-2 pl-3">
               <PostComposer
                 inReplyTo={status.id}

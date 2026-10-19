@@ -10,26 +10,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
-import { useCreatePost } from '@/lib/query/social';
+  useCreatePost,
+  useCreateGroupPost,
+  useMyGroups,
+} from '@/lib/query/social';
 import MultiMediaUpload, {
   type UploadedMedia,
 } from '@/components/MultiMediaUpload';
 import type { PostVisibility } from '@/lib/utils/getVisibility';
 import {
-  AlertTriangle,
-  Send,
-  ChevronDown,
-  Globe,
-  Lock,
-  Users,
-  Check,
-  Eye,
-} from 'lucide-react';
+  DestinationPicker,
+  DEFAULT_DESTINATION,
+  DEFAULT_VISIBILITY_OPTION,
+  GROUP_POST_VISIBILITY,
+  VISIBILITY_OPTIONS,
+  findGroup,
+  reachLine,
+  type Destination,
+} from '@/components/social/destination-picker';
+import { AlertTriangle, Send, Eye } from 'lucide-react';
 import {
   CCLicenseBadge,
   CCLicensePickerModal,
@@ -48,47 +47,19 @@ interface PostComposerProps {
    *  page. Absent both, the prompt simply starts at the left edge. */
   avatarUrl?: string | null;
   avatarName?: string;
+  /**
+   * Pin this composer to one group, by handle.
+   *
+   * Set by the group page, where the destination is the page itself and a
+   * picker offering six other places would be a trap. Identified by handle
+   * rather than id because the handle is what the write endpoint is keyed on,
+   * so submission does not depend on the group list having loaded -- only the
+   * wording of the reach line does.
+   */
+  lockedGroupHandle?: string;
 }
 
 const MAX_LENGTH = 500;
-
-const VISIBILITY_OPTIONS: {
-  value: PostVisibility;
-  icon: typeof Globe;
-  label: string;
-  description: string;
-  buttonText: string;
-  replyText: string;
-  chipText: string;
-}[] = [
-  {
-    value: 'unlisted',
-    icon: Users,
-    label: 'Visible to Local Panas',
-    description: 'Visible to local Panas only. Not shared via federation.',
-    buttonText: 'Visible to Local Panas',
-    replyText: 'Reply to Local Panas',
-    chipText: 'Local Panas',
-  },
-  {
-    value: 'private',
-    icon: Lock,
-    label: 'Followers only',
-    description: 'Only visible to your followers',
-    buttonText: 'Private Post',
-    replyText: 'Reply Privately',
-    chipText: 'Followers',
-  },
-  {
-    value: 'public',
-    icon: Globe,
-    label: 'Public',
-    description: 'Visible to everyone',
-    buttonText: 'Public Post',
-    replyText: 'Reply Publicly',
-    chipText: 'Everyone',
-  },
-];
 
 export function PostComposer({
   inReplyTo,
@@ -97,11 +68,14 @@ export function PostComposer({
   placeholder = "What's on your mind?",
   avatarUrl,
   avatarName,
+  lockedGroupHandle,
 }: PostComposerProps) {
   const [content, setContent] = useState('');
   const [contentWarning, setContentWarning] = useState('');
   const [showCW, setShowCW] = useState(false);
-  const [visibility, setVisibility] = useState<PostVisibility>('unlisted');
+  const [destination, setDestination] =
+    useState<Destination>(DEFAULT_DESTINATION);
+  const [destinationOpen, setDestinationOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'write' | 'preview'>('write');
   const [attachments, setAttachments] = useState<UploadedMedia[]>([]);
   // Seed the license from the user's saved default, but stop tracking the
@@ -118,19 +92,79 @@ export function PostComposer({
   };
   const [showLicensePicker, setShowLicensePicker] = useState(false);
   const createPost = useCreatePost();
+  const createGroupPost = useCreateGroupPost();
+  const { data: myGroups, isLoading: groupsLoading } = useMyGroups();
+  const groups = myGroups?.groups ?? [];
 
   const charCount = content.length;
   const isOverLimit = charCount > MAX_LENGTH;
   const isEmpty = content.trim().length === 0;
 
-  // For replies, use parent visibility; for new posts, use selected visibility
-  const effectiveVisibility = inReplyTo
+  /**
+   * Replies never choose a destination.
+   *
+   * A reply to a group post belongs to that group, and `createStatus` now
+   * inherits the parent's group server-side rather than taking one from the
+   * client -- so the reply box deliberately sends no group and no picker is
+   * offered. Letting a reply pick would mean letting it answer a private
+   * thread somewhere else.
+   */
+  const isReply = !!inReplyTo;
+
+  /**
+   * The group handle this post is bound for, if any.
+   *
+   * A pinned group wins outright. Otherwise it comes from the selected
+   * destination, which requires the group list to have loaded -- the picker
+   * only ever offers groups from that list, so an unresolvable id means the
+   * membership changed underneath the open menu.
+   */
+  const targetGroupHandle = isReply
+    ? undefined
+    : (lockedGroupHandle ??
+      (destination.kind === 'group'
+        ? findGroup(groups, destination.id)?.handle
+        : undefined));
+
+  /**
+   * The pinned group's full record, for wording only.
+   *
+   * May be absent while `useMyGroups` is in flight even though the handle is
+   * known, which is why it is never consulted to decide where the post goes.
+   */
+  const pinnedGroup = lockedGroupHandle
+    ? groups.find((g) => g.handle === lockedGroupHandle)
+    : undefined;
+
+  /**
+   * A group was chosen but cannot be resolved to a handle.
+   *
+   * Submission is blocked rather than falling back to a personal post. The
+   * fallback is the dangerous direction: it would take something written for
+   * one group's members and publish it to the author's whole timeline, which
+   * is a disclosure, not a degraded experience.
+   */
+  const unresolvedGroup =
+    !isReply && destination.kind === 'group' && !targetGroupHandle;
+
+  const isGroupPost = !!targetGroupHandle;
+
+  // For replies, use parent visibility. Inside a group the group's own
+  // visibility governs who may read the post, so the status carries the
+  // non-claiming value rather than whatever the audience list last had.
+  const effectiveVisibility: PostVisibility = isReply
     ? (replyVisibility ?? 'unlisted')
-    : visibility;
+    : isGroupPost
+      ? GROUP_POST_VISIBILITY
+      : destination.kind === 'audience'
+        ? destination.id
+        : 'unlisted';
 
   const currentOption =
     VISIBILITY_OPTIONS.find((o) => o.value === effectiveVisibility) ??
-    VISIBILITY_OPTIONS[0];
+    DEFAULT_VISIBILITY_OPTION;
+
+  const isPending = createPost.isPending || createGroupPost.isPending;
 
   // Phase 3 consent — social timeline deletion notice (soft notice, not a gate)
   // Social posts are always fully deletable regardless of age. This notice
@@ -140,20 +174,39 @@ export function PostComposer({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isEmpty || isOverLimit || createPost.isPending) return;
+    if (isEmpty || isOverLimit || isPending || unresolvedGroup) return;
+
+    const trimmedCw =
+      showCW && contentWarning.trim() ? contentWarning.trim() : undefined;
+    const media = attachments.length > 0 ? attachments : undefined;
 
     try {
-      const isPublicPost =
-        effectiveVisibility === 'public' || effectiveVisibility === 'unlisted';
-      await createPost.mutateAsync({
-        content: content.trim(),
-        contentWarning:
-          showCW && contentWarning.trim() ? contentWarning.trim() : undefined,
-        inReplyTo,
-        visibility: effectiveVisibility,
-        attachments: attachments.length > 0 ? attachments : undefined,
-        ...(isPublicPost ? { ccLicense } : {}),
-      });
+      if (targetGroupHandle) {
+        // A different endpoint, not a groupId on the generic one. The group
+        // route re-checks membership and owns the addressing of a private
+        // group's posts; the generic status endpoint cannot do either from an
+        // id handed to it by a client. See lib/query/social.ts.
+        await createGroupPost.mutateAsync({
+          handle: targetGroupHandle,
+          content: content.trim(),
+          contentWarning: trimmedCw,
+          visibility: GROUP_POST_VISIBILITY,
+          attachments: media,
+          ccLicense,
+        });
+      } else {
+        const isPublicPost =
+          effectiveVisibility === 'public' ||
+          effectiveVisibility === 'unlisted';
+        await createPost.mutateAsync({
+          content: content.trim(),
+          contentWarning: trimmedCw,
+          inReplyTo,
+          visibility: effectiveVisibility,
+          attachments: media,
+          ...(isPublicPost ? { ccLicense } : {}),
+        });
+      }
       setContent('');
       setContentWarning('');
       setShowCW(false);
@@ -164,9 +217,23 @@ export function PostComposer({
     }
   };
 
-  const isDisabled = isEmpty || isOverLimit || createPost.isPending;
-  const isReply = !!inReplyTo;
-  const Icon = currentOption.icon;
+  const isDisabled = isEmpty || isOverLimit || isPending || unresolvedGroup;
+
+  /**
+   * The sentence under the composer.
+   *
+   * Computed here rather than inline because the pinned-but-not-yet-loaded
+   * case has to be caught explicitly: falling through to the default audience
+   * line would tell a member writing in a private group that local Panas can
+   * see it, which is both false and the wrong direction to be wrong in.
+   */
+  const reachText = unresolvedGroup
+    ? 'That group is no longer available to post to. Pick another destination.'
+    : lockedGroupHandle
+      ? pinnedGroup
+        ? reachLine({ kind: 'group', id: pinnedGroup.id }, groups)
+        : 'Posting to this group.'
+      : reachLine(destination, groups);
   const showAvatar = !isReply && (!!avatarUrl || !!avatarName);
   // Same derivation as feed-rail.tsx, so the composer and the sidebar fall
   // back to the same two letters for a member with no picture.
@@ -277,7 +344,7 @@ export function PostComposer({
         )}
 
         <div className="composer-actions-end">
-          {createPost.isPending ? (
+          {isPending ? (
             <Button
               type="button"
               disabled
@@ -298,42 +365,20 @@ export function PostComposer({
             </Button>
           ) : (
             <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  {/* Not disabled alongside the Post button: picking who a post
-                      is for is a decision people make before typing, and the
-                      split control used to lock it until the box had text. */}
-                  <button type="button" className="composer-chip">
-                    <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                    {currentOption.chipText}
-                    <ChevronDown className="h-3 w-3" aria-hidden="true" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-72">
-                  {VISIBILITY_OPTIONS.map((option) => {
-                    const OptionIcon = option.icon;
-                    const selected = visibility === option.value;
-                    return (
-                      <DropdownMenuItem
-                        key={option.value}
-                        onClick={() => setVisibility(option.value)}
-                        className="flex cursor-pointer items-start gap-3 py-2"
-                      >
-                        <OptionIcon className="mt-0.5 h-4 w-4 shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{option.label}</span>
-                            {selected && <Check className="h-4 w-4 shrink-0" />}
-                          </div>
-                          <p className="text-muted-foreground text-xs">
-                            {option.description}
-                          </p>
-                        </div>
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* No picker when the group page pinned the destination: the
+                  page already answers "where does this go", and offering six
+                  other places on a group's own tab invites posting somewhere
+                  you did not mean to. */}
+              {!lockedGroupHandle && (
+                <DestinationPicker
+                  destination={destination}
+                  onChange={setDestination}
+                  groups={groups}
+                  isLoading={groupsLoading}
+                  open={destinationOpen}
+                  onOpenChange={setDestinationOpen}
+                />
+              )}
               <Button
                 type="submit"
                 disabled={isDisabled}
@@ -346,6 +391,17 @@ export function PostComposer({
           )}
         </div>
       </div>
+
+      {/* Who actually ends up seeing this, in words. The chip names the
+          destination; this names the consequence, which is the part that is
+          not obvious from "Local Panas" or a group's name. Omitted for
+          replies, which inherit their audience and offer no choice to
+          explain. */}
+      {!isReply && (
+        <p className="composer-reach" data-indent={showAvatar || undefined}>
+          {reachText}
+        </p>
+      )}
 
       {/* Footnote row. The character count used to sit inline with the Post
           button at body size, which gave a number nobody reads until they are

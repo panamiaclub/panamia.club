@@ -25,6 +25,7 @@ import {
   getGroupTimeline,
   getMembership,
 } from '@/lib/federation';
+import { parseCcLicense, parseStatusLocation } from '@/lib/social/status-input';
 
 export async function GET(
   request: NextRequest,
@@ -116,7 +117,15 @@ export async function POST(
     );
   }
 
-  const { content, contentWarning, inReplyTo, visibility, attachments } = body;
+  const {
+    content,
+    contentWarning,
+    inReplyTo,
+    visibility,
+    attachments,
+    location,
+    ccLicense,
+  } = body;
 
   if (!content || typeof content !== 'string') {
     return NextResponse.json(
@@ -141,8 +150,8 @@ export async function POST(
     resolvedVisibility,
     Array.isArray(attachments) ? attachments : undefined,
     undefined,
-    undefined,
-    'cc-by-4',
+    parseStatusLocation(location),
+    parseCcLicense(ccLicense),
     { groupId: found.group.id }
   );
 

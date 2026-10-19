@@ -514,3 +514,95 @@ test('deleting a group removes its posts rather than releasing them', async () =
     'the post must go with the group, not become a public personal post'
   );
 });
+
+/**
+ * Reply inheritance.
+ *
+ * The fixture reply above passes `{ groupId: privateGroupId }` explicitly,
+ * which is what made this bug survivable for so long: the suite was exercising
+ * a path the product does not use. No reply composer in the app sends a group
+ * id -- `PostCard` and `feed-post-card` both call the generic status endpoint
+ * with `inReplyTo` and nothing else -- so every real reply to a group post was
+ * taking the branch nothing covered.
+ *
+ * These tests therefore omit `options` entirely. That omission is the point,
+ * and a future refactor that "tidies" it by passing the group id again would
+ * delete the coverage without failing anything.
+ */
+test('a reply inherits its parent group when the caller sends none', async () => {
+  const reply = await createStatus(
+    memberId,
+    `Inherited reply ${suffix}`,
+    undefined,
+    privateGroupStatusId,
+    'public'
+  );
+  assert.equal(reply.success, true);
+  if (!reply.success) throw new Error('reply failed');
+
+  const row = await db.query.socialStatuses.findFirst({
+    where: eq(socialStatuses.id, reply.status.id),
+  });
+  assert.equal(
+    row?.groupId,
+    privateGroupId,
+    'a reply written with no group id must still belong to its parent group'
+  );
+});
+
+test('an inherited reply does not escape to a non-member', async () => {
+  const reply = await createStatus(
+    memberId,
+    `Escaping reply ${suffix}`,
+    undefined,
+    privateGroupStatusId,
+    'public'
+  );
+  assert.equal(reply.success, true);
+  if (!reply.success) throw new Error('reply failed');
+
+  assert.equal(
+    await getStatus(reply.status.id, strangerId),
+    null,
+    'a non-member reading the reply is the leak this inheritance prevents'
+  );
+  assert.ok(
+    await getStatus(reply.status.id, memberId),
+    'and a member must still be able to read it'
+  );
+});
+
+test('a non-member cannot reply into a public group', async () => {
+  const reply = await createStatus(
+    strangerId,
+    `Outsider reply ${suffix}`,
+    undefined,
+    publicGroupStatusId,
+    'public'
+  );
+  assert.equal(
+    reply.success,
+    false,
+    'reading a public group does not confer posting into it'
+  );
+});
+
+test('a reply may not be filed into a group other than its parent', async () => {
+  const reply = await createStatus(
+    memberId,
+    `Mismatched reply ${suffix}`,
+    undefined,
+    privateGroupStatusId,
+    'public',
+    undefined,
+    undefined,
+    undefined,
+    'cc-by-4',
+    { groupId: publicGroupId }
+  );
+  assert.equal(
+    reply.success,
+    false,
+    'honouring the caller here would move a reply out of the private thread it answers'
+  );
+});

@@ -10,6 +10,7 @@ import { socialActors } from '@/lib/schema';
 import { inArray } from 'drizzle-orm';
 import { getActiveProfileWithActor } from '@/lib/server/active-profile';
 import { createStatus, getPublicTimeline } from '@/lib/federation';
+import { parseCcLicense, parseStatusLocation } from '@/lib/social/status-input';
 import { createNotification } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
@@ -75,9 +76,7 @@ export async function POST(request: NextRequest) {
   } = body;
 
   // Validate ccLicense if provided
-  const validLicenses = ['cc-by-4', 'cc-by-sa-4', 'cc-0'] as const;
-  const resolvedLicense =
-    ccLicense && validLicenses.includes(ccLicense) ? ccLicense : 'cc-by-4';
+  const resolvedLicense = parseCcLicense(ccLicense);
 
   /* A status needs *something* in it, and an attachment is something.
      Requiring text meant a GIF with no caption -- or a photo posted without
@@ -127,33 +126,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate location if provided
-  let validatedLocation = undefined;
-  if (location && typeof location === 'object') {
-    const hasCoordinates =
-      typeof location.latitude === 'number' &&
-      typeof location.longitude === 'number' &&
-      location.latitude >= -90 &&
-      location.latitude <= 90 &&
-      location.longitude >= -180 &&
-      location.longitude <= 180;
-    const hasName =
-      typeof location.name === 'string' && location.name.trim().length > 0;
-
-    // Accept locations with coordinates OR name (or both)
-    if (hasCoordinates || hasName) {
-      validatedLocation = {
-        type: 'Place' as const,
-        ...(hasCoordinates && {
-          latitude: location.latitude,
-          longitude: location.longitude,
-        }),
-        ...(hasName && { name: location.name.trim() }),
-        ...(location.precision === 'precise' || location.precision === 'general'
-          ? { precision: location.precision }
-          : {}),
-      };
-    }
-  }
+  const validatedLocation = parseStatusLocation(location);
 
   const result = await createStatus(
     profile.socialActor.id,

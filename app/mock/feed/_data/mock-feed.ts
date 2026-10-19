@@ -156,6 +156,88 @@ export const MOCK_VIEWER = {
   unread: 12,
 };
 
+/** A group the viewer belongs to.
+ *
+ * Mirrors what `useMyGroups()` returns, which deliberately includes private
+ * groups: that hook answers "where do I belong", asked by the member about
+ * themselves. The public variant used on a stranger's profile hides private
+ * memberships, and using it here is what made the feed rail undercount anyone
+ * in a private group. */
+export interface MockGroup {
+  /** socialGroups.id */
+  id: string;
+  /** socialGroups.handle — resolves to /g/[handle] */
+  handle: string;
+  /** socialGroups.name */
+  name: string;
+  /** socialGroups.visibility.
+   *
+   * Load-bearing in the composer, not a badge. `visibleGroupStatuses` reads
+   * the *group's* visibility to decide who may see a post addressed to it, so
+   * picking a group settles the audience question outright — there is no
+   * second choice left to offer. */
+  visibility: 'public' | 'private';
+  /** socialGroupMembers rows at status='active'. */
+  memberCount: number;
+}
+
+/** The six in `MOCK_VIEWER.groups`, named so the count and the list agree.
+ *
+ * Mixed visibility on purpose: a picker that only ever shows public groups
+ * hides the case where the choice actually changes who can read the post. */
+export const MOCK_MY_GROUPS: MockGroup[] = [
+  {
+    id: 'group-1',
+    handle: 'littlehaitimakers',
+    name: 'Little Haiti Makers',
+    visibility: 'public',
+    memberCount: 212,
+  },
+  {
+    id: 'group-2',
+    handle: 'heatwavevisions',
+    name: 'Heatwave Visions',
+    visibility: 'private',
+    memberCount: 34,
+  },
+  {
+    id: 'group-3',
+    handle: 'bikesofbroward',
+    name: 'Bikes of Broward',
+    visibility: 'public',
+    memberCount: 478,
+  },
+  {
+    id: 'group-4',
+    handle: 'surplusandswap',
+    name: 'Surplus & Swap',
+    visibility: 'public',
+    memberCount: 903,
+  },
+  {
+    id: 'group-5',
+    handle: 'vendorsunion',
+    name: 'Vendors Union 305',
+    visibility: 'private',
+    memberCount: 61,
+  },
+  {
+    id: 'group-6',
+    handle: 'nightmarketcrew',
+    name: 'Night Market Crew',
+    visibility: 'private',
+    memberCount: 18,
+  },
+];
+
+/* The timeline audiences used to be duplicated here as `MOCK_AUDIENCES`.
+ *
+ * They now live in `components/social/destination-picker` as
+ * `VISIBILITY_OPTIONS`, and this mock renders that same component, so the
+ * wording approved here is literally the wording the product ships. Keeping a
+ * second copy was how the mock and the product could drift apart while both
+ * looked right in isolation. */
+
 export const MOCK_POSTS: MockPost[] = [
   {
     id: 'post-1',

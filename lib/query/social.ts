@@ -808,7 +808,31 @@ export const useMyGroups = (options?: { enabled?: boolean }) => {
   });
 };
 
+/**
+ * Whether the viewer may reply to a post, given the group it belongs to.
+ *
+ * A reply inherits its parent's group -- `createStatus` resolves it from the
+ * parent rather than from the client -- and posting into a group requires
+ * active membership. So a non-member replying to a group post gets a 403 on
+ * submit. This is what lets the cards withhold the affordance instead,
+ * because an error after typing is a worse answer than no box at all.
+ *
+ * Returns `false` while the group list is still loading. That direction is
+ * deliberate: it briefly hides a control from a member, which self-corrects,
+ * rather than briefly offering one to a non-member who could start typing and
+ * watch the box disappear.
+ *
+ * Posts with no group are always replyable from here; the ordinary visibility
+ * rules still apply and are enforced server-side.
+ */
+export const useCanReplyToGroup = (group?: { id: string } | null): boolean => {
+  const { data } = useMyGroups();
+  if (!group) return true;
+  return (data?.groups ?? []).some((g) => g.id === group.id);
+};
+
 /** What the create form collects. Mirrors the POST body the route validates. */
+
 export interface NewGroupInput {
   handle: string;
   name: string;
@@ -1142,26 +1166,66 @@ export const useGroupPosts = (
 };
 
 /**
+ * What a group post accepts.
+ *
+ * Deliberately not `useCreatePost`'s input: there is no `recipientActorIds`
+ * and no `'direct'` visibility, because a direct message that is also a group
+ * post has no coherent audience and `createStatus` rejects the combination
+ * outright. Leaving the fields off means the composer cannot offer a
+ * combination the server will refuse.
+ */
+export interface GroupPostInput {
+  handle: string;
+  content: string;
+  contentWarning?: string;
+  inReplyTo?: string;
+  visibility?: 'public' | 'unlisted' | 'private';
+  attachments?: Array<{
+    type: string;
+    mediaType: string;
+    url: string;
+    name: string;
+  }>;
+  location?: {
+    type?: 'Place';
+    latitude?: number;
+    longitude?: number;
+    name?: string;
+    precision?: 'precise' | 'general';
+  };
+  ccLicense?: 'cc-by-4' | 'cc-by-sa-4' | 'cc-0';
+}
+
+/**
  * Post into a group.
  *
  * Separate from `useCreatePost` because the endpoint is different: the group
  * route re-checks membership and owns the addressing of a private group's
  * posts, neither of which the generic status endpoint can do from a groupId
  * it was handed by a client.
+ *
+ * This used to send `{ content }` and nothing else, so a content warning or an
+ * attachment chosen in a group composer was dropped on the floor without an
+ * error. The route accepted those fields the whole time; only the hook was
+ * narrow.
  */
 export const useCreateGroupPost = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ handle, content }: { handle: string; content: string }) =>
-      axios.post(`/api/social/groups/${encodeURIComponent(handle)}/posts`, {
-        content,
-      }),
+    mutationFn: ({ handle, ...body }: GroupPostInput) =>
+      axios.post(
+        `/api/social/groups/${encodeURIComponent(handle)}/posts`,
+        body
+      ),
     onSettled: (_data, _error, { handle }) => {
       queryClient.invalidateQueries({
         queryKey: [socialQueryKey, 'group', handle],
       });
       // The post also belongs in the author's own feed and profile.
       queryClient.invalidateQueries({ queryKey: [socialQueryKey, 'timeline'] });
+      queryClient.invalidateQueries({
+        queryKey: [socialQueryKey, 'me', 'posts'],
+      });
     },
   });
 };
