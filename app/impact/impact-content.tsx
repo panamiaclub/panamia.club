@@ -100,7 +100,7 @@ export default function ImpactContent() {
       </section>
 
       {/* Subtropic Film Fest */}
-      <section className="bg-muted/40 py-16">
+      <section id="stories-of-impact" className="bg-muted/40 py-16">
         <div className="container mx-auto max-w-3xl space-y-6 px-4">
           <p className="text-pana-pink-deep text-sm font-semibold tracking-wider uppercase">
             {t('filmfest.eyebrow')}
@@ -287,7 +287,11 @@ export default function ImpactContent() {
       </section>
 
       {/* Community partners — fixed blue panel, see PARTNERS note above. */}
-      <section className="py-16" style={{ backgroundColor: '#3164ff' }}>
+      <section
+        id="partners"
+        className="py-16"
+        style={{ backgroundColor: '#3164ff' }}
+      >
         <div className="container mx-auto max-w-4xl px-4">
           <h2 className="mb-10 text-center text-3xl font-bold text-white">
             {t('partners.title')}

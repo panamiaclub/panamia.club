@@ -71,6 +71,7 @@ export function PillarPanels({ pillars }: PillarPanelsProps) {
           return (
             <section
               key={pillar.id}
+              id={`pillar-${pillar.id}`}
               className="pillar"
               data-accent={pillar.accent}
               data-open={isOpen}

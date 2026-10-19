@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 export type NavDrawerItem = {
   href: string;
   label: string;
+  children?: NavDrawerItem[];
   /** Runs alongside the drawer close, on the same click. Used for permission
       prompts that browsers only grant from a user gesture. */
   onSelect?: () => void;
@@ -154,30 +155,15 @@ export default function NavDrawer({
           </button>
         </div>
 
-        <nav>
+        <nav aria-label={title}>
           <ul className={styles.list}>
             {items.map((item, index) => (
-              <li key={item.href}>
-                <SurfaceLink
-                  href={item.href}
-                  className={styles.link}
-                  onClick={() => {
-                    item.onSelect?.();
-                    onClose();
-                  }}
-                  // Staggered entrance. Set per item rather than with
-                  // nth-child because the item count varies with auth state.
-                  style={{ '--d': `${0.1 + index * 0.05}s` } as CSSProperties}
-                >
-                  <span className={styles.num} aria-hidden="true">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <span className={styles.label}>{item.label}</span>
-                  <span className={styles.arrow} aria-hidden="true">
-                    →
-                  </span>
-                </SurfaceLink>
-              </li>
+              <NavDrawerEntry
+                key={`${item.href}-${item.label}`}
+                item={item}
+                index={index}
+                onClose={onClose}
+              />
             ))}
           </ul>
         </nav>
@@ -185,5 +171,60 @@ export default function NavDrawer({
         {footer ? <div className={styles.foot}>{footer}</div> : null}
       </div>
     </>
+  );
+}
+
+function NavDrawerEntry({
+  item,
+  index,
+  onClose,
+  depth = 0,
+}: {
+  item: NavDrawerItem;
+  index: number;
+  onClose: () => void;
+  depth?: number;
+}) {
+  return (
+    <li>
+      <SurfaceLink
+        href={item.href}
+        className={cn(styles.link, depth > 0 && styles.childLink)}
+        data-depth={depth}
+        onClick={() => {
+          item.onSelect?.();
+          onClose();
+        }}
+        style={{ '--d': `${0.1 + index * 0.05}s` } as CSSProperties}
+      >
+        {depth === 0 ? (
+          <span className={styles.num} aria-hidden="true">
+            {String(index + 1).padStart(2, '0')}
+          </span>
+        ) : (
+          <span className={styles.branch} aria-hidden="true">
+            {'\u2514'}
+          </span>
+        )}
+        <span className={styles.label}>{item.label}</span>
+        <span className={styles.arrow} aria-hidden="true">
+          →
+        </span>
+      </SurfaceLink>
+
+      {item.children?.length ? (
+        <ul className={styles.sublist}>
+          {item.children.map((child, childIndex) => (
+            <NavDrawerEntry
+              key={`${child.href}-${child.label}`}
+              item={child}
+              index={childIndex}
+              onClose={onClose}
+              depth={depth + 1}
+            />
+          ))}
+        </ul>
+      ) : null}
+    </li>
   );
 }

@@ -47,7 +47,7 @@ export default function AboutUsPage() {
       </section>
 
       {/* Our Story Section */}
-      <section className="py-16 md:py-24">
+      <section id="our-story" className="py-16 md:py-24">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-3xl">
             <div className="flex flex-col items-start gap-6 md:flex-row">
@@ -72,6 +72,7 @@ export default function AboutUsPage() {
 
       {/* Our Projects Section */}
       <section
+        id="collaborative-projects"
         className="bg-cover bg-center py-16 md:py-24"
         style={{ backgroundImage: 'url(/img/about/bubbles_navy.jpg)' }}
       >
@@ -188,6 +189,7 @@ export default function AboutUsPage() {
 
       {/* Our Team Section */}
       <section
+        id="meet-the-team"
         className="bg-cover bg-fixed bg-center py-16 md:py-24"
         style={{ backgroundImage: 'url(/img/about/parallax2.jpg)' }}
       >

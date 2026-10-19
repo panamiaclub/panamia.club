@@ -273,12 +273,59 @@ test.describe('Profile Pages', () => {
 });
 
 test.describe('Navigation Links', () => {
-  test('homepage has navigation menu', async ({ page }) => {
+  test('homepage menu matches the public site map', async ({ page }) => {
     await page.goto('/');
 
-    // Check that main navigation exists (adjust selectors as needed)
-    const nav = page.locator('nav, header').first();
-    await expect(nav).toBeVisible();
+    const trigger = page.getByRole('button', { name: 'Menu', exact: true });
+    const drawer = page.getByRole('dialog', { name: 'Menu', exact: true });
+
+    await expect(async () => {
+      if (!(await drawer.isVisible())) await trigger.click();
+      await expect(drawer).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 30_000 });
+
+    for (const label of [
+      'Our Story',
+      'Meet the Team',
+      'Why local',
+      'Pillars',
+      'Our Impact',
+      'Community connectors program',
+      'Stories of Impact',
+      'Download our Impact',
+      'Our Ecosystem',
+      'Collaborative Partners',
+      'Pana Certified',
+      'Sponsors+Funders',
+      'Support Pana',
+      'Giving Circle',
+      'Sponsorship',
+      'Programs',
+      'Pillar Breakdown by Program',
+      'Collective Tech',
+      'Directory',
+      'Pana Social',
+      'Community Building',
+      'Connectors Program',
+      'Collaborative Events (Service Offerings)',
+      'Culture Work',
+      'Pana Ink Press',
+      'Shop',
+    ]) {
+      await expect(
+        drawer.getByRole('link', { name: label, exact: true }).first()
+      ).toBeVisible();
+    }
+
+    for (const removedLabel of [
+      'Events',
+      'PanaVizión',
+      'Get Involved',
+    ]) {
+      await expect(
+        drawer.getByRole('link', { name: removedLabel, exact: true })
+      ).toHaveCount(0);
+    }
   });
 });
 

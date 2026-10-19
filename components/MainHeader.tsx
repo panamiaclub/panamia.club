@@ -19,45 +19,116 @@ import { MessagesLink } from './account/messages-link';
 import { IdentityProvider } from './account/identity-provider';
 import { AuthMenu } from './account/auth-menu';
 import { ActingAsBar } from './account/acting-as-bar';
-import { PANA_OFFERINGS } from '@/lib/panaverse/offerings';
 
 // https://www.a11ymatters.com/pattern/mobile-nav/
 
-// A primary navigation destination. `href` is the module root. Kept at module
-// scope so the array identity is stable across renders.
-type NavSection = {
-  key: string;
+type NavItemDefinition = {
   labelKey: string;
   href: string;
+  children?: NavItemDefinition[];
 };
 
-/**
- * The drawer is the six offerings, and nothing else.
- *
- * It used to be a route list — directory, events, articles, mentoring,
- * community, account, then Home, Updates, Timeline and the admin panel
- * appended on top. That is a sitemap, not a menu: it mixed the club's actual
- * offerings with two inbox views and a staff tool, ordered them by nothing in
- * particular, and changed length depending on who you were, so no two people
- * saw the same menu.
- *
- * These six are what Pana MIA offers. Each one now has a front page that
- * explains it, so every row in the drawer answers the same question — "what
- * is this?" — and answers it the same way. `PANA_OFFERINGS` is the order, and
- * it is the same order on every page for every visitor.
- *
- * What left: Updates and Timeline, which belong to a signed-in member and are
- * reachable from the identity menu, and the admin panel, which was a staff
- * link in a public menu. Home left too — the wordmark in the masthead has
- * always been the way home, and a menu whose first row duplicates the logo
- * above it is spending its best slot on the one destination nobody has
- * trouble finding.
- */
-const NAV_SECTIONS: NavSection[] = PANA_OFFERINGS.map((offering) => ({
-  key: offering.id,
-  labelKey: `${offering.id}.name`,
-  href: offering.href,
-}));
+const NAV_ITEMS: NavItemDefinition[] = [
+  { labelKey: 'nav.siteMenu.ourStory', href: '/about-us#our-story' },
+  { labelKey: 'nav.siteMenu.meetTheTeam', href: '/about-us#meet-the-team' },
+  { labelKey: 'nav.siteMenu.whyLocal', href: '/#why-local' },
+  { labelKey: 'nav.siteMenu.pillars', href: '/#pillars' },
+  {
+    labelKey: 'nav.siteMenu.ourImpact',
+    href: '/impact',
+    children: [
+      {
+        labelKey: 'nav.siteMenu.communityConnectorsProgram',
+        href: '/connectors',
+      },
+      {
+        labelKey: 'nav.siteMenu.storiesOfImpact',
+        href: '/impact#stories-of-impact',
+      },
+      {
+        labelKey: 'nav.siteMenu.downloadOurImpact',
+        href: '/impact',
+      },
+    ],
+  },
+  {
+    labelKey: 'nav.siteMenu.ourEcosystem',
+    href: '/impact#partners',
+    children: [
+      {
+        labelKey: 'nav.siteMenu.collaborativePartners',
+        href: '/impact#partners',
+      },
+      {
+        labelKey: 'nav.siteMenu.collaborativeProjects',
+        href: '/about-us#collaborative-projects',
+      },
+      {
+        labelKey: 'nav.siteMenu.panaCertified',
+        href: '/directory/search',
+      },
+      {
+        labelKey: 'nav.siteMenu.sponsorsFunders',
+        href: '/impact#partners',
+      },
+    ],
+  },
+  {
+    labelKey: 'nav.siteMenu.supportPana',
+    href: '/donate',
+    children: [
+      { labelKey: 'nav.siteMenu.givingCircle', href: '/donate' },
+      {
+        labelKey: 'nav.siteMenu.sponsorship',
+        href: '/form/contact-us',
+      },
+    ],
+  },
+  {
+    labelKey: 'nav.siteMenu.programs',
+    href: '/#pillars',
+    children: [
+      {
+        labelKey: 'nav.siteMenu.pillarBreakdownByProgram',
+        href: '/#pillars',
+      },
+      {
+        labelKey: 'nav.siteMenu.collectiveTech',
+        href: '/#pillar-tech',
+        children: [
+          { labelKey: 'nav.siteMenu.directory', href: '/directory' },
+          { labelKey: 'nav.siteMenu.panaSocial', href: '/social' },
+        ],
+      },
+      {
+        labelKey: 'nav.siteMenu.communityBuilding',
+        href: '/#pillar-community',
+        children: [
+          {
+            labelKey: 'nav.siteMenu.connectorsProgram',
+            href: '/connectors',
+          },
+          {
+            labelKey: 'nav.siteMenu.collaborativeEvents',
+            href: '/events',
+          },
+        ],
+      },
+      {
+        labelKey: 'nav.siteMenu.cultureWork',
+        href: '/#pillar-culture',
+        children: [
+          { labelKey: 'nav.siteMenu.panaInkPress', href: '/ink' },
+          {
+            labelKey: 'nav.siteMenu.collaborativeProjects',
+            href: '/about-us#collaborative-projects',
+          },
+        ],
+      },
+    ],
+  },
+  { labelKey: 'nav.siteMenu.shop', href: 'https://shop.panamia.club/' },
+];
 
 export default function MainHeader({
   isProductionSite,
@@ -65,7 +136,6 @@ export default function MainHeader({
   isProductionSite: boolean;
 }) {
   const { t, i18n } = useTranslation('common');
-  const { t: tOffering } = useTranslation('offerings');
   const isEs = i18n.language === 'es';
   const { data: session, status } = useSession();
   const pathname = usePathname();
@@ -74,17 +144,19 @@ export default function MainHeader({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
-  // The same six rows for everybody. Nothing here depends on the session, so
-  // the drawer no longer changes length when you sign in — which is the point
-  // of a menu that lists what the club *is* rather than what you can currently
-  // reach.
+  // The public site menu is identical for every visitor. Account destinations
+  // remain in the identity menu rather than changing this list after sign-in.
   const drawerItems = useMemo<NavDrawerItem[]>(
-    () =>
-      NAV_SECTIONS.map((section) => ({
-        href: section.href,
-        label: tOffering(section.labelKey),
-      })),
-    [tOffering]
+    () => {
+      const translateItem = (item: NavItemDefinition): NavDrawerItem => ({
+        href: item.href,
+        label: t(item.labelKey),
+        children: item.children?.map(translateItem),
+      });
+
+      return NAV_ITEMS.map(translateItem);
+    },
+    [t]
   );
 
   // Check if authenticated user has a profile
