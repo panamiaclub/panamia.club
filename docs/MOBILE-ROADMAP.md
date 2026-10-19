@@ -468,6 +468,36 @@ What would clear it decisively is native capability the browser cannot offer —
 push notifications first, then camera-backed uploads and share-sheet targets.
 Push is the highest-value next step for the product regardless of review.
 
+### Apple guideline 3.2.1(vi) — donations
+
+`/donate` collects money inside the app. Apple only permits that for an
+approved nonprofit; nonprofit registration alone does not satisfy Apple's
+approval process. Until approval is confirmed, the iOS app must not expose the
+donation flow inside the WebView. Fundraising must remain outside the app, such
+as in the system browser.
+
+After approval, the in-app flow must offer Apple Pay, explain how donated funds
+will be used, comply with applicable law, and provide donors with appropriate
+tax receipts. `app/api/create-checkout-session/route.ts` sets Stripe Checkout's
+`submit_type` to `donate`, and Stripe can surface Apple Pay through the existing
+`card` payment method when the device and Checkout session are eligible. Those
+technical details do not replace the approval, disclosure, or receipt
+requirements.
+
+The canonical production domain is moving to `panamia.club`. Complete that
+migration before device and store-review testing so the app, donation return
+URLs, deep links, and public disclosures consistently use the same domain.
+
+**Submission blocker:** the donation-enabled iOS app is not ready to submit
+until Apple nonprofit approval is documented and the product includes accurate
+fund-use disclosure and tax-receipt behavior. If those are not complete, keep
+donations disabled in-app.
+
+Apple references:
+
+- [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
+- [Apple Pay for Donations](https://developer.apple.com/apple-pay/nonprofits/)
+
 ### Both stores
 
 - Bundle ID / application ID is `social.pana.app`, defined once in
@@ -493,11 +523,16 @@ Push is the highest-value next step for the product regardless of review.
 3. **Generate signing keys**, upload a first internal-test build, then set
    `ANDROID_APP_CERT_FINGERPRINTS` and `APPLE_APP_TEAM_ID` and verify deep links
    end to end. This is also when a release workflow becomes worth writing.
-4. **Push notifications** — the strongest answer to guideline 4.2 and the
+4. **Complete Apple's nonprofit approval and donation compliance work.** Do not
+   enable `/donate` in the iOS app until approval is confirmed, fund use is
+   disclosed in-app, and tax-receipt behavior is implemented and verified.
+5. **Finish the `panamia.club` domain migration** before validating donation
+   return URLs, deep links, and store-review disclosures on devices.
+6. **Push notifications** — the strongest answer to guideline 4.2 and the
    clearest native win over the website. Needs `@capacitor/push-notifications`,
    APNs and FCM credentials, and device-token storage tied to the account.
    DMs now have a caller waiting for it: `handleNotify` in `worker/dm-stream.ts`
    returns a `delivered` count, and `delivered === 0` means the recipient holds
    no live socket — which is exactly the moment to push instead. See
    [CHAT-ROADMAP.md](./CHAT-ROADMAP.md#background-delivery-needs-push-and-that-is-true-everywhere).
-5. **Replace `mobile/assets/icon.png`** with a true ≥1024×1024 master.
+7. **Replace `mobile/assets/icon.png`** with a true ≥1024×1024 master.

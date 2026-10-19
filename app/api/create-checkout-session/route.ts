@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
+      submit_type: 'donate',
       line_items: [
         {
           price_data: {
