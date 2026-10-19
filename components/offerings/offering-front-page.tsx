@@ -16,7 +16,7 @@ import { SURFACE_MARK, type SurfaceMark } from '@/lib/panaverse/branding';
  *
  * Read straight out of `branding.ts` rather than copied, because that is the
  * file `SurfaceGuestHeader` and `SurfaceMemberHeader` read to dress
- * social.pana.social. A member who meets Pana Social here and then opens it
+ * social.panamia.club. A member who meets Pana Social here and then opens it
  * sees the same lettering in the same orange, and the front page cannot drift
  * away from the product's own masthead without the masthead moving too.
  *

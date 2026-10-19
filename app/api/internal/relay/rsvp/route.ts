@@ -8,9 +8,9 @@ import type { RsvpStatus } from '@/lib/schema';
 import { denyPublicRequest } from '@/lib/server/internal-auth';
 
 // Events two-way sync, phase 2 (inbound). Receives a NIP-52 RSVP (kind 31925)
-// forwarded from relay.pana.social and applies it to the authoritative
+// forwarded from relay.panamia.club and applies it to the authoritative
 // Postgres RSVP, so a member who changes their RSVP in a Nostr client sees it
-// on pana.social. Mirrors the abuse-report ingest at
+// on panamia.club. Mirrors the abuse-report ingest at
 // app/api/internal/relay/report — reached ONLY via Cloudflare Service Binding
 // from panamia-nosflare's forwardRsvpToPana() (env.PANAMIA.fetch), which
 // bypasses the public network, so no HTTP-level auth is enforced here.

@@ -3,7 +3,7 @@
 /**
  * /account/social — safety settings for Pana Social.
  *
- * Lives under /account rather than on social.pana.social because the Pana
+ * Lives under /account rather than on social.panamia.club because the Pana
  * account is shared across the panaverse: one login, one place to manage it.
  * The surfaces differ, the account does not.
  *

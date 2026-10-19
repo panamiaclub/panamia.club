@@ -79,7 +79,7 @@ export default function GlobalFooter() {
                 </a>
               </li>
               <li>
-                <a href="https://github.com/unitedcolorsofg/panamia-next">
+                <a href="https://github.com/panamiaclub/panamia.club">
                   <IconCode size={22} stroke={1.8} />
                   <span className="sr-only">{t('footer.sourceCode')}</span>
                 </a>

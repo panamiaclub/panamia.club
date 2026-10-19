@@ -17,8 +17,8 @@ import { MOCK_VIEWER } from '../../feed/_data/mock-feed';
  *
  *  This is the type the redesign is built on. Settings live on one account but
  *  are read by two surfaces, and the page never used to say which — so a member
- *  changing their screenname on pana.social had no way to know it moved their
- *  fediverse handle on social.pana.social too. */
+ *  changing their screenname on panamia.club had no way to know it moved their
+ *  fediverse handle on social.panamia.club too. */
 export type SettingScope = 'everywhere' | 'social' | 'www';
 
 export const SCOPE_LABEL: Record<SettingScope, string> = {
@@ -128,7 +128,7 @@ export const MOCK_ACCOUNT: MockAccount = {
      that never set a ZIP. Here it cannot be: this fixture has a ZIP, so the
      lookup that derives the county always has something to work with. */
   county: MOCK_VIEWER.county ?? 'Miami-Dade',
-  fediverseHandle: `@${MOCK_VIEWER.handle}@pana.social`,
+  fediverseHandle: `@${MOCK_VIEWER.handle}@panamia.club`,
   avatar: MOCK_VIEWER.avatar,
   screennameChangedAt: 'March 2024',
 };

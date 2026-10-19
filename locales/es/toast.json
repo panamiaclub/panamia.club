@@ -32,7 +32,7 @@
 
   "submissionFailed": "Envio Fallido",
   "submissionError": "Error de Envio",
-  "submissionErrorBecomePana": "Hubo un problema al enviar el formulario. Por favor contactanos en hola@pana.social",
+  "submissionErrorBecomePana": "Hubo un problema al enviar el formulario. Por favor contactanos en hola@panamia.club",
   "submissionErrorContact": "Hubo un problema al enviar tu mensaje. Por favor intenta de nuevo.",
   "submissionErrorGeneral": "Hubo un problema al enviar el formulario. Por favor recarga la pagina e intenta de nuevo.",
   "submissionErrorFormGeneric": "Hubo un problema al enviar el formulario: {{error}}",

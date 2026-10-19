@@ -432,10 +432,10 @@ function ListYourBusinessForm() {
                   <p className="italic">
                     {t('introContact')}{' '}
                     <Link
-                      href="mailto:hola@pana.social"
+                      href="mailto:hola@panamia.club"
                       className="text-pana-indigo dark:text-pana-flame font-semibold underline"
                     >
-                      hola@pana.social
+                      hola@panamia.club
                     </Link>
                   </p>
                 </div>

@@ -135,7 +135,7 @@ function Section({ id, children }: { id: SectionId; children: ReactNode }) {
  * with that, and the shape below is an argument about each.
  *
  * 1. IT NEVER SAID WHERE A SETTING APPLIED. This is the one page a member
- *    reaches from both pana.social and social.pana.social, and the surface
+ *    reaches from both panamia.club and social.panamia.club, and the surface
  *    switcher already promises "Account settings — applies everywhere". So the
  *    page is organised around scope, and every group states its own.
  *

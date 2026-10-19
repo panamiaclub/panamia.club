@@ -11,7 +11,7 @@ export { signEvent };
 export type { NostrEvent };
 export type Partial = UnsignedEvent;
 
-export const RELAY_URL = process.env.RELAY_URL ?? 'wss://relay.pana.social';
+export const RELAY_URL = process.env.RELAY_URL ?? 'wss://relay.panamia.club';
 
 export function randomSecretKey(): string {
   return bytesToHex(schnorr.utils.randomSecretKey());

@@ -4,7 +4,7 @@
  *
  * Pana Social has more than one masthead, and that is the whole bug. The
  * notifications bell was added to `MainHeader`, which flies over the main
- * site — but a member on social.pana.social is under
+ * site — but a member on social.panamia.club is under
  * `SurfaceMemberHeader`, the masthead a surface wears over its own rooms.
  * The bell was never added there, so on the feed, the page members use most,
  * there was no bell at all. And because chat shipped with its only entry

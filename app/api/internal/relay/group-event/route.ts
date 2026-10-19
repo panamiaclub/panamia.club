@@ -11,7 +11,7 @@ import { matureAndSettle } from '@/lib/relay/group-lifecycle';
 import { denyPublicRequest } from '@/lib/server/internal-auth';
 
 // NIP-29 advisory endpoint. Receives kind 9021 (join request) and kind 9022
-// (leave request) events forwarded from relay.pana.social and applies the
+// (leave request) events forwarded from relay.panamia.club and applies the
 // panamia roster policy.
 //
 // Reached only via Cloudflare Service Binding from panamia-nosflare

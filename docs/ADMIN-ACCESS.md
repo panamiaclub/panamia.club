@@ -1,6 +1,6 @@
 # Admin access
 
-Who can reach the admin surface at `admin.pana.social`, who can grant that
+Who can reach the admin surface at `admin.panamia.club`, who can grant that
 access to somebody else, and why the second one is deliberately awkward.
 
 ## The tiers
@@ -215,7 +215,7 @@ A token that can rewrite `ADMIN_EMAILS` can rewrite every other secret in the
 same Worker — `BETTER_AUTH_SECRET`, `POSTGRES_URL`, the payment keys.
 Cloudflare's scoping does not go finer than "edit this Worker", which is
 equivalent to deploying arbitrary code. Holding that token on the site would
-turn any XSS or auth bug on pana.social into full infrastructure takeover.
+turn any XSS or auth bug on panamia.club into full infrastructure takeover.
 
 It is also self-defeating. The env tier is a usable recovery path _because_ a
 web session cannot reach it. Give the website that reach and there are no

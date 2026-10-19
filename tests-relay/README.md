@@ -1,6 +1,6 @@
 # Relay Protocol Tests
 
-Protocol-level tests for the panamia-nosflare relay (`wss://relay.pana.social`).
+Protocol-level tests for the panamia-nosflare relay (`wss://relay.panamia.club`).
 Kept separate from the Playwright suite (`tests/`) — these speak raw Nostr
 WebSocket frames, no browser involved.
 

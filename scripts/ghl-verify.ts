@@ -94,7 +94,7 @@ const PIPELINE_ID = arg('pipeline-id');
 // Test contacts are addressed here. Defaults to a subdomain that does not
 // accept mail, so if a "Contact Created" workflow fires, the send bounces
 // somewhere harmless instead of at a real inbox on the live domain.
-const TEST_EMAIL_DOMAIN = arg('email-domain') ?? 'invalid.test.pana.social';
+const TEST_EMAIL_DOMAIN = arg('email-domain') ?? 'invalid.test.panamia.club';
 
 const AUTO_YES = args.has('--yes');
 const READ_ONLY = args.has('--read-only');
@@ -452,7 +452,7 @@ async function main(): Promise<void> {
     name: `GChriss Test Contact ${runId}`,
     email: testEmail,
     locationId: LOCATION_ID,
-    source: 'pana.social testing',
+    source: 'panamia.club testing',
     tags: ['unverified', 'source:contact-us', 'inquiry:general'],
   };
 

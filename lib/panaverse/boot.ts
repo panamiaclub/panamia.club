@@ -22,13 +22,9 @@ import { getRootDomain } from './surfaces';
  * would take down *.workers.dev previews for a variable that only matters once
  * real identities are being minted.
  *
- * Tests two domains even though they are the same domain today. The surface
- * root and the fediverse identity domain are both pana.social, so the second
- * `isUnder` is currently redundant — keep it anyway. They were different until
- * the surface root was corrected, and the identity domain is the one host
- * where an unset variable would infer a wrong value while minting is most
- * likely. If the UI ever moves off pana.social they diverge again, and this is
- * the only test that still covers the host handles live on.
+ * Tests both the public web root and the permanent federation identity domain.
+ * They intentionally diverge after the panamia.club web cutover, and either
+ * hostname can reach code that mints or serves federated identities.
  *
  * Matched against the hardcoded DEFAULT_FEDERATION_DOMAIN rather than
  * `getConfiguredFederationDomain()` on purpose: the configured value is null in
@@ -108,7 +104,7 @@ export function assertPanaverseConfigured(host: string | null | undefined) {
         '',
         'Set FEDERATION_DOMAIN explicitly — the `vars` block in wrangler.jsonc',
         'for Worker deploys, or the process environment otherwise. It ships',
-        'pinned to "pana.social"; if you are reading this, that entry was',
+        'pinned to "panamia.club"; if you are reading this, that entry was',
         'removed or is not reaching the runtime.',
         '',
         'See lib/federation/domain.ts and lib/panaverse/boot.ts.',

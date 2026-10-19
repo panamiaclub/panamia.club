@@ -3,7 +3,7 @@
  *
  * Android only opens a link in an app when the site that owns the domain says
  * it may. This is that statement: it names the app and the signing keys, and
- * Android fetches it over https before honouring any pana.social link.
+ * Android fetches it over https before honouring any panamia.club link.
  *
  * Without it, App Links still install — and silently do nothing. Every link
  * opens in the browser, which is indistinguishable from never having set them

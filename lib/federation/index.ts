@@ -1,7 +1,7 @@
 /**
  * Social Module
  *
- * This module provides social features for pana.social,
+ * This module provides social features for panamia.club,
  * using ActivityPub for federation with Mastodon, Pixelfed, etc.
  *
  * IMPORTANT: The external/activities.next/ directory is READ-ONLY.

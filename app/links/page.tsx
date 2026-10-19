@@ -91,7 +91,7 @@ export default function LinksPage() {
             className="h-12 w-12 rounded-full"
             asChild
           >
-            <Link href="mailto:info@pana.social" aria-label={t('ariaEmail')}>
+            <Link href="mailto:info@panamia.club" aria-label={t('ariaEmail')}>
               <Mail className="h-5 w-5" aria-hidden="true" />
             </Link>
           </Button>

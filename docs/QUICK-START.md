@@ -41,7 +41,7 @@ These are required for specific features:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/unitedcolorsofg/panamia-next.git
+git clone https://github.com/panamiaclub/panamia.club.git
 cd panamia-next
 ```
 
@@ -459,6 +459,6 @@ panamia-next/
 
 ## Getting Help
 
-- **Environment Variables**: [Contact us](https://pana.social/form/contact-us/) for a developer ENV file
+- **Environment Variables**: [Contact us](https://panamia.club/form/contact-us/) for a developer ENV file
 - **Documentation**: See the [docs/](.) folder
-- **Issues**: [GitHub Issues](https://github.com/unitedcolorsofg/panamia-next/issues)
+- **Issues**: [GitHub Issues](https://github.com/panamiaclub/panamia.club/issues)

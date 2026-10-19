@@ -48,7 +48,7 @@ jobs:
     timeout-minutes: 15
     # Scheduled workflows run on forks too, where the secrets are absent and
     # every run would fail noisily.
-    if: github.repository == 'unitedcolorsofg/panamia-next'
+    if: github.repository == 'panamiaclub/panamia.club'
 
     env:
       # drizzle.config.ts prefers POSTGRES_DIRECT_URL and falls back to

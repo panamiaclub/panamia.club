@@ -146,7 +146,7 @@ export function CreateGroupForm() {
 
       <Field
         label="Handle"
-        hint={`Its address: pana.social/g/${effectiveHandle || 'your-group'}. Letters, numbers, dashes. ${MIN_HANDLE}–${MAX_HANDLE} characters.`}
+        hint={`Its address: panamia.club/g/${effectiveHandle || 'your-group'}. Letters, numbers, dashes. ${MIN_HANDLE}–${MAX_HANDLE} characters.`}
         error={handleTooShort ? `At least ${MIN_HANDLE} characters.` : null}
       >
         <input

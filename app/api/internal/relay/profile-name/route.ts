@@ -18,7 +18,7 @@ import { denyPublicRequest } from '@/lib/server/internal-auth';
 //   200 { managed: false } — pubkey is not associated with a panamia
 //        profile (e.g. external participant); relay should not enforce.
 //   400 — malformed pubkey.
-const NIP05_DOMAIN = 'pana.social';
+const NIP05_DOMAIN = 'panamia.club';
 
 export async function GET(request: NextRequest) {
   // Refuse anything arriving from the public edge — see

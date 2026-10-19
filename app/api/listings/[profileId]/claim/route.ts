@@ -76,7 +76,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(
         {
           error:
-            'This listing already has an owner. If that should be you, contact us at hola@pana.social.',
+            'This listing already has an owner. If that should be you, contact us at hola@panamia.club.',
         },
         { status: 409 }
       );

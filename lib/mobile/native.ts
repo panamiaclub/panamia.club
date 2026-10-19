@@ -15,7 +15,7 @@
  * behind `isNativeApp()`; see components/mobile/NativeShell.tsx.
  *
  * This is also why the check is not "is the user agent a phone". A member
- * browsing pana.social in mobile Safari is on a phone and is not in the app:
+ * browsing panamia.club in mobile Safari is on a phone and is not in the app:
  * they have browser chrome, a URL bar, and a back gesture the app has to
  * provide for itself. Sniffing the user agent would give both of them the same
  * treatment and get one of them wrong.

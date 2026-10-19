@@ -30,7 +30,7 @@ import {
  * Your Account Settings", and a second card headed "Advanced Settings" holding
  * an accordion with four unrelated things in it — change your email, your
  * marketing consent, your signing keys, and your publishing licence. It is the
- * one surface a member reaches from both pana.social and social.pana.social,
+ * one surface a member reaches from both panamia.club and social.panamia.club,
  * and it is the only one that carries no Pana Mia design at all.
  *
  * Three things are wrong with it, and this mock is an argument about each:

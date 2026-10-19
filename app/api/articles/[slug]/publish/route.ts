@@ -63,7 +63,7 @@ function normalizeImageUrl(
 // acceptance: entries in NOSTR_ARTICLE_CROSSPOST_LIST are additional mirrors,
 // so their OK/failure must not change whether we record the event as live here.
 const NOSTR_HOME_RELAY =
-  process.env.NOSTR_HOME_RELAY ?? 'wss://relay.pana.social';
+  process.env.NOSTR_HOME_RELAY ?? 'wss://relay.panamia.club';
 
 function isHomeRelay(url: string): boolean {
   try {

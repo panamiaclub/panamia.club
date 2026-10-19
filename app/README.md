@@ -48,7 +48,7 @@ Authenticated user pages for managing their own content:
 
 ### Admin Pages (`/admin/*`)
 
-Site administration (requires admin role). Served under `admin.pana.social`,
+Site administration (requires admin role). Served under `admin.panamia.club`,
 which redirects `/` to `/admin`. Every page shares the sidebar defined in
 `app/admin/layout.tsx`; the tool list itself lives in `lib/admin/views.ts`.
 

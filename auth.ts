@@ -97,7 +97,7 @@ function html(params: { url: string; host: string; email: string }) {
                 If you did not request this, you can safely ignore this email. The link will expire on its own and your account will not be affected.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.5;">
-                Pana MIA &middot; <a href="https://pana.social" style="color: #9ca3af; text-decoration: underline;">pana.social</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
+                Pana MIA &middot; <a href="https://panamia.club" style="color: #9ca3af; text-decoration: underline;">panamia.club</a> &middot; <a href="mailto:hola@panamia.club" style="color: #9ca3af; text-decoration: underline;">hola@panamia.club</a>
               </p>
             </td>
           </tr>
@@ -132,7 +132,7 @@ function text(params: { url: string; host: string }) {
     '',
     '---',
     "Pana MIA \u00b7 South Florida's Creative Community",
-    'pana.social \u00b7 hola@pana.social',
+    'panamia.club \u00b7 hola@panamia.club',
   ].join('\n');
 }
 
@@ -215,10 +215,10 @@ export function emailMigrationVerificationHtml(params: {
           <tr>
             <td style="padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;">
               <p style="margin: 0 0 8px 0; color: #9ca3af; font-size: 13px; line-height: 1.6;">
-                If you did not request this email change, please ignore this message. Your account will not be affected. If you believe someone else is attempting to access your account, contact us at <a href="mailto:hola@pana.social" style="color: #9ca3af;">hola@pana.social</a>.
+                If you did not request this email change, please ignore this message. Your account will not be affected. If you believe someone else is attempting to access your account, contact us at <a href="mailto:hola@panamia.club" style="color: #9ca3af;">hola@panamia.club</a>.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.5;">
-                Pana MIA &middot; <a href="https://pana.social" style="color: #9ca3af; text-decoration: underline;">pana.social</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
+                Pana MIA &middot; <a href="https://panamia.club" style="color: #9ca3af; text-decoration: underline;">panamia.club</a> &middot; <a href="mailto:hola@panamia.club" style="color: #9ca3af; text-decoration: underline;">hola@panamia.club</a>
               </p>
             </td>
           </tr>
@@ -256,11 +256,11 @@ export function emailMigrationVerificationText(params: {
     `  - A notification will be sent to your current address (${oldEmail})`,
     '',
     'If you did not request this change, ignore this email. Your account will not be affected.',
-    'If you believe someone else is attempting to access your account, contact us at hola@pana.social.',
+    'If you believe someone else is attempting to access your account, contact us at hola@panamia.club.',
     '',
     '---',
     "Pana MIA \u00b7 South Florida's Creative Community",
-    'pana.social \u00b7 hola@pana.social',
+    'panamia.club \u00b7 hola@panamia.club',
   ].join('\n');
 }
 
@@ -318,7 +318,7 @@ export function emailMigrationConfirmationHtml(params: {
               <div style="margin: 0 0 20px 0; padding: 20px; background-color: #fef2f2; border-left: 4px solid #dc2626; border-radius: 4px;">
                 <p style="margin: 0 0 8px 0; color: #991b1b; font-size: 14px; font-weight: 600;">Did not authorize this change?</p>
                 <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.6;">
-                  Contact us immediately at <a href="mailto:hola@pana.social" style="color: #dc2626; text-decoration: underline;">hola@pana.social</a>. Please include the date and time shown above so we can investigate promptly.
+                  Contact us immediately at <a href="mailto:hola@panamia.club" style="color: #dc2626; text-decoration: underline;">hola@panamia.club</a>. Please include the date and time shown above so we can investigate promptly.
                 </p>
               </div>
             </td>
@@ -330,7 +330,7 @@ export function emailMigrationConfirmationHtml(params: {
                 This automated security notification was sent to ${escapedOldEmail} because it was the address on your account at the time of the change.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.5;">
-                Pana MIA &middot; <a href="https://pana.social" style="color: #9ca3af; text-decoration: underline;">pana.social</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
+                Pana MIA &middot; <a href="https://panamia.club" style="color: #9ca3af; text-decoration: underline;">panamia.club</a> &middot; <a href="mailto:hola@panamia.club" style="color: #9ca3af; text-decoration: underline;">hola@panamia.club</a>
               </p>
             </td>
           </tr>
@@ -361,11 +361,11 @@ export function emailMigrationConfirmationText(params: {
     'If you authorized this change, no further action is needed. You have been signed out of all active sessions. Sign in using your new email address to continue using Pana MIA.',
     '',
     'Did not authorize this change?',
-    'Contact us immediately at hola@pana.social. Please include the date and time shown above so we can investigate promptly.',
+    'Contact us immediately at hola@panamia.club. Please include the date and time shown above so we can investigate promptly.',
     '',
     '---',
     "Pana MIA \u00b7 South Florida's Creative Community",
-    'pana.social \u00b7 hola@pana.social',
+    'panamia.club \u00b7 hola@panamia.club',
   ].join('\n');
 }
 
@@ -448,7 +448,7 @@ export function oauthVerificationHtml(params: {
                 If you did not attempt to sign in using ${providerName}, you can safely ignore this email. The link will expire on its own.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.5;">
-                Pana MIA &middot; <a href="https://pana.social" style="color: #9ca3af; text-decoration: underline;">pana.social</a> &middot; <a href="mailto:hola@pana.social" style="color: #9ca3af; text-decoration: underline;">hola@pana.social</a>
+                Pana MIA &middot; <a href="https://panamia.club" style="color: #9ca3af; text-decoration: underline;">panamia.club</a> &middot; <a href="mailto:hola@panamia.club" style="color: #9ca3af; text-decoration: underline;">hola@panamia.club</a>
               </p>
             </td>
           </tr>
@@ -485,7 +485,7 @@ export function oauthVerificationText(params: {
     '',
     '---',
     "Pana MIA \u00b7 South Florida's Creative Community",
-    'pana.social \u00b7 hola@pana.social',
+    'panamia.club \u00b7 hola@panamia.club',
   ].join('\n');
 }
 
@@ -1056,7 +1056,7 @@ function getBetterAuth(): BetterAuthInstance {
       // origin has to be trusted or its sign-in requests get rejected.
       ...SURFACES.map((surface) => originFor(surface)),
       // Those name the configured root domain, so away from production they all
-      // point at pana.social and no local surface is trusted. Deriving them from
+      // point at panamia.club and no local surface is trusted. Deriving them from
       // the host actually being served covers dev, where a callback to
       // http://social.localhost:3003 is otherwise rejected with a bare 403.
       // In production this resolves to the same origins as above.

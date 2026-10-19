@@ -55,13 +55,13 @@ that decides most of what follows was stated by the product owner:
 Today there is **no chat UI anywhere in this repo.** The closest thing that ships is
 `/r/groups`, which hands panas a deeplink to a third-party Nostr client —
 `components/relay/ImportInstructions.tsx:7` hardcodes
-`https://web.nostrord.com/?relay=relay.pana.social&group=panamia-test`. Nostrord, Amethyst, and
+`https://web.nostrord.com/?relay=relay.panamia.club&group=panamia-test`. Nostrord, Amethyst, and
 0xchat are where the talking currently happens, which is precisely the outcome the constraint rules
 out.
 
 ### Goals
 
-- Real-time messaging inside pana.social — no app install, no client handoff
+- Real-time messaging inside panamia.club — no app install, no client handoff
 - Messages are in Postgres, so they can be moderated, searched, and swept on account deletion
 - Identity is established server-side and cannot be forged by the client
 - Runs on the Cloudflare Workers free plan
@@ -474,9 +474,9 @@ turned out to be narrower and better than the one first given: **there is alread
 this repo, and the socket already runs inside it unmodified.**
 
 [`capacitor.config.ts`](../capacitor.config.ts) points a WKWebView / Android WebView at
-`https://pana.social` — the same Worker this document describes. Its own words: _"cookies, auth and
+`https://panamia.club` — the same Worker this document describes. Its own words: _"cookies, auth and
 routing all behave exactly as they do in a browser on that origin."_ So `use-dm-socket.ts` builds
-`wss://pana.social/ws/dm` from `location`, the WebView sends the session cookie on a same-origin
+`wss://panamia.club/ws/dm` from `location`, the WebView sends the session cookie on a same-origin
 upgrade, and `worker/index.ts` resolves it exactly as it does for a desktop tab. There is no second
 client, no second auth path, and no native socket to write. One implementation, three platforms —
 which is the whole premise of [MOBILE-ROADMAP.md](./MOBILE-ROADMAP.md).

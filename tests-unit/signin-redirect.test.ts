@@ -26,13 +26,13 @@ import { signInPath } from '@/lib/signin-redirect';
 
 /** What a browser would hand back to the sign-in page for a given path. */
 function parseCallback(path: string): string | null {
-  return new URL(path, 'https://pana.social').searchParams.get('callbackUrl');
+  return new URL(path, 'https://panamia.club').searchParams.get('callbackUrl');
 }
 
 describe('signInPath', () => {
   test('always points at the branded sign-in page', () => {
     assert.equal(
-      new URL(signInPath('/m/profile'), 'https://pana.social').pathname,
+      new URL(signInPath('/m/profile'), 'https://panamia.club').pathname,
       '/signin'
     );
   });
@@ -47,7 +47,7 @@ describe('signInPath', () => {
     const path = signInPath('/m/schedule/book?mentor=jose');
     assert.equal(parseCallback(path), '/m/schedule/book?mentor=jose');
     assert.equal(
-      new URL(path, 'https://pana.social').searchParams.get('mentor'),
+      new URL(path, 'https://panamia.club').searchParams.get('mentor'),
       null,
       'mentor leaked out of callbackUrl and became a sibling parameter'
     );

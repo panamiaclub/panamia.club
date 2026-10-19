@@ -13,7 +13,7 @@ import type { NostrEvent } from '@/lib/nostr/sign';
 // server-verified proof of control — the same proof model as /api/relay/enroll
 // (see lib/nostr/byo-proof.ts); the nsec is never transmitted.
 //
-// This is the one continuity lever we control: the @pana.social NIP-05 handle
+// This is the one continuity lever we control: the @panamia.club NIP-05 handle
 // (served dynamically from profiles.nostr_pubkey) and the user's relay group
 // access move to the new key. What CANNOT move — by protocol, not policy —
 // stays with the old key: existing followers, authorship of past events, and

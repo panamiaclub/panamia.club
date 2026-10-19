@@ -77,7 +77,7 @@ export function wearsOwnChrome(pathname: string | null | undefined): boolean {
  *
  * Every route stays reachable from every hostname — that is a deliberate
  * property of the registry, not an oversight, because one deploy serves the
- * whole panaverse. The consequence is that social.pana.social/directory/search
+ * whole panaverse. The consequence is that social.panamia.club/directory/search
  * renders the main site's directory, and until now it rendered it with no
  * header, no footer and no link home: the root layout withheld main-site chrome
  * on surface hostnames, and Pana Social had none of its own to put there. A
@@ -99,7 +99,7 @@ export function wearsOwnChrome(pathname: string | null | undefined): boolean {
  * not look like it. `surfaceForPath('/')` answers with the default surface —
  * correctly, since `/` matches no surface prefix — so on a surface hostname the
  * front door would be read as a page borrowed from the main site and framed
- * with the guest bar. On social.pana.social the root *is* the feed (see
+ * with the guest bar. On social.panamia.club the root *is* the feed (see
  * app/page.tsx), and the page a surface serves at its own root is the one page
  * it most certainly owns.
  *
@@ -129,7 +129,7 @@ export function wearsGuestChrome(
  * over a timeline is what made Pana Social read as a section of the main site
  * rather than a place of its own. `wearsGuestChrome` then covers pages a
  * surface has borrowed. Between them sat the surface's *own* front door:
- * social.pana.social/s matched neither, so the timeline rendered with no
+ * social.panamia.club/s matched neither, so the timeline rendered with no
  * header, no footer, no nav and no route back to Pana Mia. A signed-in member
  * on the surface built for them got the barest page on the site.
  *
@@ -178,7 +178,7 @@ function intendedPath(search: string | null | undefined): string | null {
  * The three chrome predicates below all key off the surface the *hostname*
  * names, which is right once every surface has an origin and wrong until then.
  * While PANAVERSE_SUBDOMAINS is off — the configuration we actually ship —
- * pana.social/s resolves to the default surface, so `wearsGuestChrome` and
+ * panamia.club/s resolves to the default surface, so `wearsGuestChrome` and
  * `wearsSurfaceChrome` both return false on their first line and the feed falls
  * through to `wearsMainChrome`. Pana Social renders wearing the Pana Mia
  * masthead, its newsletter bar and its footer: the exact "a section of the main
@@ -213,10 +213,10 @@ export function resolveChromeSurface(
  *
  * Three rules, narrowing:
  *
- *   - The host decides whenever it names a surface. social.pana.social owns its
+ *   - The host decides whenever it names a surface. social.panamia.club owns its
  *     origin outright, so every page on it installs as Pana Social.
  *   - Otherwise the path decides. While PANAVERSE_SUBDOMAINS is off — the
- *     configuration we actually ship — Pana Social lives at pana.social/s,
+ *     configuration we actually ship — Pana Social lives at panamia.club/s,
  *     where the host resolves to the default surface, so keying the install off
  *     the host alone hands a member installing from the feed a tile labelled
  *     Pana Mia that opens the directory.

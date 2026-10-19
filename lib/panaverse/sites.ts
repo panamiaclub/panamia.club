@@ -35,7 +35,7 @@ import {
  * because crossing surfaces really does mean crossing origins now that each
  * has a hostname of its own. Before PANAVERSE_SUBDOMAINS was turned on these
  * were relative unconditionally, which was right then and became a trap the
- * moment the flag flipped: a member on social.pana.social following `/d` got
+ * moment the flag flipped: a member on social.panamia.club following `/d` got
  * the directory without ever leaving the social hostname.
  */
 export interface PanaSite {
@@ -170,7 +170,7 @@ export const PANA_SITES: readonly PanaSite[] = [
  * A site the current surface already owns is left relative, so it still
  * navigates on the client and does not reload the document for a move within
  * the same room. Everything else becomes an absolute URL on its owning
- * surface's origin — which is also what gives a member on social.pana.social a
+ * surface's origin — which is also what gives a member on social.panamia.club a
  * route back to the main site, the thing that went missing when the masthead
  * drawer was removed and PANAVERSE_SUBDOMAINS was turned on.
  *
@@ -185,7 +185,7 @@ export function resolvePanaSites(
    * this rather than against surface ids is what keeps the fallback honest:
    * while PANAVERSE_SUBDOMAINS is off every surface shares one origin, so an
    * id comparison would have called `/d` "cross-surface" from
-   * social.pana.social and handed back an absolute URL pointing at the host it
+   * social.panamia.club and handed back an absolute URL pointing at the host it
    * was already on — turning a client navigation into a full document load for
    * no crossing at all. Same origin, same relative path, whatever the flag
    * says. */
@@ -203,7 +203,7 @@ export function resolvePanaSites(
     const sameOrigin = origin === currentOrigin;
 
     /* A surface's front door is "/" on its own origin, so the tile should name
-     * that rather than the prefix: https://social.pana.social/ and, from the
+     * that rather than the prefix: https://social.panamia.club/ and, from the
      * social host itself, a plain "/". Both serve the feed; only one of them is
      * the URL a member would repeat out loud.
      *
@@ -213,11 +213,11 @@ export function resolvePanaSites(
      * the front door is "/" by construction — and load-bearing the moment one
      * does not. Events is path-only (`subdomain: null`), so crossing to it
      * lands on the shared root domain, whose "/" is the main site's homepage.
-     * Assuming "/" there sent every reader on admin.pana.social and
-     * social.pana.social to pana.social instead of to the calendar.
+     * Assuming "/" there sent every reader on admin.panamia.club and
+     * social.panamia.club to panamia.club instead of to the calendar.
      *
      * Asking `frontDoorPath` about the destination host answers both cases
-     * with one rule: social.pana.social resolves to social, so "/"; pana.social
+     * with one rule: social.panamia.club resolves to social, so "/"; panamia.club
      * resolves to the main site, so Events keeps its "/e". Only paths that
      * *are* the surface's root are touched; /d is a room, not a front door. */
     const path =

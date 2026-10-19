@@ -114,7 +114,7 @@ Setting aside the Nostr enrollment requirement, relay groups fail four of the si
 - **There is no group content surface in this repo.** `components/relay/groups/GroupDetail.tsx`
   renders a name, an about line, a member count, a member roster, and an invite box — and nothing
   else. `components/relay/ImportInstructions.tsx:7` hardcodes a deeplink to
-  `https://web.nostrord.com/?relay=relay.pana.social&group=panamia-test`.
+  `https://web.nostrord.com/?relay=relay.panamia.club&group=panamia-test`.
 
 That last point is the whole argument. Relay groups send panas to Nostrord, Amethyst, or 0xchat to
 do the actual talking, which is precisely the outcome the product owner ruled out. The key-custody
@@ -983,7 +983,7 @@ somebody silently suppressing _that person's_ notifications. The new filter is t
   that one day passes a `groupId` inherits the announcement rather than forgetting it.
 - **Only `active` members.** Pending is someone still at the door, banned is a tombstone. Same
   predicate the members list uses.
-- **Unlisted events still announce.** Unlisted governs whether an event leaves pana.social, not
+- **Unlisted events still announce.** Unlisted governs whether an event leaves panamia.club, not
   whether its own group may hear about it.
 - **Awaited, not fire-and-forget**, for the reason phase 10 gives. Both functions swallow their own
   errors, so a failed notification cannot turn a successful post into a 500.

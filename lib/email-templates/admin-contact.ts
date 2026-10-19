@@ -92,7 +92,7 @@ export function adminContact(params: Record<string, unknown>) {
       `Queue: ${queueUrl}`,
       '',
       '---',
-      'Pana MIA · pana.social',
+      'Pana MIA · panamia.club',
     ].join('\n'),
   };
 }

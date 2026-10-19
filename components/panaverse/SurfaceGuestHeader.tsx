@@ -13,7 +13,7 @@ import { SURFACE_MARK, SURFACE_TONE } from '@/lib/panaverse/branding';
  * The bar a surface wears over a page it is borrowing from another surface.
  *
  * One deploy serves the whole panaverse, so every route answers on every
- * hostname: social.pana.social/directory/search really does render the main
+ * hostname: social.panamia.club/directory/search really does render the main
  * site's directory. That is a feature — a member who wants the directory
  * should not be bounced to a different hostname to read it — but until this
  * existed those pages rendered with no header, no footer and no way back to
@@ -64,7 +64,7 @@ export function SurfaceGuestHeader({
    * surface reaches that state three ways and only one of them is a flag. A
    * path-only surface is not among them: Events has `subdomain: null`, so its
    * origin is the root domain and this link correctly leaves for
-   * `pana.social/e` from admin, social, or anywhere else it is borrowed.
+   * `panamia.club/e` from admin, social, or anywhere else it is borrowed.
    */
   const ownerHasOwnSite = ownerOrigin !== originForFrom(surface, host);
 

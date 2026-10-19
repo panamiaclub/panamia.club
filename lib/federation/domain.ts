@@ -10,7 +10,7 @@
  * actors were minted under, so an unconfigured environment can never silently
  * re-brand existing identities.
  */
-export const DEFAULT_FEDERATION_DOMAIN = 'pana.social';
+export const DEFAULT_FEDERATION_DOMAIN = 'panamia.club';
 
 /**
  * The domain in `@user@domain` handles, and the origin of every actor, status,
@@ -61,7 +61,7 @@ export function getConfiguredFederationDomain(): string | null {
  * Today `NEXT_PUBLIC_HOST_URL` is unset in the Worker config, so an
  * environment that lost `FEDERATION_DOMAIN` would still land on
  * DEFAULT_FEDERATION_DOMAIN and mint correct URIs. Setting it to the panaverse
- * surface root is also safe now — but only because that root is pana.social,
+ * surface root is also safe now — but only because that root is panamia.club,
  * the identity domain itself. It re-arms the moment the UI moves to a hostname
  * that is not the identity domain: from then on an unset `FEDERATION_DOMAIN`
  * silently mints every actor under the UI's hostname, and those URIs are

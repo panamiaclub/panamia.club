@@ -16,7 +16,7 @@ export interface PublishResult {
   reason: string;
 }
 
-const DEFAULT_RELAY_URL = 'wss://relay.pana.social';
+const DEFAULT_RELAY_URL = 'wss://relay.panamia.club';
 const DEFAULT_TIMEOUT_MS = 10_000;
 
 export async function publishWithAuth(

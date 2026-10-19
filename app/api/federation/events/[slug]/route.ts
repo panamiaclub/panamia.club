@@ -43,7 +43,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     // event, which remote servers store permanently. It must track the
     // federation domain and must NOT follow the web surface at cutover.
     // See docs/DOMAINS.md.
-    const baseUrl = 'https://pana.social';
+    const baseUrl = 'https://panamia.club';
     const hostScreenname = event.host?.user?.screenname;
 
     const as2Event = {

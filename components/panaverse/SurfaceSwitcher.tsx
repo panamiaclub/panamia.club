@@ -38,7 +38,7 @@ export interface SurfaceLink {
  * The panaverse switcher.
  *
  * The problem it solves is not navigation — a link would do that. It is that
- * pana.social and social.pana.social are different origins, so without
+ * panamia.club and social.panamia.club are different origins, so without
  * something saying otherwise, arriving at the second one reads as having been
  * handed off to a different company's product.
  *

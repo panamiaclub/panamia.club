@@ -86,7 +86,7 @@ export interface MockRoom {
 
 export const SHARED_ROOMS: MockRoom[] = [
   /* Events used to lead this list. It was promoted to a real surface —
-     registered in lib/panaverse/surfaces.ts, served at `pana.social/e` with
+     registered in lib/panaverse/surfaces.ts, served at `panamia.club/e` with
      `subdomain: null` — so it was removed from here rather than left in both
      places, which would have printed it twice in the switcher. The live
      `SHARED_ROOMS` in lib/panaverse/branding.ts dropped it for the same
@@ -100,14 +100,14 @@ export const SHARED_ROOMS: MockRoom[] = [
        surface. */
     blurb: 'Book time with a Pana',
     tone: 'blue',
-    couldBecome: 'mentoring.pana.social',
+    couldBecome: 'mentoring.panamia.club',
   },
   {
     name: 'Resilience Network',
     path: '/r',
     blurb: 'Mutual aid groups',
     tone: 'red',
-    couldBecome: 'resilience.pana.social',
+    couldBecome: 'resilience.panamia.club',
   },
 ];
 
@@ -122,5 +122,5 @@ export const MOCK_MEMBER = {
   /** socialActors.preferredUsername + FEDERATION_DOMAIN. Pinned to the
    *  identity domain, NOT the UI host — see lib/federation/domain.ts. This is
    *  the string that proves the account is the same one everywhere. */
-  fediverseHandle: `@${MOCK_VIEWER.handle}@pana.social`,
+  fediverseHandle: `@${MOCK_VIEWER.handle}@panamia.club`,
 };

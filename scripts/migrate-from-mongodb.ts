@@ -102,7 +102,7 @@ const LEGACY_CDN_PATTERNS = ['b-cdn.net', 'bunnycdn'];
 /**
  * The pull zone has hotlink protection on, and its allowed-referrer list holds
  * the legacy origin only — verified 2026-08-04: this exact value returns 200,
- * while the apex, pana.social, the workers.dev host, and no referrer all 403.
+ * while the apex, panamia.club, the workers.dev host, and no referrer all 403.
  * If that entry is ever removed, every transfer fails and the assets become
  * unreachable, so this migration wants to run while it still holds.
  */

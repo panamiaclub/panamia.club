@@ -20,12 +20,12 @@ export function IntroSection() {
           </a>{' '}
           relay hosted at{' '}
           <a
-            href="https://relay.pana.social"
+            href="https://relay.panamia.club"
             target="_blank"
             rel="noreferrer"
             className="underline"
           >
-            relay.pana.social
+            relay.panamia.club
           </a>
           .
         </p>

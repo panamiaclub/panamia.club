@@ -56,7 +56,7 @@ const SURFACE_COLORS: Record<string, { theme: string; background: string }> = {
  *
  * A surface with `subdomain: null` never reaches that second state. Events is
  * path-only — it is a surface with its own name, mark and tone, served at
- * pana.social/e — so `ownsOrigin` stays false for it whatever the flag says,
+ * panamia.club/e — so `ownsOrigin` stays false for it whatever the flag says,
  * and the installed app opens and scopes to /e. That is the point: scoping it
  * to `/` would make installing Events quietly capture every other surface
  * sharing the root domain.

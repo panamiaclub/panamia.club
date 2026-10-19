@@ -1,7 +1,7 @@
 # Relay Abuse Reports Roadmap
 
 This document outlines the plan for surfacing NIP-56 abuse reports (kind `1984`)
-published to `relay.pana.social` inside Pana's admin console, so a moderator can
+published to `relay.panamia.club` inside Pana's admin console, so a moderator can
 act on them. It follows the forward-to-pana pattern established for NIP-29
 roster advisories in commit `cb67d26` (_"forward NIP-29 advisories to pana with
 24h leave debounce"_), but inverts the failure model — see
@@ -98,7 +98,7 @@ So the report path must be **fire-and-forget and fail-open**:
                 │  kind 1984 report event
                 ▼
    ┌─────────────────────────────────────────────┐
-   │  relay.pana.social  (external/nosflare)       │
+   │  relay.panamia.club  (external/nosflare)       │
    │                                               │
    │  durable-object.ts                            │
    │   1. processEvent()  ── persist + broadcast   │  ← unchanged NIP-56 behavior
@@ -156,7 +156,7 @@ Implemented 2026-06-26 (`durable-object.ts`, `reportTargetsAreLocal` +
 post-signature gate in `handleEvent`). "Accept from anyone" opened the relay to
 cross-relay report-spam: clients broadcast a kind `1984` report to **every**
 relay in the author's list regardless of where the reported content lives, so
-relay.pana.social began accumulating reports about accounts and events it has
+relay.panamia.club began accumulating reports about accounts and events it has
 never hosted (observed: external pubkeys whose only activity here was the report
 itself, including all-category bursts against a single absent target).
 

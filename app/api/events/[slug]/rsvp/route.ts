@@ -8,7 +8,7 @@
  *   DELETE — logged-in user withdraws their RSVP.
  *
  * Capacity (counted, verified 'going' RSVPs) is enforced transactionally at
- * min(event.attendeeCap, venue.fireCapacity), mirroring pana.social.
+ * min(event.attendeeCap, venue.fireCapacity), mirroring panamia.club.
  *
  * v2: optionally mirror RSVPs to Nostr as kind-31925 (relay-signed, or NIP-07
  * self-signed for enrolled users). Deliberately omitted in v1 — attendee PII is

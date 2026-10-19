@@ -27,7 +27,7 @@ export function FaqSection() {
               relays you have configured. From that moment, any Primal user who
               searches for your pubkey or views your profile can see it. So even
               if you remove every public relay from Primal&rsquo;s settings and
-              keep only <code>relay.pana.social</code>, posting through Primal
+              keep only <code>relay.panamia.club</code>, posting through Primal
               still makes your note publicly visible via Primal&rsquo;s app.
             </p>
             <p>

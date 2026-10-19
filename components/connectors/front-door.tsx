@@ -9,7 +9,7 @@ import { getMyConnector } from '@/lib/connectors/membership';
  * The Pana Connectors front door.
  *
  * Lives here rather than in `app/connectors/page.tsx` because two routes need
- * it: that path, and `/` when the request arrives on `connectors.pana.social`.
+ * it: that path, and `/` when the request arrives on `connectors.panamia.club`.
  * The subdomain's root has to render the same thing its named path does, and
  * the only alternative to sharing a component is keeping two copies of a
  * redirect in step forever.

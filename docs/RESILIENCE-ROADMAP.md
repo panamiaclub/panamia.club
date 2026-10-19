@@ -1,12 +1,12 @@
 # Resilience Roadmap
 
-This document captures architectural decisions and planned work for platform resilience and decentralization — primarily the integration of a self-hosted Nostr relay as a pana.social sidecar service.
+This document captures architectural decisions and planned work for platform resilience and decentralization — primarily the integration of a self-hosted Nostr relay as a panamia.club sidecar service.
 
 ---
 
 ## Current status (2026-05)
 
-The PoC is live at `wss://relay.pana.social` and the `/r` enrollment flow on `daydream.pana.social` is end-to-end functional. A new user signs in, picks a screenname, completes the become-a-pana form, generates a keypair in the browser, enrolls into `panamia-test`, and lands directly in the group from Nostrord (mobile + web) without an admin-approval gate.
+The PoC is live at `wss://relay.panamia.club` and the `/r` enrollment flow on `daydream.panamia.club` is end-to-end functional. A new user signs in, picks a screenname, completes the become-a-pana form, generates a keypair in the browser, enrolls into `panamia-test`, and lands directly in the group from Nostrord (mobile + web) without an admin-approval gate.
 
 **Shipped**
 
@@ -42,7 +42,7 @@ The customizations in `external/nosflare/` (panamia ACL, kind 9000 grant emissio
 ## Nostr Relay Sidecar (nosflare)
 
 **Project:** [nosflare](https://github.com/Spl0itable/nosflare) — MIT licensed (panamia customizations not republished; see _Source-code disclosure_ above)
-**Deployment target:** `relay.pana.social` — separate Cloudflare Worker
+**Deployment target:** `relay.panamia.club` — separate Cloudflare Worker
 
 ### Why a sidecar, not bundled
 
@@ -93,7 +93,7 @@ Nosflare's existing `hasPaidForRelay(pubkey, env)` function (called from the Dur
 5. Returns `{ allowed: boolean }`
 6. Result cached in DO memory for the session lifetime
 
-Membership logic stays in pana.social. No Supabase credentials are exposed in the nosflare environment.
+Membership logic stays in panamia.club. No Supabase credentials are exposed in the nosflare environment.
 
 ### New route required in panamia-next (called by nosflare)
 
@@ -174,10 +174,10 @@ panamia-next calls nosflare's feed endpoint via Service Binding (`env.RELAY.fetc
 
 ### Real-time (preferred for live feed)
 
-pana.social frontend connects directly to the relay as a Nostr client:
+panamia.club frontend connects directly to the relay as a Nostr client:
 
 ```
-browser → wss://relay.pana.social → live kind 1 event stream
+browser → wss://relay.panamia.club → live kind 1 event stream
 ```
 
 A standard Nostr REQ subscription filtered to registered member pubkeys delivers the real-time feed without any custom API endpoints. Requires a small client-side Nostr library (~50 lines or a lightweight package).
@@ -193,7 +193,7 @@ Surfaces derived from relay metadata should be clearly communicated to users:
 - **Kind 4/17 `p` tags** reveal _who_ a user messaged, not _what_ was said — a known Nostr protocol limitation
 - **Kind 1059** gift-wrapped messages are designed to hide all metadata; the relay cannot enumerate recipients
 
-If pana.social surfaces any of the above, users should understand it is derived from public relay metadata, not decrypted content.
+If panamia.club surfaces any of the above, users should understand it is derived from public relay metadata, not decrypted content.
 
 ---
 
@@ -207,7 +207,7 @@ Public relays shut down constantly, throttle storage, or evict old events withou
 
 **A real identity that works everywhere.**
 
-`name@pana.social` as a NIP-05 identifier is verifiable in every Nostr client — the difference between sharing `npub14ctdq...` and sharing `maria@pana.social`. Because it is backed by actual directory membership rather than self-assertion, it carries social trust that generic identifiers (e.g. `user@nostr.com`) do not. It is also portable — it works in Primal, Damus, Amethyst, and any future client, independent of pana.social's own app.
+`name@panamia.club` as a NIP-05 identifier is verifiable in every Nostr client — the difference between sharing `npub14ctdq...` and sharing `maria@panamia.club`. Because it is backed by actual directory membership rather than self-assertion, it carries social trust that generic identifiers (e.g. `user@nostr.com`) do not. It is also portable — it works in Primal, Damus, Amethyst, and any future client, independent of panamia.club's own app.
 
 **A spam-free community feed.**
 
@@ -215,7 +215,7 @@ Public relays are flooded with bots, scam accounts, and noise. A members-only re
 
 **Key backup that doesn't exist elsewhere.**
 
-Losing a Nostr private key means losing your identity, followers, and post history permanently — there is no recovery path in the base protocol. No major public relay solves this. The `/r` module's client-side encrypted key backup addresses the single biggest UX barrier to mainstream Nostr adoption. This alone is a meaningful reason for a member to use the pana.social relay over public alternatives.
+Losing a Nostr private key means losing your identity, followers, and post history permanently — there is no recovery path in the base protocol. No major public relay solves this. The `/r` module's client-side encrypted key backup addresses the single biggest UX barrier to mainstream Nostr adoption. This alone is a meaningful reason for a member to use the panamia.club relay over public alternatives.
 
 **A declared home relay — with an organisational commitment behind it.**
 
@@ -231,7 +231,7 @@ The Nostr base protocol (NIP-01) is deliberately silent on retention. Most publi
 
 Support quality varies significantly — "implements NIP-65" can mean anything from publishing a kind 10002 event to fully routing reads and writes through declared relays. This landscape is evolving quickly; verify against current client changelogs before making UX assumptions.
 
-`relay.pana.social` is designed to serve as members' home relay, backed by an explicit organisational commitment: **pana.social commits to retaining member content for the lifetime of their active membership.** This is something no public relay offers. It transforms the relay from infrastructure into a membership benefit — a verifiable promise that a member's social presence is safe.
+`relay.panamia.club` is designed to serve as members' home relay, backed by an explicit organisational commitment: **panamia.club commits to retaining member content for the lifetime of their active membership.** This is something no public relay offers. It transforms the relay from infrastructure into a membership benefit — a verifiable promise that a member's social presence is safe.
 
 ### The combined pitch to a member
 
@@ -246,8 +246,8 @@ Support quality varies significantly — "implements NIP-65" can mean anything f
 | `profiles.nostrPubkey` + `nostr_pubkey_source` columns + migration         | Everything                     |
 | Panamia-side key issuance flow (NIP-46 remote signer or equivalent)        | Default identity path          |
 | BYO-pubkey upload form + correlation-risk disclosure acknowledgment        | Opt-in identity path           |
-| `/api/internal/relay/check` route in pana.social                           | Membership gating              |
-| `/api/internal/relay/group-membership?pubkey=[hex]` route in pana.social   | NIP-29 group ACL               |
+| `/api/internal/relay/check` route in panamia.club                           | Membership gating              |
+| `/api/internal/relay/group-membership?pubkey=[hex]` route in panamia.club   | NIP-29 group ACL               |
 | Service Binding in nosflare `wrangler.toml` (nosflare → panamia-next)      | Membership gating              |
 | Service Binding in panamia-next `wrangler.jsonc` (panamia-next → nosflare) | Stats, feed, network graph     |
 | nosflare internal API endpoints                                            | Stats, feed, network graph     |
@@ -259,7 +259,7 @@ Support quality varies significantly — "implements NIP-65" can mean anything f
 
 ### Why NIP-29
 
-pana.social is a resilience network. Groups are the organisational primitive for emergency coordination — neighborhood watch, supply distribution, status reporting. NIP-29 (Relay-Based Groups) provides:
+panamia.club is a resilience network. Groups are the organisational primitive for emergency coordination — neighborhood watch, supply distribution, status reporting. NIP-29 (Relay-Based Groups) provides:
 
 - **Membership enforcement** — the relay controls who can read and write to a group
 - **Relay-signed metadata** — group name, description, member list, admin list are authoritative events signed by the relay's keypair
@@ -368,7 +368,7 @@ A code audit of `external/nostrord` confirms the client is **relay-authoritative
 
 ### Ecosystem status (2026-04)
 
-NIP-29 adoption remains early. Reference relay (fiatjaf's relay29, Go) was archived April 2026. With nostrord as the canonical client, pana.social controls both sides of the protocol and is not blocked on third-party client adoption. Spec compliance is followed for future-proofing but is not a delivery dependency.
+NIP-29 adoption remains early. Reference relay (fiatjaf's relay29, Go) was archived April 2026. With nostrord as the canonical client, panamia.club controls both sides of the protocol and is not blocked on third-party client adoption. Spec compliance is followed for future-proofing but is not a delivery dependency.
 
 ### Implementation in nosflare
 
@@ -460,7 +460,7 @@ When infrastructure fails and members communicate over BLE/LoRa mesh, NIP-29 ope
 **Architecture:**
 
 ```
-Online:  App -> WebSocket -> relay.pana.social (CF Worker) -> D1 -> broadcast
+Online:  App -> WebSocket -> relay.panamia.club (CF Worker) -> D1 -> broadcast
 Mesh:    App -> WebSocket -> ws://localhost:4848 (local relay) -> roster check -> BLE/LoRa
 ```
 
@@ -468,7 +468,7 @@ The client connects to "a relay" over standard Nostr WebSocket protocol (REQ/EVE
 
 **Packet size:** A minimal NIP-29 group message is ~300+ bytes; LoRa max is ~250 bytes. Mitigations include BLE for local (higher bandwidth), LoRa for long-range (compressed/fragmented), and compact binary wire format reconstructed to valid Nostr JSON on receipt.
 
-**Recovery:** Events created during mesh mode are valid signed Nostr events. When internet returns, the local relay syncs them to `relay.pana.social`. They merge into D1 as legitimate group history. The relay regenerates metadata events (39000-39003) to reflect current state.
+**Recovery:** Events created during mesh mode are valid signed Nostr events. When internet returns, the local relay syncs them to `relay.panamia.club`. They merge into D1 as legitimate group history. The relay regenerates metadata events (39000-39003) to reflect current state.
 
 **NIP-26 delegation was considered** for authorizing mesh nodes to sign on the relay's behalf, but it is marked "unrecommended" by the Nostr community and not widely implemented. The freeze-and-cache approach is simpler and sufficient.
 
@@ -481,12 +481,12 @@ Because the upstream Nostr design is unsettled, our roadmap's local-relay-as-gat
 
 ### Abuse reporting
 
-Secure comms does not grant blanket anonymity. Every event on the relay is signed by an authenticated pubkey tied to a pana.social member account (via `profiles.nostrPubkey`). This is a deliberate design choice: the relay provides encrypted transport and membership-gated access, but the operator retains the ability to identify who posted what and to act on abuse reports.
+Secure comms does not grant blanket anonymity. Every event on the relay is signed by an authenticated pubkey tied to a panamia.club member account (via `profiles.nostrPubkey`). This is a deliberate design choice: the relay provides encrypted transport and membership-gated access, but the operator retains the ability to identify who posted what and to act on abuse reports.
 
 **Report intake:**
 
 - In-app abuse report button on any group message, routed to a monitored queue (not a shared inbox)
-- Public abuse report form on the pana.social website — accessible to anyone, not just members (e.g. a non-member who received forwarded content or a law enforcement contact)
+- Public abuse report form on the panamia.club website — accessible to anyone, not just members (e.g. a non-member who received forwarded content or a law enforcement contact)
 - Reports include the event ID, event pubkey, group ID, and reporter's account (or contact info for external reports) — sufficient to identify the content, the author, and the context
 - Content removal is performed by panamia (the sole authority): panamia issues a delete via the relay's internal `/api/internal/group-state` endpoint, which removes the event from D1. Member-published kind 9005 deletions are limited to the author's own events.
 
@@ -524,7 +524,7 @@ NIP-104 (a.k.a. NIP-EE) defines end-to-end encrypted group messaging on Nostr us
 
 ### Why this asymmetry is correct
 
-A panamia member can use `relay.pana.social` as their advertised MLS endpoint (KeyPackage discovery). Anyone — member or not — can then encrypt a Welcome or group message _to_ that member and post it as a gift wrap. The relay sees only opaque envelopes addressed by `p`-tag. This matches how Signal-style messaging works on Nostr: the inbox is open, the contents are private.
+A panamia member can use `relay.panamia.club` as their advertised MLS endpoint (KeyPackage discovery). Anyone — member or not — can then encrypt a Welcome or group message _to_ that member and post it as a gift wrap. The relay sees only opaque envelopes addressed by `p`-tag. This matches how Signal-style messaging works on Nostr: the inbox is open, the contents are private.
 
 ### What "limit to panamia members" means for MLS
 
@@ -547,7 +547,7 @@ Both NIP-17 chat rooms and MLS travel as kind 1059 gift wraps from the relay's p
 
 ## Future Considerations
 
-- **NIP-05 identity** (`username@pana.social`) — pana.social could serve `/.well-known/nostr.json` mapping member usernames to their registered hex pubkeys, giving members a verified Nostr identity tied to their directory profile
+- **NIP-05 identity** (`username@panamia.club`) — panamia.club could serve `/.well-known/nostr.json` mapping member usernames to their registered hex pubkeys, giving members a verified Nostr identity tied to their directory profile
 - **ActivityPub bridge via a dedicated public group** — panamia already has `social_actors` and partial ActivityPub infrastructure. Rather than an in-band `!public` prefix on individual messages (mixes private + public traffic on the same group, leaks on typo), the planned UX is a dedicated NIP-29 group (e.g. `panamia-public`) explicitly marked as bridged in its 39000 metadata. A worker subscribes to kind 9/11 events with `#h=panamia-public` and republishes them as ActivityPub Notes via the author's `social_actors` row. Bridge participation is itself opt-in (join the group); revoking the bridge means leaving the group, no custom flow.
 - **Mesh relay implementation** — lightweight Nostr relay for mobile/embedded devices, using the `nip29.ts` pure-function membership checks against a cached roster, forwarding events over BLE/LoRa
-- **Primal NIP-29 support** — lobby PrimalHQ to add NIP-29 group support; if adopted, pana.social groups become accessible from a mainstream Nostr client without a custom UI
+- **Primal NIP-29 support** — lobby PrimalHQ to add NIP-29 group support; if adopted, panamia.club groups become accessible from a mainstream Nostr client without a custom UI

@@ -140,7 +140,7 @@ export const moduleDefinitions: ModuleDefinition[] = [
       'Key custody: secret keys are generated client-side and never transmitted',
       'Bring-your-own keys: proof of control, and the cross-relay correlation disclosure',
       'One Nostr identity per profile; key rotation and what it does not carry over',
-      'Group membership records and the NIP-05 handle at pana.social',
+      'Group membership records and the NIP-05 handle at panamia.club',
       'Member-created groups: who may invite, and who may edit a group’s details',
       'Invitations name both members and are deleted once answered or after 30 days',
       'Leaving takes effect after a grace period; a group ends when its last member leaves',

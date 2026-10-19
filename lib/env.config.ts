@@ -111,7 +111,7 @@ export const envConfig: Record<string, EnvVarConfig> = {
       'ActivityPub JSON. Defaults to the NEXT_PUBLIC_HOST_URL hostname.',
     location: 'VAR',
     required: false,
-    example: 'pana.social',
+    example: 'panamia.club',
   },
 
   PANAVERSE_ROOT_DOMAIN: {
@@ -119,11 +119,11 @@ export const envConfig: Record<string, EnvVarConfig> = {
       'Registrable domain the panaverse surfaces hang off. Each surface in ' +
       'lib/panaverse/surfaces.ts is a subdomain of this (social.<root>, …), and ' +
       'the Worker uses it to route a surface hostname to that surface. Defaults ' +
-      'to pana.social. Unset or unmatched hosts — localhost, *.workers.dev — ' +
+      'to panamia.club. Unset or unmatched hosts — localhost, *.workers.dev — ' +
       'fall back to the main site with every route reachable, as before surfaces.',
     location: 'VAR',
     required: false,
-    example: 'pana.social',
+    example: 'panamia.club',
   },
 
   PANAVERSE_SUBDOMAINS: {
@@ -145,15 +145,15 @@ export const envConfig: Record<string, EnvVarConfig> = {
   PANAVERSE_COOKIE_DOMAIN: {
     description:
       'Cookie domain shared by the panaverse surfaces, so one sign-in carries ' +
-      'across pana.social and social.pana.social. Leave unset to keep ' +
+      'across panamia.club and social.panamia.club. Leave unset to keep ' +
       'host-only cookies, which is how every existing session was issued — ' +
       'setting this re-scopes cookies and signs current users out once, so do ' +
       'it as part of launching the social surface, not before. Must be the ' +
       'registrable domain, which now also carries the fediverse identity host: ' +
-      'a ".pana.social" cookie is sent to relay.pana.social as well.',
+      'a ".panamia.club" cookie is sent to relay.panamia.club as well.',
     location: 'VAR',
     required: false,
-    example: '.pana.social',
+    example: '.panamia.club',
   },
 
   // =============================================================================
@@ -328,7 +328,7 @@ export const envConfig: Record<string, EnvVarConfig> = {
       'Baked into the bundle by Vite at build time. Must be in CF Build variables.',
     location: 'VAR',
     required: false,
-    example: 'hola@pana.social',
+    example: 'hola@panamia.club',
   },
   EMAIL_SENDER_NAME: {
     description:
@@ -474,7 +474,7 @@ export const envConfig: Record<string, EnvVarConfig> = {
     description: 'DMCA agent email for takedown notices',
     location: 'VAR',
     required: false,
-    example: 'dmca@pana.social',
+    example: 'dmca@panamia.club',
   },
   DMCA_AGENT_ADDRESS: {
     description:
@@ -527,8 +527,8 @@ export const envConfig: Record<string, EnvVarConfig> = {
       'relay Worker NOSTR_HOME_RELAY.',
     location: 'VAR',
     required: false,
-    defaultValue: 'wss://relay.pana.social',
-    example: 'wss://relay.pana.social',
+    defaultValue: 'wss://relay.panamia.club',
+    example: 'wss://relay.panamia.club',
   },
   RELAY_INTERNAL_URL: {
     description:

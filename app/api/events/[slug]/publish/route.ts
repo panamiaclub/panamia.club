@@ -40,7 +40,7 @@ function normalizeImageUrl(
 // NOSTR_HOME_RELAY. nostr_event_id is recorded only when THIS relay accepted
 // the event — mirror relays in the crosspost list don't count.
 const NOSTR_HOME_RELAY =
-  process.env.NOSTR_HOME_RELAY ?? 'wss://relay.pana.social';
+  process.env.NOSTR_HOME_RELAY ?? 'wss://relay.panamia.club';
 
 function isHomeRelay(url: string): boolean {
   try {
@@ -113,7 +113,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
     // Unlisted events are Postgres-only: NIP-52 calendar events (kind 31923) are
     // public, world-readable by spec, so there is no way to publish an unlisted
     // one to a relay. We therefore never crosspost an unlisted event — it lives
-    // only on pana.social. See docs/EVENTS-ROADMAP.md → Unlisted events.
+    // only on panamia.club. See docs/EVENTS-ROADMAP.md → Unlisted events.
     const isUnlisted = event.visibility === 'unlisted';
 
     let nostrEventId: string | null = null;
@@ -170,7 +170,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
             ? 'no-targets'
             : 'failed';
     const crosspostDetail = isUnlisted
-      ? 'Unlisted event — kept on pana.social only, not published to Nostr.'
+      ? 'Unlisted event — kept on panamia.club only, not published to Nostr.'
       : (crosspostError ??
         crosspost?.results.find((r) => !r.ok)?.error ??
         crosspost?.note ??

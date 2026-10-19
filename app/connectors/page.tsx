@@ -4,7 +4,7 @@ import { ConnectorsFrontDoor } from '@/components/connectors/front-door';
  * The Pana Connectors front page at its named path.
  *
  * The page itself is `components/connectors/front-door.tsx`, shared with `/`
- * on `connectors.pana.social`. This file exists to give it a route and
+ * on `connectors.panamia.club`. This file exists to give it a route and
  * metadata.
  */
 

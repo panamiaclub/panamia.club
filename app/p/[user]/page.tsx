@@ -71,7 +71,7 @@ export async function generateMetadata({
    * already loaded the profile to render it.
    *
    * Without this the two competed: every route answers on every hostname, so
-   * a listing returns 200 on both pana.social and social.pana.social, and a
+   * a listing returns 200 on both panamia.club and social.panamia.club, and a
    * crawler sees two URLs with identical content splitting one ranking.
    *
    * The split is metadata only, and that is the point. A member who taps a

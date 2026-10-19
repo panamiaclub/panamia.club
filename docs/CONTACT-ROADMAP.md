@@ -255,7 +255,7 @@ Role addresses are hardcoded in `lib/contact-routing.ts` rather than
 configured. They are role aliases on the org's own domain, not staff
 addresses — nothing sensitive, and nothing that changes when staffing does,
 since re-pointing a role is a mail-alias edit with no deploy. **Both roles
-currently resolve to `hola@pana.social`**, because no `press@` or `membership@`
+currently resolve to `hola@panamia.club`**, because no `press@` or `membership@`
 alias exists yet; splitting them means editing that one map, as every call site
 asks for a role rather than an address. An alias must not be added there before
 it is confirmed deliverable — one that bounces silently drops exactly the

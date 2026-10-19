@@ -52,7 +52,7 @@ const GAP_COPY: Record<
   },
   screenname: {
     label:
-      'Pick a screenname on your account — it becomes your stable Nostr handle (alice@pana.social) and ActivityPub identity.',
+      'Pick a screenname on your account — it becomes your stable Nostr handle (alice@panamia.club) and ActivityPub identity.',
     href: '/account/user/edit',
     cta: 'Set your screenname',
   },
@@ -190,7 +190,7 @@ export function EnrollSection() {
   // identity events (kind 0 / relay lists / group list) under the BYO key so it
   // advertises the Pana handle/profile and lands in the groups — same as the
   // generated-key flow and rotation. This DOES overwrite any kind 0 / relay
-  // lists the key already had on relay.pana.social; true collisions with an
+  // lists the key already had on relay.panamia.club; true collisions with an
   // established identity are expected to be rare.
   async function enrollByo() {
     const userId = session?.user?.id;
@@ -322,7 +322,7 @@ export function EnrollSection() {
                 <p className="mt-2 text-amber-900/80 dark:text-amber-200/80">
                   Resilience uses your panamia screenname and profile to give
                   you a stable Nostr identity (
-                  <code>screenname@pana.social</code>) so other clients show
+                  <code>screenname@panamia.club</code>) so other clients show
                   your name, not a hex string. We need the following before you
                   can enroll:
                 </p>
@@ -399,9 +399,9 @@ export function EnrollSection() {
                           </strong>{' '}
                           — only the resulting signature is transmitted for
                           verification. We&rsquo;ll then publish your Pana
-                          profile and <code>@pana.social</code> handle under
+                          profile and <code>@panamia.club</code> handle under
                           this key, replacing any profile metadata it already
-                          has on relay.pana.social.
+                          has on relay.panamia.club.
                         </span>
                       </div>
                     </div>

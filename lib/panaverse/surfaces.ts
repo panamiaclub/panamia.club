@@ -24,7 +24,7 @@ export interface PanaverseSurface {
   tagline: string;
   /**
    * Label under the root domain, or null for the apex.
-   * `social` → social.pana.social
+   * `social` → social.panamia.club
    */
   subdomain: string | null;
   /**
@@ -73,13 +73,11 @@ export interface PanaverseSurface {
  * of this, which is what lets one session cookie cover all of them — cookies
  * cannot be shared across registrable domains.
  *
- * Equal to DEFAULT_FEDERATION_DOMAIN by design, not by accident: pana.social
- * both serves this app and mints @user@pana.social handles. Keeping them equal
- * is what lets a surface cookie cover the identity host, and it means the
- * federation domain survives a UI move — see lib/federation/domain.ts.
- * panamia.club is a different, older deployment; it is not this app.
+ * The web root and federation identity domain are intentionally independent.
+ * The UI is served from panamia.club while permanent @user@panamia.club
+ * identities remain pinned by FEDERATION_DOMAIN.
  */
-export const DEFAULT_ROOT_DOMAIN = 'pana.social';
+export const DEFAULT_ROOT_DOMAIN = 'panamia.club';
 
 export function getRootDomain(): string {
   return process.env.PANAVERSE_ROOT_DOMAIN?.trim() || DEFAULT_ROOT_DOMAIN;
@@ -144,8 +142,8 @@ export const SURFACES: readonly PanaverseSurface[] = [
     // No subdomain at all, and that is the whole of what makes this surface
     // path-only. `originFor` and `originForFrom` both fall through to the root
     // domain for a surface without one, so a link to Events resolves to
-    // pana.social/e from whatever host is in hand — including admin.pana.social
-    // and social.pana.social, which would otherwise have kept the reader on
+    // panamia.club/e from whatever host is in hand — including admin.panamia.club
+    // and social.panamia.club, which would otherwise have kept the reader on
     // their own hostname wearing their own masthead. `www` has always worked
     // this way; Events is the second surface to want it.
     subdomain: null,
@@ -191,13 +189,13 @@ export const SURFACES: readonly PanaverseSurface[] = [
     // masthead enumerates SURFACES, so a surface becomes visible only when
     // something deliberately links it. See lib/panaverse/sites.ts.
     //
-    // The doubled path in admin.pana.social/admin/connectors is real and is
+    // The doubled path in admin.panamia.club/admin/connectors is real and is
     // the accepted cost. Paths are global — every route answers on every
     // hostname, and the Worker deliberately does not rewrite them (see
     // worker/index.ts: vinext has no middleware-rewrite signalling, so serving
     // /admin/connectors under the URL /connectors would leave the client
     // router fetching RSC payloads for a path that does not exist). So
-    // admin.pana.social/connectors cannot mean the admin console; it would
+    // admin.panamia.club/connectors cannot mean the admin console; it would
     // serve the public Connectors landing page, which is what /connectors
     // already is for everyone. Social dodges this by owning short top-level
     // paths it claimed first; /connectors was taken before this surface
@@ -235,10 +233,10 @@ export function originFor(
  *
  * A surface's root path is fixed in the registry; the URL its front door
  * actually wears is not. On its own hostname the surface is served at `/` —
- * social.pana.social/ is the feed, see app/page.tsx — and only from elsewhere
+ * social.panamia.club/ is the feed, see app/page.tsx — and only from elsewhere
  * does it need its prefix. A masthead that always linked `rootPath` would send
- * a member on social.pana.social from `/` to `/s`, the same page one URL
- * uglier; one that always linked `/` would send a member reading pana.social/s
+ * a member on social.panamia.club from `/` to `/s`, the same page one URL
+ * uglier; one that always linked `/` would send a member reading panamia.club/s
  * to the main site's homepage instead of back to the feed.
  */
 export function frontDoorPath(
@@ -256,7 +254,7 @@ export function frontDoorPath(
  *
  * `originFor` always points at the configured root domain, which is right in
  * production and wrong everywhere else: on social.localhost:3002 it would send
- * a member to https://pana.social — the live site — for what should be a link
+ * a member to https://panamia.club — the live site — for what should be a link
  * across the hall. This swaps the surface label on the host in hand instead,
  * keeping scheme and port, so cross-surface links behave in dev and in prod
  * without a branch at every call site.
@@ -264,8 +262,7 @@ export function frontDoorPath(
  * Hosts that are not under the root domain — *.workers.dev previews, and any
  * future alias — have no sibling to swap to, so they fall back to the
  * canonical origin. That fallback is only safe while the root domain is the
- * host that actually serves production: while it named panamia.club, every
- * link out of here pointed at a different app behind an expired certificate.
+ * host that actually serves production.
  */
 export function originForFrom(
   target: PanaverseSurface,
@@ -302,10 +299,10 @@ export function originForFrom(
 
   // `base` has to be the domain the panaverse actually hangs off. When it is
   // not, the current host is some other subdomain under the root — today
-  // relay.pana.social, tomorrow an api.* — and swapping labels would invent
-  // social.relay.pana.social. Those hosts have no sibling, so they take the
+  // relay.panamia.club, tomorrow an api.* — and swapping labels would invent
+  // social.relay.panamia.club. Those hosts have no sibling, so they take the
   // canonical origin. This only became reachable when the root domain moved to
-  // pana.social and brought the relay under it.
+  // panamia.club and brought the relay under it.
   if (!isLocal && base !== root) return originFor(target, rootDomain);
 
   const host = target.subdomain ? `${target.subdomain}.${base}` : base;

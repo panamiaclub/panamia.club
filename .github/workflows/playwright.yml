@@ -260,7 +260,7 @@ jobs:
           echo "R2_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }}" >> .dev.vars
           echo "R2_BUCKET_NAME=${{ vars.R2_BUCKET_NAME }}" >> .dev.vars
           echo "R2_PUBLIC_URL=${{ vars.R2_PUBLIC_URL }}" >> .dev.vars
-          # Empty on purpose: wrangler.jsonc sets this to ".pana.social" for
+          # Empty on purpose: wrangler.jsonc sets this to ".panamia.club" for
           # production, which browsers reject on the localhost host the test
           # server runs on. Empty restores host-only cookies so any future
           # session-dependent spec can actually hold a session.

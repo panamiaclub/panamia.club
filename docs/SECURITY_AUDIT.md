@@ -754,7 +754,7 @@ PUSHER_CLUSTER=         # Cluster (safe in client)
 
 ## Vulnerability Disclosure
 
-If you discover a security vulnerability, please [contact us](https://pana.social/form/contact-us/) with the subject line "SECURITY VULNERABILITY" or email directly if you have our contact information.
+If you discover a security vulnerability, please [contact us](https://panamia.club/form/contact-us/) with the subject line "SECURITY VULNERABILITY" or email directly if you have our contact information.
 
 **Do not** create public GitHub issues for security vulnerabilities.
 
@@ -784,7 +784,7 @@ If you discover a security vulnerability, please [contact us](https://pana.socia
 
 ### Automated Scans
 
-- [ ] [GitHub Dependabot](https://github.com/unitedcolorsofg/panamia-next/security/dependabot) — dependency vulnerability alerts (review regularly)
+- [ ] [GitHub Dependabot](https://github.com/panamiaclub/panamia.club/security/dependabot) — dependency vulnerability alerts (review regularly)
 - [ ] [Supabase Security Advisor](https://supabase.com/dashboard/project/_/advisors/security) — database-level security checks (RLS policies, exposed schemas, auth settings)
 - [ ] npm audit (no high/critical vulnerabilities)
 - [ ] OWASP ZAP scan

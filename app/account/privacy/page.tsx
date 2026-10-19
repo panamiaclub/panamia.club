@@ -633,8 +633,8 @@ export default function PrivacySettingsPage() {
           </p>
           <p className="text-muted-foreground text-sm">
             To exercise these rights, contact{' '}
-            <a href="mailto:hola@pana.social" className="underline">
-              hola@pana.social
+            <a href="mailto:hola@panamia.club" className="underline">
+              hola@panamia.club
             </a>
             .
           </p>

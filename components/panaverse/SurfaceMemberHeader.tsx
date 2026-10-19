@@ -14,7 +14,7 @@ import { MessagesLink } from '@/components/account/messages-link';
  * surface hostnames — correctly, because that masthead over a timeline is what
  * made Pana Social read as a section of the main site — and `SurfaceGuestHeader`
  * only covers pages a surface has *borrowed*. The surface's own front door fell
- * between the two, so a signed-in member at social.pana.social/s got a bare
+ * between the two, so a signed-in member at social.panamia.club/s got a bare
  * page: no mark, no nav, no account, and no route back to Pana Mia.
  *
  * Mark on the left, search in the middle, account on the right: the shape a
@@ -25,7 +25,7 @@ import { MessagesLink } from '@/components/account/messages-link';
  *
  * NAV IS DELIBERATELY ABSENT, but the route home is not. The MENU drawer that
  * used to sit on the left carried the surface nav, the shared rooms, and — via
- * `originForFrom` — the only link that could cross from social.pana.social
+ * `originForFrom` — the only link that could cross from social.panamia.club
  * back to the main site. That last one now comes from `PANA_SITES` in the
  * account menu instead: its paths are resolved server-side by
  * `resolvePanaSites`, so a site on another surface links to that surface's
