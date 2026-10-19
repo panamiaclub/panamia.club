@@ -64,6 +64,20 @@
     </application>
 
     <!-- Permissions -->
-
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+      Push notifications, Android 13 (API 33) and up.
+
+      Declared here rather than inherited: @capacitor/push-notifications ships
+      an Android manifest that registers its messaging service but does not
+      declare this permission, so with targetSdkVersion 36 the runtime request
+      made by PushNotifications.requestPermissions() has nothing to request.
+      It does not throw — it returns "denied" immediately, the dialog never
+      appears, and the member has no way to tell that they were never asked.
+
+      Below API 33 notifications need no permission at all and this is ignored,
+      which is why minSdkVersion 24 is unaffected.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

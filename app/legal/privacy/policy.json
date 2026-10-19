@@ -178,6 +178,23 @@
           }
         },
         {
+          "name": "device_tokens",
+          "label": "Push Notification Devices",
+          "data": ["push_token", "device_platform"],
+          "source": "automatic",
+          "purpose": "notification_delivery",
+          "retention": "active_account_lifetime",
+          "display": {
+            "icon": "smartphone",
+            "source": "Automatic (mobile app only)",
+            "purpose": "Delivering push notifications",
+            "retention": "Account lifetime",
+            "sharedWith": "Apple, Google",
+            "prose": "Push notification tokens for devices running the mobile app",
+            "blurb": "If you use the mobile app and turn on notifications, we store an address your phone's maker gives us so alerts can reach your device. We send alerts through Apple or Google to deliver them. Turning notifications off in your phone's settings, signing out, or deleting the app stops this."
+          }
+        },
+        {
           "name": "intake",
           "label": "Intake Form Submissions",
           "data": ["form_responses"],

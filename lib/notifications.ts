@@ -13,6 +13,7 @@
 
 import { db } from '@/lib/db';
 import { profiles, notifications, socialActors } from '@/lib/schema';
+import { sendPushToUsers, type PushMessage } from '@/lib/push';
 import type {
   NotificationActivityType,
   NotificationContext,
@@ -41,6 +42,21 @@ export interface CreateNotificationParams {
   objectTitle?: string;
   objectUrl?: string;
   message?: string; // Personal message (invitation text)
+}
+
+function notificationPushMessage(
+  params: Omit<CreateNotificationParams, 'targetId'>,
+  actor: { screenname?: string | null; name?: string | null }
+): PushMessage {
+  return {
+    title: 'Pana MIA Club',
+    body: getNotificationMessage({
+      ...params,
+      actorScreenname: actor.screenname,
+      actorName: actor.name,
+    }),
+    url: params.objectUrl ?? '/updates',
+  };
 }
 
 /**
@@ -106,6 +122,9 @@ export async function createNotification(
   // Determine expiration based on type and context
   const expiresAt = getExpirationDate(params.type, params.context);
 
+  const actorScreenname = actorProfile?.user?.screenname;
+  const actorName = actorProfile?.name;
+
   // Create notification
   await db.insert(notifications).values({
     type: params.type,
@@ -117,12 +136,34 @@ export async function createNotification(
     objectTitle: params.objectTitle,
     objectUrl: params.objectUrl,
     message: params.message,
-    actorScreenname: actorProfile?.user?.screenname,
-    actorName: actorProfile?.name,
+    actorScreenname,
+    actorName,
     read: false,
     emailSent: false,
     expiresAt,
   });
+
+  // Deliver to the member's devices, if they have the app and agreed to be
+  // notified. Deliberately after the insert and deliberately not fatal: the
+  // row above is the system of record, and a push service having a bad minute
+  // must not turn a successful like or reply into a failed request.
+  //
+  // sendPushToUsers never throws and no-ops when push is unconfigured or the
+  // member has no registered device, so the common case — a browser visitor —
+  // costs nothing beyond an environment variable check. See lib/push/.
+  //
+  // Reuses getNotificationMessage rather than composing its own copy. That
+  // function already covers every context and type pair in the system, so a
+  // separate string here would be a second place to update and a chance for
+  // the lock screen and the notifications page to disagree about what
+  // happened.
+  await sendPushToUsers(
+    [params.targetId],
+    notificationPushMessage(params, {
+      screenname: actorScreenname,
+      name: actorName,
+    })
+  );
 
   // TODO: Check email preferences and send if enabled
   // await maybeSendNotificationEmail(notification);
@@ -236,6 +277,14 @@ export async function createNotificationsForTargets(
       emailSent: false,
       expiresAt,
     }))
+  );
+
+  await sendPushToUsers(
+    allowedIds,
+    notificationPushMessage(params, {
+      screenname: actorProfile?.user?.screenname,
+      name: actorProfile?.name,
+    })
   );
 
   return allowedIds.length;

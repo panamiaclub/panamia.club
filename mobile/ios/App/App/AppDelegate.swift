@@ -11,6 +11,32 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
 
+    // MARK: - Push notification registration
+    //
+    // UIKit delivers the APNs device token to the app delegate and nowhere
+    // else. Capacitor's push plugin cannot see it from there, so it listens on
+    // NotificationCenter instead and relies on these two methods to forward it.
+    //
+    // Without them PushNotifications.register() completes, iOS registers the
+    // app normally, and the JavaScript `registration` listener is simply never
+    // called — no error, no warning, on device or in the console. The app looks
+    // like it has push and silently has no address to send to. That is the
+    // reason these exist, and the reason they should not be deleted as unused.
+    //
+    // See components/mobile/PushRegistration.tsx for the other end.
+
+    func application(_ application: UIApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications,
+                                        object: deviceToken)
+    }
+
+    func application(_ application: UIApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications,
+                                        object: error)
+    }
+
     func applicationWillResignActive(_ application: UIApplication) {
         // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
         // Use this method to pause ongoing tasks, disable timers, and invalidate graphics rendering callbacks. Games should use this method to pause the game.
