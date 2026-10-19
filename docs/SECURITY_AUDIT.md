@@ -536,12 +536,93 @@ of the tag.
 
 **Regression tests**: `tests-unit/sanitize-html.test.ts` (`yarn test:unit`)
 
-**Status**: Protected — sanitised at render, enforced by a single chokepoint
+**Status**: Protected against **injection**. Deceptive links are a separate
+problem, now **partially mitigated** — see below.
 
 > Prior revisions of this document claimed "Never dangerouslySetInnerHTML
 > used" / "Protected". That was false in four places, and nothing in the repo
 > sanitised post HTML at the time, so stored XSS was reachable by any poster.
 > Fixed in the change that added `lib/sanitize-html.ts`.
+
+### Deceptive links (mitigated by disclosure, not by prevention)
+
+**Sanitisation fixes injection, not deception.** These are different problems
+and the allowlist only solves the first. A link whose visible text disagrees
+with its destination is well-formed HTML, so it passes the allowlist untouched:
+
+```
+in   <a href="https://evil.test">your bank</a>
+out  <a href="https://evil.test" rel="noopener noreferrer ugc" target="_blank">your bank</a>
+```
+
+The sanitiser does not merely permit the lure — it decorates it, in the same
+call that strips an `onerror` handler off the markup beside it.
+
+**Scope**: live on every surface that renders post HTML, because anchors carry
+attacker-chosen `href` _and_ attacker-chosen text — `PostCard`,
+`feed-post-card`, `MastodonComments`. Federated content is the sharpest case:
+it is authored on instances we do not moderate.
+
+**Not a sanitiser setting.** Narrowing the allowlist cannot fix this; the
+markup is already valid. Nor can it be fixed by removing links — on a feed,
+links are the feature.
+
+#### What is implemented
+
+`lib/link-safety.ts` adds a destination badge to any link whose visible text
+does not already say where it goes. It runs inside `<SafeHtml>`, immediately
+after sanitisation, so it applies at all four render sites at once.
+
+| Visible text                                | Shown                     |
+| ------------------------------------------- | ------------------------- |
+| Already names the host, or the host is ours | nothing                   |
+| Ordinary prose (`your bank`)                | quiet badge with the host |
+| Is itself a URL for somewhere else          | `! goes to <host>`        |
+
+Load-bearing properties, each pinned by a test in
+`tests-unit/link-safety.test.ts`:
+
+- **Unforgeable.** It runs _after_ the sanitiser, which denies authors
+  arbitrary `class`, and the annotator deletes then re-sets its own attributes
+  on every anchor. An author-supplied `data-pana-host` never survives.
+- **Never trusts author-supplied attributes as a skip signal.** Notably
+  `class="mention"` is allowed by the sanitiser, so a hostile instance could
+  otherwise opt its own links out.
+- **Matches on domain boundaries, not substrings.** `panamia.club.evil.test`
+  does not read as `panamia.club`, and text `evil.test` does not satisfy a
+  link to `not-evil.test`.
+- **Shows punycode**, so an IDN homograph cannot reproduce its deception
+  inside the badge itself.
+- **Carries an `aria-label`**, because the badge is CSS generated content and
+  screen readers announce that inconsistently. A disclosure control that does
+  not reach the reader is not a control.
+
+#### Residual risk — read this before relying on the badge
+
+This is **disclosure, not prevention**, and the distinction is the whole point:
+
+1. **It reveals the host; it cannot judge the host.** `evil.test` means
+   nothing to a reader who does not already know it is hostile. The badge
+   moves the decision to the reader — it does not make the decision.
+2. **Nothing is blocked.** Every link remains clickable, including the ones
+   carrying a warning.
+3. **The trusted-host list is static** (`PANA_HOSTS` in `lib/link-safety.ts`),
+   because reading a server-only env var here would desynchronise SSR from the
+   client. A new Pana surface not added to that list shows a redundant badge —
+   noise, not a hole.
+4. **The loud tier is suppressed for filename-shaped text** whose suffix
+   cannot be a TLD (`index.js`), to stop false alarms on ordinary posts. The
+   host is still shown. Suffixes that _are_ live TLDs — `.zip`, `.mov`, `.sh`,
+   `.md` — are deliberately excluded from that exemption.
+
+`/updates` remains stricter: `htmlToText` flattens held DM requests to plain
+text, removing the anchor entirely. That is still correct there and should not
+be "simplified" to `<SafeHtml>` now that badges exist — a stranger's
+unsolicited first message has no legitimate need for links at all, so removing
+them beats disclosing them.
+
+**Not yet accepted**: no maintainer has signed off on the residual risk above.
+Mitigated here means reduced, not closed.
 
 ### CSRF Protection
 

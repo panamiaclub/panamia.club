@@ -10215,3 +10215,66 @@ body:has(.dirscope) header {
   color: var(--story-ink);
   opacity: 0.8;
 }
+
+/* ---------------------------------------------------------------------------
+   Link destination badges
+
+   Rendered for links in post bodies whose visible text does not already say
+   where they go, so a reader sees the real host before clicking rather than
+   after. The attributes are applied in lib/link-safety.ts, which runs after
+   sanitisation — an author cannot set `data-pana-host` themselves, so the
+   badge cannot be forged.
+
+   Generated content rather than markup on purpose: it keeps the sanitised HTML
+   untouched, and it cannot be selected or copied into a quote, so the badge
+   never travels anywhere it would be mistaken for the author's own words. The
+   accessible name carries the same information for screen readers, which
+   announce generated content inconsistently.
+   ------------------------------------------------------------------------ */
+a[data-pana-host]::after {
+  content: attr(data-pana-host);
+  display: inline-block;
+  margin-inline-start: 0.35em;
+  padding: 0.05em 0.5em;
+  border: 1px solid color-mix(in srgb, var(--color-pana-ink) 20%, transparent);
+  border-radius: 999px;
+  background: var(--color-pana-butter-2);
+  color: var(--color-pana-ink);
+  font-size: 0.76em;
+  font-weight: 700;
+  line-height: 1.6;
+  /* inline-block keeps the parent link's underline off the badge */
+  text-decoration: none;
+  white-space: nowrap;
+  vertical-align: baseline;
+  /* A hostile host can be arbitrarily long; truncate rather than let it break
+     the column. The leading labels are the part that matters, and the full
+     value stays in the accessible name. */
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Text that is itself a URL pointing somewhere else — the phishing shape.
+   Loud on purpose: the quiet badge says "here is where this goes", this one
+   says "this is not what it claims". Ink on red follows the contrast rule
+   above; cream on a warm surface fails it. */
+a[data-pana-host][data-pana-impostor]::after {
+  content: '! goes to ' attr(data-pana-host);
+  max-width: none;
+  border-color: color-mix(in srgb, var(--color-pana-ink) 35%, transparent);
+  background: var(--color-pana-red);
+  color: var(--color-pana-ink);
+}
+
+.dark a[data-pana-host]::after {
+  border-color: color-mix(in srgb, var(--color-pana-cream) 24%, transparent);
+  background: color-mix(in srgb, var(--color-pana-cream) 12%, transparent);
+  color: var(--color-pana-cream);
+}
+
+.dark a[data-pana-host][data-pana-impostor]::after {
+  border-color: color-mix(in srgb, var(--color-pana-cream) 45%, transparent);
+  background: var(--color-pana-red);
+  color: var(--color-pana-ink);
+}

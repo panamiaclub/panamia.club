@@ -122,18 +122,38 @@ export function isSafeUrl(url: string): boolean {
   return (SAFE_URL_SCHEMES as readonly string[]).includes(scheme[1]);
 }
 
-const OPTIONS: sanitizeHtml.IOptions = {
+/**
+ * Forced on every link in a post body. `ugc` marks the link as user-generated
+ * for search engines; the other two stop the opened page reaching back through
+ * `window.opener`.
+ *
+ * Exported because lib/link-safety.ts re-serialises the same anchors and must
+ * not drift from this — two copies of a security-relevant attribute set is a
+ * doc-rot bug waiting to happen.
+ */
+export const EXTERNAL_LINK_REL = 'noopener noreferrer ugc';
+export const EXTERNAL_LINK_TARGET = '_blank';
+
+/**
+ * Attributes each tag may keep.
+ *
+ * Extracted and exported so lib/link-safety.ts can widen the `a` entry for the
+ * attributes it owns without restating this list — a second copy would drift.
+ */
+export const STATUS_ALLOWED_ATTRIBUTES: Record<string, string[]> = {
+  a: ['href', 'title', 'class', 'rel', 'target'],
+  span: ['class'],
+  code: ['class'],
+  pre: ['class'],
+  ol: ['start'],
+  li: ['value'],
+  td: ['colspan', 'rowspan'],
+  th: ['colspan', 'rowspan', 'scope'],
+};
+
+export const STATUS_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: ALLOWED_TAGS,
-  allowedAttributes: {
-    a: ['href', 'title', 'class', 'rel', 'target'],
-    span: ['class'],
-    code: ['class'],
-    pre: ['class'],
-    ol: ['start'],
-    li: ['value'],
-    td: ['colspan', 'rowspan'],
-    th: ['colspan', 'rowspan', 'scope'],
-  },
+  allowedAttributes: STATUS_ALLOWED_ATTRIBUTES,
   allowedClasses: ALLOWED_CLASSES,
 
   // Only these schemes may appear in a URL attribute. `javascript:` and
@@ -158,8 +178,8 @@ const OPTIONS: sanitizeHtml.IOptions = {
       tagName,
       attribs: {
         ...attribs,
-        rel: 'noopener noreferrer ugc',
-        target: '_blank',
+        rel: EXTERNAL_LINK_REL,
+        target: EXTERNAL_LINK_TARGET,
       },
     }),
   },
@@ -175,5 +195,5 @@ const OPTIONS: sanitizeHtml.IOptions = {
  */
 export function sanitizeStatusHtml(html: string | null | undefined): string {
   if (!html) return '';
-  return sanitizeHtml(html, OPTIONS);
+  return sanitizeHtml(html, STATUS_SANITIZE_OPTIONS);
 }
