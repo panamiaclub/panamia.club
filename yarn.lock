@@ -971,6 +971,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@electric-sql/pglite@npm:^0.5.8":
+  version: 0.5.10
+  resolution: "@electric-sql/pglite@npm:0.5.10"
+  checksum: 10c0/634e8431d9c3d85d5bebdcf55255290669e10dff0da3d9fc6439321debd28db6f87279ff3c445f77945aceb293690a2f16175a3dd72192b1d37f03b4f81f70b2
+  languageName: node
+  linkType: hard
+
 "@emnapi/core@npm:^1.11.1":
   version: 1.11.2
   resolution: "@emnapi/core@npm:1.11.2"
@@ -8967,6 +8974,7 @@ __metadata:
     "@cloudflare/vite-plugin": "npm:1.64.0"
     "@commitlint/cli": "npm:21.2.3"
     "@commitlint/config-conventional": "npm:^21.2.3"
+    "@electric-sql/pglite": "npm:^0.5.8"
     "@ffmpeg/ffmpeg": "npm:^0.12.15"
     "@ffmpeg/util": "npm:^0.12.2"
     "@hookform/resolvers": "npm:^5.9.1"
@@ -9040,6 +9048,7 @@ __metadata:
     stripe: "npm:22.6.2"
     tailwind-merge: "npm:^3.7.0"
     tailwindcss: "npm:4.3.3"
+    tsx: "npm:^4.21.0"
     typescript: "npm:^6.0.3"
     vinext: "npm:1.2.1"
     vite: "npm:8.3.4"
