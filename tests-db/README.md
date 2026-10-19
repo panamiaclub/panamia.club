@@ -10,11 +10,41 @@ Kept separate from `tests/` (Playwright, browser) and `tests-relay/`
 
 ## Running
 
+### Isolated status visibility regression (no secrets)
+
+```
+yarn test:db:visibility
+```
+
+`visibility.test.ts` uses PGlite (real Postgres compiled to WASM) in memory.
+It never loads `.env.local`, reads a connection string, or connects to an
+external database. Run with Node 24; the script enables Node's experimental
+module mocks to replace the database and session boundaries before importing
+production code.
+
+The suite renders the production addressing predicate with `PgDialect`, then
+executes the actual actor-post, permalink, redirect lookup, reply, public-feed,
+and mention queries through Drizzle against PGlite. It also calls the real
+posts/status/replies GET handlers with stubbed sessions and active profiles.
+The federation barrel forwards to the real wrappers; navigation is stubbed
+to assert the legacy redirect's destination or not-found outcome.
+It covers accepted versus pending follows, named `to`/`cc` recipients, expiry,
+public versus unlisted, active versus pending/banned group membership, public
+addressing inside private groups, parent authorization, and pagination.
+Group authorization remains independent of personal-post addressing: a public
+group is readable by anyone, while private groups require active membership,
+even for the author or a named recipient.
+
+The separate `Status Visibility` workflow runs only this suite on fork PRs
+without secrets or the Playwright job's database setup.
+
+### Existing database-backed suites
+
 ```
 yarn test:db
 ```
 
-Reads `POSTGRES_URL` from `.env.local` locally. In CI the variable is already
+Other suites read `POSTGRES_URL` from `.env.local` locally. In CI the variable is already
 exported and dotenv leaves it alone, so the same command works unchanged.
 
 ## What's tested

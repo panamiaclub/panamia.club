@@ -32,11 +32,8 @@ import {
   evaluateDirectThreads,
   recordDirectThreadRequests,
 } from './dm-gate';
-import {
-  getViewerGroupIds,
-  visibleGroupStatuses,
-  canViewStatusGroup,
-} from './group-visibility';
+import { getViewerGroupIds, canViewStatusGroup } from './group-visibility';
+import { PUBLIC, notExpired, readableStatus } from './visibility';
 import { notifyDirectMessage } from '@/lib/dm-stream';
 import { notifyGroupPosted } from './group-notify';
 import type { PostVisibility } from '@/lib/utils/getVisibility';
@@ -95,13 +92,6 @@ export function generateStatusUri(username: string, statusId: string): string {
  * drizzle/0062_dm_expiry_30_days.sql for the backfill of existing messages.
  */
 const DM_EXPIRY_DAYS = 30;
-
-/**
- * Returns a Drizzle WHERE condition to exclude expired statuses.
- */
-function _notExpiredCondition() {
-  return sql`(${socialStatuses.expiresAt} IS NULL OR ${socialStatuses.expiresAt} > NOW())`;
-}
 
 /** Location object for ActivityPub Place */
 export interface StatusLocation {
@@ -333,7 +323,6 @@ export async function createStatus(
     .returning();
 
   // Compute ActivityPub recipients
-  const PUBLIC = 'https://www.w3.org/ns/activitystreams#Public';
   const followersUrl = getFollowersUrl(actor.username);
 
   let recipientTo: string[];
@@ -533,23 +522,25 @@ export async function createStatus(
 /**
  * Get a status by ID with actor information
  *
- * Group-aware: a status in a private group resolves to null for anyone who is
- * not an active member. Callers that pass no viewer are treated as anonymous,
- * which is the safe default and the correct one for the public permalink.
+ * Enforces recipient addressing, group membership, and expiry. Callers that
+ * pass no viewer are anonymous; inaccessible statuses resolve to null.
  */
 export async function getStatus(
   statusId: string,
   viewerActorId?: string
 ): Promise<StatusWithActor | null> {
+  const viewerGroupIds = await getViewerGroupIds(viewerActorId);
   const status =
     (await db.query.socialStatuses.findFirst({
-      where: eq(socialStatuses.id, statusId),
+      where: and(
+        eq(socialStatuses.id, statusId),
+        readableStatus(viewerActorId, viewerGroupIds),
+        notExpired()
+      ),
       with: { actor: { columns: PUBLIC_ACTOR_COLUMNS } },
     })) ?? null;
 
   if (!status) return null;
-  if (!(await canViewStatusGroup(status.groupId, viewerActorId))) return null;
-
   return status;
 }
 
@@ -560,7 +551,7 @@ export async function getStatus(
  * resolve a URI it was handed — dereferencing an inbox activity, threading a
  * reply — where the caller is the system rather than a person, and returning
  * null would break delivery rather than protect anything. Any path that shows
- * the result to a human must gate it with `canViewStatusGroup` first.
+ * the result to a human must use a viewer-authorized read instead.
  */
 export async function getStatusByUri(
   uri: string
@@ -619,10 +610,8 @@ export async function deleteStatus(
 /**
  * Get replies to a status
  *
- * A reply inherits its parent's group, so this needs the same gate the parent
- * did. Without it a thread inside a private group is readable by anyone who
- * can guess a status id, which is the cheapest possible way to defeat the
- * group's privacy.
+ * Both parent and children must be readable. Keep the existing viewer-last
+ * signature so cursor/limit callers cannot silently shift authorization.
  */
 export async function getStatusReplies(
   statusId: string,
@@ -630,6 +619,11 @@ export async function getStatusReplies(
   limit: number = 20,
   viewerActorId?: string
 ): Promise<{ replies: StatusWithActor[]; nextCursor: string | null }> {
+  // Authorize the parent too: public addressing on a reply does not open a
+  // private thread, including legacy replies missing their parent's group.
+  if (!(await getStatus(statusId, viewerActorId))) {
+    return { replies: [], nextCursor: null };
+  }
   const viewerGroupIds = await getViewerGroupIds(viewerActorId);
 
   const replies = await db.query.socialStatuses.findMany({
@@ -637,9 +631,9 @@ export async function getStatusReplies(
       and(
         eq(s.inReplyToId, statusId),
         isNotNull(s.published),
-        visibleGroupStatuses(viewerGroupIds),
+        readableStatus(viewerActorId, viewerGroupIds),
         cursor ? gt(s.id, cursor) : undefined,
-        sql`(${socialStatuses.expiresAt} IS NULL OR ${socialStatuses.expiresAt} > NOW())`
+        notExpired()
       ),
     with: { actor: { columns: PUBLIC_ACTOR_COLUMNS }, attachments: true },
     orderBy: (s, { asc }) => [asc(s.published), asc(s.id)],

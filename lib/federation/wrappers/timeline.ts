@@ -23,25 +23,21 @@ import type {
   PublicSocialActor,
   SocialGroupVisibility,
 } from '@/lib/schema';
-import { and, eq, sql, or, asc, inArray, type SQL } from 'drizzle-orm';
+import { and, eq, sql, or, asc, inArray } from 'drizzle-orm';
 import { countyShortLabel } from '@/lib/county';
 import { socialConfig } from '../index';
 import {
   getViewerGroupIds,
   visibleGroupStatuses,
   personalStatusesOnly,
-  canViewStatusGroup,
 } from './group-visibility';
 import { getHiddenActorIds } from './block-filter';
-
-const PUBLIC = 'https://www.w3.org/ns/activitystreams#Public';
-
-/**
- * Drizzle SQL condition to exclude expired statuses (soft delete).
- */
-function notExpired() {
-  return sql`(${socialStatuses.expiresAt} IS NULL OR ${socialStatuses.expiresAt} > NOW())`;
-}
+import {
+  PUBLIC,
+  jsonbArrayContains,
+  notExpired,
+  readableStatus,
+} from './visibility';
 
 /**
  * Drizzle SQL condition to keep stories out of anything that means "posts".
@@ -51,7 +47,7 @@ function notExpired() {
  * reuse is this guard, and it has to be applied deliberately rather than
  * inherited: the home and public timelines happen to be safe because a story
  * is addressed followers-only and those queries demand the Public URI, but
- * `getActorPosts` filters on nothing but the actor and expiry. Without this,
+ * `getActorPosts` permits readable personal and group posts. Without this,
  * a story appears on the profile's Posts tab as an ordinary post the moment
  * it is created, and silently vanishes a day later.
  *
@@ -127,18 +123,6 @@ function heldRequest(viewerActorId: string, viewerUri: string) {
 
 function notHeldRequest(viewerActorId: string, viewerUri: string) {
   return sql`NOT ${heldRequest(viewerActorId, viewerUri)}`;
-}
-
-/**
- * Check if a JSONB array column contains a specific string value.
- * PostgreSQL: column @> to_jsonb(value::text)
- */
-
-function jsonbArrayContains(
-  column: SQL<unknown> | { getSQL(): SQL<unknown> },
-  value: string
-) {
-  return sql`${column} @> to_jsonb(${value}::text)`;
 }
 
 export type PublicActorWithCounty = PublicSocialActor & {
@@ -386,10 +370,7 @@ export async function getActorPosts(
         eq(s.actorId, actorId),
         isNotNull(s.published),
         includeReplies ? undefined : isNull(s.inReplyToId),
-        // Without this a private group post appears on its author's profile,
-        // to anyone, which is the leak the group feature is most able to cause:
-        // the author is public, so nothing else here would have stopped it.
-        visibleGroupStatuses(viewerGroupIds),
+        readableStatus(viewerActorId, viewerGroupIds),
         notExpired(),
         excludeStories(),
         cursor ? sql`${s.id} < ${cursor}` : undefined
@@ -668,9 +649,8 @@ export async function getAtMeTimeline(
             AND st.href = ${actor.uri}
           )`
         ),
-        // A mention is an invitation to read the post, so without this a
-        // non-member is handed private group content by being named in it.
-        visibleGroupStatuses(viewerGroupIds),
+        // A mention tag alone must not grant access to a private personal post.
+        readableStatus(actorId, viewerGroupIds),
         notExpired(),
         excludeStories(),
         notHidden(hiddenActorIds),
@@ -765,6 +745,7 @@ export async function getStatusWithLikeStatus(
   statusId: string,
   viewerActorId?: string
 ): Promise<StatusWithActorAndLike | null> {
+  const viewerGroupIds = await getViewerGroupIds(viewerActorId);
   const row = await db.query.socialStatuses.findFirst({
     // Expiry and the story exclusion are applied here, not just in the
     // timelines. This is the permalink read, and a status that has dropped out
@@ -772,7 +753,12 @@ export async function getStatusWithLikeStatus(
     // the feeds -- the link keeps working, and for an expired DM that is the
     // whole of the deletion. Stories are excluded on top because they have no
     // permalink by design: they are watched in the viewer or not at all.
-    where: and(eq(socialStatuses.id, statusId), notExpired(), excludeStories()),
+    where: and(
+      eq(socialStatuses.id, statusId),
+      readableStatus(viewerActorId, viewerGroupIds),
+      notExpired(),
+      excludeStories()
+    ),
     with: {
       actor: ACTOR_WITH,
       attachments: true,
@@ -787,8 +773,6 @@ export async function getStatusWithLikeStatus(
   });
 
   if (!row) return null;
-  if (!(await canViewStatusGroup(row.groupId, viewerActorId))) return null;
-
   return toStatus(row);
 }
 
