@@ -305,7 +305,7 @@ jobs:
           R2_BUCKET_NAME: ${{ vars.R2_BUCKET_NAME }}
           R2_PUBLIC_URL: ${{ vars.R2_PUBLIC_URL }}
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
