@@ -120,7 +120,7 @@ jobs:
 
       # Sideloadable on any device with developer mode on. This is the fastest
       # way for someone without an Android toolchain to try a branch.
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: pana-mia-android-debug
@@ -212,7 +212,7 @@ jobs:
       # log is noise.
       - name: Upload build log
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ios-build-log
           path: mobile/ios/App/build/Logs/**
