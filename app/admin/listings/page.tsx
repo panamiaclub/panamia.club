@@ -124,7 +124,10 @@ export default function AdminListingsPage() {
       setBusyId(listing.id);
       setActionError(undefined);
       try {
-        await axios.post(`/api/admin/listings/${listing.id}/decide`, {
+        const { data } = await axios.post<{
+          success: true;
+          mailFailed?: boolean;
+        }>(`/api/admin/listings/${listing.id}/decide`, {
           decision,
           reason,
         });
@@ -141,6 +144,13 @@ export default function AdminListingsPage() {
           },
           ...rows,
         ]);
+        if (data.mailFailed) {
+          setActionError(
+            `${listing.name} was ${
+              decision === 'approve' ? 'approved' : 'declined'
+            }, but the notification email could not be sent.`
+          );
+        }
       } catch (error) {
         const message =
           axios.isAxiosError(error) && error.response?.data?.error

@@ -192,15 +192,14 @@ export async function signOut(options?: {
   callbackUrl?: string;
 }): Promise<void> {
   const callbackURL = options?.callbackUrl ?? '/';
-  await authClient.signOut({
-    fetchOptions: {
-      onSuccess: () => {
-        if (options?.redirect !== false && typeof window !== 'undefined') {
-          window.location.href = callbackURL;
-        }
-      },
-    },
-  });
+  const { error } = await authClient.signOut();
+  if (error) {
+    throw new Error(error.message ?? 'Sign-out failed');
+  }
+
+  if (options?.redirect !== false && typeof window !== 'undefined') {
+    window.location.assign(callbackURL);
+  }
 }
 
 // ── SessionProvider ──────────────────────────────────────────────────────────

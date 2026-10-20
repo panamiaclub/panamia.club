@@ -52,6 +52,7 @@
   "checkEmail": "Check Your Email",
   "checkEmailDesc": "We sent you a sign-in link.",
   "signInFailed": "Failed to send sign-in link. Please try again.",
+  "oauthSignInFailed": "Google sign-in could not start. Please try again.",
   "verificationEmailSent": "Verification Email Sent",
   "verificationEmailSentDesc": "Check your inbox at {{email}}. The link expires in 5 minutes.",
   "migrationFailed": "Migration Failed",

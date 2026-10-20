@@ -69,7 +69,13 @@ export interface ListingStatus {
 }
 
 export type DecisionOutcome =
-  | { ok: true; name: string; email: string; mailed: boolean }
+  | {
+      ok: true;
+      name: string;
+      email: string;
+      mailed: boolean;
+      mailFailed: boolean;
+    }
   | { ok: false; reason: 'not-found' | 'already-decided' };
 
 export async function decideListing({
@@ -120,18 +126,32 @@ export async function decideListing({
     .set({ active: decision === 'approve', status: nextStatus })
     .where(eq(profiles.id, profileId));
 
+  let mailed = false;
+  let mailFailed = false;
+
   if (firstTime) {
-    await sendTemplateEmail(
-      decision === 'approve' ? 'profile.published' : 'profile.not_published',
-      { name: profile.name },
-      profile.email
-    );
+    try {
+      await sendTemplateEmail(
+        decision === 'approve' ? 'profile.published' : 'profile.not_published',
+        { name: profile.name },
+        profile.email
+      );
+      mailed = true;
+    } catch (error) {
+      mailFailed = true;
+      console.error('Listing decision saved but notification email failed', {
+        profileId,
+        decision,
+        error,
+      });
+    }
   }
 
   return {
     ok: true,
     name: profile.name,
     email: profile.email,
-    mailed: firstTime,
+    mailed,
+    mailFailed,
   };
 }
