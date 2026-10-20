@@ -1,7 +1,13 @@
 {
   "hero": {
-    "title": "Sobre Nosotros",
-    "subheadline": "El Futuro es Local"
+    "eyebrow": "Acerca de Pana",
+    "title": "Lo local es una relación.",
+    "subheadline": "Pana MIA reúne a la gente, los proyectos y la economía local del Sur de la Florida.",
+    "region": "Miami-Dade · Broward · Palm Beach",
+    "nonprofit": "Organización comunitaria 501(c)(3)"
+  },
+  "pageNav": {
+    "label": "Secciones de Acerca de Pana"
   },
   "mission": {
     "title": "Nuestra Misión",
@@ -13,18 +19,33 @@
     "body": "Pana MIA Club es una organización sin fines de lucro 501(c)(3) con sede en el Sur de la Florida."
   },
   "story": {
+    "eyebrow": "Dónde comenzó",
     "title": "Nuestra Historia",
     "p1": "En la primavera de 2022, Anette y Clari, dos emprendedoras emergentes, formaron un vínculo especial en un mercado de Miami. A pesar de sus diferencias, su amistad se profundizó con el tiempo, evolucionando en una oportunidad para algo más grande que ellas mismas.",
-    "p2": "Sus sueños compartidos y apoyo mutuo se convirtieron en el catalizador para la creación de Pana MIA Club, demostrando que el emprendimiento no tiene que ser un camino solitario. Juntas, descubrieron el poder de la unidad entre emprendedores locales y creativos. La historia de Pana MIA comenzó en ese encuentro inesperado que se transformó en el fundamento de todo."
+    "p2": "Sus sueños compartidos y apoyo mutuo se convirtieron en el catalizador para la creación de Pana MIA Club, demostrando que el emprendimiento no tiene que ser un camino solitario. Juntas, descubrieron el poder de la unidad entre emprendedores locales y creativos. La historia de Pana MIA comenzó en ese encuentro inesperado que se transformó en el fundamento de todo.",
+    "photoAlt": "Clari y Anette, fundadoras de Pana MIA",
+    "caption": "Clari y Anette, cofundadoras de Pana MIA.",
+    "pullQuote": "El club nació de una idea sencilla: la gente local llega más lejos cuando avanza unida."
+  },
+  "whyLocal": {
+    "eyebrow": "El movimiento local"
+  },
+  "pillars": {
+    "eyebrow": "Cómo se organiza el trabajo",
+    "title": "Tres pilares. Un ecosistema local.",
+    "intro": "Nuestros programas se organizan alrededor de tres condiciones para una economía local fuerte: herramientas compartidas, relaciones que se convierten en acción y una cultura que lleva nuestras historias."
   },
   "projects": {
+    "eyebrow": "Trabajo creado en conjunto",
     "title": "Nuestros Proyectos",
+    "intro": "Los proyectos de Pana expresan nuestros pilares: herramientas para encontrarnos, medios que comparten historias locales y espacios para mantener conectada a la comunidad.",
     "tab1": "El Directorio",
     "tab2": "LeoLero",
     "tab3": "PanaVizion",
     "directorio": "El Directorio es tu guía de acceso a todo lo que se hace y ocurre localmente en SoFlo. Nuestro directorio local en línea, con fácil funcionalidad de búsqueda por palabras clave, permite a los clientes encontrar soluciones de origen local para cualquier necesidad o deseo. Esto mejora la comodidad de los consumidores al comprar localmente y proporciona mayor visibilidad a las marcas locales, proveedores de servicios y organizaciones. Nuestro objetivo es crear una herramienta que estimule la economía local de SoFlo y abogue por un estilo de vida centrado en apoyar los negocios locales.",
     "leolero": "Descubre el vibrante mundo de LeoLero, nuestro boletín mensual que te trae una selección curada de perspectivas exclusivas. Sumérgete en extractos de nuestros talentosos Panas, lee resúmenes de nuestro podcast y únete a conversaciones fascinantes lideradas por expertos experimentados. Explora temas que resuenan con la comunidad de SoFlo y mantente al día con una lista de reproducción cuidadosamente elaborada y un calendario de eventos locales del Sur de la Florida. LeoLero es tu clave para los últimos sucesos, voces diversas y el pulso de nuestra comunidad creativa.",
-    "panavizion": "PanaVizión sirve como canal de difusión y podcast dedicado a destacar a líderes comunitarios impactantes en el Sur de la Florida a través de contenido mediático curado que comparte sus historias. Nuestro objetivo es descubrir las ricas experiencias, talentos y creaciones que las personas del Sur de la Florida tienen para ofrecer. Al brindar una plataforma para estas historias, nos esforzamos por ampliar la perspectiva y el aprecio del público por las diversas narrativas dentro de la comunidad."
+    "panavizion": "PanaVizión sirve como canal de difusión y podcast dedicado a destacar a líderes comunitarios impactantes en el Sur de la Florida a través de contenido mediático curado que comparte sus historias. Nuestro objetivo es descubrir las ricas experiencias, talentos y creaciones que las personas del Sur de la Florida tienen para ofrecer. Al brindar una plataforma para estas historias, nos esforzamos por ampliar la perspectiva y el aprecio del público por las diversas narrativas dentro de la comunidad.",
+    "explore": "Explora el proyecto"
   },
   "board": {
     "title": "Nuestra Junta",
@@ -38,15 +59,18 @@
     }
   },
   "team": {
+    "eyebrow": "La gente detrás de Pana",
     "title": "Nuestro Equipo",
     "copywriter": "Redactora",
     "technicalAdvisor": "Asesor Técnico",
     "webDeveloper": "Desarrolladora Web"
   },
   "support": {
+    "eyebrow": "Ayuda a construir lo que sigue",
     "title": "Apoya Nuestro Club",
     "p1": "Pana MIA Club trabaja arduamente hacia nuestra visión de una comunidad local unida en SoFlo todos los días. ¡Sabemos que podemos lograrlo con tu ayuda! Puedes apoyarnos financiando nuestra misión con una donación única o uniéndote a nuestra comunidad de seguidores llamada Gente dePana.",
     "cta": "Ayuda a Financiar Nuestro Directorio Local de Acceso Abierto",
-    "p2": "Nuestros suscriptores de Gente dePana son la base de la sostenibilidad de Pana MIA; las contribuciones mensuales nos permiten dar pasos más grandes en nuestros proyectos para apoyar a la comunidad local. A cambio, nuestra Gente es recompensada con muchos beneficios, descuentos y privilegios que te dan acceso especial a todo lo Pana."
+    "p2": "Nuestros suscriptores de Gente dePana son la base de la sostenibilidad de Pana MIA; las contribuciones mensuales nos permiten dar pasos más grandes en nuestros proyectos para apoyar a la comunidad local. A cambio, nuestra Gente es recompensada con muchos beneficios, descuentos y privilegios que te dan acceso especial a todo lo Pana.",
+    "ctaShort": "Apoya a Pana"
   }
 }

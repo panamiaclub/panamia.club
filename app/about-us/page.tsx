@@ -2,283 +2,313 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { ArrowRight, HeartHandshake, MapPin, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+import { usePillars, useStoryBeats } from '@/components/home/content';
+import styles from './AboutUsPage.module.css';
+
+const TEAM = [
+  {
+    name: 'Bee Maria',
+    roleKey: 'team.copywriter',
+    image: '/img/about/bee_maria.jpg',
+  },
+  {
+    name: 'Jeremy Downs',
+    roleKey: 'team.technicalAdvisor',
+    image: '/img/about/jdowns.jpg',
+  },
+  {
+    name: 'Genesis Barrios',
+    roleKey: 'team.webDeveloper',
+    image: '/img/about/gbarrios.jpg',
+  },
+] as const;
+
+const PROJECTS = [
+  {
+    key: 'directorio',
+    titleKey: 'projects.tab1',
+    bodyKey: 'projects.directorio',
+    href: '/directory',
+    accent: 'blue',
+  },
+  {
+    key: 'leolero',
+    titleKey: 'projects.tab2',
+    bodyKey: 'projects.leolero',
+    href: '/a',
+    accent: 'yellow',
+  },
+  {
+    key: 'panavizion',
+    titleKey: 'projects.tab3',
+    bodyKey: 'projects.panavizion',
+    href: '/vizion',
+    accent: 'pink',
+  },
+] as const;
 
 export default function AboutUsPage() {
   const { t } = useTranslation('about');
+  const { t: tHome } = useTranslation('home');
+  const whyLocal = useStoryBeats().find((beat) => beat.id === 'local');
+  const pillars = usePillars();
+
   return (
-    <div className="flex min-h-screen flex-col">
-      {/* Hero Section */}
-      <section
-        className="relative bg-cover bg-center py-32 text-center md:py-48"
-        style={{ backgroundImage: 'url(/img/about/florida.jpg)' }}
-      >
-        <div className="absolute inset-0 bg-black/30" />
-        <div className="relative container mx-auto px-4">
-          <h1 className="mb-4 text-5xl font-bold text-white md:text-6xl">
-            {t('hero.title')}
-          </h1>
-          <p className="text-2xl text-white md:text-3xl">
-            {t('hero.subheadline')}
-          </p>
+    <main className={styles.page}>
+      <header className={styles.hero}>
+        <Image
+          src="/img/about/florida.jpg"
+          alt=""
+          fill
+          priority
+          className={styles.heroImage}
+        />
+        <div className={styles.heroWash} />
+        <div className={styles.heroContent}>
+          <p className={styles.eyebrow}>{t('hero.eyebrow')}</p>
+          <h1>{t('hero.title')}</h1>
+          <p className={styles.heroLead}>{t('hero.subheadline')}</p>
+          <div className={styles.heroFacts}>
+            <span>
+              <MapPin aria-hidden="true" />
+              {t('hero.region')}
+            </span>
+            <span>
+              <HeartHandshake aria-hidden="true" />
+              {t('hero.nonprofit')}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <nav className={styles.pageNav} aria-label={t('pageNav.label')}>
+        <div className={styles.pageNavInner}>
+          <Link href="#our-story">{t('story.title')}</Link>
+          <Link href="#why-local">{tHome('beats.local.question')}</Link>
+          <Link href="#pillars">{t('pillars.title')}</Link>
+          <Link href="#meet-the-team">{t('team.title')}</Link>
+        </div>
+      </nav>
+
+      <section className={styles.mission}>
+        <div className={styles.sectionInner}>
+          <div className={styles.missionStatement}>
+            <p className={styles.eyebrow}>{t('mission.title')}</p>
+            <h2>{t('vision.subheadline')}</h2>
+          </div>
+          <div className={styles.missionCopy}>
+            <p>{t('mission.body')}</p>
+            <p className={styles.nonprofitNote}>{t('vision.body')}</p>
+          </div>
         </div>
       </section>
 
-      {/* Mission & Vision Section */}
-      <section className="bg-pana-navy py-16 text-white md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-3xl space-y-8">
-            <div className="space-y-4">
-              <h2 className="text-3xl font-bold">{t('mission.title')}</h2>
-              <p className="text-lg leading-relaxed">{t('mission.body')}</p>
+      <section id="our-story" className={styles.story}>
+        <div className={styles.sectionInner}>
+          <div className={styles.sectionHeading}>
+            <span>01</span>
+            <div>
+              <p className={styles.eyebrow}>{t('story.eyebrow')}</p>
+              <h2>{t('story.title')}</h2>
             </div>
-            <div className="space-y-4">
-              <h2 className="text-3xl font-bold">{t('vision.title')}</h2>
-              <h3 className="text-2xl font-semibold">
-                {t('vision.subheadline')}
-              </h3>
-              <p className="text-lg">{t('vision.body')}</p>
+          </div>
+
+          <div className={styles.storyGrid}>
+            <figure className={styles.foundersPhoto}>
+              <Image
+                src="/img/about/clari_and_anette.webp"
+                alt={t('story.photoAlt')}
+                width={900}
+                height={1100}
+              />
+              <figcaption>{t('story.caption')}</figcaption>
+            </figure>
+            <div className={styles.storyCopy}>
+              <p className={styles.storyOpening}>{t('story.p1')}</p>
+              <p>{t('story.p2')}</p>
+              <blockquote>{t('story.pullQuote')}</blockquote>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Our Story Section */}
-      <section id="our-story" className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-3xl">
-            <div className="flex flex-col items-start gap-6 md:flex-row">
-              <div className="w-full md:w-1/3">
+      {whyLocal ? (
+        <section id="why-local" className={styles.whyLocal}>
+          <div className={styles.sectionInner}>
+            <div className={styles.sectionHeading}>
+              <span>02</span>
+              <div>
+                <p className={styles.eyebrow}>{t('whyLocal.eyebrow')}</p>
+                <h2>{whyLocal.question}</h2>
+              </div>
+            </div>
+
+            <div className={styles.whyGrid}>
+              <div className={styles.mapFrame}>
                 <Image
-                  src="/img/about/clari_and_anette.webp"
-                  alt="Clari and Anette, founders of Pana MIA"
-                  width={300}
-                  height={400}
-                  className="w-full rounded-lg"
+                  src="/img/impact/county-map.webp"
+                  alt={whyLocal.scene.alt}
+                  width={800}
+                  height={600}
                 />
               </div>
-              <div className="w-full space-y-4 md:w-2/3">
-                <h2 className="text-3xl font-bold">{t('story.title')}</h2>
-                <p className="text-lg leading-relaxed">{t('story.p1')}</p>
-                <p className="text-lg leading-relaxed">{t('story.p2')}</p>
+              <div className={styles.whyCopy}>
+                <p className={styles.whyAnswer}>{whyLocal.answer}</p>
+                {whyLocal.detail.map((block) =>
+                  block.kind === 'list' ? (
+                    <div key={block.label}>
+                      <h3>{block.label}</h3>
+                      <ul>
+                        {block.items.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null
+                )}
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
-      {/* Our Projects Section */}
-      <section
-        id="collaborative-projects"
-        className="bg-cover bg-center py-16 md:py-24"
-        style={{ backgroundImage: 'url(/img/about/bubbles_navy.jpg)' }}
-      >
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-3xl">
-            <h2 className="mb-8 text-center text-3xl font-bold text-white">
-              {t('projects.title')}
-            </h2>
-            <Tabs defaultValue="directorio" className="w-full">
-              <TabsList className="grid h-auto w-full grid-cols-3 gap-0 bg-transparent p-0">
-                <TabsTrigger
-                  value="directorio"
-                  className="border-pana-blue hover:bg-pana-blue data-[state=active]:bg-pana-blue data-[state=inactive]:text-pana-blue rounded-t-lg rounded-b-none border-4 py-3 transition-colors hover:text-white data-[state=active]:text-white data-[state=inactive]:bg-white"
-                >
-                  {t('projects.tab1')}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="leolero"
-                  className="border-pana-yellow hover:bg-pana-yellow data-[state=active]:bg-pana-yellow data-[state=inactive]:text-pana-yellow rounded-t-lg rounded-b-none border-4 py-3 transition-colors hover:text-white data-[state=active]:text-white data-[state=inactive]:bg-white"
-                >
-                  {t('projects.tab2')}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="panavizion"
-                  className="border-pana-pink hover:bg-pana-pink data-[state=active]:bg-pana-pink data-[state=inactive]:text-pana-pink-deep rounded-t-lg rounded-b-none border-4 py-3 transition-colors hover:text-white data-[state=active]:text-white data-[state=inactive]:bg-white"
-                >
-                  {t('projects.tab3')}
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="directorio" className="mt-0">
-                <Card className="border-pana-blue rounded-t-none border-4">
-                  <CardContent className="p-8">
-                    <p className="text-lg leading-relaxed">
-                      {t('projects.directorio')}
-                    </p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              <TabsContent value="leolero" className="mt-0">
-                <Card className="border-pana-yellow rounded-t-none border-4">
-                  <CardContent className="p-8">
-                    <p className="text-lg leading-relaxed">
-                      {t('projects.leolero')}
-                    </p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              <TabsContent value="panavizion" className="mt-0">
-                <Card className="border-pana-pink rounded-t-none border-4">
-                  <CardContent className="p-8">
-                    <p className="text-lg leading-relaxed">
-                      {t('projects.panavizion')}
-                    </p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+      <section id="pillars" className={styles.pillars}>
+        <div className={styles.sectionInner}>
+          <div className={styles.sectionHeading}>
+            <span>03</span>
+            <div>
+              <p className={styles.eyebrow}>{t('pillars.eyebrow')}</p>
+              <h2>{t('pillars.title')}</h2>
+            </div>
+          </div>
+          <p className={styles.sectionIntro}>{t('pillars.intro')}</p>
+
+          <div className={styles.pillarGrid}>
+            {pillars.map((pillar, index) => (
+              <article
+                key={pillar.id}
+                className={styles.pillarCard}
+                data-accent={pillar.accent}
+              >
+                <span className={styles.pillarNumber}>
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <h3>{pillar.name}</h3>
+                <p>{pillar.answer}</p>
+                <ul>
+                  {pillar.programs.map((program) => (
+                    <li key={program.name}>
+                      {program.href ? (
+                        <Link href={program.href}>{program.name}</Link>
+                      ) : (
+                        program.name
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Our Board Section */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-3xl space-y-12">
-            <h2 className="text-center text-3xl font-bold">
-              {t('board.title')}
-            </h2>
+      <section id="meet-the-team" className={styles.people}>
+        <div className={styles.sectionInner}>
+          <div className={styles.sectionHeading}>
+            <span>04</span>
+            <div>
+              <p className={styles.eyebrow}>{t('team.eyebrow')}</p>
+              <h2>{t('team.title')}</h2>
+            </div>
+          </div>
 
-            {/* Anette Mago */}
-            <div className="flex flex-col items-start gap-6 md:flex-row">
-              <div className="w-full md:w-1/3">
+          <div className={styles.founderGrid}>
+            <article className={styles.founderCard}>
+              <Image
+                src="/img/about/anette_mago.jpg"
+                alt="Anette Mago"
+                width={640}
+                height={800}
+              />
+              <div>
+                <h3>{t('board.anette.name')}</h3>
+                <p>{t('board.anette.bio')}</p>
+              </div>
+            </article>
+            <article className={styles.founderCard}>
+              <Image
+                src="/img/about/claribel_avila.jpg"
+                alt="Claribel Avila"
+                width={640}
+                height={800}
+              />
+              <div>
+                <h3>{t('board.claribel.name')}</h3>
+                <p>{t('board.claribel.bio')}</p>
+              </div>
+            </article>
+          </div>
+
+          <div className={styles.teamGrid}>
+            {TEAM.map((member) => (
+              <article key={member.name} className={styles.teamCard}>
                 <Image
-                  src="/img/about/anette_mago.jpg"
-                  alt="Anette Mago"
-                  width={320}
+                  src={member.image}
+                  alt={member.name}
+                  width={400}
                   height={400}
-                  className="w-full rounded-lg"
                 />
-              </div>
-              <div className="w-full space-y-4 md:w-2/3">
-                <h3 className="text-2xl font-semibold">
-                  {t('board.anette.name')}
-                </h3>
-                <p className="text-lg leading-relaxed">
-                  {t('board.anette.bio')}
-                </p>
-              </div>
-            </div>
-
-            {/* Claribel Avila */}
-            <div className="flex flex-col items-start gap-6 md:flex-row-reverse">
-              <div className="w-full md:w-1/3">
-                <Image
-                  src="/img/about/claribel_avila.jpg"
-                  alt="Claribel Avila"
-                  width={320}
-                  height={400}
-                  className="w-full rounded-lg"
-                />
-              </div>
-              <div className="w-full space-y-4 md:w-2/3">
-                <h3 className="text-2xl font-semibold">
-                  {t('board.claribel.name')}
-                </h3>
-                <p className="text-lg leading-relaxed">
-                  {t('board.claribel.bio')}
-                </p>
-              </div>
-            </div>
+                <h3>{member.name}</h3>
+                <p>{t(member.roleKey)}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Our Team Section */}
-      <section
-        id="meet-the-team"
-        className="bg-cover bg-fixed bg-center py-16 md:py-24"
-        style={{ backgroundImage: 'url(/img/about/parallax2.jpg)' }}
-      >
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-3xl">
-            <h2 className="mb-8 text-center text-3xl font-bold text-white">
-              {t('team.title')}
-            </h2>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <Card className="text-center">
-                <CardContent className="p-4">
-                  <Image
-                    src="/img/about/bee_maria.jpg"
-                    alt="Bee Maria"
-                    width={200}
-                    height={200}
-                    className="mb-3 w-full rounded-lg"
-                  />
-                  <h3 className="text-lg font-semibold">Bee Maria</h3>
-                  <p className="text-muted-foreground text-sm">
-                    {t('team.copywriter')}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="text-center">
-                <CardContent className="p-4">
-                  <Image
-                    src="/img/about/jdowns.jpg"
-                    alt="Jeremy Downs"
-                    width={200}
-                    height={200}
-                    className="mb-3 w-full rounded-lg"
-                  />
-                  <h3 className="text-lg font-semibold">Jeremy Downs</h3>
-                  <p className="text-muted-foreground text-sm">
-                    {t('team.technicalAdvisor')}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="text-center">
-                <CardContent className="p-4">
-                  <Image
-                    src="/img/about/gbarrios.jpg"
-                    alt="Genesis Barrios"
-                    width={200}
-                    height={200}
-                    className="mb-3 w-full rounded-lg"
-                  />
-                  <h3 className="text-lg font-semibold">Genesis Barrios</h3>
-                  <p className="text-muted-foreground text-sm">
-                    {t('team.webDeveloper')}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+      <section id="collaborative-projects" className={styles.projects}>
+        <div className={styles.sectionInner}>
+          <div className={styles.projectsHeading}>
+            <p className={styles.eyebrow}>{t('projects.eyebrow')}</p>
+            <h2>{t('projects.title')}</h2>
+            <p>{t('projects.intro')}</p>
+          </div>
+          <div className={styles.projectGrid}>
+            {PROJECTS.map((project) => (
+              <article
+                key={project.key}
+                className={styles.projectCard}
+                data-accent={project.accent}
+              >
+                <h3>{t(project.titleKey)}</h3>
+                <p>{t(project.bodyKey)}</p>
+                <Link href={project.href}>
+                  {t('projects.explore')}
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Support Our Club Section */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-3xl">
-            <div className="flex flex-col items-center gap-8 md:flex-row">
-              <div className="w-full md:w-1/3">
-                <Image
-                  src="/img/about/floridamap_panamia.jpg"
-                  alt="Florida map with Pana MIA"
-                  width={320}
-                  height={400}
-                  className="w-full rounded-lg"
-                />
-              </div>
-              <div className="w-full space-y-6 md:w-2/3">
-                <h2 className="text-3xl font-bold">{t('support.title')}</h2>
-                <p className="text-lg leading-relaxed">{t('support.p1')}</p>
-                <Button
-                  size="lg"
-                  className="bg-pana-pink hover:bg-pana-pink/90"
-                  asChild
-                >
-                  <Link href="/donate">{t('support.cta')}</Link>
-                </Button>
-                <p className="text-lg leading-relaxed">{t('support.p2')}</p>
-              </div>
-            </div>
-          </div>
+      <section className={styles.support}>
+        <div className={styles.supportArt}>
+          <Users aria-hidden="true" />
         </div>
+        <div>
+          <p className={styles.eyebrow}>{t('support.eyebrow')}</p>
+          <h2>{t('support.title')}</h2>
+          <p>{t('support.p1')}</p>
+        </div>
+        <Link href="/donate" className={styles.supportCta}>
+          {t('support.ctaShort')}
+          <ArrowRight aria-hidden="true" />
+        </Link>
       </section>
-    </div>
+    </main>
   );
 }
