@@ -4,8 +4,9 @@ import { useState, useEffect, FormEvent } from 'react';
 import { useSession } from '@/lib/auth-client';
 import { useTurnstile } from '@/components/Turnstile';
 import Link from 'next/link';
-import Image from 'next/image';
 import axios from 'axios';
+import PublicPageShell from '@/components/PublicPageShell';
+import publicStyles from '@/components/PublicPageShell.module.css';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -215,26 +216,16 @@ function ContactForm() {
   }
 
   return (
-    <div className="from-background to-muted/20 flex min-h-screen flex-col bg-gradient-to-b">
-      <div className="container mx-auto max-w-2xl px-4 py-12">
-        {/* Logo */}
-        <div className="mb-8 flex justify-center">
-          <Link href="/">
-            <Image
-              src="/logos/pana_logo_long_blue.png"
-              alt="Pana MIA Club"
-              width={300}
-              height={150}
-              className="h-auto w-64"
-              priority
-            />
-          </Link>
-        </div>
-
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="mb-4 text-4xl font-bold">{t('title')}</h1>
-          <div className="text-muted-foreground space-y-2 text-lg">
+    <PublicPageShell
+      eyebrow={t('eyebrow')}
+      title={t('title')}
+      intro={t('intro2')}
+      narrow
+    >
+      <div className={publicStyles.stack}>
+        <aside className={publicStyles.callout}>
+          <h2>{t('formTitle')}</h2>
+          <div>
             <p>
               {t('intro1')}{' '}
               <Link
@@ -249,12 +240,10 @@ function ContactForm() {
               </Link>
               {t('intro1c')}
             </p>
-            <p>{t('intro2')}</p>
           </div>
-        </div>
+        </aside>
 
-        {/* Contact Form */}
-        <Card>
+        <Card className={publicStyles.panel}>
           <CardHeader>
             <CardTitle>{t('formTitle')}</CardTitle>
             <CardDescription>{t('formDesc')}</CardDescription>
@@ -382,7 +371,7 @@ function ContactForm() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PublicPageShell>
   );
 }
 

@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
+import PublicPageShell from '@/components/PublicPageShell';
+import publicStyles from '@/components/PublicPageShell.module.css';
 import {
   Accordion,
   AccordionContent,
@@ -13,16 +15,14 @@ export default function JoinTheTeamPage() {
   const { t } = useTranslation('jointeam');
 
   return (
-    <div className="from-background to-muted/20 flex min-h-screen flex-col bg-gradient-to-b">
-      <div className="container mx-auto max-w-4xl px-4 py-12">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="mb-4 text-4xl font-bold">{t('title')}</h1>
-          <p className="text-muted-foreground text-lg">{t('subtitle')}</p>
-        </div>
-
-        {/* Job Positions Accordion */}
-        <div className="mb-12">
+    <PublicPageShell
+      eyebrow={t('eyebrow')}
+      title={t('title')}
+      intro={t('subtitle')}
+      narrow
+    >
+      <div className={publicStyles.stack}>
+        <div className={`${publicStyles.panel} p-6 md:p-8`}>
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
               <AccordionTrigger className="text-left text-xl font-semibold">
@@ -119,27 +119,25 @@ export default function JoinTheTeamPage() {
           </Accordion>
         </div>
 
-        {/* General volunteering — folded in from the retired Google volunteer
-            form that /links used to point at. Sits outside the accordion
-            because it isn't a named role: it's the low-commitment way in. */}
-        <div className="bg-muted/40 mb-8 rounded-lg border p-6">
-          <h2 className="mb-3 text-xl font-semibold">{t('volunteer.title')}</h2>
-          <p className="mb-3 text-base">{t('volunteer.p1')}</p>
-          <p className="text-muted-foreground text-base">{t('volunteer.p2')}</p>
+        <div className={publicStyles.callout}>
+          <h2>{t('volunteer.title')}</h2>
+          <p>{t('volunteer.p1')}</p>
+          <p>{t('volunteer.p2')}</p>
         </div>
 
-        {/* Contact Us */}
-        <div className="rounded-lg border p-6 text-center">
-          <p className="mb-4 text-lg font-semibold">{t('cta.question')}</p>
-          <p className="text-muted-foreground mb-6">{t('cta.desc')}</p>
+        <div className={`${publicStyles.panel} p-6 text-center md:p-8`}>
+          <h2 className="mb-3 text-2xl font-bold">{t('cta.question')}</h2>
+          <p className="text-muted-foreground mx-auto mb-6 max-w-2xl">
+            {t('cta.desc')}
+          </p>
           <Link
             href="/form/contact-us"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-block rounded-md px-6 py-3 font-semibold transition-colors"
+            className="bg-pana-blue inline-block rounded-full px-6 py-3 font-bold text-white transition-colors hover:bg-black"
           >
             {t('cta.button')}
           </Link>
         </div>
       </div>
-    </div>
+    </PublicPageShell>
   );
 }

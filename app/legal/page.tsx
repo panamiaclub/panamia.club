@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalJsonLd } from '@/components/legal/JsonLd';
+import PublicPageShell from '@/components/PublicPageShell';
+import publicStyles from '@/components/PublicPageShell.module.css';
 
 // Static legal content — cache at the edge, revalidate hourly (Workers Cache).
 export const revalidate = 3600;
@@ -63,29 +65,25 @@ export default function LegalIndexPage() {
         url={`${SITE}/legal`}
         version="0.1"
       />
-      <header className="mb-8 border-b pb-6">
-        <h1 className="text-4xl font-bold">Legal</h1>
-        <p className="text-muted-foreground mt-2">
-          Pana MIA Club legal documents, policies, and disclosures.
-        </p>
-      </header>
-
-      <div className="grid gap-4">
-        {documents.map((doc) => (
-          <Link
-            key={doc.href}
-            href={doc.href}
-            className="group hover:bg-muted/50 rounded-lg border p-6 transition-colors"
-          >
-            <h2 className="text-xl font-semibold group-hover:underline">
-              {doc.title}
-            </h2>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {doc.description}
-            </p>
-          </Link>
-        ))}
-      </div>
+      <PublicPageShell
+        eyebrow="Trust & transparency"
+        title="Legal & policies"
+        intro="The commitments, safeguards, and operating policies behind Pana MIA Club and the services we provide."
+        narrow
+      >
+        <div className={publicStyles.legalGrid}>
+          {documents.map((doc) => (
+            <Link
+              key={doc.href}
+              href={doc.href}
+              className={publicStyles.legalCard}
+            >
+              <h2>{doc.title}</h2>
+              <p>{doc.description}</p>
+            </Link>
+          ))}
+        </div>
+      </PublicPageShell>
     </>
   );
 }
