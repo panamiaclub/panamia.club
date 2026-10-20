@@ -38,21 +38,21 @@ const NAV_ITEMS: NavItemDefinition[] = [
         labelKey: 'nav.siteMenu.meetTheTeam',
         href: '/about-us#meet-the-team',
       },
-      { labelKey: 'nav.siteMenu.whyLocal', href: '/#why-local' },
-      { labelKey: 'nav.siteMenu.pillars', href: '/#pillars' },
+      { labelKey: 'nav.siteMenu.whyLocal', href: '/about-us#why-local' },
+      { labelKey: 'nav.siteMenu.pillars', href: '/about-us#pillars' },
     ],
   },
   {
     labelKey: 'nav.siteMenu.ourImpact',
-    href: '/impact',
+    href: '/our-impact',
     children: [
       {
         labelKey: 'nav.siteMenu.communityConnectorsProgram',
-        href: '/connectors',
+        href: '/our-impact#community-connectors',
       },
       {
         labelKey: 'nav.siteMenu.storiesOfImpact',
-        href: '/impact#stories-of-impact',
+        href: '/our-impact#stories-of-impact',
       },
       {
         labelKey: 'nav.siteMenu.downloadOurImpact',
@@ -62,48 +62,51 @@ const NAV_ITEMS: NavItemDefinition[] = [
   },
   {
     labelKey: 'nav.siteMenu.ourEcosystem',
-    href: '/impact#partners',
+    href: '/ecosystem',
     children: [
       {
         labelKey: 'nav.siteMenu.collaborativePartners',
-        href: '/impact#partners',
+        href: '/ecosystem#collaborative-partners',
       },
       {
         labelKey: 'nav.siteMenu.collaborativeProjects',
-        href: '/about-us#collaborative-projects',
+        href: '/ecosystem#collaborative-projects',
       },
       {
         labelKey: 'nav.siteMenu.panaCertified',
-        href: '/directory/search',
+        href: '/ecosystem#pana-certified',
       },
       {
         labelKey: 'nav.siteMenu.sponsorsFunders',
-        href: '/impact#partners',
+        href: '/ecosystem#sponsors-funders',
       },
     ],
   },
   {
     labelKey: 'nav.siteMenu.supportPana',
-    href: '/donate',
+    href: '/support-pana',
     children: [
-      { labelKey: 'nav.siteMenu.givingCircle', href: '/donate' },
+      {
+        labelKey: 'nav.siteMenu.givingCircle',
+        href: '/support-pana#giving-circle',
+      },
       {
         labelKey: 'nav.siteMenu.sponsorship',
-        href: '/form/contact-us',
+        href: '/support-pana#sponsorship',
       },
     ],
   },
   {
     labelKey: 'nav.siteMenu.programs',
-    href: '/#pillars',
+    href: '/programs',
     children: [
       {
         labelKey: 'nav.siteMenu.pillarBreakdownByProgram',
-        href: '/#pillars',
+        href: '/programs#pillar-breakdown',
       },
       {
         labelKey: 'nav.siteMenu.collectiveTech',
-        href: '/#pillar-tech',
+        href: '/programs#collective-tech',
         children: [
           { labelKey: 'nav.siteMenu.directory', href: '/directory' },
           { labelKey: 'nav.siteMenu.panaSocial', href: '/social' },
@@ -111,7 +114,7 @@ const NAV_ITEMS: NavItemDefinition[] = [
       },
       {
         labelKey: 'nav.siteMenu.communityBuilding',
-        href: '/#pillar-community',
+        href: '/programs#community-building',
         children: [
           {
             labelKey: 'nav.siteMenu.connectorsProgram',
@@ -125,7 +128,7 @@ const NAV_ITEMS: NavItemDefinition[] = [
       },
       {
         labelKey: 'nav.siteMenu.cultureWork',
-        href: '/#pillar-culture',
+        href: '/programs#culture-work',
         children: [
           {
             labelKey: 'nav.siteMenu.panaInkPress',
@@ -136,7 +139,7 @@ const NAV_ITEMS: NavItemDefinition[] = [
           },
           {
             labelKey: 'nav.siteMenu.collaborativeProjects',
-            href: '/about-us#collaborative-projects',
+            href: '/ecosystem#collaborative-projects',
           },
         ],
       },

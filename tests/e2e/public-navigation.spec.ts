@@ -29,8 +29,23 @@ test.describe('Public Navigation', () => {
   test('about page loads', async ({ page }) => {
     const res = await page.goto('/about-us');
     expect(res?.status()).toBe(200);
-    await expect(page.locator('h1').first()).toContainText('About Us');
+    await expect(page.locator('h1').first()).toContainText(
+      'Local is a relationship'
+    );
   });
+
+  for (const [path, heading] of [
+    ['/our-impact', 'Our Impact'],
+    ['/ecosystem', 'Our Ecosystem'],
+    ['/support-pana', 'Support Pana'],
+    ['/programs', 'Programs'],
+  ]) {
+    test(`${path} parent page loads`, async ({ page }) => {
+      const res = await page.goto(path);
+      expect(res?.status()).toBe(200);
+      await expect(page.locator('h1').first()).toContainText(heading);
+    });
+  }
 
   test('directory search loads', async ({ page }) => {
     const res = await page.goto('/directory/search');

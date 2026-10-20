@@ -1,7 +1,13 @@
 {
   "hero": {
-    "title": "About Us",
-    "subheadline": "The Future is Local"
+    "eyebrow": "About Pana",
+    "title": "Local is a relationship.",
+    "subheadline": "Pana MIA brings South Florida's people, projects, and local economy into the same room.",
+    "region": "Miami-Dade · Broward · Palm Beach",
+    "nonprofit": "Community-led 501(c)(3)"
+  },
+  "pageNav": {
+    "label": "About Pana sections"
   },
   "mission": {
     "title": "Our Mission",
@@ -13,18 +19,33 @@
     "body": "Pana MIA Club is a 501(c)(3) non-profit based in South Florida."
   },
   "story": {
+    "eyebrow": "Where it started",
     "title": "Our Story",
     "p1": "In the spring of 2022, Anette and Clari, two emerging entrepreneurs, formed a fated bond at a Miami market. Despite their differences, their friendship deepened over time, evolving into an opportunity for something greater than themselves.",
-    "p2": "Their shared dreams and mutual support became the catalyst for the creation of Pana MIA Club, proving that entrepreneurship doesn't have to be a solo journey. Together, they discovered the power of unity among local entrepreneurs and creatives. Pana MIA's story began in that unexpected meeting that transformed into the foundation of it all."
+    "p2": "Their shared dreams and mutual support became the catalyst for the creation of Pana MIA Club, proving that entrepreneurship doesn't have to be a solo journey. Together, they discovered the power of unity among local entrepreneurs and creatives. Pana MIA's story began in that unexpected meeting that transformed into the foundation of it all.",
+    "photoAlt": "Clari and Anette, founders of Pana MIA",
+    "caption": "Clari and Anette, co-founders of Pana MIA.",
+    "pullQuote": "The club began with a simple realization: local people move further when they move together."
+  },
+  "whyLocal": {
+    "eyebrow": "The local movement"
+  },
+  "pillars": {
+    "eyebrow": "How the work is organized",
+    "title": "Three pillars. One local ecosystem.",
+    "intro": "Our programs are organized around the three conditions a strong local economy needs: useful shared tools, relationships that turn into action, and culture that carries local stories."
   },
   "projects": {
+    "eyebrow": "Work made together",
     "title": "Our Projects",
+    "intro": "Pana projects are practical expressions of the pillars: tools to find one another, media that carries local stories, and spaces for the community to stay connected.",
     "tab1": "El Directorio",
     "tab2": "LeoLero",
     "tab3": "PanaVizion",
     "directorio": "El Directorio is your access guide to everything locally made and occurring in SoFlo! Our online Local Directory, with easy keyword search functionality, allows patrons to find locally sourced solutions for any need or desire. This enhances convenience for consumers when shopping locally and provides increased visibility for local brands, service providers, and organizations. Our objective is to create a tool that will stimulate the local SoFlo economy and advocate for a lifestyle centered around supporting local businesses.",
     "leolero": "Discover the vibrant world of LeoLero, our monthly newsletter that brings you a curated selection of exclusive insights. Dive into excerpts from our talented Panas, catch recaps from our podcast, and join engaging conversations led by seasoned experts. Explore topics that resonate with the SoFlo community and stay in the loop with a thoughtfully crafted playlist and a local events calendar for South Florida. LeoLero is your key to the latest happenings, diverse voices, and the heartbeat of our creative community.",
-    "panavizion": "PanaVizión serves as a broadcast channel and podcast dedicated to highlighting impactful community leaders in South Florida through curated media content that shares their stories. Our goal is to uncover the rich experiences, talents, and creations that the people of South Florida have to offer. By providing a platform for these stories, we strive to expand the public's perspective and appreciation for the diverse narratives within the community."
+    "panavizion": "PanaVizión serves as a broadcast channel and podcast dedicated to highlighting impactful community leaders in South Florida through curated media content that shares their stories. Our goal is to uncover the rich experiences, talents, and creations that the people of South Florida have to offer. By providing a platform for these stories, we strive to expand the public's perspective and appreciation for the diverse narratives within the community.",
+    "explore": "Explore the project"
   },
   "board": {
     "title": "Our Board",
@@ -38,15 +59,18 @@
     }
   },
   "team": {
+    "eyebrow": "The people behind Pana",
     "title": "Our Team",
     "copywriter": "Copywriter",
     "technicalAdvisor": "Technical Advisor",
     "webDeveloper": "Web Developer"
   },
   "support": {
+    "eyebrow": "Help build what comes next",
     "title": "Support Our Club",
     "p1": "Pana MIA Club works hard towards our vision for a unified local SoFlo community everyday. We know we can do it with your help! You can support us by funding our mission with a one-time donation or by joining our community of supporters called Gente dePana!",
     "cta": "Help Fund Our Open-Access Local's Directory",
-    "p2": "Our Gente dePana subscribers are the foundation of Pana MIA's sustainability, monthly contributions allow us to make bigger strides in our projects to support the local community. In return, our Gente are rewarded with so many benefits, discounts and perks that give you special access to all things Pana!"
+    "p2": "Our Gente dePana subscribers are the foundation of Pana MIA's sustainability, monthly contributions allow us to make bigger strides in our projects to support the local community. In return, our Gente are rewarded with so many benefits, discounts and perks that give you special access to all things Pana!",
+    "ctaShort": "Support Pana"
   }
 }
