@@ -6,19 +6,19 @@ Read this before repointing any domain constant. Two separate sessions independe
 
 ## Live topology
 
-Measured 2026-10-07 unless noted. Verify before acting on it; deployments move.
+Measured 2026-10-19 unless noted. Verify before acting on it; deployments move.
 
-| Host                     | Status                           | What it serves                                                                                                                                                     |
-| ------------------------ | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pana.social`            | **200** (Cloudflare)             | **This app.** The live production deployment.                                                                                                                      |
-| `social.pana.social`     | **200**                          | Pana Social. Bound as a Worker Custom Domain 2026-09-24.                                                                                                           |
-| `connectors.pana.social` | **200**                          | Pana Connectors. Bound as a Worker Custom Domain 2026-10-07.                                                                                                       |
-| `admin.pana.social`      | **200** at `/admin`              | The admin console. Bound as a Worker Custom Domain 2026-10-07.                                                                                                     |
-| `events.pana.social`     | **Not planned**                  | Nothing. Pana Events is served from `pana.social/e` instead — see [Events is path-only](#events-is-path-only).                                                     |
-| `relay.pana.social`      | Resolves                         | The **separate** `panamia-nosflare` Worker, not this one.                                                                                                          |
-| `www.panamia.club`       | **200**                          | A **different, older site** — "All Things Local In SoFlo"                                                                                                          |
-| `panamia.club` (apex)    | **Fails** — timed out            | Nothing reachable. TLS cert expired when measured 2026-09-22; a bare timeout now. Both are consistent with the split A record — see [Known issues](#known-issues). |
-| `social.panamia.club`    | **Fails** — timeout (2026-09-22) | Parked domain. Not part of the plan; see below.                                                                                                                    |
+| Host                     | Status               | What it serves                                                                                                 |
+| ------------------------ | -------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `pana.social`            | **No web address**   | Reserved for federated identities and email; it currently has no A or AAAA record.                             |
+| `social.pana.social`     | **Does not resolve** | No current web deployment.                                                                                     |
+| `connectors.pana.social` | **200**              | Pana Connectors. Bound as a Worker Custom Domain 2026-10-07.                                                   |
+| `admin.pana.social`      | **200** at `/admin`  | The admin console. Bound as a Worker Custom Domain 2026-10-07.                                                 |
+| `events.pana.social`     | **Not planned**      | Nothing. Pana Events is served from `pana.social/e` instead — see [Events is path-only](#events-is-path-only). |
+| `relay.pana.social`      | Resolves             | The **separate** `panamia-nosflare` Worker, not this one.                                                      |
+| `www.panamia.club`       | **200**              | A **different, older site** — "All Things Local In SoFlo"                                                      |
+| `panamia.club` (apex)    | **200** (Cloudflare) | **This app.** The live production deployment.                                                                  |
+| `social.panamia.club`    | **522**              | DNS exists, but the origin is not healthy; `PANAVERSE_SUBDOMAINS` remains off.                                 |
 
 Every app surface that is getting a subdomain has one; `events.pana.social` is deliberately not among them. The bound ones still answer on the apex as well, at `pana.social/connectors` and `pana.social/admin` — binding a subdomain adds a front door, it does not move a route. Events only ever uses that apex door, at `pana.social/e`.
 

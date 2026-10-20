@@ -143,6 +143,7 @@ function SignInPageContent({
   })();
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [oauthProvider, setOAuthProvider] = useState<string | null>(null);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const {
@@ -239,8 +240,18 @@ function SignInPageContent({
   // With no OAuth to choose between, the toggle is a pointless extra click.
   const emailFormOpen = showEmailForm || !hasOAuth;
 
-  const handleOAuthSignIn = (provider: string) => {
-    signIn(provider, { callbackUrl });
+  const handleOAuthSignIn = async (provider: string) => {
+    setOAuthProvider(provider);
+    try {
+      await signIn(provider, { callbackUrl });
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: tToast('error'),
+        description: tToast('oauthSignInFailed'),
+      });
+      setOAuthProvider(null);
+    }
   };
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
@@ -352,9 +363,12 @@ function SignInPageContent({
                       onClick={() => handleOAuthSignIn(provider.id)}
                       className={provider.className}
                       size="lg"
+                      disabled={oauthProvider !== null}
                     >
                       {provider.icon}
-                      {provider.label}
+                      {oauthProvider === provider.id
+                        ? t('signingIn')
+                        : provider.label}
                     </Button>
                   ))}
                 </div>

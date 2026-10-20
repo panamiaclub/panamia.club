@@ -190,7 +190,7 @@
   // only enforces that the *keys* match envConfig, never the values.
   // See .env.local.example.
   "vars": {
-    "BETTER_AUTH_URL": "https://pana.social",
+    "BETTER_AUTH_URL": "https://panamia.club",
     "EMAIL_ENV": "PROD",
     "EMAIL_SENDER_ADDRESS": "hola@pana.social",
     "EMAIL_SENDER_NAME": "Pana MIA Testing Environment",
@@ -211,19 +211,14 @@
     // plaintext dashboard vars are wiped on each Workers Builds deploy, which
     // is exactly why it lives here. Turn the button off by setting "false".
     "NEXT_PUBLIC_GOOGLE_ENABLED": "true",
-    // Registrable domain the panaverse surfaces hang off — see
-    // lib/panaverse/surfaces.ts. Hosts that don't match a surface (previews,
-    // localhost) fall back to the main site with every route reachable.
-    // This is the host that actually serves this Worker, and it matches
-    // FEDERATION_DOMAIN above on purpose. panamia.club is a different, older
-    // deployment — pointing this at it sends every cross-surface link and
-    // canonical URL to another app. See docs/DOMAINS.md.
-    "PANAVERSE_ROOT_DOMAIN": "pana.social",
-    // On: social.pana.social is bound to this Worker as a Custom Domain, so it
-    // has a DNS record and its own certificate (there is no *.pana.social
-    // wildcard — certs here are per-hostname). With this "1", cross-surface
-    // links, metadataBase and canonical URLs move onto the surface subdomain,
-    // and Pana Social's front door is social.pana.social rather than /s.
+    // Registrable domain the web surfaces hang off — see
+    // lib/panaverse/surfaces.ts. This is independent of FEDERATION_DOMAIN:
+    // ActivityPub identities remain @user@pana.social even though the website
+    // currently serves from panamia.club.
+    "PANAVERSE_ROOT_DOMAIN": "panamia.club",
+    // Off while the surface subdomains are not healthy. With this "0",
+    // cross-surface links stay on panamia.club and use their route prefixes
+    // instead of sending members to a hostname that returns Cloudflare 522.
     //
     // Routing is unaffected either way — every surface route answers on every
     // hostname — so this moves the front door without moving a single route,
@@ -231,17 +226,10 @@
     // resolving: that is the setting which keeps every link on the host in
     // hand, and a link to a host with no record is a dead end rather than a
     // slower route. See docs/DOMAINS.md.
-    "PANAVERSE_SUBDOMAINS": "1",
-    // Set as part of launching social.pana.social. Without it the session
-    // cookie is host-only, so verification on pana.social leaves the member
-    // signed out on social.pana.social — the social surface cannot hold a
-    // session at all. Re-scoping signs every existing user out once; that is
-    // the one-time cost of this line, expected rather than a regression.
-    // Note it is also sent to relay.pana.social, under the same registrable
-    // domain. That is a cookie the relay never reads, not a new grant: it
-    // cannot reach the fediverse identity domain, which is a separate
-    // registrable domain and needs a real OAuth handoff. See docs/DOMAINS.md.
-    "PANAVERSE_COOKIE_DOMAIN": ".pana.social",
+    "PANAVERSE_SUBDOMAINS": "0",
+    // Scope sessions to the registrable domain that actually serves the app.
+    // This is intentionally separate from FEDERATION_DOMAIN.
+    "PANAVERSE_COOKIE_DOMAIN": ".panamia.club",
     "R2_BUCKET_NAME": "panamia-media",
     "R2_PUBLIC_URL": "https://pub-32ea3903ddd74e92a629c30bcda3b3c5.r2.dev",
     "GHL_WORKFLOW_TEST_ID": "6682f160-e9a3-4aff-9f5d-099bd9c3e951",

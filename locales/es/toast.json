@@ -52,6 +52,7 @@
   "checkEmail": "Revisa Tu Correo",
   "checkEmailDesc": "Te enviamos un enlace para iniciar sesion.",
   "signInFailed": "Error al enviar enlace de inicio de sesion. Por favor intenta de nuevo.",
+  "oauthSignInFailed": "No se pudo iniciar sesion con Google. Por favor intenta de nuevo.",
   "verificationEmailSent": "Correo de Verificacion Enviado",
   "verificationEmailSentDesc": "Revisa tu bandeja en {{email}}. El enlace expira en 5 minutos.",
   "migrationFailed": "Migracion Fallida",
