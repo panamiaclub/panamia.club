@@ -71,7 +71,7 @@ export default function OurImpactPage() {
         <div className={styles.sectionInner}>
           <div className={styles.missionStatement}>
             <p className={styles.eyebrow}>{t('believe.title')}</p>
-            <h2>{t('conclusion.title')}</h2>
+            <h2>{t('localImpact.title')}</h2>
           </div>
           <div className={styles.missionCopy}>
             <p>{t('believe.body1')}</p>
