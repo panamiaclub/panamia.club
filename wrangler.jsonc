@@ -96,6 +96,13 @@
       "preview_bucket_name": "panamia-media-preview",
     },
   ],
+  // Persistent Vinext data cache for ISR and cache-tag invalidation.
+  "kv_namespaces": [
+    {
+      "binding": "VINEXT_KV_CACHE",
+      "id": "31382647349e4f86baf7d85cf86cc953",
+    },
+  ],
 
   // Durable Objects for WebSocket-based real-time features (signaling, chat)
   "durable_objects": {

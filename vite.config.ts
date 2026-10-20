@@ -1,4 +1,5 @@
 import { cloudflare } from '@cloudflare/vite-plugin';
+import { kvDataAdapter } from '@vinext/cloudflare/cache/kv-data-adapter';
 import fs from 'fs';
 import path from 'path';
 import vinext from 'vinext';
@@ -104,6 +105,39 @@ const fixNoonDateLibPlugin: Plugin = {
   },
 };
 
+// MapLibre ships its worker with a sourceMappingURL comment. The Vinext SSR
+// build fingerprints the worker filename but does not emit the referenced map,
+// and Wrangler fails closed on that dangling path during deploy. Remove only
+// the invalid comment from that generated chunk; the worker code is unchanged.
+const stripMaplibreWorkerSourceMapPlugin: Plugin = {
+  name: 'strip-maplibre-worker-sourcemap',
+  closeBundle() {
+    const root = path.resolve('dist/server');
+    if (!fs.existsSync(root)) return;
+    const visit = (directory: string) => {
+      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        const absolute = path.join(directory, entry.name);
+        if (entry.isDirectory()) {
+          visit(absolute);
+        } else if (
+          entry.name.startsWith('maplibre-gl-worker.') &&
+          entry.name.endsWith('.mjs')
+        ) {
+          const code = fs.readFileSync(absolute, 'utf8');
+          fs.writeFileSync(
+            absolute,
+            code.replace(
+              /\n?\/\/# sourceMappingURL=maplibre-gl-worker\.mjs\.map\s*$/,
+              ''
+            )
+          );
+        }
+      }
+    };
+    visit(root);
+  },
+};
+
 // Vite 8 + @vitejs/plugin-react v6 upgrade blocked:
 //   - vinext dev server crashes with SyntaxError in worker runner (cloudflare/vinext#540, #585)
 //   - Vite 8's Rolldown bundler breaks CJS deps in SSR dev (module is not defined)
@@ -146,7 +180,12 @@ export default defineConfig({
     fixAtAliasPlugin,
     fixNextExtensionImportsPlugin,
     fixNoonDateLibPlugin,
-    vinext(),
+    stripMaplibreWorkerSourceMapPlugin,
+    vinext({
+      cache: {
+        data: kvDataAdapter(),
+      },
+    }),
     cloudflare({
       viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] },
     }),
