@@ -177,7 +177,7 @@ export default function DonatePage() {
   return (
     <PublicPageShell
       eyebrow="Support Pana MIA"
-      title="Fund the future of local"
+      title="MAKE A DONATION"
       intro="Your contribution helps Pana MIA build community technology, support local culture, and connect the people shaping South Florida."
     >
       <div className="mx-auto max-w-4xl">
