@@ -1,11 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation, Trans } from 'react-i18next';
-import { ArrowRight, Heart } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { DirectorySuggest } from '@/components/directory-suggest';
 import { ScopeMenu } from '@/components/directory-scope-bar';
 import { useSession } from '@/lib/auth-client';
@@ -32,7 +29,7 @@ import { useStoryBeats, usePillars } from './content';
  *   1. Search        — what are you looking for? (unchanged, it already works)
  *   2. The street    — what is this place, and why does it exist?
  *   3. The pillars   — what is actually being built?
- *   4. The point     — so join, or subscribe.
+ *   4. Get involved  — choose a path, or let the quiz recommend one.
  *
  * The scene is the newer idea and the load-bearing one. Pana MIA's whole
  * argument is about a physical place — these counties, these blocks, the
@@ -56,8 +53,6 @@ import { useStoryBeats, usePillars } from './content';
  *   outright. It was three verbs written for the site; the pillars are the
  *   organisation's own three-part account of its work, and having both would
  *   be the homepage disagreeing with the deck.
- *
- * The point-and-newsletter section is carried over as-is, per the brief.
  *
  * These are exported as parts rather than as one `<HomePage>` because
  * `/mock/home` renders exactly the same sections inside a density-toggle
@@ -343,110 +338,6 @@ export function HomePillars() {
           questions already had. */}
       <div data-rv>
         <PillarPanels pillars={pillars} />
-      </div>
-    </section>
-  );
-}
-
-/* -------------------------------------------------------------------------
-   4. The point, and the newsletter
-   ------------------------------------------------------------------------- */
-
-/**
- * Carried over from the previous homepage without redesign, per the brief.
- * The newsletter capture is still disabled for the same reason it was
- * disabled there: /api/crm/contact/subscribe only re-subscribes an already
- * authenticated contact, so a live input would accept an address and silently
- * drop it.
- */
-export function HomePoint() {
-  const { t } = useTranslation('home');
-
-  return (
-    <section className="home-section story-point">
-      <div className="container mx-auto px-4" data-rv>
-        <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-          <div>
-            <span className="section-eyebrow">{t('closing.eyebrow')}</span>
-            <h2 className="section-statement mt-6">
-              <Trans
-                i18nKey="closing.statement"
-                t={t}
-                components={{ em: <em /> }}
-              />
-            </h2>
-          </div>
-          <div>
-            <p className="section-lede story-point-body">{t('closing.lede')}</p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Button
-                size="lg"
-                asChild
-                className="story-btn story-btn-solid rounded-full font-extrabold"
-              >
-                <Link href="/form/get-listed">{t('closing.ctaJoin')}</Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                asChild
-                className="story-btn story-btn-ghost rounded-full border-2 font-extrabold"
-              >
-                <Link href="/directory/search">{t('closing.ctaBrowse')}</Link>
-              </Button>
-              {/* Ghost rather than a third fill: "How do I get involved?" is
-                  answered by joining first, and a money ask that outweighs the
-                  join button would be answering a question nobody asked. The
-                  heart is what marks it as a different kind of ask, which is
-                  the job the old county row did by setting it apart. */}
-              <Button
-                size="lg"
-                variant="outline"
-                asChild
-                className="story-btn story-btn-ghost rounded-full border-2 font-extrabold"
-              >
-                <Link href="/donate">
-                  <Heart className="h-4 w-4" aria-hidden="true" />
-                  {t('closing.ctaDonate')}
-                </Link>
-              </Button>
-            </div>
-
-            <div className="story-point-rule mt-10 border-t pt-8">
-              <span className="section-eyebrow">{t('newsletter.eyebrow')}</span>
-              <p className="section-lede story-point-body mt-4">
-                {t('newsletter.lede')}
-              </p>
-              <div className="mt-5 flex max-w-lg flex-wrap items-center gap-3">
-                <input
-                  type="email"
-                  disabled
-                  aria-describedby="home-newsletter-status"
-                  placeholder={t('newsletter.placeholder')}
-                  className="story-point-input min-w-0 flex-1 rounded-full border-2 px-5 py-3 font-semibold disabled:cursor-not-allowed"
-                />
-                <Button
-                  size="lg"
-                  disabled
-                  className="story-btn story-btn-solid rounded-full font-extrabold"
-                >
-                  {t('newsletter.cta')}
-                </Button>
-              </div>
-              <span
-                id="home-newsletter-status"
-                className="coming-soon story-point-accent mt-4"
-              >
-                {t('comingSoon')}
-              </span>
-            </div>
-
-            <Link href="/a" className="link-arrow story-point-accent mt-10">
-              {t('closing.dispatches')}
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </div>
-        </div>
       </div>
     </section>
   );

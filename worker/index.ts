@@ -105,6 +105,27 @@ export default {
     // that reaches those routes over HTTP rather than the Service Binding.
     setInternalAuthToken(env);
 
+    /* Design mocks are deliberately self-contained fixtures, but the Worker
+     * normally opens a database before it hands any request to the renderer.
+     * That makes `/mock/*` impossible to review in a fresh worktree unless the
+     * reviewer also has the application's database credentials.
+     *
+     * Keep this escape hatch local and mock-only. A deployed host still fails
+     * closed when its database binding is missing, and no real route can use
+     * the fixture path to sidestep the request-scoped DB context. */
+    if (
+      !env.POSTGRES_URL &&
+      !env.HYPERDRIVE &&
+      requestUrl.pathname.startsWith('/mock/') &&
+      (requestUrl.hostname === 'localhost' ||
+        requestUrl.hostname.endsWith('.localhost'))
+    ) {
+      const routed = new Request(request);
+      routed.headers.set(PATHNAME_HEADER, requestUrl.pathname);
+      routed.headers.set(SEARCH_HEADER, requestUrl.search);
+      return handler.fetch(routed);
+    }
+
     // The DB client is the exception: postgres.js sockets belong to the request
     // that opened them, so it is scoped to this request rather than shared.
     // Everything downstream must run inside this callback for `db` to resolve.
