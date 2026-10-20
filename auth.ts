@@ -929,12 +929,41 @@ function getBetterAuth(): BetterAuthInstance {
   //
   // This cannot reach the fediverse identity domain — a different registrable
   // domain needs a real OAuth handoff, not a shared cookie.
-  const panaverseCookieDomain = process.env.PANAVERSE_COOKIE_DOMAIN?.trim();
+  const configuredCookieDomain =
+    process.env.PANAVERSE_COOKIE_DOMAIN?.trim();
 
   const authBaseURL =
     process.env.NEXT_PUBLIC_HOST_URL ||
     process.env.BETTER_AUTH_URL ||
     'http://localhost:3000';
+
+  const panaverseCookieDomain = (() => {
+    if (!configuredCookieDomain) return undefined;
+
+    const cookieHostname = configuredCookieDomain.replace(/^\./, '');
+    try {
+      const authHostname = new URL(authBaseURL).hostname;
+      if (
+        authHostname === cookieHostname ||
+        authHostname.endsWith(`.${cookieHostname}`)
+      ) {
+        return configuredCookieDomain;
+      }
+
+      // A browser rejects cookies scoped to an unrelated domain. Falling back
+      // to the auth host keeps sign-in and sign-out functional when a stale
+      // dashboard variable disagrees with the deployed BETTER_AUTH_URL.
+      console.error(
+        `PANAVERSE_COOKIE_DOMAIN=${configuredCookieDomain} does not contain auth host ${authHostname}; using .${authHostname}.`
+      );
+      return `.${authHostname}`;
+    } catch {
+      console.error(
+        `Cannot validate PANAVERSE_COOKIE_DOMAIN because BETTER_AUTH_URL is invalid: ${authBaseURL}`
+      );
+      return undefined;
+    }
+  })();
 
   // Parsed defensively: this runs at instance construction, so a malformed
   // value here would take down every auth route rather than one callback.
