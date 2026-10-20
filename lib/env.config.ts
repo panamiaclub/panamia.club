@@ -391,6 +391,28 @@ export const envConfig: Record<string, EnvVarConfig> = {
     required: false,
     docsUrl: 'https://dashboard.stripe.com/apikeys',
   },
+  STRIPE_WEBHOOK_SECRET: {
+    description:
+      'Signing secret for the shop Stripe webhook at /api/shop/webhook',
+    location: 'SECRET',
+    required: false,
+    docsUrl: 'https://dashboard.stripe.com/webhooks',
+  },
+  STRIPE_SHIPPING_RATE_IDS: {
+    description:
+      'Comma-separated Stripe Shipping Rate IDs offered for merchandise checkout',
+    location: 'SECRET',
+    required: false,
+    example: 'shr_standard,shr_express',
+    docsUrl: 'https://dashboard.stripe.com/shipping-rates',
+  },
+  SHOP_USE_MOCK_PRODUCTS: {
+    description:
+      'Set to 1 to show the non-purchasable preview catalog instead of Stripe products',
+    location: 'VAR',
+    required: false,
+    example: '1',
+  },
 
   // =============================================================================
   // CLOUDFLARE STREAM (Events livestreaming setup)

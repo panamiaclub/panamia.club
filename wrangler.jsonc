@@ -186,6 +186,9 @@
     "EMAIL_ENV": "PROD",
     "EMAIL_SENDER_ADDRESS": "hola@pana.social",
     "EMAIL_SENDER_NAME": "Pana MIA Testing Environment",
+    // Temporary preview catalog. Remove or set to "0" after live Stripe
+    // products, photography, inventory, and shipping rates are ready.
+    "SHOP_USE_MOCK_PRODUCTS": "1",
     // Pinned identity domain. This is what makes @user@pana.social handles
     // stable if/when the UI moves to another hostname. Do not change it once
     // actors have federated — see lib/federation/domain.ts.

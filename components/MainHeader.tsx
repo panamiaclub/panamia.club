@@ -145,7 +145,7 @@ const NAV_ITEMS: NavItemDefinition[] = [
       },
     ],
   },
-  { labelKey: 'nav.siteMenu.shop', href: 'https://shop.panamia.club/' },
+  { labelKey: 'nav.siteMenu.shop', href: '/shop' },
 ];
 
 export default function MainHeader({

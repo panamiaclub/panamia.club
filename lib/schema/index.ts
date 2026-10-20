@@ -119,6 +119,28 @@ export const membershipLevel = pgEnum('membership_level', [
   'partner',
 ]);
 
+export const commerceOrderKind = pgEnum('commerce_order_kind', [
+  'merchandise',
+  'subscription',
+]);
+
+export const commerceOrderStatus = pgEnum('commerce_order_status', [
+  'pending',
+  'paid',
+  'payment_failed',
+  'refunded',
+  'partially_refunded',
+  'cancelled',
+]);
+
+export const commerceFulfillmentStatus = pgEnum('commerce_fulfillment_status', [
+  'not_required',
+  'unfulfilled',
+  'processing',
+  'fulfilled',
+  'cancelled',
+]);
+
 export const sessionType = pgEnum('session_type', [
   'artistic',
   'knowledge_transfer',
@@ -2486,6 +2508,141 @@ export const eventDismissals = pgTable(
 );
 
 // =============================================================================
+// Commerce
+// =============================================================================
+
+export const commerceInventory = pgTable('commerce_inventory', {
+  stripePriceId: text('stripe_price_id').primaryKey(),
+  stripeProductId: text('stripe_product_id').notNull(),
+  availableQuantity: integer('available_quantity').notNull().default(0),
+  reservedQuantity: integer('reserved_quantity').notNull().default(0),
+  trackInventory: boolean('track_inventory').notNull().default(true),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .$defaultFn(() => new Date())
+    .$onUpdateFn(() => new Date()),
+});
+
+export const commerceOrders = pgTable(
+  'commerce_orders',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdateFn(() => new Date()),
+    userId: text('user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    kind: commerceOrderKind('kind').notNull(),
+    status: commerceOrderStatus('status').notNull().default('pending'),
+    fulfillmentStatus: commerceFulfillmentStatus('fulfillment_status')
+      .notNull()
+      .default('not_required'),
+    email: text('email'),
+    customerName: text('customer_name'),
+    currency: text('currency').notNull().default('usd'),
+    subtotalCents: integer('subtotal_cents').notNull().default(0),
+    shippingCents: integer('shipping_cents').notNull().default(0),
+    taxCents: integer('tax_cents').notNull().default(0),
+    discountCents: integer('discount_cents').notNull().default(0),
+    totalCents: integer('total_cents').notNull().default(0),
+    refundedCents: integer('refunded_cents').notNull().default(0),
+    stripeCheckoutSessionId: text('stripe_checkout_session_id').unique(),
+    stripePaymentIntentId: text('stripe_payment_intent_id'),
+    stripeCustomerId: text('stripe_customer_id'),
+    stripeSubscriptionId: text('stripe_subscription_id'),
+    shippingAddress: jsonb('shipping_address'),
+    trackingNumber: text('tracking_number'),
+    trackingUrl: text('tracking_url'),
+    fulfilledAt: timestamp('fulfilled_at', { withTimezone: true }),
+    reservationExpiresAt: timestamp('reservation_expires_at', {
+      withTimezone: true,
+    }),
+  },
+  (table) => ({
+    createdAtIdx: index('commerce_orders_created_at_idx').on(table.createdAt),
+    emailIdx: index('commerce_orders_email_idx').on(table.email),
+    statusIdx: index('commerce_orders_status_idx').on(
+      table.status,
+      table.fulfillmentStatus
+    ),
+    stripeCustomerIdx: index('commerce_orders_stripe_customer_idx').on(
+      table.stripeCustomerId
+    ),
+  })
+);
+
+export const commerceOrderItems = pgTable(
+  'commerce_order_items',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    orderId: text('order_id')
+      .notNull()
+      .references(() => commerceOrders.id, { onDelete: 'cascade' }),
+    stripeProductId: text('stripe_product_id').notNull(),
+    stripePriceId: text('stripe_price_id').notNull(),
+    productName: text('product_name').notNull(),
+    priceName: text('price_name'),
+    imageUrl: text('image_url'),
+    quantity: integer('quantity').notNull(),
+    unitAmountCents: integer('unit_amount_cents').notNull(),
+    amountTotalCents: integer('amount_total_cents').notNull(),
+    recurringInterval: text('recurring_interval'),
+  },
+  (table) => ({
+    orderIdIdx: index('commerce_order_items_order_id_idx').on(table.orderId),
+  })
+);
+
+export const commerceSubscriptions = pgTable(
+  'commerce_subscriptions',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdateFn(() => new Date()),
+    userId: text('user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    email: text('email').notNull(),
+    stripeCustomerId: text('stripe_customer_id').notNull(),
+    stripeSubscriptionId: text('stripe_subscription_id').notNull().unique(),
+    stripePriceId: text('stripe_price_id'),
+    status: text('status').notNull(),
+    cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+    currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
+  },
+  (table) => ({
+    emailIdx: index('commerce_subscriptions_email_idx').on(table.email),
+    customerIdx: index('commerce_subscriptions_customer_idx').on(
+      table.stripeCustomerId
+    ),
+  })
+);
+
+export const stripeWebhookEvents = pgTable('stripe_webhook_events', {
+  stripeEventId: text('stripe_event_id').primaryKey(),
+  eventType: text('event_type').notNull(),
+  processedAt: timestamp('processed_at', { withTimezone: true })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+// =============================================================================
 // Screenname History
 // =============================================================================
 
@@ -2677,6 +2834,23 @@ export const connectorCommitmentsRelations = relations(
     profile: one(profiles, {
       fields: [connectorCommitments.profileId],
       references: [profiles.id],
+    }),
+  })
+);
+
+export const commerceOrdersRelations = relations(
+  commerceOrders,
+  ({ many }) => ({
+    items: many(commerceOrderItems),
+  })
+);
+
+export const commerceOrderItemsRelations = relations(
+  commerceOrderItems,
+  ({ one }) => ({
+    order: one(commerceOrders, {
+      fields: [commerceOrderItems.orderId],
+      references: [commerceOrders.id],
     }),
   })
 );
@@ -3383,6 +3557,10 @@ export type ScreennameHistory = typeof screennameHistory.$inferSelect;
 export type Venue = typeof venues.$inferSelect;
 export type Event = typeof events.$inferSelect;
 export type EventAttendee = typeof eventAttendees.$inferSelect;
+export type CommerceInventory = typeof commerceInventory.$inferSelect;
+export type CommerceOrder = typeof commerceOrders.$inferSelect;
+export type CommerceOrderItem = typeof commerceOrderItems.$inferSelect;
+export type CommerceSubscription = typeof commerceSubscriptions.$inferSelect;
 export type DeletionLog = typeof deletionLogs.$inferSelect;
 export type RelayGroup = typeof relayGroups.$inferSelect;
 export type RelayGroupMember = typeof relayGroupMembers.$inferSelect;

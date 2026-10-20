@@ -656,7 +656,7 @@ Satisfies disclosure requirements from:
 ### Module: Payments
 
 - Stripe for donations and memberships
-- GoHighLevel shop for merchandise sales
+- Stripe Checkout for merchandise sales; buyer contact and subscription tags may sync to GoHighLevel
 - Donation tiers and membership levels
 - Recurring subscription management
 - Refund policy
