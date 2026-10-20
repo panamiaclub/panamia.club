@@ -42,7 +42,7 @@
     "dev:vinext": "vinext dev --port 3001",
     "dev:http": "vinext dev --host 0.0.0.0 --port 3000",
     "build:vinext": "vinext build",
-    "deploy:vinext": "drizzle-kit migrate && vinext deploy",
+    "deploy:vinext": "drizzle-kit migrate && vinext-cloudflare deploy",
     "mobile": "npx tsx scripts/mobile-run.ts",
     "mobile:sync": "cap sync",
     "mobile:assets": "npx tsx scripts/mobile-assets.ts",
@@ -140,6 +140,7 @@
     "@types/react-dom": "^19.3.0",
     "@types/react-is": "^19",
     "@types/ws": "^8.18.2",
+    "@vinext/cloudflare": "1.1.1",
     "@vitejs/plugin-react": "^6.1.2",
     "@vitejs/plugin-rsc": "0.5.38",
     "dotenv": "^17.4.2",
@@ -153,7 +154,7 @@
     "typescript": "^6.0.3",
     "vinext": "1.2.1",
     "vite": "8.3.4",
-    "wrangler": "4.151.1",
+    "wrangler": "4.151.3",
     "ws": "8.22.0"
   },
   "resolutions": {
