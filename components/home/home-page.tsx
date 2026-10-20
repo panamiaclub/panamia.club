@@ -7,16 +7,19 @@ import {
   HomePillars,
   HomePoint,
 } from '@/components/home/sections';
+import {
+  HomeArticleRail,
+  MOCK_HOME_ARTICLES,
+} from '@/components/home/article-rail';
 
 /**
  * The Pana Mia homepage.
  *
- * Four cards, in the order the panas who brought the Community Connectors
- * deck over described them: search, then the three questions everyone asks,
- * then the three pillars the organisation is building, then the ask. The
- * reasoning for the cut — and for the seven sections the previous eleven-
- * section page loses — is on the sections themselves, in
- * `components/home/sections.tsx`.
+ * The homepage follows the order the panas who brought the Community
+ * Connectors deck over described: search, the questions everyone asks, the
+ * pillars the organisation is building, stories from the collective, then
+ * the ask. The reasoning for the original cut is on the sections themselves
+ * in `components/home/sections.tsx`.
  *
  * The composition lives there rather than here because `/mock/home` renders
  * the same sections inside a density-toggle harness. There is one
@@ -42,6 +45,7 @@ export function HomePage() {
         <HomeFirstScreen />
         <HomeBasics />
         <HomePillars />
+        <HomeArticleRail initialArticles={MOCK_HOME_ARTICLES} />
         <HomePoint />
       </div>
     </>

@@ -8,6 +8,10 @@ import {
   HomePillars,
   HomePoint,
 } from '@/components/home/sections';
+import {
+  HomeArticleRail,
+  MOCK_HOME_ARTICLES,
+} from '@/components/home/article-rail';
 import { MockControls, type Density } from './mock-controls';
 
 /**
@@ -45,6 +49,7 @@ export function HomeMock() {
         <HomeFirstScreen />
         <HomeBasics />
         <HomePillars />
+        <HomeArticleRail initialArticles={MOCK_HOME_ARTICLES} />
         <HomePoint />
 
         {/* Every mock says where it came from, so a screenshot taken out of
