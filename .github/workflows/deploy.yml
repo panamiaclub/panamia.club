@@ -67,8 +67,8 @@ jobs:
         shell: bash
         run: |
           for attempt in {1..12}; do
-            if curl --fail --silent --show-error https://panamia.club/shop \
-              | grep --quiet 'The Pana collection'; then
+            body="$(curl --fail --silent --show-error https://panamia.club/shop)" || true
+            if grep --quiet 'The Pana collection' <<<"$body"; then
               echo "Production storefront is live."
               exit 0
             fi
