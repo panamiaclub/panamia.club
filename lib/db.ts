@@ -27,8 +27,9 @@
  * dev-only path, which is how max: 1 came to sit unnoticed on the production
  * path. Verified 2026-10-10 via `wrangler secret list` — POSTGRES_URL is a
  * deployed secret_text on the production Worker. Because it is checked first,
- * the HYPERDRIVE branch never runs in production and the hyperdrive binding in
- * wrangler.jsonc is dead code.
+ * the HYPERDRIVE branch never runs in production. The stale binding was removed
+ * from wrangler.jsonc because it referenced a configuration in another
+ * Cloudflare account and blocked deployment from the production account.
  *
  * What that actually costs, measured against production the same day:
  *   - max: 1 applies deployed, so every `await Promise.all([...])` in this
@@ -42,9 +43,10 @@
  *     not approach the ceiling; connection count tracks Worker isolates,
  *     which is why wrangler.jsonc pins placement to one region.
  *
- * The fix is to delete the POSTGRES_URL secret so the Hyperdrive pool is used
- * again; the `placement` comment in wrangler.jsonc says the same. Until then,
- * read the first branch below as the production path.
+ * A future Hyperdrive migration must first create the configuration in the
+ * production Cloudflare account, restore the binding in wrangler.jsonc, and
+ * only then delete POSTGRES_URL. Until then, read the first branch below as
+ * the production path.
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { drizzle } from 'drizzle-orm/postgres-js';
