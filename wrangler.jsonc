@@ -35,8 +35,8 @@
   // cache key ignores cookies (Cloudflare does not honour Vary: Cookie at the
   // edge). Anything session-scoped must therefore say no-store itself, or it
   // will be served to anonymous visitors:
-  //  - proxy.ts — any request carrying a better-auth session cookie
-  //  - app/api/auth/[...all]/route.ts — every auth response
+  //  - proxy.ts â€” any request carrying a better-auth session cookie
+  //  - app/api/auth/[...all]/route.ts â€” every auth response
   //
   // Anonymous requests carry no cookie, so public routes still cache.
   "cache": {
@@ -45,7 +45,7 @@
   // Placement: run the Worker next to Postgres rather than next to the member.
   //
   // The database is in us-east-1 (N. Virginia) and the audience is South
-  // Florida — roughly a 25ms round trip. By default a Worker runs in the data
+  // Florida â€” roughly a 25ms round trip. By default a Worker runs in the data
   // centre nearest the request, so every query on a server-rendered page
   // crosses to Virginia and back, and a page issuing four sequential queries
   // spends ~200ms doing nothing but waiting on the network.
@@ -55,46 +55,6 @@
   //
   // This matters more than the query count alone suggests, because production
   // reaches Postgres through the POSTGRES_URL secret rather than the
-  // HYPERDRIVE binding — lib/db.ts checks env.POSTGRES_URL first and returns
-  // before the Hyperdrive branch, and that secret is set on the deployed
-  // Worker despite the comment there saying it never is. Nothing pools that
-  // path, so every request pays a fresh TCP + TLS + SCRAM handshake — four to
-  // five round trips — before its first query. Co-locating the Worker with
-  // the database turns that handshake from ~125ms into single digits.
-  // Deleting the POSTGRES_URL secret so the Hyperdrive pool is used again is
-  // the actual fix; this keeps the fallback cheap until that happens.
-  //
-  // Explicit region rather than "mode": "smart" — they are mutually exclusive,
-  // and smart only considers locations where the Worker has already run. A
-  // single-metro audience means it only ever runs in Miami, so it has no
-  // faster candidate to discover and would sit at INSUFFICIENT_INVOCATIONS.
-  // We know where the database is; say so.
-  //
-  // Static assets are unaffected. They are served from the location nearest
-  // the request before the Worker is invoked, because run_worker_first is not
-  // set — so chunks still come from Miami. The ASSETS binding in
-  // worker/index.ts is only reached on the image-optimization path, which is
-  // Worker work regardless.
-  //
-  // The cost is requests that never touch Postgres: they now run ~25ms from
-  // the member instead of ~5ms. Static assets bypass the Worker entirely, so
-  // that is a small share of traffic, and it is the right trade while every
-  // server-rendered page is a database read.
-  "placement": {
-    "mode": "targeted",
-    "region": "aws:us-east-1",
-  },
-  // Hyperdrive binding for Supabase PostgreSQL access from Workers
-  // https://dash.cloudflare.com -> Workers & Pages -> Hyperdrive
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      "id": "985dd5bf59c84a799dc3eac9122facaf",
-      // localConnectionString satisfies wrangler's local-emulation check only;
-      // the real Hyperdrive service is used in production.
-      "localConnectionString": "postgresql://placeholder:placeholder@localhost:5432/placeholder",
-    },
-  ],
   // R2 object storage for media uploads (profile images, social audio/video)
   // Create bucket: wrangler r2 bucket create panamia-media
   // Enable public access in the Cloudflare dashboard to get R2_PUBLIC_URL.
@@ -113,7 +73,7 @@
         "name": "SIGNALING_ROOM",
         "class_name": "SignalingRoom",
       },
-      // One instance per recipient actor — a mailbox, not a room. See
+      // One instance per recipient actor â€” a mailbox, not a room. See
       // worker/dm-stream.ts for why actor scope rather than thread scope.
       {
         "name": "DM_STREAM",
@@ -163,16 +123,16 @@
   // which sign with the shared relay key and fan out to NOSTR_*_CROSSPOST_LIST.
   // Optional: crosspost is best-effort; when unbound the client falls back to
   // RELAY_INTERNAL_URL (see lib/relay/crosspost-client.ts). The reverse binding
-  // (PANAMIA → here) lives in the panamia-nosflare repo's wrangler config.
+  // (PANAMIA â†’ here) lives in the panamia-nosflare repo's wrangler config.
   "services": [{ "binding": "RELAY", "service": "panamia-nosflare" }],
 
   // Runtime env vars. Declare non-sensitive runtime vars here so they survive
-  // CF Workers Builds deploys — dashboard-set plaintext vars get wiped on each
+  // CF Workers Builds deploys â€” dashboard-set plaintext vars get wiped on each
   // deploy unless they're in this file or promoted to secrets.
   //
-  // Sensitive values (API keys, DB URLs, auth secrets) → `wrangler secret put`.
-  // Genuinely build-baked vars — ones read by a client component, such as
-  // NEXT_PUBLIC_TURNSTILE_SITE_KEY or EMAIL_SENDER_* — belong in CF dashboard
+  // Sensitive values (API keys, DB URLs, auth secrets) â†’ `wrangler secret put`.
+  // Genuinely build-baked vars â€” ones read by a client component, such as
+  // NEXT_PUBLIC_TURNSTILE_SITE_KEY or EMAIL_SENDER_* â€” belong in CF dashboard
   // Build variables, NOT here: they are inlined at build time, so a runtime
   // value arrives far too late to reach the bundle.
   //
@@ -184,7 +144,7 @@
   // what decides whether the buttons render.
   //
   // The values below are PRODUCTION CF Workers values. They are intentionally
-  // distinct from .env.local — that file is for local-dev values only. Most
+  // distinct from .env.local â€” that file is for local-dev values only. Most
   // vars here will differ from your .env.local (e.g. BETTER_AUTH_URL points
   // to the deployed worker, EMAIL_ENV is "PROD" not "DEV"). `npm run env:check`
   // only enforces that the *keys* match envConfig, never the values.
@@ -196,7 +156,7 @@
     "EMAIL_SENDER_NAME": "Pana MIA Testing Environment",
     // Pinned identity domain. This is what makes @user@pana.social handles
     // stable if/when the UI moves to another hostname. Do not change it once
-    // actors have federated — see lib/federation/domain.ts.
+    // actors have federated â€” see lib/federation/domain.ts.
     "FEDERATION_DOMAIN": "pana.social",
     // Public half of the Google OAuth credential pair: it travels in the
     // browser's authorization URL, so it is config rather than a secret. The
@@ -207,11 +167,11 @@
     // Shows the "Continue with Google" button. Despite the NEXT_PUBLIC_ prefix
     // this is a plain runtime var, not a build-baked one: app/signin/page.tsx
     // resolves it on the server and hands the result to the client component
-    // as a prop. Setting it as a dashboard variable works but does not last —
+    // as a prop. Setting it as a dashboard variable works but does not last â€”
     // plaintext dashboard vars are wiped on each Workers Builds deploy, which
     // is exactly why it lives here. Turn the button off by setting "false".
     "NEXT_PUBLIC_GOOGLE_ENABLED": "true",
-    // Registrable domain the web surfaces hang off — see
+    // Registrable domain the web surfaces hang off â€” see
     // lib/panaverse/surfaces.ts. This is independent of FEDERATION_DOMAIN:
     // ActivityPub identities remain @user@pana.social even though the website
     // currently serves from panamia.club.
@@ -220,8 +180,8 @@
     // cross-surface links stay on panamia.club and use their route prefixes
     // instead of sending members to a hostname that returns Cloudflare 522.
     //
-    // Routing is unaffected either way — every surface route answers on every
-    // hostname — so this moves the front door without moving a single route,
+    // Routing is unaffected either way â€” every surface route answers on every
+    // hostname â€” so this moves the front door without moving a single route,
     // and /s keeps working. Set it back to "0" if the subdomain ever stops
     // resolving: that is the setting which keeps every link on the host in
     // hand, and a link to a host with no record is a dead end rather than a
@@ -235,7 +195,7 @@
     "GHL_WORKFLOW_TEST_ID": "6682f160-e9a3-4aff-9f5d-099bd9c3e951",
   },
 
-  // Capture Worker exceptions in Cloudflare dashboard → Workers & Pages → Observability
+  // Capture Worker exceptions in Cloudflare dashboard â†’ Workers & Pages â†’ Observability
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,
