@@ -25,27 +25,22 @@
 }
 
 .footerInner {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2.25rem 3rem;
-  justify-content: space-between;
+  display: grid;
+  gap: 3rem;
 }
 
-.footerInner ul {
+.footerInner ul,
+.footerNav ul {
   margin: 0;
   padding-inline-start: initial;
   list-style-type: none;
 }
 
-.footerInner li {
+.footerLinks li {
   line-height: 1.9rem;
 }
 
-/* The column headings borrow `.section-eyebrow` rather than being it: the
-   eyebrow is a flex container with a rule drawn in `::before`, which is a lot
-   of furniture for a four-item list. This takes the type treatment -- small,
-   heavy, tracked-out, indigo -- and leaves the rule behind. */
-.footerInner li strong {
+.footerLinks li strong {
   display: inline-block;
   margin-bottom: 0.5rem;
   color: var(--color-pana-indigo);
@@ -55,16 +50,20 @@
   text-transform: uppercase;
 }
 
-.footerLinksAlt li a {
+.footerLinks li a {
   color: var(--color-pana-ink);
   font-weight: 600;
   transition: color 0.18s ease;
 }
 
-.footerLinksAlt li a:hover {
+.footerLinks li a:hover {
   color: var(--color-pana-indigo);
   text-decoration: underline;
   text-underline-offset: 0.25em;
+}
+
+.footerBrand {
+  max-width: 25rem;
 }
 
 .footerLogo {
@@ -72,9 +71,19 @@
   align-items: center;
 }
 
-/* Outlined circles at the same 2.75rem the identity menu uses, so the social
-   row is a comfortable touch target on a phone instead of four bare glyphs
-   sitting 8px apart. */
+.footerBrand > p {
+  margin: 1.25rem 0 1.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.65;
+}
+
+.footerNav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2rem;
+}
+
 .socials ul {
   display: flex;
   flex-wrap: wrap;
@@ -104,66 +113,54 @@
   color: var(--color-pana-cream);
 }
 
-/* Contact is the one thing down here asking to be clicked rather than
-   scanned, so it gets the site's pill-button shape instead of being an
-   underlined word that happens to be centred. Cream on indigo is 9.01:1. */
-.footerContact {
+.footerBottom {
+  display: flex;
+  gap: 1rem 2rem;
+  align-items: flex-start;
+  justify-content: space-between;
   margin-top: 2.75rem;
   padding-top: 2rem;
   border-top: 2px solid rgb(17 13 13 / 0.08);
-  text-align: center;
 }
 
-.footerContact a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  padding: 0.7rem 1.875rem;
-  background-color: var(--color-pana-indigo);
-  color: var(--color-pana-cream);
-  font-size: 0.875rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  transition: background-color 0.18s ease;
-}
-
-.footerContact a:hover {
-  background-color: var(--color-pana-ink);
-  text-decoration: none;
+.footerBottom p {
+  margin: 0;
 }
 
 .legalDisclosure {
   max-width: 48rem;
-  margin: 1.5rem auto 0;
   color: rgb(17 13 13 / 0.68);
   font-size: 0.75rem;
   line-height: 1.6;
-  text-align: center;
+  text-align: right;
 }
 
-@media only screen and (max-width: 600px) {
+@media (min-width: 880px) {
+  .footerInner {
+    grid-template-columns: minmax(15rem, 0.8fr) minmax(0, 1.7fr);
+  }
+}
+
+@media only screen and (max-width: 700px) {
   .footer {
     padding-block: 2.5rem 1.5rem;
   }
 
-  /* Break the flex row after the logo so it no longer steals width from the
-     columns -- otherwise the narrow socials stack wraps below Support/Community.
-     Give it the full row and center it. */
-  .footerLogo {
-    flex-basis: 100%;
-    justify-content: center;
+  .footerNav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  /* Same reasoning for the socials: on one line with two link columns they
-     get squeezed into a vertical stack of circles. Their own row, centred
-     under the columns, matches the logo above. */
-  .socials {
-    flex-basis: 100%;
+  .footerBottom {
+    display: grid;
   }
 
-  .socials ul {
-    justify-content: center;
+  .legalDisclosure {
+    text-align: left;
+  }
+}
+
+@media only screen and (max-width: 440px) {
+  .footerNav {
+    grid-template-columns: 1fr;
   }
 }
