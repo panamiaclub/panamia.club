@@ -59,18 +59,18 @@ export function ProductCard({ price }: { price: ShopPrice }) {
           <img
             src={price.imageUrl}
             alt={price.name}
-            className="aspect-square w-full object-cover"
+            className="aspect-[1.15] w-full object-cover"
           />
         ) : price.mockArt ? (
           <div
-            className={`${MOCK_ART[price.mockArt].className} flex aspect-square items-center justify-center overflow-hidden p-8`}
+            className={`${MOCK_ART[price.mockArt].className} flex aspect-[1.15] items-center justify-center overflow-hidden p-8`}
           >
             <span className="font-montserrat text-center text-4xl leading-[0.95] font-black whitespace-pre-line drop-shadow-sm">
               {MOCK_ART[price.mockArt].content}
             </span>
           </div>
         ) : (
-          <div className="bg-pana-butter-2 flex aspect-square items-center justify-center text-5xl">
+          <div className="bg-pana-butter-2 flex aspect-[1.15] items-center justify-center text-5xl">
             ✦
           </div>
         )}

@@ -60,7 +60,7 @@ export default async function ShopPage({
           </div>
         </div>
       </section>
-      <section className="container mx-auto px-4 py-14">
+      <section className="container mx-auto max-w-[1800px] px-4 py-14">
         {prices.some((price) => price.isMock) && (
           <div className="border-pana-indigo/20 bg-pana-butter-2 mb-8 rounded-2xl border px-5 py-4 text-sm">
             <strong>Preview collection:</strong> These sample items establish
@@ -85,7 +85,13 @@ export default async function ShopPage({
           </p>
         </div>
         {visible.length > 0 ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div
+            className="grid justify-center gap-5"
+            style={{
+              gridTemplateColumns:
+                'repeat(auto-fit, minmax(min(100%, 250px), 300px))',
+            }}
+          >
             {visible.map((price) => (
               <ProductCard key={price.id} price={price} />
             ))}
