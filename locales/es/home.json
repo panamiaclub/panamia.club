@@ -119,6 +119,119 @@
     "ctaBrowse": "Buscar en el directorio",
     "ctaDonate": "Donar"
   },
+  "involvement": {
+    "eyebrow": "Aquí hay un lugar para ti",
+    "titleBefore": "¿Cómo quieres",
+    "titleAccent": "involucrarte?",
+    "lede": "Elige un camino si ya sabes lo que buscas, o responde tres preguntas rápidas y te ayudaremos a encontrar un punto de partida.",
+    "duration": "Aproximadamente un minuto",
+    "noSignup": "No necesitas registrarte",
+    "choicesEyebrow": "Sé por dónde quiero empezar",
+    "choicesTitle": "Elige tu camino",
+    "quizInviteTitle": "¿No sabes por dónde comenzar?",
+    "quizInviteBody": "Deja que tus intereses te guíen.",
+    "quizStart": "Encuentra mi camino",
+    "back": "Atrás",
+    "restart": "Empezar de nuevo",
+    "questionCounter": "Pregunta {{current}} de {{total}}",
+    "progressLabel": "Progreso del cuestionario",
+    "resultEyebrow": "Tu mejor punto de partida",
+    "alternatives": "También te puede interesar",
+    "paths": {
+      "directory": {
+        "title": "Date a conocer",
+        "description": "Añádete a ti, a un negocio o a una organización al directorio.",
+        "resultDescription": "Comparte lo que haces para que tus vecinos puedan descubrirte, apoyarte y recomendarte.",
+        "cta": "Únete al directorio"
+      },
+      "social": {
+        "title": "Encuentra a tu gente",
+        "description": "Únete a Pana Social para conectar, descubrir grupos y encontrar eventos locales.",
+        "resultDescription": "Conoce a Panas locales, sigue lo que está pasando y encuentra encuentros cerca de ti.",
+        "cta": "Únete a Pana Social"
+      },
+      "connectors": {
+        "title": "Ofrece tu tiempo",
+        "description": "Comparte tus habilidades como voluntario en el programa Community Connectors.",
+        "resultDescription": "Aporta tu tiempo y tus habilidades a proyectos comunitarios que necesitan una mano.",
+        "cta": "Conviértete en Connector"
+      },
+      "donate": {
+        "title": "Apoya el trabajo",
+        "description": "Ayuda a financiar las herramientas, programas y encuentros que unen a los Panas.",
+        "resultDescription": "Ayuda a sostener la infraestructura y los programas compartidos que mantienen conectada a la comunidad.",
+        "cta": "Haz una donación"
+      }
+    },
+    "questions": {
+      "goal": {
+        "eyebrow": "Empieza por lo que importa",
+        "question": "¿Qué te gustaría hacer más?",
+        "answers": {
+          "visibility": {
+            "label": "Ayudar a que encuentren lo que hago",
+            "description": "Me represento a mí, a un negocio o a una organización."
+          },
+          "connection": {
+            "label": "Conocer a más personas cercanas",
+            "description": "Busco conexión, grupos y cosas que hacer."
+          },
+          "volunteer": {
+            "label": "Colaborar con el trabajo comunitario",
+            "description": "Tengo tiempo o habilidades que me gustaría aportar."
+          },
+          "fund": {
+            "label": "Ayudar a que el trabajo sea posible",
+            "description": "Ahora mismo puedo contribuir económicamente."
+          }
+        }
+      },
+      "participation": {
+        "eyebrow": "Haz que encaje en tu vida",
+        "question": "¿Qué tipo de participación te atrae más?",
+        "answers": {
+          "once": {
+            "label": "Algo que pueda preparar una vez",
+            "description": "Dame un próximo paso útil sin un compromiso continuo."
+          },
+          "casual": {
+            "label": "Conectar cuando tenga tiempo",
+            "description": "Quiero participar en conversaciones y eventos a mi propio ritmo."
+          },
+          "handsOn": {
+            "label": "Práctica y colaborativa",
+            "description": "Me gustaría trabajar en equipo para atender necesidades reales de la comunidad."
+          },
+          "flexible": {
+            "label": "Flexible — muéstrame la mejor opción",
+            "description": "El propósito me importa más que el formato."
+          }
+        }
+      },
+      "bringing": {
+        "eyebrow": "Una última cosa",
+        "question": "¿Qué traes contigo?",
+        "answers": {
+          "organization": {
+            "label": "Un negocio, proyecto u organización",
+            "description": "Quiero que tenga visibilidad y conexión local."
+          },
+          "curiosity": {
+            "label": "Mi curiosidad y yo",
+            "description": "Busco personas, lugares y oportunidades."
+          },
+          "skills": {
+            "label": "Mi tiempo, habilidades o experiencia",
+            "description": "Quiero ser útil donde haga falta ayuda."
+          },
+          "financial": {
+            "label": "Apoyo económico",
+            "description": "Quiero invertir en los recursos compartidos de la comunidad."
+          }
+        }
+      }
+    }
+  },
   "newsletter": {
     "eyebrow": "Nuestro Boletín",
     "lede": "Recibe nuevos Panas, eventos y despachos en tu correo. Sin ruido.",

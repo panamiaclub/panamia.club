@@ -6,12 +6,12 @@ import {
   HomeFirstScreen,
   HomeBasics,
   HomePillars,
-  HomePoint,
 } from '@/components/home/sections';
 import {
   HomeArticleRail,
   MOCK_HOME_ARTICLES,
 } from '@/components/home/article-rail';
+import { GetInvolvedQuiz } from '@/components/home/get-involved-quiz';
 import { MockControls, type Density } from './mock-controls';
 
 /**
@@ -50,7 +50,7 @@ export function HomeMock() {
         <HomeBasics />
         <HomePillars />
         <HomeArticleRail initialArticles={MOCK_HOME_ARTICLES} />
-        <HomePoint />
+        <GetInvolvedQuiz />
 
         {/* Every mock says where it came from, so a screenshot taken out of
             context still names its own route. */}

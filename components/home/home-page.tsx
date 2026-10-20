@@ -5,8 +5,8 @@ import {
   HomeFirstScreen,
   HomeBasics,
   HomePillars,
-  HomePoint,
 } from '@/components/home/sections';
+import { GetInvolvedQuiz } from '@/components/home/get-involved-quiz';
 import {
   HomeArticleRail,
   MOCK_HOME_ARTICLES,
@@ -17,9 +17,9 @@ import {
  *
  * The homepage follows the order the panas who brought the Community
  * Connectors deck over described: search, the questions everyone asks, the
- * pillars the organisation is building, stories from the collective, then
- * the ask. The reasoning for the original cut is on the sections themselves
- * in `components/home/sections.tsx`.
+ * pillars the organisation is building, stories from the collective, then an
+ * involvement chooser for the ask. The reasoning for the original cut is on
+ * the sections themselves in `components/home/sections.tsx`.
  *
  * The composition lives there rather than here because `/mock/home` renders
  * the same sections inside a density-toggle harness. There is one
@@ -46,7 +46,7 @@ export function HomePage() {
         <HomeBasics />
         <HomePillars />
         <HomeArticleRail initialArticles={MOCK_HOME_ARTICLES} />
-        <HomePoint />
+        <GetInvolvedQuiz />
       </div>
     </>
   );

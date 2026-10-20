@@ -121,6 +121,119 @@
     "ctaDonate": "Donate",
     "dispatches": "Read the dispatches"
   },
+  "involvement": {
+    "eyebrow": "There is a place for you here",
+    "titleBefore": "How do you want to",
+    "titleAccent": "get involved?",
+    "lede": "Pick a path if you already know what you need, or answer three quick questions and we’ll help you find a starting point.",
+    "duration": "About one minute",
+    "noSignup": "No signup required",
+    "choicesEyebrow": "I know where I want to start",
+    "choicesTitle": "Choose your path",
+    "quizInviteTitle": "Not sure where to begin?",
+    "quizInviteBody": "Let your interests point the way.",
+    "quizStart": "Find my path",
+    "back": "Back",
+    "restart": "Start over",
+    "questionCounter": "Question {{current}} of {{total}}",
+    "progressLabel": "Quiz progress",
+    "resultEyebrow": "Your best starting point",
+    "alternatives": "You may also like",
+    "paths": {
+      "directory": {
+        "title": "Get discovered",
+        "description": "Add yourself, a business, or an organization to the directory.",
+        "resultDescription": "Share what you do so neighbors can discover, support, and recommend you.",
+        "cta": "Join the directory"
+      },
+      "social": {
+        "title": "Find your people",
+        "description": "Join Pana Social for connections, groups, and local events.",
+        "resultDescription": "Meet local Panas, follow what is happening, and find gatherings near you.",
+        "cta": "Join Pana Social"
+      },
+      "connectors": {
+        "title": "Give your time",
+        "description": "Volunteer your skills through the Community Connectors program.",
+        "resultDescription": "Put your time and skills behind community projects that need an extra set of hands.",
+        "cta": "Become a Connector"
+      },
+      "donate": {
+        "title": "Support the work",
+        "description": "Help fund the tools, programs, and gatherings that bring Panas together.",
+        "resultDescription": "Help sustain the shared infrastructure and programs that keep the community connected.",
+        "cta": "Make a donation"
+      }
+    },
+    "questions": {
+      "goal": {
+        "eyebrow": "Start with what matters",
+        "question": "What would you most like to do?",
+        "answers": {
+          "visibility": {
+            "label": "Help people find what I do",
+            "description": "I represent myself, a business, or an organization."
+          },
+          "connection": {
+            "label": "Meet more people nearby",
+            "description": "I want connection, groups, and things to do."
+          },
+          "volunteer": {
+            "label": "Pitch in on community work",
+            "description": "I have time or skills I would like to contribute."
+          },
+          "fund": {
+            "label": "Help make the work possible",
+            "description": "I am most ready to contribute financially."
+          }
+        }
+      },
+      "participation": {
+        "eyebrow": "Make it fit your life",
+        "question": "What kind of participation sounds best?",
+        "answers": {
+          "once": {
+            "label": "Something I can set up once",
+            "description": "Give me a useful next step without an ongoing commitment."
+          },
+          "casual": {
+            "label": "Casual connection when I have time",
+            "description": "I want to drop into conversations and events at my pace."
+          },
+          "handsOn": {
+            "label": "Hands-on and collaborative",
+            "description": "I would enjoy working with a team on real community needs."
+          },
+          "flexible": {
+            "label": "Flexible — show me the best match",
+            "description": "The purpose matters more to me than the format."
+          }
+        }
+      },
+      "bringing": {
+        "eyebrow": "One last thing",
+        "question": "What are you bringing with you?",
+        "answers": {
+          "organization": {
+            "label": "A business, project, or organization",
+            "description": "I want it to be visible and connected locally."
+          },
+          "curiosity": {
+            "label": "Myself and my curiosity",
+            "description": "I am looking for people, places, and opportunities."
+          },
+          "skills": {
+            "label": "My time, skills, or experience",
+            "description": "I am ready to be useful where help is needed."
+          },
+          "financial": {
+            "label": "Financial support",
+            "description": "I want to invest in the community’s shared resources."
+          }
+        }
+      }
+    }
+  },
   "newsletter": {
     "eyebrow": "Our Newsletter",
     "lede": "Get new Panas, events and dispatches in your inbox. No noise.",
