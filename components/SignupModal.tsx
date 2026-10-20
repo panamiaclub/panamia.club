@@ -209,6 +209,7 @@ function SignupModalInner() {
             <button
               type="submit"
               className={classNames(styles.button, styles.cta)}
+              disabled={!turnstileToken}
             >
               Submit
             </button>

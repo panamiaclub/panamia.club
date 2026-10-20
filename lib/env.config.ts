@@ -284,8 +284,8 @@ export const envConfig: Record<string, EnvVarConfig> = {
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: {
     description:
       'Cloudflare Turnstile site key (public). ' +
-      'Baked into the bundle by Vite at build time. ' +
-      'Must be set in CF dashboard Build variables (not Runtime).',
+      'Client builds inline it when available; the Turnstile hook also reads ' +
+      'it from a runtime config endpoint for Cloudflare deployments.',
     location: 'VAR',
     required: true,
     docsUrl: 'https://dash.cloudflare.com/?to=/:account/turnstile',

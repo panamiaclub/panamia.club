@@ -162,10 +162,11 @@
   // deploy unless they're in this file or promoted to secrets.
   //
   // Sensitive values (API keys, DB URLs, auth secrets) → `wrangler secret put`.
-  // Genuinely build-baked vars — ones read by a client component, such as
-  // NEXT_PUBLIC_TURNSTILE_SITE_KEY or EMAIL_SENDER_* — belong in CF dashboard
-  // Build variables, NOT here: they are inlined at build time, so a runtime
-  // value arrives far too late to reach the bundle.
+  // Genuinely build-baked vars belong in CF dashboard Build variables, NOT
+  // here: they are inlined at build time, so a runtime value arrives too late
+  // to reach the bundle. Turnstile is an exception: its public key is exposed
+  // through /api/config/turnstile so client forms also work when a Workers
+  // build does not provide build-time environment variables.
   //
   // The NEXT_PUBLIC_*_ENABLED sign-in flags are the exception. They keep the
   // prefix for continuity with lib/env.config.ts, but app/signin/page.tsx
@@ -202,6 +203,8 @@
     // plaintext dashboard vars are wiped on each Workers Builds deploy, which
     // is exactly why it lives here. Turn the button off by setting "false".
     "NEXT_PUBLIC_GOOGLE_ENABLED": "true",
+    // Public widget key. The matching TURNSTILE_SECRET_KEY remains a secret.
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAFbCMWS-gwmBMHKZ",
     // Registrable domain the web surfaces hang off — see
     // lib/panaverse/surfaces.ts. This is independent of FEDERATION_DOMAIN:
     // ActivityPub identities remain @user@pana.social even though the website

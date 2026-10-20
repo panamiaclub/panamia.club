@@ -416,9 +416,7 @@ function SignInPageContent({
                   <Button
                     type="submit"
                     className="bg-pana-flame text-pana-ink hover:bg-pana-burnt w-full font-extrabold"
-                    disabled={
-                      isSubmitting || (!!turnstileSiteKey && !turnstileToken)
-                    }
+                    disabled={isSubmitting || !turnstileToken}
                   >
                     {isSubmitting ? t('sendingLink') : t('sendLink')}
                   </Button>
