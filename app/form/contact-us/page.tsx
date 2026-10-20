@@ -366,9 +366,7 @@ function ContactForm() {
                   type="submit"
                   size="lg"
                   className="bg-pana-pink hover:bg-pana-pink/90 w-full md:w-auto"
-                  disabled={
-                    isSubmitting || (!!turnstileSiteKey && !turnstileToken)
-                  }
+                  disabled={isSubmitting || !turnstileToken}
                 >
                   {isSubmitting ? (
                     t('sending')

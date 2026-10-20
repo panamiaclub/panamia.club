@@ -120,12 +120,52 @@ export default function Turnstile({
 }
 
 export function useTurnstile(siteKey: string | undefined, action?: string) {
+  const [resolvedSiteKey, setResolvedSiteKey] = useState(siteKey);
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [widgetKey, setWidgetKey] = useState(0);
+
+  useEffect(() => {
+    if (siteKey) {
+      setResolvedSiteKey(siteKey);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    fetch('/api/config/turnstile', {
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error('Turnstile configuration is unavailable');
+        }
+
+        const body = (await response.json()) as { siteKey?: unknown };
+        if (typeof body.siteKey !== 'string' || !body.siteKey) {
+          throw new Error('Turnstile site key is missing');
+        }
+
+        setResolvedSiteKey(body.siteKey);
+      })
+      .catch((fetchError: unknown) => {
+        if (
+          fetchError instanceof DOMException &&
+          fetchError.name === 'AbortError'
+        ) {
+          return;
+        }
+        setError(true);
+      });
+
+    return () => controller.abort();
+  }, [siteKey]);
 
   const reset = useCallback(() => {
     setToken(null);
     setError(false);
+    setWidgetKey((value) => value + 1);
   }, []);
 
   const handleToken = useCallback((value: string) => {
@@ -142,9 +182,10 @@ export function useTurnstile(siteKey: string | undefined, action?: string) {
     setToken(null);
   }, []);
 
-  const Widget = siteKey ? (
+  const Widget = resolvedSiteKey ? (
     <Turnstile
-      siteKey={siteKey}
+      key={widgetKey}
+      siteKey={resolvedSiteKey}
       onToken={handleToken}
       onExpire={handleExpire}
       onError={handleError}

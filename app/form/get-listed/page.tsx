@@ -1051,9 +1051,7 @@ function ListYourBusinessForm() {
                     type="submit"
                     size="lg"
                     className="bg-pana-flame text-pana-ink hover:bg-pana-burnt font-extrabold"
-                    disabled={
-                      isSubmitting || (!!turnstileSiteKey && !turnstileToken)
-                    }
+                    disabled={isSubmitting || !turnstileToken}
                   >
                     {isSubmitting ? (
                       t('sending')
