@@ -198,6 +198,13 @@ export const inventory: Record<TableExport, Classification> = {
   relayGroupInvites: ['relay_group_invites'],
   relayReports: ['relay_abuse_reports'],
 
+  // --- Commerce ---
+  commerceInventory: NOT_PERSONAL_DATA,
+  commerceOrders: ['payments'],
+  commerceOrderItems: ['payments'],
+  commerceSubscriptions: ['payments'],
+  stripeWebhookEvents: NOT_PERSONAL_DATA,
+
   // --- Compliance records (retained after account deletion by design) ---
   consentReceipts: ['consent_receipts'],
   deletionLogs: ['deletion_audit'],

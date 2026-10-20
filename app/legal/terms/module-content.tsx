@@ -120,10 +120,10 @@ export const moduleDefinitions: ModuleDefinition[] = [
     id: 'payments',
     title: 'Payments',
     summary:
-      'Donations and memberships are processed through Stripe. Merchandise is sold through our GoHighLevel shop. Stripe retains transaction records for 7+ years per tax and legal requirements, even after account deletion.',
+      'Donations, memberships, and merchandise payments are processed through Stripe. Buyer contact details may be synchronized to GoHighLevel for customer communication. Stripe retains transaction records for 7+ years per tax and legal requirements, even after account deletion.',
     items: [
-      'Stripe for donations and memberships',
-      'GoHighLevel shop for merchandise sales',
+      'Stripe for donations, memberships, and merchandise',
+      'GoHighLevel may receive buyer contact and subscription tags',
       'Donation tiers and membership levels',
       'Recurring subscription management',
       'Refund policy',

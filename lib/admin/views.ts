@@ -31,6 +31,7 @@ import {
   type LucideIcon,
   Mail,
   ShieldCheck,
+  ShoppingBag,
   Store,
   UsersRound,
 } from 'lucide-react';
@@ -268,6 +269,20 @@ export const ADMIN_VIEWS: readonly AdminView[] = [
     status: 'live',
     access: 'moderator',
     icon: Flag,
+  },
+  {
+    id: 'shop',
+    name: 'Shop operations',
+    href: '/admin/shop',
+    group: 'site',
+    blurb: 'Paid orders, stock reservations and merchandise fulfillment.',
+    does: [
+      'Sync active products from Stripe',
+      'Set physical inventory quantities',
+      'Track and fulfill paid merchandise orders',
+    ],
+    status: 'live',
+    icon: ShoppingBag,
   },
   {
     id: 'livesite',
