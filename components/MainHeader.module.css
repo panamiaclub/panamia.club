@@ -4,6 +4,16 @@
   display: contents;
 }
 
+.shopAnnouncement {
+  padding: 0.55rem 1rem;
+  background-color: var(--color-pana-butter);
+  color: var(--color-pana-ink);
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.025em;
+}
+
 .panaButton button {
   order: 3 !important;
 }

@@ -103,9 +103,10 @@ const moduleDisclosures: Record<LegalModule, ModuleDisclosure> = {
   payments: {
     title: 'Payment Terms',
     summary:
-      'Donations and memberships are processed through Stripe. Merchandise is sold through our GoHighLevel shop. Transaction records are retained by Stripe for at least 7 years per legal requirements, even after account deletion.',
+      'Donations, memberships, and merchandise payments are processed through Stripe. Buyer contact details may be synchronized to GoHighLevel for customer communication. Transaction records are retained by Stripe for at least 7 years per legal requirements, even after account deletion.',
     highlights: [
-      'Stripe for donations and memberships; GoHighLevel for merchandise',
+      'Stripe for donations, memberships, and merchandise',
+      'GoHighLevel may receive buyer contact and subscription tags',
       'Stripe customer deletion initiated on account deletion',
       'Transaction history retained by Stripe for 7+ years (tax/legal)',
       'Active subscriptions cancelled before account deletion',

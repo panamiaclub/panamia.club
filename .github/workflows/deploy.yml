@@ -1,0 +1,79 @@
+name: Production Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.repository == 'panamiaclub/panamia.club'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      # GitHub's hosted runners have no route to the Supabase direct host's
+      # IPv6 address. The production POSTGRES_URL uses the reachable Supavisor
+      # session pooler, which supports the session state drizzle-kit needs.
+      POSTGRES_DIRECT_URL: ${{ secrets.POSTGRES_URL }}
+      POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+      BETTER_AUTH_URL: https://panamia.club
+      NEXT_PUBLIC_HOST_URL: https://panamia.club
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PRODUCTION_TURNSTILE_SITE_KEY }}
+      NEXT_PUBLIC_GOOGLE_ENABLED: 'true'
+      NEXT_PUBLIC_APPLE_ENABLED: 'false'
+      NEXT_PUBLIC_MASTODON_ENABLED: 'false'
+      NEXT_PUBLIC_WIKIMEDIA_ENABLED: 'false'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Validate migration journal
+        run: bash scripts/validate-migrations.sh --strict
+
+      - name: Report migration state
+        continue-on-error: true
+        run: yarn db:check-pending
+
+      - name: Apply migrations
+        run: yarn db:migrate
+
+      - name: Verify migration state
+        run: yarn db:check-pending
+
+      - name: Deploy Worker
+        run: yarn vinext-cloudflare deploy
+
+      - name: Verify live storefront
+        shell: bash
+        run: |
+          for attempt in {1..12}; do
+            body="$(curl --fail --silent --show-error https://panamia.club/shop)" || true
+            if grep --quiet 'The Pana collection' <<<"$body"; then
+              echo "Production storefront is live."
+              exit 0
+            fi
+            echo "Storefront not ready yet (attempt $attempt/12)."
+            sleep 10
+          done
+          echo "Production storefront did not become healthy in time."
+          exit 1

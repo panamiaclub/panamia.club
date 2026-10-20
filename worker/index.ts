@@ -85,6 +85,16 @@ export default {
      * orphaned fediverse identities are not. */
     assertPanaverseConfigured(request.headers.get('host'));
 
+    const requestUrl = new URL(request.url);
+    if (requestUrl.hostname === 'shop.panamia.club') {
+      const destination =
+        requestUrl.pathname === '/cart' ? '/shop/cart' : '/shop';
+      return Response.redirect(
+        `https://panamia.club${destination}${requestUrl.search}`,
+        308
+      );
+    }
+
     // Prime the R2/email/relay caches with CF bindings before any application
     // code runs. These hold plain binding objects, which are safe to reuse.
     getEmail(env);
@@ -99,7 +109,7 @@ export default {
     // that opened them, so it is scoped to this request rather than shared.
     // Everything downstream must run inside this callback for `db` to resolve.
     return runWithDb(env, async () => {
-      const url = new URL(request.url);
+      const url = requestUrl;
 
       // Live DM delivery — route /ws/dm to the signed-in member's own mailbox.
       //

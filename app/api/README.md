@@ -232,9 +232,14 @@ Admin-only endpoints (require admin role):
 
 ## Payments
 
-| Endpoint                       | Method | Description            |
-| ------------------------------ | ------ | ---------------------- |
-| `/api/create-checkout-session` | POST   | Create Stripe checkout |
+| Endpoint                       | Method    | Description                                      |
+| ------------------------------ | --------- | ------------------------------------------------ |
+| `/api/create-checkout-session` | POST      | Create a donation Stripe Checkout Session        |
+| `/api/shop/checkout`           | POST      | Reserve stock and create a shop Checkout Session |
+| `/api/shop/webhook`            | POST      | Verify and process Stripe commerce events        |
+| `/api/shop/portal`             | POST      | Open the signed-in subscriber's Customer Portal  |
+| `/api/admin/shop`              | GET/PATCH | Read orders and update inventory or fulfillment  |
+| `/api/admin/shop`              | POST      | Synchronize active one-time Stripe prices        |
 
 ## CRM / Marketing Data (`/api/crm/*`)
 
