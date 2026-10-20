@@ -8896,17 +8896,50 @@ body:has([data-density]) {
 }
 
 .home-articles-track {
+  --home-articles-gutter: 1rem;
   display: flex;
   gap: 1rem;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  scroll-padding-inline-start: max(1rem, calc((100vw - 72rem) / 2));
-  padding: 0.5rem max(1rem, calc((100vw - 72rem) / 2)) 1rem;
+  scroll-padding-inline-start: var(--home-articles-gutter);
+  padding: 0.5rem var(--home-articles-gutter) 1rem;
   scrollbar-width: none;
 }
 
 .home-articles-track::-webkit-scrollbar {
   display: none;
+}
+
+/* Keep the full-bleed rail aligned with Tailwind's responsive `.container`
+   rather than pinning it to one narrower max-width. */
+@media (min-width: 40rem) {
+  .home-articles-track {
+    --home-articles-gutter: calc((100vw - 40rem) / 2 + 1rem);
+  }
+}
+
+@media (min-width: 48rem) {
+  .home-articles-track {
+    --home-articles-gutter: calc((100vw - 48rem) / 2 + 1rem);
+  }
+}
+
+@media (min-width: 64rem) {
+  .home-articles-track {
+    --home-articles-gutter: calc((100vw - 64rem) / 2 + 1rem);
+  }
+}
+
+@media (min-width: 80rem) {
+  .home-articles-track {
+    --home-articles-gutter: calc((100vw - 80rem) / 2 + 1rem);
+  }
+}
+
+@media (min-width: 96rem) {
+  .home-articles-track {
+    --home-articles-gutter: calc((100vw - 96rem) / 2 + 1rem);
+  }
 }
 
 .home-article-card {
