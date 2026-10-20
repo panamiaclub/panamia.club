@@ -96,9 +96,13 @@ export async function POST(request: NextRequest) {
           data: [
             {
               message:
-                action === 'approve'
-                  ? 'Profile has been set active'
-                  : 'Profile has been declined',
+                result.mailFailed
+                  ? action === 'approve'
+                    ? 'Profile is active, but the notification email could not be sent'
+                    : 'Profile is declined, but the notification email could not be sent'
+                  : action === 'approve'
+                    ? 'Profile has been set active'
+                    : 'Profile has been declined',
               name: result.name,
               handle: null,
               total: totalProfiles,
