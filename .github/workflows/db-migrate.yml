@@ -20,13 +20,6 @@ name: Database Migrations
 # either alone. See docs/QUICK-START.md.
 
 on:
-  push:
-    branches: [main]
-    # Only migrate when migration content actually changes. Drift from any
-    # other source is caught by the scheduled run below.
-    paths:
-      - 'drizzle/**'
-      - '.github/workflows/db-migrate.yml'
   # Daily drift detector. Verifies only -- never applies. If someone restores a
   # snapshot, repoints the app at a different database, or a migration is
   # reverted, this fails within a day instead of waiting for a user report.
@@ -51,12 +44,11 @@ jobs:
     if: github.repository == 'panamiaclub/panamia.club'
 
     env:
-      # drizzle.config.ts prefers POSTGRES_DIRECT_URL and falls back to
-      # POSTGRES_URL. Migrations must not go through Supabase's transaction
-      # pooler (port 6543) -- it handles the session-scoped state drizzle-kit
-      # relies on poorly, and the resulting failures are intermittent rather
-      # than clean. POSTGRES_DIRECT_URL must be the direct endpoint (5432).
-      POSTGRES_DIRECT_URL: ${{ secrets.POSTGRES_DIRECT_URL }}
+      # GitHub-hosted runners cannot reach the Supabase direct hostname because
+      # it resolves IPv6-only. POSTGRES_URL is the reachable Supavisor session
+      # pooler (not transaction mode), so expose it under drizzle.config.ts's
+      # preferred variable name too.
+      POSTGRES_DIRECT_URL: ${{ secrets.POSTGRES_URL }}
       POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
 
     steps:
