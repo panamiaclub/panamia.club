@@ -205,11 +205,11 @@ switched off because it needs credentials. To enable it:
    _Create credentials_ → _OAuth client ID_ → _Web application_.
 
    Consent screen settings that catch people out:
-   - **Every URL on the consent screen must be `pana.social`.** Publishing asks
+   - **Every URL on the consent screen must be `panamia.club`.** Publishing asks
      for homepage, privacy policy and terms links, and the instinct is to use
-     the email domain. Do not: the `panamia.club` apex has served an expired TLS
-     certificate since 2024-07-24, so those links land on a browser security
-     interstitial. See [DOMAINS.md](./DOMAINS.md).
+     the identity domain. Do not: `pana.social` is retained for ActivityPub
+     identities and email, but it does not currently serve the website. See
+     [DOMAINS.md](./DOMAINS.md).
    - **User type must be External.** _Internal_ would admit only
      `@panamia.club` Workspace members, whereas members sign in with their own
      Google accounts.
@@ -228,7 +228,7 @@ switched off because it needs credentials. To enable it:
    mount, so the authorised redirect URI is:
 
    ```text
-   https://pana.social/api/auth/callback/google
+   https://panamia.club/api/auth/callback/google
    ```
 
    Add one entry per origin you sign in from, including

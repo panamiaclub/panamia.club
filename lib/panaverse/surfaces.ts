@@ -73,13 +73,12 @@ export interface PanaverseSurface {
  * of this, which is what lets one session cookie cover all of them — cookies
  * cannot be shared across registrable domains.
  *
- * Equal to DEFAULT_FEDERATION_DOMAIN by design, not by accident: pana.social
- * both serves this app and mints @user@pana.social handles. Keeping them equal
- * is what lets a surface cookie cover the identity host, and it means the
- * federation domain survives a UI move — see lib/federation/domain.ts.
- * panamia.club is a different, older deployment; it is not this app.
+ * This is deliberately independent from DEFAULT_FEDERATION_DOMAIN. The web app
+ * currently serves from panamia.club, while federated identities remain pinned
+ * to pana.social so existing actor IDs never change with the website hostname.
+ * See lib/federation/domain.ts.
  */
-export const DEFAULT_ROOT_DOMAIN = 'pana.social';
+export const DEFAULT_ROOT_DOMAIN = 'panamia.club';
 
 export function getRootDomain(): string {
   return process.env.PANAVERSE_ROOT_DOMAIN?.trim() || DEFAULT_ROOT_DOMAIN;
