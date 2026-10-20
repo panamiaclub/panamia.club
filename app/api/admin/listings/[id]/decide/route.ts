@@ -80,6 +80,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       success: true,
       name: result.name,
       mailed: result.mailed,
+      mailFailed: result.mailFailed,
     });
   } catch (error) {
     console.error('Failed to decide a listing', error);
