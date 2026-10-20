@@ -157,6 +157,7 @@ export default function MainHeader({
   const isEs = i18n.language === 'es';
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  const isShopRoute = pathname === '/shop' || pathname.startsWith('/shop/');
   const showDirectoryJoin = pathname === '/' || pathname === '/mock/home';
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
 
@@ -207,8 +208,16 @@ export default function MainHeader({
       <header className={styles.header}>
         {/* Ambient unread cues: browser-tab count + desktop notifications */}
         <NotificationAlerts />
+        {/* The shop carries its own purpose-built announcement. The generic
+            newsletter/profile CTA changes the first band of the approved shop
+            design and makes the masthead feel like a borrowed component. */}
+        {status !== 'loading' && isShopRoute && (
+          <div className={styles.shopAnnouncement}>
+            {t('nav.shopAnnouncement')}
+          </div>
+        )}
         {/* CTA bar: newsletter for unauthenticated, profile completion for authenticated without profile */}
-        {status !== 'loading' && !session && (
+        {status !== 'loading' && !isShopRoute && !session && (
           <div id="call-to-action-bar">
             <CallToActionBar isProductionSite={isProductionSite} />
           </div>
@@ -216,6 +225,7 @@ export default function MainHeader({
         {status !== 'loading' &&
           session &&
           hasProfile === false &&
+          !isShopRoute &&
           !isOnboardingRoute(pathname) && (
             <div id="call-to-action-bar">
               <CallToActionBar
