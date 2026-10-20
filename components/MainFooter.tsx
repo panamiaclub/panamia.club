@@ -91,6 +91,9 @@ export default function GlobalFooter() {
         <div className={styles.footerContact}>
           <Link href="/form/contact-us">{t('footer.contactUs')}</Link>
         </div>
+        <p className={styles.legalDisclosure}>
+          {t('footer.nonprofitDisclosure')}
+        </p>
       </div>
     </footer>
   );
