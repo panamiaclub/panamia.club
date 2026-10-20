@@ -134,6 +134,15 @@
   text-decoration: none;
 }
 
+.legalDisclosure {
+  max-width: 48rem;
+  margin: 1.5rem auto 0;
+  color: rgb(17 13 13 / 0.68);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
 @media only screen and (max-width: 600px) {
   .footer {
     padding-block: 2.5rem 1.5rem;
