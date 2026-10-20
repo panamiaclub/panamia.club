@@ -86,7 +86,10 @@
     "signIn": "Sign In",
     "menu": "Menu",
     "closeMenu": "Close menu",
+    "expandSubmenu": "Expand {{label}} submenu",
+    "collapseSubmenu": "Collapse {{label}} submenu",
     "siteMenu": {
+      "aboutPana": "About Pana",
       "ourStory": "Our Story",
       "meetTheTeam": "Meet the Team",
       "whyLocal": "Why local",
@@ -113,6 +116,7 @@
       "collaborativeEvents": "Collaborative Events (Service Offerings)",
       "cultureWork": "Culture Work",
       "panaInkPress": "Pana Ink Press",
+      "panavizion": "Panavizion",
       "shop": "Shop"
     },
     "alreadyAPana": "Already a Pana? <a>Log in</a>",

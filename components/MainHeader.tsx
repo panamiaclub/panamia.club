@@ -29,10 +29,19 @@ type NavItemDefinition = {
 };
 
 const NAV_ITEMS: NavItemDefinition[] = [
-  { labelKey: 'nav.siteMenu.ourStory', href: '/about-us#our-story' },
-  { labelKey: 'nav.siteMenu.meetTheTeam', href: '/about-us#meet-the-team' },
-  { labelKey: 'nav.siteMenu.whyLocal', href: '/#why-local' },
-  { labelKey: 'nav.siteMenu.pillars', href: '/#pillars' },
+  {
+    labelKey: 'nav.siteMenu.aboutPana',
+    href: '/about-us',
+    children: [
+      { labelKey: 'nav.siteMenu.ourStory', href: '/about-us#our-story' },
+      {
+        labelKey: 'nav.siteMenu.meetTheTeam',
+        href: '/about-us#meet-the-team',
+      },
+      { labelKey: 'nav.siteMenu.whyLocal', href: '/#why-local' },
+      { labelKey: 'nav.siteMenu.pillars', href: '/#pillars' },
+    ],
+  },
   {
     labelKey: 'nav.siteMenu.ourImpact',
     href: '/impact',
@@ -118,7 +127,13 @@ const NAV_ITEMS: NavItemDefinition[] = [
         labelKey: 'nav.siteMenu.cultureWork',
         href: '/#pillar-culture',
         children: [
-          { labelKey: 'nav.siteMenu.panaInkPress', href: '/ink' },
+          {
+            labelKey: 'nav.siteMenu.panaInkPress',
+            href: '/ink',
+            children: [
+              { labelKey: 'nav.siteMenu.panavizion', href: '/vizion' },
+            ],
+          },
           {
             labelKey: 'nav.siteMenu.collaborativeProjects',
             href: '/about-us#collaborative-projects',
@@ -152,6 +167,12 @@ export default function MainHeader({
       const translateItem = (item: NavItemDefinition): NavDrawerItem => ({
         href: item.href,
         label: t(item.labelKey),
+        expandLabel: t('nav.expandSubmenu', {
+          label: t(item.labelKey),
+        }),
+        collapseLabel: t('nav.collapseSubmenu', {
+          label: t(item.labelKey),
+        }),
         children: item.children?.map(translateItem),
       });
 

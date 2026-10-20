@@ -1,7 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useRef, type CSSProperties } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import Image from 'next/image';
+import { ChevronDown } from 'lucide-react';
 
 import styles from './NavDrawer.module.css';
 import SurfaceLink from '@/components/panaverse/SurfaceLink';
@@ -11,6 +19,8 @@ export type NavDrawerItem = {
   href: string;
   label: string;
   children?: NavDrawerItem[];
+  expandLabel?: string;
+  collapseLabel?: string;
   /** Runs alongside the drawer close, on the same click. Used for permission
       prompts that browsers only grant from a user gesture. */
   onSelect?: () => void;
@@ -185,36 +195,68 @@ function NavDrawerEntry({
   onClose: () => void;
   depth?: number;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const submenuId = useId();
+  const hasChildren = !!item.children?.length;
+
   return (
     <li>
-      <SurfaceLink
-        href={item.href}
-        className={cn(styles.link, depth > 0 && styles.childLink)}
-        data-depth={depth}
-        onClick={() => {
-          item.onSelect?.();
-          onClose();
-        }}
-        style={{ '--d': `${0.1 + index * 0.05}s` } as CSSProperties}
-      >
-        {depth === 0 ? (
-          <span className={styles.num} aria-hidden="true">
-            {String(index + 1).padStart(2, '0')}
-          </span>
-        ) : (
-          <span className={styles.branch} aria-hidden="true">
-            {'\u2514'}
-          </span>
-        )}
-        <span className={styles.label}>{item.label}</span>
-        <span className={styles.arrow} aria-hidden="true">
-          →
-        </span>
-      </SurfaceLink>
+      <div className={styles.entryRow}>
+        <SurfaceLink
+          href={item.href}
+          className={cn(
+            styles.link,
+            depth > 0 && styles.childLink,
+            hasChildren && styles.parentLink
+          )}
+          data-depth={depth}
+          onClick={() => {
+            item.onSelect?.();
+            onClose();
+          }}
+          style={{ '--d': `${0.1 + index * 0.05}s` } as CSSProperties}
+        >
+          {depth === 0 ? (
+            <span className={styles.num} aria-hidden="true">
+              {String(index + 1).padStart(2, '0')}
+            </span>
+          ) : (
+            <span className={styles.branch} aria-hidden="true">
+              {'\u2514'}
+            </span>
+          )}
+          <span className={styles.label}>{item.label}</span>
+          {!hasChildren ? (
+            <span className={styles.arrow} aria-hidden="true">
+              →
+            </span>
+          ) : null}
+        </SurfaceLink>
 
-      {item.children?.length ? (
-        <ul className={styles.sublist}>
-          {item.children.map((child, childIndex) => (
+        {hasChildren ? (
+          <button
+            type="button"
+            className={styles.submenuToggle}
+            aria-expanded={expanded}
+            aria-controls={submenuId}
+            aria-label={
+              expanded
+                ? (item.collapseLabel ?? `Collapse ${item.label} submenu`)
+                : (item.expandLabel ?? `Expand ${item.label} submenu`)
+            }
+            onClick={() => setExpanded((current) => !current)}
+          >
+            <ChevronDown
+              className={styles.submenuIcon}
+              aria-hidden="true"
+            />
+          </button>
+        ) : null}
+      </div>
+
+      {hasChildren && expanded ? (
+        <ul id={submenuId} className={styles.sublist}>
+          {item.children?.map((child, childIndex) => (
             <NavDrawerEntry
               key={`${child.href}-${child.label}`}
               item={child}

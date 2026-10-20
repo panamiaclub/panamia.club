@@ -285,37 +285,109 @@ test.describe('Navigation Links', () => {
     }).toPass({ timeout: 30_000 });
 
     for (const label of [
-      'Our Story',
-      'Meet the Team',
-      'Why local',
-      'Pillars',
+      'About Pana',
       'Our Impact',
-      'Community connectors program',
-      'Stories of Impact',
-      'Download our Impact',
       'Our Ecosystem',
-      'Collaborative Partners',
-      'Pana Certified',
-      'Sponsors+Funders',
       'Support Pana',
-      'Giving Circle',
-      'Sponsorship',
       'Programs',
-      'Pillar Breakdown by Program',
-      'Collective Tech',
-      'Directory',
-      'Pana Social',
-      'Community Building',
-      'Connectors Program',
-      'Collaborative Events (Service Offerings)',
-      'Culture Work',
-      'Pana Ink Press',
       'Shop',
     ]) {
       await expect(
         drawer.getByRole('link', { name: label, exact: true }).first()
       ).toBeVisible();
     }
+
+    await expect(
+      drawer.getByRole('link', {
+        name: 'Community connectors program',
+        exact: true,
+      })
+    ).toHaveCount(0);
+
+    for (const [parent, children] of [
+      [
+        'About Pana',
+        ['Our Story', 'Meet the Team', 'Why local', 'Pillars'],
+      ],
+      [
+        'Our Impact',
+        [
+          'Community connectors program',
+          'Stories of Impact',
+          'Download our Impact',
+        ],
+      ],
+      [
+        'Our Ecosystem',
+        [
+          'Collaborative Partners',
+          'Collaborative Projects',
+          'Pana Certified',
+          'Sponsors+Funders',
+        ],
+      ],
+      ['Support Pana', ['Giving Circle', 'Sponsorship']],
+      [
+        'Programs',
+        [
+          'Pillar Breakdown by Program',
+          'Collective Tech',
+          'Community Building',
+          'Culture Work',
+        ],
+      ],
+    ] as const) {
+      const toggle = drawer.getByRole('button', {
+        name: `Expand ${parent} submenu`,
+        exact: true,
+      });
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      await toggle.click();
+      await expect(
+        drawer.getByRole('button', {
+          name: `Collapse ${parent} submenu`,
+          exact: true,
+        })
+      ).toHaveAttribute('aria-expanded', 'true');
+
+      for (const child of children) {
+        await expect(
+          drawer.getByRole('link', { name: child, exact: true }).first()
+        ).toBeVisible();
+      }
+    }
+
+    for (const [parent, children] of [
+      ['Collective Tech', ['Directory', 'Pana Social']],
+      [
+        'Community Building',
+        ['Connectors Program', 'Collaborative Events (Service Offerings)'],
+      ],
+      ['Culture Work', ['Pana Ink Press', 'Collaborative Projects']],
+    ] as const) {
+      await drawer
+        .getByRole('button', {
+          name: `Expand ${parent} submenu`,
+          exact: true,
+        })
+        .click();
+
+      for (const child of children) {
+        await expect(
+          drawer.getByRole('link', { name: child, exact: true }).first()
+        ).toBeVisible();
+      }
+    }
+
+    await drawer
+      .getByRole('button', {
+        name: 'Expand Pana Ink Press submenu',
+        exact: true,
+      })
+      .click();
+    await expect(
+      drawer.getByRole('link', { name: 'Panavizion', exact: true })
+    ).toBeVisible();
 
     for (const removedLabel of [
       'Events',
