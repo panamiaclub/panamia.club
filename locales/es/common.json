@@ -86,6 +86,7 @@
     "signIn": "Iniciar Sesión",
     "menu": "Menú",
     "closeMenu": "Cerrar menú",
+    "shopAnnouncement": "Cada compra apoya los programas comunitarios de Pana MIA en el sur de Florida.",
     "expandSubmenu": "Abrir el submenú de {{label}}",
     "collapseSubmenu": "Cerrar el submenú de {{label}}",
     "siteMenu": {
