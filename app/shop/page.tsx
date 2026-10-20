@@ -22,8 +22,16 @@ export default async function ShopPage({
 
   return (
     <main>
-      <section className="bg-pana-indigo text-pana-cream">
-        <div className="container mx-auto grid gap-8 px-4 py-16 md:grid-cols-[1.2fr_0.8fr] md:py-24">
+      <section className="bg-pana-indigo text-pana-cream relative overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="bg-pana-pink absolute -top-[185px] right-[6%] h-[340px] w-[340px] rounded-full"
+        />
+        <div
+          aria-hidden="true"
+          className="bg-pana-blue absolute right-[27%] -bottom-[165px] h-[220px] w-[220px] rounded-full"
+        />
+        <div className="relative z-10 container mx-auto grid gap-12 px-4 py-16 md:grid-cols-[1.2fr_0.8fr] md:items-center md:py-24">
           <div>
             <p className="text-pana-butter font-black tracking-[0.2em] uppercase">
               Support the community
@@ -36,14 +44,18 @@ export default async function ShopPage({
               securely handled by Stripe.
             </p>
           </div>
-          <div className="bg-pana-flame text-pana-ink self-end rounded-3xl p-7">
-            <span className="bg-pana-butter inline-flex rounded-full px-3 py-1 text-xs font-black tracking-widest uppercase">
-              100% Pana
+          <div className="bg-pana-flame text-pana-ink border-pana-ink relative self-center rounded-[28px] border-4 p-8 shadow-[12px_12px_0_#110d0d] md:rotate-[2deg]">
+            <span className="bg-pana-butter border-pana-ink absolute -top-6 right-6 grid h-[72px] w-[72px] rotate-[10deg] place-items-center rounded-full border-[3px] text-center text-sm leading-tight font-black uppercase">
+              100%
+              <br />
+              Pana
             </span>
-            <p className="text-2xl font-black">One cart, one purpose.</p>
-            <p className="mt-2">
+            <p className="max-w-[13ch] text-3xl leading-none font-black">
+              One cart, one purpose.
+            </p>
+            <p className="mt-4 max-w-md text-base leading-relaxed font-bold">
               Merchandise and memberships check out separately so shipping and
-              recurring billing stay clear.
+              recurring billing always stay simple and clear.
             </p>
           </div>
         </div>
