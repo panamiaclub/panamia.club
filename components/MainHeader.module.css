@@ -374,6 +374,39 @@
   outline-offset: 2px;
 }
 
+.directoryJoin {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--color-pana-indigo);
+  border-radius: 9999px;
+  background-color: var(--color-pana-indigo);
+  color: var(--color-pana-cream);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  white-space: nowrap;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.directoryJoin:hover {
+  border-color: var(--color-pana-burnt);
+  background-color: var(--color-pana-burnt);
+}
+
+.directoryJoin:focus-visible {
+  outline: 2px solid var(--color-pana-flame);
+  outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+  .directoryJoin {
+    display: none;
+  }
+}
+
 /* Below this width the right column outgrows its 1fr share and pushes the logo
    off centre. The menu word is mirrored inside the drawer, so nothing becomes
    unreachable. */
