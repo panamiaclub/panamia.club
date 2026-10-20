@@ -54,11 +54,24 @@
   "articles": {
     "eyebrow": "Despachos",
     "title": "Historias Del<br/>Colectivo",
+    "titlePlain": "Historias Del Colectivo",
     "subtitle": "Lecturas más largas de quienes construyen la economía local del Sur de la Florida.",
     "viewAll": "Ver Todos",
     "noArticles": "¡Aún no hay artículos!",
     "noArticlesDesc": "Sé el primero en compartir una historia con la comunidad.",
-    "writeArticle": "Escribe un Artículo"
+    "writeArticle": "Escribe un Artículo",
+    "loading": "Cargando artículos de la comunidad",
+    "loadError": "No se pudieron cargar las historias más recientes.",
+    "next": "Más artículos",
+    "returnToFirst": "Volver al primer artículo",
+    "communityAuthor": "Comunidad Pana MIA",
+    "readingTime_one": "{{count}} min de lectura",
+    "readingTime_other": "{{count}} min de lectura",
+    "types": {
+      "businessUpdate": "Actualización de negocio",
+      "commentary": "Historia comunitaria",
+      "staffUpdate": "De Pana MIA"
+    }
   },
   "impact": {
     "eyebrow": "En Números",

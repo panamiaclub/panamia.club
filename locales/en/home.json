@@ -55,11 +55,24 @@
   "articles": {
     "eyebrow": "Dispatches",
     "title": "Stories From<br/>The Collective",
+    "titlePlain": "Stories From The Collective",
     "subtitle": "Longer reads from the people building South Florida's local economy.",
     "viewAll": "View All",
     "noArticles": "No articles yet!",
     "noArticlesDesc": "Be the first to share a story with the community.",
-    "writeArticle": "Write an Article"
+    "writeArticle": "Write an Article",
+    "loading": "Loading community articles",
+    "loadError": "The latest stories could not be loaded right now.",
+    "next": "Next articles",
+    "returnToFirst": "Return to the first article",
+    "communityAuthor": "Pana MIA community",
+    "readingTime_one": "{{count}} min read",
+    "readingTime_other": "{{count}} min read",
+    "types": {
+      "businessUpdate": "Business update",
+      "commentary": "Community story",
+      "staffUpdate": "From Pana MIA"
+    }
   },
   "impact": {
     "eyebrow": "By The Numbers",
