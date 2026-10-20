@@ -61,8 +61,10 @@
   // path, so every request pays a fresh TCP + TLS + SCRAM handshake — four to
   // five round trips — before its first query. Co-locating the Worker with
   // the database turns that handshake from ~125ms into single digits.
-  // Deleting the POSTGRES_URL secret so the Hyperdrive pool is used again is
-  // the actual fix; this keeps the fallback cheap until that happens.
+  // A future Hyperdrive migration must create the configuration in the same
+  // Cloudflare account as this Worker before adding the binding here. The old
+  // binding referenced another account, was unreachable because POSTGRES_URL
+  // wins, and blocked deployments from the production account.
   //
   // Explicit region rather than "mode": "smart" — they are mutually exclusive,
   // and smart only considers locations where the Worker has already run. A
@@ -84,17 +86,6 @@
     "mode": "targeted",
     "region": "aws:us-east-1",
   },
-  // Hyperdrive binding for Supabase PostgreSQL access from Workers
-  // https://dash.cloudflare.com -> Workers & Pages -> Hyperdrive
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      "id": "985dd5bf59c84a799dc3eac9122facaf",
-      // localConnectionString satisfies wrangler's local-emulation check only;
-      // the real Hyperdrive service is used in production.
-      "localConnectionString": "postgresql://placeholder:placeholder@localhost:5432/placeholder",
-    },
-  ],
   // R2 object storage for media uploads (profile images, social audio/video)
   // Create bucket: wrangler r2 bucket create panamia-media
   // Enable public access in the Cloudflare dashboard to get R2_PUBLIC_URL.
