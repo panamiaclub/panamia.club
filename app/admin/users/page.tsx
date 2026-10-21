@@ -8,6 +8,7 @@ import {
   ACCOUNT_TYPES,
   USER_STATES,
   isUserState,
+  isUserSort,
 } from '@/lib/admin/user-filters';
 import { listUsers, latestLocksFor, userStats } from '@/lib/admin/users';
 import { redirectToSignIn } from '@/lib/signin-redirect';
@@ -78,6 +79,14 @@ const STATE_LABEL: Record<string, string> = {
   staff: 'Admin or moderator',
 };
 
+const SORT_LABEL: Record<string, string> = {
+  newest: 'Date joined — newest',
+  oldest: 'Date joined — oldest',
+  'name-asc': 'Alphabetical — A to Z',
+  'name-desc': 'Alphabetical — Z to A',
+  roles: 'Roles — staff first',
+};
+
 export default async function AdminUsersPage({
   searchParams,
 }: {
@@ -101,14 +110,17 @@ export default async function AdminUsersPage({
   const stateParam = one('state');
   const state = isUserState(stateParam) ? stateParam : 'all';
   const type = one('type') ?? '';
+  const sortParam = one('sort');
+  const sort = isUserSort(sortParam) ? sortParam : 'newest';
   const page = Number.parseInt(one('page') ?? '1', 10) || 1;
 
   const [result, stats] = await Promise.all([
-    listUsers({ query, state, accountType: type || null, page }),
+    listUsers({ query, state, accountType: type || null, sort, page }),
     userStats(),
   ]);
 
-  const filtering = query.length > 0 || state !== 'all' || type.length > 0;
+  const filtering =
+    query.length > 0 || state !== 'all' || type.length > 0 || sort !== 'newest';
 
   /* Why each locked account was locked, for the rows on this page only. One
      extra query, and only when something on the page is actually locked. */
@@ -123,6 +135,7 @@ export default async function AdminUsersPage({
     if (query) next.set('q', query);
     if (state !== 'all') next.set('state', state);
     if (type) next.set('type', type);
+    if (sort !== 'newest') next.set('sort', sort);
     if (target > 1) next.set('page', String(target));
     const qs = next.toString();
     return qs ? `/admin/users?${qs}` : '/admin/users';
@@ -161,6 +174,26 @@ export default async function AdminUsersPage({
             },
           ]}
         />
+      </div>
+      <div>
+        <label
+          htmlFor="sort"
+          className="text-pana-ink/70 block text-xs font-bold"
+        >
+          Sort by
+        </label>
+        <select
+          id="sort"
+          name="sort"
+          defaultValue={sort}
+          className="border-pana-ink/20 text-pana-ink mt-1 rounded-lg border-2 bg-white px-3 py-2 text-sm"
+        >
+          {Object.entries(SORT_LABEL).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="mt-6">

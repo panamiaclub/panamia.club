@@ -1,12 +1,29 @@
-import { and, count, desc, eq, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  or,
+  sql,
+} from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import { profileOwners, profiles, sessions, userLocks, users } from '@/lib/schema';
+import {
+  profileOwners,
+  profiles,
+  sessions,
+  userLocks,
+  users,
+} from '@/lib/schema';
 import { isAdminEmail } from '@/lib/server/admin-emails';
 import { containsPattern } from '@/lib/admin/user-search';
 import { checkReason, reasonError } from '@/lib/admin/user-locks';
 import { isAccountType } from '@/lib/admin/user-filters';
-import type { UserState } from '@/lib/admin/user-filters';
+import type { UserSort, UserState } from '@/lib/admin/user-filters';
 
 /**
  * Reading and locking accounts, for the admin console.
@@ -62,13 +79,19 @@ export {
   ACCOUNT_TYPES,
   isUserState,
   isAccountType,
+  isUserSort,
 } from '@/lib/admin/user-filters';
-export type { UserState, AccountType } from '@/lib/admin/user-filters';
+export type {
+  UserState,
+  UserSort,
+  AccountType,
+} from '@/lib/admin/user-filters';
 
 export interface ListUsersOptions {
   query?: string | null;
   state?: UserState;
   accountType?: string | null;
+  sort?: UserSort;
   page?: number;
 }
 
@@ -96,6 +119,7 @@ export async function listUsers(
   const query = (options.query ?? '').trim();
   const state = options.state ?? 'all';
   const type = options.accountType;
+  const sort = options.sort ?? 'newest';
 
   const filters = [];
 
@@ -145,15 +169,25 @@ export async function listUsers(
   // a wide slice once and page in memory. The table is small enough that this
   // is cheaper than the alternative and honest either way.
   const postFiltered = state === 'owners' || state === 'staff';
+  const postProcessed = postFiltered || sort === 'roles';
+  const nameOrder = sql<string>`lower(coalesce(nullif(${users.name}, ''), nullif(${users.screenname}, ''), ${users.email}))`;
+  const order =
+    sort === 'oldest'
+      ? asc(users.createdAt)
+      : sort === 'name-asc'
+        ? asc(nameOrder)
+        : sort === 'name-desc'
+          ? desc(nameOrder)
+          : desc(users.createdAt);
 
   const rowsRaw = await db
     .select(baseSelect)
     .from(users)
     .leftJoin(profiles, eq(profiles.userId, users.id))
     .where(where)
-    .orderBy(desc(users.createdAt))
-    .limit(postFiltered ? 2000 : USERS_PER_PAGE)
-    .offset(postFiltered ? 0 : USERS_PER_PAGE * (page - 1));
+    .orderBy(order)
+    .limit(postProcessed ? 2000 : USERS_PER_PAGE)
+    .offset(postProcessed ? 0 : USERS_PER_PAGE * (page - 1));
 
   let mapped: AdminUserRow[] = rowsRaw.map((row) => {
     const roles = (row.roles ?? {}) as {
@@ -182,11 +216,29 @@ export async function listUsers(
 
   let total: number;
 
-  if (postFiltered) {
-    mapped =
-      state === 'owners'
-        ? mapped.filter((row) => row.administers > 0)
-        : mapped.filter((row) => row.isAdmin || row.isContentModerator);
+  if (postProcessed) {
+    if (state === 'owners') {
+      mapped = mapped.filter((row) => row.administers > 0);
+    } else if (state === 'staff') {
+      mapped = mapped.filter((row) => row.isAdmin || row.isContentModerator);
+    }
+    if (sort === 'roles') {
+      const roleRank = (row: AdminUserRow) =>
+        row.isSuperAdmin
+          ? 0
+          : row.grantedAdmin
+            ? 1
+            : row.isContentModerator
+              ? 2
+              : 3;
+      const name = (row: AdminUserRow) =>
+        row.name || row.screenname || row.email;
+      mapped.sort(
+        (a, b) =>
+          roleRank(a) - roleRank(b) ||
+          name(a).localeCompare(name(b), undefined, { sensitivity: 'base' })
+      );
+    }
     total = mapped.length;
     mapped = mapped.slice(USERS_PER_PAGE * (page - 1), USERS_PER_PAGE * page);
   } else {
@@ -268,7 +320,8 @@ export async function latestLocksFor(
     .orderBy(desc(userLocks.createdAt));
 
   // Ordered newest first, so the first row seen per user is the current one.
-  for (const row of rows) if (!found.has(row.userId)) found.set(row.userId, row);
+  for (const row of rows)
+    if (!found.has(row.userId)) found.set(row.userId, row);
   return found;
 }
 
@@ -293,8 +346,7 @@ export async function lockHistory(userId: string): Promise<LockHistoryEntry[]> {
 export { REASON_MIN, REASON_MAX } from '@/lib/admin/user-locks';
 
 export type LockOutcome =
-  | { ok: true; sessionsRevoked: number }
-  | { ok: false; error: string };
+  { ok: true; sessionsRevoked: number } | { ok: false; error: string };
 
 interface LockActor {
   userId: string | null;
@@ -337,7 +389,8 @@ export async function lockUser(
     .limit(1);
 
   if (!target) return { ok: false, error: 'No such account.' };
-  if (target.lockedAt) return { ok: false, error: 'That account is already locked.' };
+  if (target.lockedAt)
+    return { ok: false, error: 'That account is already locked.' };
 
   const roles = (target.roles ?? {}) as { admin?: boolean };
   if (isAdminEmail(target.email) || roles.admin === true) {
@@ -399,7 +452,8 @@ export async function unlockUser(
     .limit(1);
 
   if (!target) return { ok: false, error: 'No such account.' };
-  if (!target.lockedAt) return { ok: false, error: 'That account is not locked.' };
+  if (!target.lockedAt)
+    return { ok: false, error: 'That account is not locked.' };
 
   await db.transaction(async (tx) => {
     await tx.update(users).set({ lockedAt: null }).where(eq(users.id, userId));
