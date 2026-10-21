@@ -11,7 +11,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { profiles } from '@/lib/schema';
+import { profiles, smsSubscriptions } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { GhlClient } from '@/lib/ghl';
 import { checkSameOrigin } from '@/lib/csrf';
@@ -73,7 +73,23 @@ export async function POST(request: Request) {
     .where(eq(profiles.id, profile.id));
 
   try {
-    await ghl.clearDndAll(profile.ghlContactId);
+    const [contact, smsSubscription] = await Promise.all([
+      ghl.getContactById(profile.ghlContactId),
+      db.query.smsSubscriptions.findFirst({
+        where: eq(smsSubscriptions.profileId, profile.id),
+      }),
+    ]);
+    await ghl.setDndChannels(profile.ghlContactId, {
+      Email: false,
+      SMS:
+        smsSubscription?.status === 'active'
+          ? false
+          : contact.dndSettings?.SMS?.status === 'active' ||
+            (contact.dnd === true &&
+              contact.dndSettings?.SMS?.status === undefined),
+      WhatsApp: false,
+      Call: false,
+    });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error(

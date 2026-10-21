@@ -26,6 +26,7 @@ import { getDmStream } from '../lib/dm-stream';
 import { resolveUserIdFromHeaders } from '../auth';
 import { getActiveProfileWithActor } from '../lib/server/active-profile';
 import { PATHNAME_HEADER, SEARCH_HEADER } from '../lib/panaverse/chrome';
+import { retryPendingSmsSubscriptions } from '../lib/sms-subscriptions';
 
 // Re-export Durable Object classes so wrangler can discover them
 export { SignalingRoom } from './signaling-room';
@@ -287,6 +288,14 @@ export default {
       // broken sweep also blinds the dashboard that reports on it, which is
       // exactly when somebody is looking.
       await recordSyntheticRun(event.cron);
+
+      // Consent is saved locally before HighLevel is contacted, so a provider
+      // outage leaves a visible pending row rather than losing the member's
+      // choice. Retry those rows hourly before the unrelated expiry purge.
+      const smsSync = await retryPendingSmsSubscriptions();
+      if (smsSync.attempted > 0) {
+        console.log('[sms-subscription-sync]', JSON.stringify(smsSync));
+      }
 
       // Recorded in job_runs as well as logged. The console line is kept
       // because it is the only thing visible during a live tail; the ledger

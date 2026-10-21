@@ -46,6 +46,7 @@ import {
 } from './settings-primitives';
 import { SETTINGS_SECTIONS, SettingsNav, type SectionId } from './settings-nav';
 import { AvatarEditor } from './avatar-editor';
+import { SmsSubscriptionCard } from './sms-subscription-card';
 
 // Channels the app manages, spelled as GHL requires. Mirrors GHL_DND_CHANNELS
 // in lib/ghl.ts; kept local so this client component does not pull in the
@@ -55,11 +56,6 @@ const DND_CHANNELS = [
     key: 'Email',
     label: 'Email',
     blurb: 'Newsletters and announcements about new features.',
-  },
-  {
-    key: 'SMS',
-    label: 'Text messages',
-    blurb: 'Reminders for markets and mixers you said you were going to.',
   },
   {
     key: 'WhatsApp',
@@ -1027,111 +1023,113 @@ export function UserSettingsView({
 
             {/* ---- Messages ---------------------------------------------- */}
             <Section id="messages">
-              {ghlLoading || ghlContact === null ? (
-                <SettingsCard>
-                  <div className="settings-row settings-note flex items-center gap-2">
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      aria-hidden="true"
-                    />
-                    Loading your preferences…
-                  </div>
-                </SettingsCard>
-              ) : ghlContact === 'empty' ? (
-                <SettingsCard>
-                  <div className="settings-row settings-note">
-                    We hold no marketing record for you, so there is nothing to
-                    switch on or off here.
-                  </div>
-                </SettingsCard>
-              ) : (
-                <>
+              <SmsSubscriptionCard onChanged={fetchGhlContact} />
+              <div className="mt-3">
+                {ghlLoading || ghlContact === null ? (
                   <SettingsCard>
-                    {DND_CHANNELS.map(({ key, label, blurb }) => {
-                      const suppressed =
-                        ghlContact.dndSettings?.[key]?.status === 'active';
-                      return (
-                        <SettingsRow
-                          key={key}
-                          label={label}
-                          note={blurb}
-                          control={
-                            <OnOff
-                              label={`${label} messages`}
-                              value={!suppressed}
-                              disabled={!!ghlActionLoading}
-                              busy={ghlActionLoading === `dnd-${key}`}
-                              onChange={(next) =>
-                                handleGhlChannelToggle(key, !next)
-                              }
-                            />
-                          }
-                        />
-                      );
-                    })}
-
-                    <SettingsRow
-                      label={
-                        ghlContact.dnd
-                          ? 'Turn everything on'
-                          : 'Turn everything off'
-                      }
-                      note={
-                        ghlContact.dnd
-                          ? 'Start receiving Pana Mia messages again on every channel.'
-                          : 'A complete opt-out of all Pana Mia messages, including announcements and news about projects that are not on this site. Sign-in links you ask for yourself still arrive.'
-                      }
-                      control={
-                        ghlContact.dnd ? (
-                          <button
-                            type="button"
-                            className="settings-btn"
-                            disabled={!!ghlActionLoading}
-                            onClick={handleGhlSubscribe}
-                          >
-                            {ghlActionLoading === 'subscribe' && (
-                              <Loader2
-                                className="h-3.5 w-3.5 animate-spin"
-                                aria-hidden="true"
-                              />
-                            )}
-                            Subscribe
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="settings-btn"
-                            data-variant="danger"
-                            disabled={!!ghlActionLoading}
-                            onClick={() => setShowUnsubscribeDialog(true)}
-                          >
-                            {ghlActionLoading === 'unsubscribe' && (
-                              <Loader2
-                                className="h-3.5 w-3.5 animate-spin"
-                                aria-hidden="true"
-                              />
-                            )}
-                            Turn all off
-                          </button>
-                        )
-                      }
-                    />
+                    <div className="settings-row settings-note flex items-center gap-2">
+                      <Loader2
+                        className="h-4 w-4 animate-spin"
+                        aria-hidden="true"
+                      />
+                      Loading your preferences…
+                    </div>
                   </SettingsCard>
+                ) : ghlContact === 'empty' ? (
+                  <SettingsCard>
+                    <div className="settings-row settings-note">
+                      We hold no other marketing record for you.
+                    </div>
+                  </SettingsCard>
+                ) : (
+                  <>
+                    <SettingsCard>
+                      {DND_CHANNELS.map(({ key, label, blurb }) => {
+                        const suppressed =
+                          ghlContact.dndSettings?.[key]?.status === 'active';
+                        return (
+                          <SettingsRow
+                            key={key}
+                            label={label}
+                            note={blurb}
+                            control={
+                              <OnOff
+                                label={`${label} messages`}
+                                value={!suppressed}
+                                disabled={!!ghlActionLoading}
+                                busy={ghlActionLoading === `dnd-${key}`}
+                                onChange={(next) =>
+                                  handleGhlChannelToggle(key, !next)
+                                }
+                              />
+                            }
+                          />
+                        );
+                      })}
 
-                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <AutoSaved state="idle" />
-                    <p className="settings-note">
-                      Changes can take up to 24 hours to take effect.{' '}
-                      <Link
-                        href="/legal/privacy#sharing"
-                        className="text-pana-indigo font-extrabold underline"
-                      >
-                        How marketing data is shared
-                      </Link>
-                    </p>
-                  </div>
-                </>
-              )}
+                      <SettingsRow
+                        label={
+                          ghlContact.dnd
+                            ? 'Turn other channels on'
+                            : 'Turn everything off'
+                        }
+                        note={
+                          ghlContact.dnd
+                            ? 'Start receiving Pana Mia email, WhatsApp messages and calls again. Text consent is managed above.'
+                            : 'A complete opt-out of all Pana Mia messages, including announcements and news about projects that are not on this site. Sign-in links you ask for yourself still arrive.'
+                        }
+                        control={
+                          ghlContact.dnd ? (
+                            <button
+                              type="button"
+                              className="settings-btn"
+                              disabled={!!ghlActionLoading}
+                              onClick={handleGhlSubscribe}
+                            >
+                              {ghlActionLoading === 'subscribe' && (
+                                <Loader2
+                                  className="h-3.5 w-3.5 animate-spin"
+                                  aria-hidden="true"
+                                />
+                              )}
+                              Subscribe
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="settings-btn"
+                              data-variant="danger"
+                              disabled={!!ghlActionLoading}
+                              onClick={() => setShowUnsubscribeDialog(true)}
+                            >
+                              {ghlActionLoading === 'unsubscribe' && (
+                                <Loader2
+                                  className="h-3.5 w-3.5 animate-spin"
+                                  aria-hidden="true"
+                                />
+                              )}
+                              Turn all off
+                            </button>
+                          )
+                        }
+                      />
+                    </SettingsCard>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                      <AutoSaved state="idle" />
+                      <p className="settings-note">
+                        Changes can take up to 24 hours to take effect.{' '}
+                        <Link
+                          href="/legal/privacy#sharing"
+                          className="text-pana-indigo font-extrabold underline"
+                        >
+                          How marketing data is shared
+                        </Link>
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
             </Section>
 
             {/* ---- Data -------------------------------------------------- */}

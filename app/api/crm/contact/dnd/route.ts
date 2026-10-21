@@ -14,7 +14,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { profiles } from '@/lib/schema';
+import { profiles, smsSubscriptions } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { GhlClient, GHL_DND_CHANNELS, type GhlDndChannel } from '@/lib/ghl';
 import { checkSameOrigin } from '@/lib/csrf';
@@ -85,6 +85,27 @@ export async function PATCH(request: Request) {
     );
   }
 
+  const smsSubscription =
+    channel === 'SMS'
+      ? await db.query.smsSubscriptions.findFirst({
+          where: eq(smsSubscriptions.profileId, profile.id),
+        })
+      : null;
+  if (
+    channel === 'SMS' &&
+    !suppressed &&
+    smsSubscription?.status !== 'active'
+  ) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          'Explicit SMS consent is required. Use the text-message opt-in form.',
+      },
+      { status: 409 }
+    );
+  }
+
   const ghl = GhlClient.create();
   if (!ghl) {
     console.warn(
@@ -113,6 +134,20 @@ export async function PATCH(request: Request) {
     ) as Record<GhlDndChannel, boolean>;
 
     await ghl.setDndChannels(profile.ghlContactId, active);
+
+    if (channel === 'SMS' && smsSubscription) {
+      const now = new Date();
+      await db
+        .update(smsSubscriptions)
+        .set({
+          status: suppressed ? 'opted_out' : 'active',
+          optedOutAt: suppressed ? now : null,
+          syncedAt: now,
+          syncError: null,
+          updatedAt: now,
+        })
+        .where(eq(smsSubscriptions.profileId, profile.id));
+    }
 
     // Opening any channel means the user wants contact again, so ghlOptedOut
     // must not keep the CRM worker from pushing updates. Suppressing a single

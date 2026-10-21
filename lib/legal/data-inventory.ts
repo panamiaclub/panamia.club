@@ -86,6 +86,10 @@ export const inventory: Record<TableExport, Classification> = {
   // One row per attempted recipient. No phone or name is copied here, and the
   // profile link becomes NULL when that profile is deleted.
   communitySmsRecipients: ['crm'],
+  // A member-controlled mobile number plus the explicit consent state and
+  // HighLevel synchronization result that determine whether Panamia may text
+  // it. Deleted with the profile so account deletion removes the number.
+  smsSubscriptions: ['crm'],
   // Which listings a person administers. Opaque ids only, but the association
   // itself is personal data — it says which businesses this human runs — so it
   // is classified rather than waved through as a join table. Cascades on user

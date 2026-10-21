@@ -58,12 +58,16 @@ export function ConnectorJoinForm({
   initialPod = null,
   initialHouses = [],
   initialBring = '',
+  initialSmsOptIn = false,
+  initialSmsPhone = '',
   isEditing = false,
   isPending = false,
 }: {
   initialPod?: PodId | null;
   initialHouses?: HouseId[];
   initialBring?: string;
+  initialSmsOptIn?: boolean;
+  initialSmsPhone?: string;
   isEditing?: boolean;
   /** Editing an application that has not been decided on yet. */
   isPending?: boolean;
@@ -72,6 +76,8 @@ export function ConnectorJoinForm({
   const [pod, setPod] = useState<PodId | null>(initialPod);
   const [houses, setHouses] = useState<HouseId[]>(initialHouses);
   const [bring, setBring] = useState(initialBring);
+  const [smsOptIn, setSmsOptIn] = useState(initialSmsOptIn);
+  const [smsPhone, setSmsPhone] = useState(initialSmsPhone);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,19 +99,41 @@ export function ConnectorJoinForm({
       setError('Pick at least one house.');
       return;
     }
+    if (smsOptIn && !smsPhone.trim()) {
+      setError('Add the mobile number where you want Connector texts.');
+      return;
+    }
 
     setSaving(true);
     try {
       const res = await fetch('/api/connectors/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pod, houses, bring }),
+        body: JSON.stringify({
+          pod,
+          houses,
+          bring,
+          smsOptIn,
+          smsPhone,
+        }),
       });
-      const data = (await res.json()) as { success: boolean; error?: string };
+      const data = (await res.json()) as {
+        success: boolean;
+        error?: string;
+        smsError?: string | null;
+      };
 
       if (!res.ok || !data.success) {
         setError(data.error ?? 'Could not save that. Try again.');
         setSaving(false);
+        return;
+      }
+      if (data.smsError) {
+        setError(
+          `Your Connector application was saved, but text-message setup failed: ${data.smsError}`
+        );
+        setSaving(false);
+        router.refresh();
         return;
       }
 
@@ -252,6 +280,60 @@ export function ConnectorJoinForm({
                 Optional. You can change it whenever.
               </span>
             </label>
+          </Step>
+
+          <Step
+            number={4}
+            title="Choose whether we can text you"
+            lede="Optional. Connector updates can still reach you in the app or by email."
+          >
+            <div className="border-pana-ink bg-pana-cream rounded-xl border-2 p-4">
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={smsOptIn}
+                  onChange={(event) => setSmsOptIn(event.target.checked)}
+                  className="border-pana-ink mt-1 size-4 shrink-0 rounded border-2"
+                />
+                <span className="text-sm leading-relaxed">
+                  I agree to receive community and Connector text messages from
+                  Pana MIA. Message frequency varies. Message and data rates may
+                  apply. Reply STOP to opt out or HELP for help.
+                </span>
+              </label>
+              {smsOptIn ? (
+                <label className="mt-4 block">
+                  <span className="text-xs font-extrabold tracking-wide uppercase">
+                    Mobile number
+                  </span>
+                  <input
+                    type="tel"
+                    autoComplete="tel"
+                    value={smsPhone}
+                    onChange={(event) => setSmsPhone(event.target.value)}
+                    placeholder="(305) 555-0123"
+                    className="border-pana-ink text-pana-ink mt-1.5 w-full max-w-sm rounded-lg border-2 bg-white px-3 py-2 text-sm"
+                  />
+                </label>
+              ) : null}
+              <p className="text-pana-ink/55 mt-3 text-xs leading-relaxed">
+                See our{' '}
+                <SurfaceLink
+                  href="/legal/privacy"
+                  className="font-bold underline underline-offset-2"
+                >
+                  privacy policy
+                </SurfaceLink>{' '}
+                and{' '}
+                <SurfaceLink
+                  href="/legal/terms"
+                  className="font-bold underline underline-offset-2"
+                >
+                  terms
+                </SurfaceLink>
+                .
+              </p>
+            </div>
           </Step>
 
           <section className="border-pana-ink bg-pana-butter-2 rounded-xl border-2 p-5">

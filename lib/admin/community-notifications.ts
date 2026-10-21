@@ -7,6 +7,7 @@ import {
   communitySmsCampaigns,
   communitySmsRecipients,
   profiles,
+  smsSubscriptions,
   socialActors,
   socialGroupMembers,
 } from '@/lib/schema';
@@ -52,6 +53,7 @@ interface Candidate {
   email: string;
   ghlContactId: string | null;
   ghlOptedOut: boolean;
+  smsStatus: string | null;
 }
 
 interface EligibilityResult {
@@ -106,6 +108,7 @@ function candidateColumns() {
     email: profiles.email,
     ghlContactId: profiles.ghlContactId,
     ghlOptedOut: profiles.ghlOptedOut,
+    smsStatus: smsSubscriptions.status,
   };
 }
 
@@ -114,12 +117,14 @@ function toCandidate(row: {
   email: string;
   ghlContactId: string | null;
   ghlOptedOut: boolean;
+  smsStatus: string | null;
 }): Candidate {
   return {
     profileId: row.profileId,
     email: row.email,
     ghlContactId: row.ghlContactId,
     ghlOptedOut: row.ghlOptedOut,
+    smsStatus: row.smsStatus,
   };
 }
 
@@ -218,6 +223,7 @@ export async function listAudienceCandidates(
     const rows = await db
       .select(candidateColumns())
       .from(profiles)
+      .leftJoin(smsSubscriptions, eq(smsSubscriptions.profileId, profiles.id))
       .where(
         and(
           isNotNull(profiles.connector),
@@ -231,6 +237,7 @@ export async function listAudienceCandidates(
     const rows = await db
       .select(candidateColumns())
       .from(profiles)
+      .leftJoin(smsSubscriptions, eq(smsSubscriptions.profileId, profiles.id))
       .where(
         and(
           isNotNull(profiles.connector),
@@ -245,6 +252,7 @@ export async function listAudienceCandidates(
     .from(socialGroupMembers)
     .innerJoin(socialActors, eq(socialActors.id, socialGroupMembers.actorId))
     .innerJoin(profiles, eq(profiles.id, socialActors.profileId))
+    .leftJoin(smsSubscriptions, eq(smsSubscriptions.profileId, profiles.id))
     .where(
       and(
         eq(socialGroupMembers.status, 'active'),
@@ -286,6 +294,21 @@ async function checkEligibility(
   ghl: GhlClient
 ): Promise<EligibilityResult[]> {
   return mapConcurrent(candidates, SEND_CONCURRENCY, async (candidate) => {
+    if (candidate.smsStatus !== 'active') {
+      return {
+        candidate,
+        eligible: false,
+        reason:
+          candidate.smsStatus === 'opted_out'
+            ? 'Panamia SMS opt-out'
+            : candidate.smsStatus === 'pending'
+              ? 'Panamia SMS sync pending'
+              : 'No Panamia SMS opt-in',
+        contactId: null,
+        error: false,
+      };
+    }
+
     if (candidate.ghlOptedOut) {
       return {
         candidate,
@@ -332,6 +355,17 @@ async function checkEligibility(
         contact.dnd === true ||
         contact.dndSettings?.SMS?.status === 'active'
       ) {
+        const now = new Date();
+        await db
+          .update(smsSubscriptions)
+          .set({
+            status: 'opted_out',
+            optedOutAt: now,
+            syncedAt: now,
+            syncError: null,
+            updatedAt: now,
+          })
+          .where(eq(smsSubscriptions.profileId, candidate.profileId));
         return {
           candidate,
           eligible: false,

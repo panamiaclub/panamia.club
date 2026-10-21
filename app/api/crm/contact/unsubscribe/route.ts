@@ -11,7 +11,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { profiles } from '@/lib/schema';
+import { profiles, smsSubscriptions } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { GhlClient } from '@/lib/ghl';
 import { checkSameOrigin } from '@/lib/csrf';
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
   const profile = await db.query.profiles.findFirst({
     where: eq(profiles.userId, session.user.id),
-    columns: { ghlContactId: true },
+    columns: { id: true, ghlContactId: true },
   });
 
   if (!profile) {
@@ -46,12 +46,31 @@ export async function POST(request: Request) {
     );
   }
 
+  const now = new Date();
+  await db
+    .update(smsSubscriptions)
+    .set({
+      status: 'opted_out',
+      optedOutAt: now,
+      syncedAt: null,
+      syncError: null,
+      updatedAt: now,
+    })
+    .where(eq(smsSubscriptions.profileId, profile.id));
+
   if (!profile.ghlContactId) {
     return NextResponse.json({ success: true });
   }
 
   const ghl = GhlClient.create();
   if (!ghl) {
+    await db
+      .update(smsSubscriptions)
+      .set({
+        syncError: 'HighLevel is not configured.',
+        updatedAt: new Date(),
+      })
+      .where(eq(smsSubscriptions.profileId, profile.id));
     return NextResponse.json(
       {
         success: false,
@@ -63,8 +82,26 @@ export async function POST(request: Request) {
 
   try {
     await ghl.setDndAll(profile.ghlContactId);
+    await db
+      .update(smsSubscriptions)
+      .set({
+        syncedAt: new Date(),
+        syncError: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(smsSubscriptions.profileId, profile.id));
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    await db
+      .update(smsSubscriptions)
+      .set({
+        syncError:
+          error instanceof Error
+            ? error.message.slice(0, 500)
+            : 'HighLevel opt-out failed',
+        updatedAt: new Date(),
+      })
+      .where(eq(smsSubscriptions.profileId, profile.id));
     return NextResponse.json(
       {
         success: false,
