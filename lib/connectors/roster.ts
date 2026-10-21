@@ -2,7 +2,10 @@ import { and, eq, isNotNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
 import { profiles } from '@/lib/schema';
-import { parseConnector, type ProfileConnector } from '@/lib/connectors/membership';
+import {
+  parseConnector,
+  type ProfileConnector,
+} from '@/lib/connectors/membership';
 import { HOUSES, PODS, TIERS } from '@/lib/connectors/model';
 import type { HouseId, PodId, TierId } from '@/lib/connectors/model';
 
@@ -225,6 +228,37 @@ export async function setHousesAndTier(
     ...membership,
     houses: [...new Set(houses)],
     tier,
+  };
+
+  await db
+    .update(profiles)
+    .set({ connector: next })
+    .where(eq(profiles.id, profileId));
+
+  return next;
+}
+
+export async function offboardConnector(
+  profileId: string,
+  adminUserId: string,
+  reason: string
+): Promise<ProfileConnector | null> {
+  const profile = await db.query.profiles.findFirst({
+    where: eq(profiles.id, profileId),
+    columns: { id: true, connector: true },
+  });
+  if (!profile) return null;
+
+  const membership = parseConnector(profile.connector);
+  if (!membership || membership.status !== 'active') return null;
+
+  const now = new Date().toISOString();
+  const next: ProfileConnector = {
+    ...membership,
+    status: 'inactive',
+    offboardedAt: now,
+    offboardedBy: adminUserId,
+    offboardReason: reason,
   };
 
   await db

@@ -59,7 +59,7 @@ import {
  * means "is a connector" — it is what gates HQ, the pod headcount and the
  * ability to record a commitment.
  */
-export type ConnectorStatus = 'pending' | 'active' | 'declined';
+export type ConnectorStatus = 'pending' | 'active' | 'declined' | 'inactive';
 
 export interface ProfileConnector {
   status: ConnectorStatus;
@@ -77,6 +77,11 @@ export interface ProfileConnector {
   /** When staff accepted or declined them, and who did it. */
   decidedAt: string | null;
   decidedBy: string | null;
+  /** Staff offboarding is distinct from declining the original application. */
+  offboardedAt: string | null;
+  offboardedBy: string | null;
+  /** Internal staff note. Never rendered to the member. */
+  offboardReason: string | null;
 }
 
 const POD_IDS = new Set<string>(PODS.map((p) => p.id));
@@ -85,6 +90,7 @@ const STATUSES: ReadonlySet<string> = new Set([
   'pending',
   'active',
   'declined',
+  'inactive',
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -142,6 +148,14 @@ export function parseConnector(value: unknown): ProfileConnector | null {
     appliedAt,
     decidedAt: typeof value.decidedAt === 'string' ? value.decidedAt : null,
     decidedBy: typeof value.decidedBy === 'string' ? value.decidedBy : null,
+    offboardedAt:
+      typeof value.offboardedAt === 'string' ? value.offboardedAt : null,
+    offboardedBy:
+      typeof value.offboardedBy === 'string' ? value.offboardedBy : null,
+    offboardReason:
+      typeof value.offboardReason === 'string'
+        ? value.offboardReason.trim()
+        : null,
   };
 }
 
@@ -345,6 +359,9 @@ export async function decideConnectorApplication(
     status: decision,
     decidedAt: new Date().toISOString(),
     decidedBy: adminUserId,
+    offboardedAt: null,
+    offboardedBy: null,
+    offboardReason: null,
   };
 
   await db

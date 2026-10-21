@@ -132,8 +132,8 @@ describe('parseConnector — the legacy commitments key', () => {
 });
 
 describe('parseConnector — status is the gate', () => {
-  test('keeps each of the three real statuses', () => {
-    for (const status of ['pending', 'active', 'declined']) {
+  test('keeps each real status', () => {
+    for (const status of ['pending', 'active', 'declined', 'inactive']) {
       assert.equal(parseConnector({ ...VALID, status })?.status, status);
     }
   });
@@ -178,6 +178,20 @@ describe('parseConnector — status is the gate', () => {
       ...VALID,
       decidedAt: '2025-03-01T00:00:00.000Z',
       decidedBy: 'admin-1',
+    });
+
+    test('keeps the internal offboarding record', () => {
+      const parsed = parseConnector({
+        ...VALID,
+        status: 'inactive',
+        offboardedAt: '2026-10-21T21:45:00.000Z',
+        offboardedBy: 'admin-2',
+        offboardReason: '  Moved out of the region  ',
+      });
+
+      assert.equal(parsed?.offboardedAt, '2026-10-21T21:45:00.000Z');
+      assert.equal(parsed?.offboardedBy, 'admin-2');
+      assert.equal(parsed?.offboardReason, 'Moved out of the region');
     });
 
     assert.equal(parsed?.decidedAt, '2025-03-01T00:00:00.000Z');
