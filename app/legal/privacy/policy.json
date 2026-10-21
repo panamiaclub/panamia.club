@@ -615,20 +615,23 @@
             "message",
             "category",
             "screenname",
-            "user_id"
+            "user_id",
+            "page_url",
+            "screenshot",
+            "browser_and_device_details"
           ],
           "source": "user_action",
           "purpose": "support_history",
           "retention": "indefinite",
-          "note": "Messages sent through the Contact Us form. Kept indefinitely and not tied to an account: most arrive from people who are not signed in, and the app remains the record of an inquiry even after it has been routed to our CRM, where the working copy may be removed at any time.",
+          "note": "Messages sent through the Contact Us form or bug report dialog. Bug reports may include the page URL, browser and screen details, and a screenshot the sender chooses to attach. Kept indefinitely and not tied to an account: most arrive from people who are not signed in, and the app remains the record of an inquiry even after it has been routed to our CRM, where the working copy may be removed at any time.",
           "display": {
             "icon": "mail",
             "source": "You write to us",
             "purpose": "Support history",
             "retention": "Kept indefinitely",
             "sharedWith": "Site operators, GoHighLevel",
-            "prose": "Contact Us inquiries — your name, email address, the message you wrote, and what it was about. Retained indefinitely as the support record. Inquiries other than technical reports are also copied to our CRM so whoever answers them can work from the tool they already use; that copy may be removed at any time, and the record here is the one that persists.",
-            "blurb": "Messages you send us through the Contact Us form, kept as the lasting record of what was asked and answered."
+            "prose": "Contact Us inquiries and bug reports — your name, email address, the message you wrote, and what it was about. A bug report also includes the page where it happened and basic browser, language, and screen-size details; it can include a screenshot if you choose to attach one. Retained indefinitely as the support record. Inquiries other than technical reports are also copied to our CRM so whoever answers them can work from the tool they already use; that copy may be removed at any time, and the record here is the one that persists.",
+            "blurb": "Messages and bug reports you send us, including optional screenshots and basic device context, kept as the lasting support record."
           }
         }
       ]

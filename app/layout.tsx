@@ -31,6 +31,7 @@ import { SurfaceMemberHeader } from '@/components/panaverse/SurfaceMemberHeader'
 import { SurfaceMemberFooter } from '@/components/panaverse/SurfaceMemberFooter';
 import { PanaSitesProvider } from '@/components/panaverse/PanaSitesProvider';
 import { resolvePanaSites } from '@/lib/panaverse/sites';
+import BugReportDialog from '@/components/BugReportDialog';
 
 /**
  * Title and description for any page that does not set its own.
@@ -327,6 +328,7 @@ export default async function RootLayout({
                   />
                 )}
                 {ownSurface && <SurfaceMemberFooter surface={chromeSurface} />}
+                <BugReportDialog />
                 <ScreennameGate />
                 {/* Renders nothing, and nothing in a browser. Mounted here
                     because what it wires up — dismissing the native splash,
