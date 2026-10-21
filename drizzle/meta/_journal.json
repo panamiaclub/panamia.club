@@ -477,6 +477,13 @@
       "when": 1792368000000,
       "tag": "0066_shop_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1792454400000,
+      "tag": "0067_community_sms_campaigns",
+      "breakpoints": true
     }
   ]
 }

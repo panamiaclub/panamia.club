@@ -30,6 +30,7 @@ import {
   HeartHandshake,
   type LucideIcon,
   Mail,
+  MessageSquareText,
   ShieldCheck,
   ShoppingBag,
   Store,
@@ -233,6 +234,20 @@ export const ADMIN_VIEWS: readonly AdminView[] = [
     ],
     status: 'live',
     icon: UsersRound,
+  },
+  {
+    id: 'community-notifications',
+    name: 'Community notifications',
+    href: '/admin/community-notifications',
+    group: 'community',
+    blurb: 'Send an SMS update to a consented group of panas.',
+    does: [
+      'Choose a platform audience',
+      'Preview eligibility and opt-out exclusions',
+      'Write, schedule and review a text campaign',
+    ],
+    status: 'live',
+    icon: MessageSquareText,
   },
   {
     id: 'roles',

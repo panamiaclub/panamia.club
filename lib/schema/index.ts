@@ -3520,6 +3520,77 @@ export const jobRuns = pgTable(
 );
 
 // =============================================================================
+// Community SMS campaigns
+// =============================================================================
+
+export const communitySmsCampaigns = pgTable(
+  'community_sms_campaigns',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdateFn(() => new Date()),
+    requestId: text('request_id').notNull().unique(),
+    createdBy: text('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    name: text('name').notNull(),
+    audience: text('audience').notNull(),
+    message: text('message').notNull(),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+    status: text('status').notNull().default('processing'),
+    candidateCount: integer('candidate_count').notNull().default(0),
+    eligibleCount: integer('eligible_count').notNull().default(0),
+    excludedCount: integer('excluded_count').notNull().default(0),
+    sentCount: integer('sent_count').notNull().default(0),
+    failedCount: integer('failed_count').notNull().default(0),
+  },
+  (table) => [
+    index('community_sms_campaigns_created_at_idx').on(table.createdAt.desc()),
+  ]
+);
+
+export const communitySmsRecipients = pgTable(
+  'community_sms_recipients',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdateFn(() => new Date()),
+    campaignId: text('campaign_id')
+      .notNull()
+      .references(() => communitySmsCampaigns.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id').references(() => profiles.id, {
+      onDelete: 'set null',
+    }),
+    status: text('status').notNull(),
+    reason: text('reason'),
+    ghlMessageId: text('ghl_message_id'),
+  },
+  (table) => [
+    uniqueIndex('community_sms_recipients_campaign_profile_unique')
+      .on(table.campaignId, table.profileId)
+      .where(sql`${table.profileId} is not null`),
+    index('community_sms_recipients_campaign_status_idx').on(
+      table.campaignId,
+      table.status
+    ),
+  ]
+);
+
+// =============================================================================
 // Inferred Types
 // =============================================================================
 
@@ -3596,3 +3667,5 @@ export type RelayGroupLeavePending = typeof relayGroupLeavePending.$inferSelect;
 export type RelayGroupJoinPending = typeof relayGroupJoinPending.$inferSelect;
 export type RelayReport = typeof relayReports.$inferSelect;
 export type JobRun = typeof jobRuns.$inferSelect;
+export type CommunitySmsCampaign = typeof communitySmsCampaigns.$inferSelect;
+export type CommunitySmsRecipient = typeof communitySmsRecipients.$inferSelect;

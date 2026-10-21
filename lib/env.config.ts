@@ -446,7 +446,8 @@ export const envConfig: Record<string, EnvVarConfig> = {
   GHL_API_KEY: {
     description:
       'GHL private integration API key. ' +
-      'Used by the privacy portal (Settings page) for direct GHL API calls on behalf of the authenticated user. ' +
+      'Used by the privacy portal and admin community SMS campaigns. ' +
+      'The token needs contact read/write plus conversation/message write scopes. ' +
       'Create in GHL → Settings → Integrations → Private Integrations.',
     location: 'SECRET',
     required: false,

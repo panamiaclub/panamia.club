@@ -179,6 +179,12 @@ export interface GhlUser {
   roles?: { type?: string; role?: string };
 }
 
+export interface GhlOutboundMessage {
+  id: string | null;
+  conversationId: string | null;
+  status: string | null;
+}
+
 /**
  * A non-2xx response from GHL, carrying the status and raw body.
  *
@@ -381,16 +387,29 @@ export class GhlClient {
     cachedId: string | null,
     email: string
   ): Promise<string | null> {
+    const contact = await this.resolveContact(cachedId, email);
+    return contact?.id ?? null;
+  }
+
+  /**
+   * Resolve and return a possibly-stale contact in one read path.
+   *
+   * Campaign eligibility needs the contact's phone and SMS DND state after
+   * resolving its ID. Returning the contact avoids immediately fetching the
+   * same record a second time.
+   */
+  async resolveContact(
+    cachedId: string | null,
+    email: string
+  ): Promise<GhlContact | null> {
     if (cachedId) {
       try {
-        const contact = await this.getContactById(cachedId);
-        return contact.id;
+        return await this.getContactById(cachedId);
       } catch (err) {
         if (!(err instanceof GhlApiError) || !err.isNotFound) throw err;
       }
     }
-    const found = await this.findByEmail(email);
-    return found?.id ?? null;
+    return this.findByEmail(email);
   }
 
   /**
@@ -553,6 +572,52 @@ export class GhlClient {
       `/users/?locationId=${encodeURIComponent(this.locationId)}`
     );
     return data?.users ?? [];
+  }
+
+  /**
+   * Submit one SMS to HighLevel.
+   *
+   * HighLevel's messaging endpoint is contact-scoped rather than bulk: each
+   * recipient gets its own request and its own provider message ID. A future
+   * time is delegated to HighLevel with scheduledTimestamp so the application
+   * does not need a minute-level sending cron.
+   */
+  async sendSms(
+    contactId: string,
+    message: string,
+    scheduledAt?: Date | null
+  ): Promise<GhlOutboundMessage> {
+    const data = await this.request<{
+      id?: string;
+      messageId?: string;
+      conversationId?: string;
+      status?: string;
+      message?: {
+        id?: string;
+        messageId?: string;
+        conversationId?: string;
+        status?: string;
+      };
+    }>('POST', '/conversations/messages', {
+      type: 'SMS',
+      contactId,
+      message,
+      ...(scheduledAt
+        ? { scheduledTimestamp: Math.floor(scheduledAt.getTime() / 1000) }
+        : {}),
+    });
+
+    return {
+      id:
+        data.messageId ??
+        data.id ??
+        data.message?.messageId ??
+        data.message?.id ??
+        null,
+      conversationId:
+        data.conversationId ?? data.message?.conversationId ?? null,
+      status: data.status ?? data.message?.status ?? null,
+    };
   }
 
   /** Enroll a contact in a workflow by ID. */
