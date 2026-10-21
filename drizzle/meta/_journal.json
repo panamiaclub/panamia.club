@@ -484,6 +484,13 @@
       "when": 1792454400000,
       "tag": "0067_bug_report_context",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1792540800000,
+      "tag": "0068_community_sms_campaigns",
+      "breakpoints": true
     }
   ]
 }

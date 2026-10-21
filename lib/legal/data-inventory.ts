@@ -79,6 +79,13 @@ export const inventory: Record<TableExport, Classification> = {
     'crm', // ghl_contact_id
     'visible_profile_info',
   ],
+  // Staff-authored message and aggregate delivery totals. The recipient rows
+  // below carry the profile association; the campaign itself carries the
+  // exact communication sent and the staff account that initiated it.
+  communitySmsCampaigns: ['crm'],
+  // One row per attempted recipient. No phone or name is copied here, and the
+  // profile link becomes NULL when that profile is deleted.
+  communitySmsRecipients: ['crm'],
   // Which listings a person administers. Opaque ids only, but the association
   // itself is personal data — it says which businesses this human runs — so it
   // is classified rather than waved through as a join table. Cascades on user
