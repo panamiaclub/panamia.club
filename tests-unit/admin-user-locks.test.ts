@@ -9,8 +9,10 @@ import {
 } from '@/lib/admin/user-locks';
 import {
   ACCOUNT_TYPES,
+  USER_SORTS,
   USER_STATES,
   isAccountType,
+  isUserSort,
   isUserState,
 } from '@/lib/admin/user-filters';
 
@@ -62,10 +64,15 @@ test('unknown filter values are refused rather than passed to SQL', () => {
   assert.equal(isAccountType('directory'), true);
   assert.equal(isAccountType('nonsense'), false);
   assert.equal(isAccountType(null), false);
+
+  assert.equal(isUserSort('name-asc'), true);
+  assert.equal(isUserSort('email'), false);
+  assert.equal(isUserSort(undefined), false);
 });
 
-test('every declared state and account type is accepted by its own guard', () => {
+test('every declared filter and sort is accepted by its own guard', () => {
   // Catches a value being added to one list and forgotten in the other.
   for (const state of USER_STATES) assert.equal(isUserState(state), true);
   for (const type of ACCOUNT_TYPES) assert.equal(isAccountType(type), true);
+  for (const sort of USER_SORTS) assert.equal(isUserSort(sort), true);
 });
