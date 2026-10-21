@@ -203,6 +203,7 @@ export const inventory: Record<TableExport, Classification> = {
   commerceOrders: ['payments'],
   commerceOrderItems: ['payments'],
   commerceSubscriptions: ['payments'],
+  commerceShopSettings: NOT_PERSONAL_DATA,
   stripeWebhookEvents: NOT_PERSONAL_DATA,
 
   // --- Compliance records (retained after account deletion by design) ---
