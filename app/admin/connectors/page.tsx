@@ -4,13 +4,12 @@ import {
   EventBoard,
   RosterEditor,
 } from '@/components/connectors/admin-console';
-import { Panel, StatBand } from '@/components/Admin/parts';
+import { AdminPageHeader, Panel, StatBand } from '@/components/Admin/parts';
 import { requireConnectorsAdmin } from '@/lib/connectors/admin-gate';
 import { countConnectorApplications } from '@/lib/connectors/membership';
 import { listRoster, rosterTallies } from '@/lib/connectors/roster';
 import { commitmentTotals } from '@/lib/connectors/commitments';
 import { listEventsForAdmin } from '@/lib/connectors/events';
-import { AdminEyebrow } from '@/components/Admin/eyebrow';
 import { ADMIN_CHROME } from '@/lib/admin/theme';
 import { PODS } from '@/lib/connectors/model';
 
@@ -141,31 +140,31 @@ export default async function AdminConnectorsPage() {
 
   return (
     <>
-      <header className="pb-6">
-        <AdminEyebrow>Community</AdminEyebrow>
-        <h1 className="mt-2 text-4xl leading-tight font-extrabold sm:text-5xl">
-          Connector Dashboard
-        </h1>
-        <p className="text-pana-ink/70 mt-3 max-w-2xl text-sm leading-relaxed">
-          Every number on this page is counted from the rows below it. If the
-          band and a table ever disagree, the bug is here and not in your
-          reading of it.
-        </p>
-        {/* The way back to the members' side. An admin is usually also a
-         * connector, and the two views answer different questions. */}
-        <p className="mt-4 text-sm">
-          <SurfaceLink
-            href="/connectors/hq"
-            className={`font-extrabold underline underline-offset-4 ${ADMIN_CHROME.ACCENT}`}
-          >
-            Open Connector HQ
-          </SurfaceLink>
-          <span className="text-pana-ink/60">
-            {' '}
-            — the members&rsquo; view of the same programme.
-          </span>
-        </p>
-      </header>
+      <AdminPageHeader
+        eyebrow="Community"
+        title="Connector dashboard"
+        description={
+          <>
+            <p>
+              Every number on this page is counted from the rows below it. If
+              the cards and a table ever disagree, the bug is here and not in
+              your reading of it.
+            </p>
+            <p className="mt-3 text-sm">
+              <SurfaceLink
+                href="/connectors/hq"
+                className={`font-extrabold underline underline-offset-4 ${ADMIN_CHROME.ACCENT}`}
+              >
+                Open Connector HQ
+              </SurfaceLink>
+              <span className="text-pana-ink/60">
+                {' '}
+                — the members&rsquo; view of the same programme.
+              </span>
+            </p>
+          </>
+        }
+      />
 
       <div className="flex flex-col gap-6">
         <StatBand stats={band} />

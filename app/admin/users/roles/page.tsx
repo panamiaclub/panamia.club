@@ -5,6 +5,7 @@ import axios from 'axios';
 import Link from 'next/link';
 import { Flag, Search, ShieldCheck, UserPlus } from 'lucide-react';
 import { useAdminGate } from '@/components/Admin/gate';
+import { AdminPageHeader, Panel } from '@/components/Admin/parts';
 import { useSession } from '@/lib/auth-client';
 import PageMeta from '@/components/PageMeta';
 import { Button } from '@/components/ui/button';
@@ -337,12 +338,16 @@ export default function AdminRolesPage() {
     <>
       <PageMeta title="Roles & permissions | Admin" desc="" />
       <div>
-        <h2 className="mb-2 text-3xl font-bold">Roles &amp; permissions</h2>
-        <p className="text-pana-ink/70 mb-6 max-w-2xl text-sm leading-relaxed">
-          Who holds a staff role, and how to give someone one. Only roles the
-          site actually enforces appear here — a toggle that grants nothing
-          would be worse than no toggle at all.
-        </p>
+        <AdminPageHeader
+          eyebrow="Access"
+          title="Roles & permissions"
+          description={
+            <p>
+              Who holds a staff role, and how to give someone one. Only roles
+              the site actually enforces appear here.
+            </p>
+          }
+        />
 
         <div className="border-pana-ink/10 bg-pana-butter/30 text-pana-ink/80 mb-8 max-w-2xl rounded-xl border p-4 text-sm leading-relaxed">
           {actor.isSuperAdmin ? (
@@ -380,80 +385,82 @@ export default function AdminRolesPage() {
           )}
         </div>
 
-        <section className="space-y-4">
-          <div>
-            <h3 className="flex items-center gap-2 text-xl font-bold">
-              <UserPlus className="h-5 w-5" aria-hidden="true" />
-              Give someone a role
-            </h3>
-            <p className="text-pana-ink/70 mt-1 max-w-2xl text-sm leading-relaxed">
-              Search by name, handle or email.
-            </p>
-          </div>
+        <Panel title="Give someone a role">
+          <section className="space-y-4">
+            <div>
+              <h3 className="flex items-center gap-2 text-xl font-bold">
+                <UserPlus className="h-5 w-5" aria-hidden="true" />
+                Give someone a role
+              </h3>
+              <p className="text-pana-ink/70 mt-1 max-w-2xl text-sm leading-relaxed">
+                Search by name, handle or email.
+              </p>
+            </div>
 
-          <div className="relative max-w-md">
-            <Search
-              className="text-pana-ink/40 pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Find a pana…"
-              aria-label="Search panas by name, handle or email"
-              className="border-pana-ink/20 focus:border-pana-indigo focus:ring-pana-indigo/30 w-full rounded-xl border py-2.5 pr-3 pl-9 text-sm focus:ring-2 focus:outline-none"
-            />
-          </div>
+            <div className="relative max-w-md">
+              <Search
+                className="text-pana-ink/40 pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Find a pana…"
+                aria-label="Search panas by name, handle or email"
+                className="border-pana-ink/20 focus:border-pana-indigo focus:ring-pana-indigo/30 w-full rounded-xl border py-2.5 pr-3 pl-9 text-sm focus:ring-2 focus:outline-none"
+              />
+            </div>
 
-          {searching ? (
-            <p className="text-pana-ink/60 text-sm">Searching…</p>
-          ) : null}
+            {searching ? (
+              <p className="text-pana-ink/60 text-sm">Searching…</p>
+            ) : null}
 
-          {!searching && searched && results.length === 0 ? (
-            <p className="text-pana-ink/60 text-sm">
-              Nobody matched &ldquo;{query.trim()}&rdquo;.
-            </p>
-          ) : null}
+            {!searching && searched && results.length === 0 ? (
+              <p className="text-pana-ink/60 text-sm">
+                Nobody matched &ldquo;{query.trim()}&rdquo;.
+              </p>
+            ) : null}
 
-          <div className="space-y-3">
-            {results.map((person) => {
-              const controls = grantControls(person);
-              const errorKey = GRANTABLE_ROLES.map(
-                (r) => `${person.userId}:${r.id}`
-              ).find((k) => rowError?.key === k);
-              return (
-                <Card key={person.userId}>
-                  <CardContent className="p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-bold">
-                            {displayName(person)}
-                          </span>
-                          {roleBadges(person)}
+            <div className="space-y-3">
+              {results.map((person) => {
+                const controls = grantControls(person);
+                const errorKey = GRANTABLE_ROLES.map(
+                  (r) => `${person.userId}:${r.id}`
+                ).find((k) => rowError?.key === k);
+                return (
+                  <Card key={person.userId}>
+                    <CardContent className="p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-bold">
+                              {displayName(person)}
+                            </span>
+                            {roleBadges(person)}
+                          </div>
+                          <p className="text-pana-ink/60 mt-1 text-sm break-all">
+                            {person.email}
+                          </p>
                         </div>
-                        <p className="text-pana-ink/60 mt-1 text-sm break-all">
-                          {person.email}
-                        </p>
+                        {controls.length > 0 ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            {controls}
+                          </div>
+                        ) : null}
                       </div>
-                      {controls.length > 0 ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          {controls}
-                        </div>
+                      {errorKey ? (
+                        <p className="text-pana-red mt-3 text-xs font-semibold">
+                          {rowError?.message}
+                        </p>
                       ) : null}
-                    </div>
-                    {errorKey ? (
-                      <p className="text-pana-red mt-3 text-xs font-semibold">
-                        {rowError?.message}
-                      </p>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </section>
+        </Panel>
       </div>
     </>
   );

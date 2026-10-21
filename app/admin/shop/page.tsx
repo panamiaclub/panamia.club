@@ -23,6 +23,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAdminGate } from '@/components/Admin/gate';
+import { AdminPageHeader } from '@/components/Admin/parts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSession } from '@/lib/auth-client';
@@ -330,26 +331,24 @@ export default function AdminShopPage() {
 
   return (
     <div className="relative">
-      <div className="flex flex-wrap items-end justify-between gap-5">
-        <div>
-          <p className="text-pana-burnt-deep text-xs font-black tracking-[0.17em] uppercase">
-            Commerce
-          </p>
-          <h1 className="mt-1 text-4xl font-black tracking-tight md:text-5xl">
-            Shop operations
-          </h1>
-          <p className="text-pana-ink/65 mt-3 max-w-2xl">
+      <AdminPageHeader
+        eyebrow="Commerce"
+        title="Shop operations"
+        description={
+          <p>
             Products, photos, prices, stock, orders, subscriptions and
             fulfillment—managed here while Stripe handles money.
           </p>
-        </div>
-        <Button
-          onClick={() => openCreate()}
-          className="bg-pana-ink text-pana-cream"
-        >
-          <Plus /> Add product
-        </Button>
-      </div>
+        }
+        action={
+          <Button
+            onClick={() => openCreate()}
+            className="bg-pana-ink text-pana-cream"
+          >
+            <Plus /> Add product
+          </Button>
+        }
+      />
 
       <Stats data={data} loading={loading} />
 

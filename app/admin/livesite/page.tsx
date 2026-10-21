@@ -6,7 +6,7 @@
   type RunFact,
   type WaitingItem,
 } from '@/components/Admin/livesite-parts';
-import { StatBand } from '@/components/Admin/parts';
+import { AdminPageHeader, StatBand } from '@/components/Admin/parts';
 import { requireAdmin } from '@/lib/admin/gate';
 import {
   communitySnapshot,
@@ -44,7 +44,8 @@ import {
 const CONSOLES: readonly ExternalConsole[] = [
   {
     name: 'Requests and errors',
-    blocked: 'needs an account-owned Cloudflare token; a user token cannot grant it.',
+    blocked:
+      'needs an account-owned Cloudflare token; a user token cannot grant it.',
     href: 'https://dash.cloudflare.com/?to=/:account/workers/services/view/panamia-next/production/metrics',
     linkLabel: 'Cloudflare metrics',
   },
@@ -237,12 +238,13 @@ export default async function LiveSitePage() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-3xl font-extrabold text-pana-ink">Live site</h1>
-        <p className="mt-1 max-w-2xl text-sm text-pana-ink/70">
-          How the website is holding up, and what is waiting on a human.
-        </p>
-      </header>
+      <AdminPageHeader
+        eyebrow="Operations"
+        title="Live site"
+        description={
+          <p>How the website is holding up, and what is waiting on a human.</p>
+        }
+      />
 
       <AttentionStrip waiting={waiting} />
 

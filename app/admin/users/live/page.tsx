@@ -1,6 +1,7 @@
 'use client';
 
 import { useAdminGate } from '@/components/Admin/gate';
+import { AdminPageHeader } from '@/components/Admin/parts';
 import { useSession } from '@/lib/auth-client';
 import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
@@ -264,17 +265,22 @@ export default function AdminUsersLivePage() {
     <>
       <PageMeta title="Users — live list | Admin" desc="" />
       <div>
-        <h2 className="mb-2 text-3xl font-bold">Users — live list</h2>
-        <p className="text-pana-ink/70 mb-6 max-w-2xl text-sm leading-relaxed">
-          Real rows from the database. This is the list as it exists today;{' '}
-          <Link
-            href="/admin/users"
-            className="font-bold underline underline-offset-4"
-          >
-            the proposed screen
-          </Link>{' '}
-          is the mock.
-        </p>
+        <AdminPageHeader
+          eyebrow="Community"
+          title="Users — live list"
+          description={
+            <p>
+              Real rows from the database. Use{' '}
+              <Link
+                href="/admin/users"
+                className="font-bold underline underline-offset-4"
+              >
+                Accounts
+              </Link>{' '}
+              for focused search and account controls.
+            </p>
+          }
+        />
         <div className="border-pana-ink/10 bg-pana-butter/30 text-pana-ink/80 mb-6 max-w-2xl rounded-xl border p-4 text-sm leading-relaxed">
           {canGrant ? (
             <>

@@ -138,7 +138,15 @@ export default function AdminNav() {
 
   return (
     <nav aria-label="Admin sections" className="lg:w-60 lg:shrink-0">
-      <div className="flex gap-5 overflow-x-auto pb-3 lg:block lg:gap-0 lg:overflow-visible lg:pb-0">
+      <div className="border-pana-ink/10 flex gap-5 overflow-x-auto rounded-2xl border bg-white p-3 shadow-[0_8px_24px_rgb(17_13_13_/_0.06)] lg:sticky lg:top-6 lg:block lg:gap-0 lg:overflow-visible">
+        <div className="hidden px-2 pt-1 pb-4 lg:block">
+          <p className="text-pana-navy text-[0.68rem] font-black tracking-[0.16em] uppercase">
+            Pana MIA
+          </p>
+          <p className="mt-0.5 text-xl font-black tracking-tight">
+            Back office
+          </p>
+        </div>
         {/* Overview is the shelf listing every tool, so it is only useful to
             someone who can open them. A moderator gets their one tool
             directly. */}

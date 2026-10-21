@@ -14,10 +14,12 @@ import AdminNav from '@/components/Admin/nav';
  */
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-pana-cream text-pana-ink">
-      <div className="container mx-auto flex flex-col gap-8 px-4 py-8 lg:flex-row lg:gap-10">
+    <div className="bg-pana-cream text-pana-ink min-h-screen">
+      <div className="container mx-auto flex flex-col gap-7 px-4 py-7 lg:flex-row lg:gap-8 lg:py-10">
         <AdminNav />
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="[&_.bg-card]:border-pana-ink/10 [&_input]:border-pana-ink/15 [&_select]:border-pana-ink/15 [&_textarea]:border-pana-ink/15 min-w-0 flex-1 [&_.bg-card]:rounded-2xl [&_.bg-card]:shadow-[0_8px_24px_rgb(17_13_13_/_0.06)]">
+          {children}
+        </main>
       </div>
     </div>
   );

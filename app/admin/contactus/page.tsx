@@ -2,6 +2,7 @@
 
 import { useSession } from '@/lib/auth-client';
 import { useAdminGate } from '@/components/Admin/gate';
+import { AdminPageHeader } from '@/components/Admin/parts';
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import PageMeta from '@/components/PageMeta';
@@ -253,10 +254,19 @@ export default function AdminContactUsPage() {
     <>
       <PageMeta title="Contact Us Submissions | Admin" desc="" />
       <div>
-        <h2 className="mb-6 text-3xl font-bold">Contact Us Submissions</h2>
+        <AdminPageHeader
+          eyebrow="Inbox"
+          title="Contact submissions"
+          description={
+            <p>
+              Questions, partnership requests, and support messages sent through
+              the public contact form.
+            </p>
+          }
+        />
         <div className="space-y-6">
           {/* Category filter */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="border-pana-ink/10 flex flex-wrap items-center gap-2 rounded-2xl border bg-white p-3 shadow-[0_8px_24px_rgb(17_13_13_/_0.05)]">
             <Button
               size="sm"
               variant={category === '' ? 'default' : 'outline'}

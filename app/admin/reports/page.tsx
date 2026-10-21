@@ -2,6 +2,7 @@
 
 import { useSession } from '@/lib/auth-client';
 import { useAdminGate } from '@/components/Admin/gate';
+import { AdminPageHeader } from '@/components/Admin/parts';
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import PageMeta from '@/components/PageMeta';
@@ -378,7 +379,16 @@ export default function AdminReportsPage() {
     <>
       <PageMeta title="Abuse Reports | Admin" desc="" />
       <div>
-        <h2 className="mb-6 text-3xl font-bold">Abuse Reports</h2>
+        <AdminPageHeader
+          eyebrow="Moderation"
+          title="Abuse reports"
+          description={
+            <p>
+              Review reports from the social relay, document decisions, and
+              remove content when a policy violation is confirmed.
+            </p>
+          }
+        />
         <div className="space-y-6">
           <div className="space-y-4">
             {!loaded ? (
