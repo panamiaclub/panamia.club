@@ -1346,6 +1346,12 @@ export const contactSubmissions = pgTable(
       onDelete: 'set null',
     }),
     screenname: text('screenname'),
+    // Populated by the app-wide bug report dialog. Kept on the same support
+    // record so operators do not have to correlate a separate upload table.
+    pageUrl: text('page_url'),
+    screenshotUrl: text('screenshot_url'),
+    userAgent: text('user_agent'),
+    viewport: text('viewport'),
     // Moderation state, mirroring relay_reports: see /admin/contactus.
     status: contactSubmissionStatus('status').notNull().default('open'),
     moderationReason: text('moderation_reason'),
