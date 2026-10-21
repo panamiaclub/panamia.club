@@ -48,7 +48,10 @@ export default async function ConnectorJoinPage() {
     getMyConnector(session.user.id),
     getSmsSubscriptionForUser(session.user.id),
   ]);
-  if (me?.membership.status === 'declined') {
+  if (
+    me?.membership.status === 'declined' ||
+    me?.membership.status === 'inactive'
+  ) {
     redirect('/connectors/hq');
   }
 

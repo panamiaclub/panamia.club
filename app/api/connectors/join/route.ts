@@ -136,6 +136,9 @@ export async function POST(request: NextRequest) {
     appliedAt: current?.appliedAt ?? new Date().toISOString(),
     decidedAt: current?.decidedAt ?? null,
     decidedBy: current?.decidedBy ?? null,
+    offboardedAt: current?.offboardedAt ?? null,
+    offboardedBy: current?.offboardedBy ?? null,
+    offboardReason: current?.offboardReason ?? null,
   };
 
   try {

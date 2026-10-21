@@ -117,6 +117,8 @@ export function RosterEditor({ rows }: { rows: RosterRow[] }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const [offboarding, setOffboarding] = useState<string | null>(null);
+  const [offboardReason, setOffboardReason] = useState('');
 
   if (rows.length === 0) {
     return (
@@ -161,7 +163,31 @@ export function RosterEditor({ rows }: { rows: RosterRow[] }) {
       setError(failure);
       return;
     }
+
     setSaved(profileId);
+    router.refresh();
+  }
+
+  async function offboard(profileId: string) {
+    if (!offboardReason.trim()) {
+      setError('Record why they are leaving the programme.');
+      return;
+    }
+    setBusy(profileId);
+    setError(null);
+
+    const failure = await post('/api/admin/connectors/roster', 'DELETE', {
+      profileId,
+      reason: offboardReason,
+    });
+
+    setBusy(null);
+    if (failure) {
+      setError(failure);
+      return;
+    }
+    setOffboarding(null);
+    setOffboardReason('');
     router.refresh();
   }
 
@@ -253,6 +279,65 @@ export function RosterEditor({ rows }: { rows: RosterRow[] }) {
                     ? 'Saved'
                     : 'Save'}
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOffboarding(row.profileId);
+                  setOffboardReason('');
+                  setError(null);
+                }}
+                disabled={busy === row.profileId}
+                className="border-pana-red text-pana-red-deep rounded-full border-2 px-3 py-1 text-xs font-extrabold"
+              >
+                Offboard
+              </button>
+              {offboarding === row.profileId ? (
+                <div className="border-pana-red/30 bg-pana-red/5 basis-full rounded-xl border-2 p-4">
+                  <p className="text-sm font-extrabold">
+                    Remove {row.displayName} from Pana Connectors?
+                  </p>
+                  <p className="text-pana-ink/65 mt-1 text-xs leading-relaxed">
+                    They will leave the active roster, scheduling, and Connector
+                    notification audience. Their past commitments remain in the
+                    record.
+                  </p>
+                  <label className="mt-3 block">
+                    <span className={LABEL}>Internal reason</span>
+                    <textarea
+                      value={offboardReason}
+                      onChange={(event) =>
+                        setOffboardReason(event.target.value)
+                      }
+                      maxLength={500}
+                      rows={2}
+                      className={`${FIELD} mt-1.5 resize-y`}
+                    />
+                  </label>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => offboard(row.profileId)}
+                      disabled={busy === row.profileId}
+                      className="bg-pana-red text-pana-ink rounded-full px-4 py-2 text-xs font-extrabold disabled:opacity-50"
+                    >
+                      {busy === row.profileId
+                        ? 'Offboarding…'
+                        : 'Confirm offboarding'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOffboarding(null);
+                        setOffboardReason('');
+                      }}
+                      disabled={busy === row.profileId}
+                      className="border-pana-ink/25 rounded-full border-2 px-4 py-2 text-xs font-extrabold"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           );
         })}

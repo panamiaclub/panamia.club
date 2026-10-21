@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { checkAdminAuth } from '@/lib/server/admin-auth';
-import { setHousesAndTier } from '@/lib/connectors/roster';
+import { offboardConnector, setHousesAndTier } from '@/lib/connectors/roster';
 import { HOUSES, TIERS } from '@/lib/connectors/model';
 import type { HouseId, TierId } from '@/lib/connectors/model';
 
@@ -104,6 +104,68 @@ export async function PATCH(request: NextRequest) {
     console.error('Error updating connector roster:', error);
     return NextResponse.json(
       { success: false, error: 'Could not save that. Try again.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const admin = await checkAdminAuth();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Could not read that request.' },
+        { status: 400 }
+      );
+    }
+
+    const payload = (body ?? {}) as Record<string, unknown>;
+    const profileId =
+      typeof payload.profileId === 'string' ? payload.profileId : '';
+    const reason =
+      typeof payload.reason === 'string'
+        ? payload.reason.trim().slice(0, 500)
+        : '';
+
+    if (!profileId) {
+      return NextResponse.json(
+        { success: false, error: 'Which connector?' },
+        { status: 400 }
+      );
+    }
+    if (!reason) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Record why they are leaving the programme.',
+        },
+        { status: 400 }
+      );
+    }
+
+    const updated = await offboardConnector(profileId, admin.id, reason);
+    if (!updated) {
+      return NextResponse.json(
+        { success: false, error: 'No active connector with that profile.' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Error offboarding connector:', error);
+    return NextResponse.json(
+      { success: false, error: 'Could not offboard that connector.' },
       { status: 500 }
     );
   }

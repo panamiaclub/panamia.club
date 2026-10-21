@@ -112,6 +112,9 @@ export default async function ConnectorHqPage() {
   if (me.membership.status === 'declined') {
     return <ApplicationDeclined />;
   }
+  if (me.membership.status === 'inactive') {
+    return <ConnectorInactive />;
+  }
 
   const { displayName, imageUrl, membership } = me;
 
@@ -161,7 +164,7 @@ export default async function ConnectorHqPage() {
         <aside className="flex flex-col gap-6">
           <Panel title="Coming up">
             {upcoming.length === 0 ? (
-              <p className="text-sm text-pana-ink/70">
+              <p className="text-pana-ink/70 text-sm">
                 Nothing on the calendar for {getPod(membership.pod).name} yet.
                 Organizers post gatherings here.
               </p>
@@ -370,6 +373,26 @@ function ApplicationDeclined() {
         think that is a mistake, or things have changed, talk to whoever you
         know in the programme — there are plenty of other ways to be in this
         community in the meantime.
+      </p>
+    </HqMessage>
+  );
+}
+
+function ConnectorInactive() {
+  return (
+    <HqMessage
+      title="Your Connector membership has ended."
+      actions={
+        <SecondaryAction href="/connectors">
+          Explore the programme
+        </SecondaryAction>
+      }
+    >
+      <p>
+        You are no longer on the active Connector roster. Your past work stays
+        in the programme record, but you will not receive Connector assignments
+        or group notifications. Contact the programme team if you think this is
+        a mistake.
       </p>
     </HqMessage>
   );
