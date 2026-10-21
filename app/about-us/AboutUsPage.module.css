@@ -159,6 +159,10 @@
   padding-block: clamp(5rem, 10vw, 9rem);
 }
 
+.firstSection {
+  padding-top: clamp(3rem, 5vw, 5rem);
+}
+
 .sectionHeading {
   display: flex;
   align-items: flex-start;

@@ -106,7 +106,10 @@ export default function AboutUsPage() {
         </div>
       </section>
 
-      <section id="our-story" className={styles.story}>
+      <section
+        id="our-story"
+        className={`${styles.story} ${styles.firstSection}`}
+      >
         <div className={styles.sectionInner}>
           <div className={styles.sectionHeading}>
             <span>01</span>
