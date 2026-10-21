@@ -2642,6 +2642,33 @@ export const stripeWebhookEvents = pgTable('stripe_webhook_events', {
     .$defaultFn(() => new Date()),
 });
 
+export const commerceShopSettings = pgTable('commerce_shop_settings', {
+  id: text('id').primaryKey().default('default'),
+  standardShippingEnabled: boolean('standard_shipping_enabled')
+    .notNull()
+    .default(true),
+  standardShippingCents: integer('standard_shipping_cents')
+    .notNull()
+    .default(500),
+  standardShippingMinDays: integer('standard_shipping_min_days')
+    .notNull()
+    .default(3),
+  standardShippingMaxDays: integer('standard_shipping_max_days')
+    .notNull()
+    .default(7),
+  localPickupEnabled: boolean('local_pickup_enabled').notNull().default(true),
+  pickupInstructions: text('pickup_instructions'),
+  ghlSyncEnabled: boolean('ghl_sync_enabled').notNull().default(true),
+  customerEmailEnabled: boolean('customer_email_enabled')
+    .notNull()
+    .default(true),
+  staffEmailEnabled: boolean('staff_email_enabled').notNull().default(true),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .$defaultFn(() => new Date())
+    .$onUpdateFn(() => new Date()),
+});
+
 // =============================================================================
 // Screenname History
 // =============================================================================
@@ -3561,6 +3588,7 @@ export type CommerceInventory = typeof commerceInventory.$inferSelect;
 export type CommerceOrder = typeof commerceOrders.$inferSelect;
 export type CommerceOrderItem = typeof commerceOrderItems.$inferSelect;
 export type CommerceSubscription = typeof commerceSubscriptions.$inferSelect;
+export type CommerceShopSettings = typeof commerceShopSettings.$inferSelect;
 export type DeletionLog = typeof deletionLogs.$inferSelect;
 export type RelayGroup = typeof relayGroups.$inferSelect;
 export type RelayGroupMember = typeof relayGroupMembers.$inferSelect;

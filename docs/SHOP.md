@@ -67,9 +67,24 @@ can retry it.
 
 ## Operations
 
-`/admin/shop` lets admins synchronize Stripe prices, maintain quantities, view
-orders, and record fulfillment and tracking. Refunds stay in the Stripe
-Dashboard; `charge.refunded` updates the local order projection.
+`/admin/shop` is the daily store-management interface. Admins can:
+
+- create and archive physical products or subscription plans
+- upload and reorder product images stored in R2
+- edit names, descriptions, visibility, slugs, prices, and inventory
+- view orders, customer details, payment/refund state, and line items
+- record fulfillment, tracking numbers, and tracking URLs
+- issue full or partial Stripe refunds with a recorded staff reason
+- edit shipping, pickup, email, and HighLevel synchronization settings
+
+Stripe prices are immutable. Editing an amount creates a replacement price,
+makes it the product default, and archives the old price. Existing orders keep
+their original price references.
+
+The production restricted key needs read/write access to Checkout Sessions,
+Products/Prices, Customers, Subscriptions, Billing Portal, and Refunds. Product
+images are uploaded with the Worker R2 binding and do not require Stripe Files
+permissions.
 
 Successful buyers are optionally upserted into GoHighLevel and tagged:
 

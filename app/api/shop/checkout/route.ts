@@ -10,6 +10,7 @@ import {
   commerceOrders,
 } from '@/lib/schema';
 import { getStripe, listShopPrices } from '@/lib/shop/stripe';
+import { getShopSettings } from '@/lib/shop/settings';
 import type { ShopCartItem } from '@/lib/shop/types';
 
 const CHECKOUT_TTL_SECONDS = 30 * 60;
@@ -132,6 +133,54 @@ export async function POST(request: NextRequest) {
     }
 
     const session = await auth();
+    const shopSettings =
+      kind === 'merchandise' ? await getShopSettings() : null;
+    const shippingOptions =
+      kind === 'merchandise'
+        ? [
+            ...(shopSettings?.standardShippingEnabled
+              ? [
+                  {
+                    shipping_rate_data: {
+                      type: 'fixed_amount' as const,
+                      fixed_amount: {
+                        amount: shopSettings.standardShippingCents,
+                        currency: 'usd',
+                      },
+                      display_name: 'Standard shipping',
+                      delivery_estimate: {
+                        minimum: {
+                          unit: 'business_day' as const,
+                          value: shopSettings.standardShippingMinDays,
+                        },
+                        maximum: {
+                          unit: 'business_day' as const,
+                          value: shopSettings.standardShippingMaxDays,
+                        },
+                      },
+                    },
+                  },
+                ]
+              : []),
+            ...(shopSettings?.localPickupEnabled
+              ? [
+                  {
+                    shipping_rate_data: {
+                      type: 'fixed_amount' as const,
+                      fixed_amount: { amount: 0, currency: 'usd' },
+                      display_name: 'Local pickup',
+                    },
+                  },
+                ]
+              : []),
+          ]
+        : [];
+    if (kind === 'merchandise' && shippingOptions.length === 0) {
+      return NextResponse.json(
+        { error: 'No fulfillment options are currently available' },
+        { status: 503 }
+      );
+    }
     const orderId = createId();
     const expiresAt = new Date(Date.now() + CHECKOUT_TTL_SECONDS * 1000);
     const subtotalCents = resolved.reduce(
@@ -217,29 +266,7 @@ export async function POST(request: NextRequest) {
           kind === 'merchandise'
             ? { allowed_countries: ['US', 'PR'] }
             : undefined,
-        shipping_options:
-          kind === 'merchandise'
-            ? [
-                {
-                  shipping_rate_data: {
-                    type: 'fixed_amount',
-                    fixed_amount: { amount: 500, currency: 'usd' },
-                    display_name: 'Standard shipping',
-                    delivery_estimate: {
-                      minimum: { unit: 'business_day', value: 3 },
-                      maximum: { unit: 'business_day', value: 7 },
-                    },
-                  },
-                },
-                {
-                  shipping_rate_data: {
-                    type: 'fixed_amount',
-                    fixed_amount: { amount: 0, currency: 'usd' },
-                    display_name: 'Local pickup',
-                  },
-                },
-              ]
-            : undefined,
+        shipping_options: kind === 'merchandise' ? shippingOptions : undefined,
         phone_number_collection:
           kind === 'merchandise' ? { enabled: true } : undefined,
         metadata: { orderId, kind },

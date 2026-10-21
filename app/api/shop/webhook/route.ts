@@ -16,6 +16,7 @@ import {
 import { adminEmailList } from '@/lib/server/admin-emails';
 import { syncShopBuyerToGhl } from '@/lib/shop/crm';
 import { getStripe } from '@/lib/shop/stripe';
+import { getShopSettings } from '@/lib/shop/settings';
 
 function stripeId(value: string | { id: string } | null): string | null {
   if (!value) return null;
@@ -177,6 +178,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     where: eq(commerceOrderItems.orderId, orderId),
   });
   const siteUrl = process.env.NEXT_PUBLIC_HOST_URL || 'https://panamia.club';
+  const settings = await getShopSettings();
   const params = {
     orderId,
     customerName,
@@ -190,21 +192,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       quantity: item.quantity,
     })),
   };
-  await sendTemplateEmail('shop.order', params, email).catch((error) =>
-    console.error('[shop:webhook:customer-email]', error)
-  );
-  await Promise.all(
-    adminEmailList().map((adminEmail) =>
-      sendTemplateEmail('admin.shop_order', params, adminEmail).catch((error) =>
-        console.error('[shop:webhook:admin-email]', error)
+  if (settings.customerEmailEnabled) {
+    await sendTemplateEmail('shop.order', params, email).catch((error) =>
+      console.error('[shop:webhook:customer-email]', error)
+    );
+  }
+  if (settings.staffEmailEnabled) {
+    await Promise.all(
+      adminEmailList().map((adminEmail) =>
+        sendTemplateEmail('admin.shop_order', params, adminEmail).catch(
+          (error) => console.error('[shop:webhook:admin-email]', error)
+        )
       )
-    )
-  );
-  await syncShopBuyerToGhl({
-    email,
-    name: customerName,
-    subscription: order.kind === 'subscription',
-  }).catch((error) => console.error('[shop:webhook:ghl]', error));
+    );
+  }
+  if (settings.ghlSyncEnabled) {
+    await syncShopBuyerToGhl({
+      email,
+      name: customerName,
+      subscription: order.kind === 'subscription',
+    }).catch((error) => console.error('[shop:webhook:ghl]', error));
+  }
 }
 
 async function handleSubscription(subscription: Stripe.Subscription) {

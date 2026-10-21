@@ -240,6 +240,11 @@ Admin-only endpoints (require admin role):
 | `/api/shop/portal`             | POST      | Open the signed-in subscriber's Customer Portal  |
 | `/api/admin/shop`              | GET/PATCH | Read orders and update inventory or fulfillment  |
 | `/api/admin/shop`              | POST      | Synchronize active one-time Stripe prices        |
+| `/api/admin/shop/products`     | POST      | Create a Stripe product and price                 |
+| `/api/admin/shop/products`     | PATCH     | Edit product, visibility, inventory, or price     |
+| `/api/admin/shop/products`     | DELETE    | Archive a product and its active price            |
+| `/api/admin/shop/media`        | POST      | Upload a product image to R2                      |
+| `/api/admin/shop/refund`       | POST      | Issue a full or partial Stripe refund             |
 
 ## CRM / Marketing Data (`/api/crm/*`)
 
