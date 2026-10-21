@@ -1,4 +1,5 @@
 import { AdminPageHeader, Panel } from '@/components/Admin/parts';
+import { ConnectorAdminTabs } from '@/components/Admin/connectors-tabs';
 import { ApplicationQueue } from '@/components/connectors/application-queue';
 import { requireConnectorsAdmin } from '@/lib/connectors/admin-gate';
 import { listConnectorApplications } from '@/lib/connectors/membership';
@@ -68,6 +69,8 @@ export default async function AdminConnectorApplicationsPage() {
           </p>
         }
       />
+
+      <ConnectorAdminTabs />
 
       <Panel title="Waiting on a decision">
         <ApplicationQueue applications={applications} />

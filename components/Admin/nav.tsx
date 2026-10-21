@@ -188,7 +188,11 @@ export default function AdminNav() {
                       <li>
                         <NavLink
                           view={view}
-                          active={pathname === view.href}
+                          active={
+                            pathname === view.href ||
+                            (children.length === 0 &&
+                              pathname.startsWith(`${view.href}/`))
+                          }
                           sectionActive={children.some(
                             (child) => pathname === child.href
                           )}

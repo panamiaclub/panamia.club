@@ -5,6 +5,7 @@ import {
   RosterEditor,
 } from '@/components/connectors/admin-console';
 import { AdminPageHeader, Panel, StatBand } from '@/components/Admin/parts';
+import { ConnectorAdminTabs } from '@/components/Admin/connectors-tabs';
 import { requireConnectorsAdmin } from '@/lib/connectors/admin-gate';
 import { countConnectorApplications } from '@/lib/connectors/membership';
 import { listRoster, rosterTallies } from '@/lib/connectors/roster';
@@ -37,13 +38,11 @@ import { PODS } from '@/lib/connectors/model';
  * Each now has its own page, and this one keeps only what answers "how is the
  * programme doing", which is the question somebody opening it cold is asking.
  *
- * The three pages used to carry a tab strip across the top of each. The admin
- * sidebar now nests Applications and Scheduling under Pana Connectors, which
- * says the same thing in the place a reader already looks for navigation, so
- * the strip was two controls for one job sitting a few hundred pixels apart.
- * It went, and with it the pending-application count that Scheduling was
- * querying purely to badge a tab it no longer draws. The count still appears
- * on this page, in the stat band, where it is read rather than decorative.
+ * The three pages share a route-based tab strip, matching Shop Operations.
+ * They remain separate server-rendered routes because each reads different
+ * data, but the sidebar presents Pana Connectors as one tool rather than three
+ * nested rows. The pending count stays in this page's stat band, where it is
+ * information rather than a navigation badge.
  *
  * Events stayed here rather than moving to Scheduling. They are the
  * programme's calendar, not one person's workload, and nothing about running
@@ -165,6 +164,8 @@ export default async function AdminConnectorsPage() {
           </>
         }
       />
+
+      <ConnectorAdminTabs />
 
       <div className="flex flex-col gap-6">
         <StatBand stats={band} />

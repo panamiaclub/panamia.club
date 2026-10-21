@@ -23,8 +23,6 @@
 
 import {
   Activity,
-  CalendarClock,
-  ClipboardCheck,
   Download,
   Flag,
   HeartHandshake,
@@ -178,48 +176,13 @@ export const ADMIN_VIEWS: readonly AdminView[] = [
     blurb: 'The volunteer programme: roster, houses and the events calendar.',
     does: [
       'Move a connector between houses',
+      'Review applications',
+      'Assign work from the scheduling view',
       'Run the events calendar',
       'Read the programme numbers',
     ],
     status: 'live',
     icon: HeartHandshake,
-  },
-  /* The two below are subpages of Connectors and nest under it. They carry
-     their own rows rather than living only in the page's tab strip because
-     the nav matches the active row on an exact pathname: a subpage with no
-     entry would leave the whole sidebar looking unselected while you were
-     standing on it.
-
-     Named for what they are rather than repeating the programme. "Connector
-     applications" under "Pana Connectors" stutters once the indent already
-     says whose applications these are. */
-  {
-    id: 'connector-applications',
-    name: 'Applications',
-    href: '/admin/connectors/applications',
-    group: 'community',
-    parent: 'connectors',
-    blurb: 'People waiting to be let into the volunteer programme.',
-    does: [
-      'Read what somebody said they can bring',
-      'Accept or decline, oldest application first',
-    ],
-    status: 'live',
-    icon: ClipboardCheck,
-  },
-  {
-    id: 'connector-scheduling',
-    name: 'Scheduling',
-    href: '/admin/connectors/scheduling',
-    group: 'community',
-    parent: 'connectors',
-    blurb: 'Who is carrying what, and handing out the next piece of work.',
-    does: [
-      'See each connector’s open load in hours',
-      'Assign a task to somebody who has room',
-    ],
-    status: 'live',
-    icon: CalendarClock,
   },
   {
     id: 'users',

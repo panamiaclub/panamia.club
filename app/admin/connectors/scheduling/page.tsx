@@ -2,6 +2,7 @@ import { CommitmentsTable } from '@/components/connectors/dashboard-parts';
 import { LoadTable } from '@/components/connectors/load-table';
 import { StaffingTable } from '@/components/connectors/staffing-table';
 import { AdminPageHeader, Panel, StatBand } from '@/components/Admin/parts';
+import { ConnectorAdminTabs } from '@/components/Admin/connectors-tabs';
 import { requireConnectorsAdmin } from '@/lib/connectors/admin-gate';
 import { listRoster } from '@/lib/connectors/roster';
 import {
@@ -173,6 +174,8 @@ export default async function AdminConnectorSchedulingPage() {
           </p>
         }
       />
+
+      <ConnectorAdminTabs />
 
       <div className="flex flex-col gap-6">
         <StatBand stats={band} />
