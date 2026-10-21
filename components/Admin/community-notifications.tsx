@@ -226,23 +226,35 @@ function AudienceStep({
                 {audience.description}
               </span>
               {selected === audience.id ? (
-                <span className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
-                  {loading || audience.eligible === undefined ? (
-                    <span className="bg-pana-cream text-pana-ink/60 flex items-center gap-1.5 rounded-full px-2.5 py-1">
-                      <LoaderCircle className="h-3 w-3 animate-spin" />
-                      Checking HighLevel eligibility
+                <>
+                  <span className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
+                    {loading || audience.eligible === undefined ? (
+                      <span className="bg-pana-cream text-pana-ink/60 flex items-center gap-1.5 rounded-full px-2.5 py-1">
+                        <LoaderCircle className="h-3 w-3 animate-spin" />
+                        Checking HighLevel eligibility
+                      </span>
+                    ) : (
+                      <>
+                        <span className="rounded-full bg-[#e5f3e8] px-2.5 py-1 text-[#185c31]">
+                          {audience.eligible} SMS eligible
+                        </span>
+                        <span className="bg-pana-cream text-pana-ink/60 rounded-full px-2.5 py-1">
+                          {audience.excluded} excluded
+                        </span>
+                      </>
+                    )}
+                  </span>
+                  {!loading && audience.exclusions?.length ? (
+                    <span className="text-pana-ink/60 mt-2 block text-xs leading-relaxed">
+                      {audience.exclusions
+                        .map(
+                          (exclusion) =>
+                            `${exclusion.count} ${exclusion.reason.toLowerCase()}`
+                        )
+                        .join(' · ')}
                     </span>
-                  ) : (
-                    <>
-                      <span className="rounded-full bg-[#e5f3e8] px-2.5 py-1 text-[#185c31]">
-                        {audience.eligible} SMS eligible
-                      </span>
-                      <span className="bg-pana-cream text-pana-ink/60 rounded-full px-2.5 py-1">
-                        {audience.excluded} excluded
-                      </span>
-                    </>
-                  )}
-                </span>
+                  ) : null}
+                </>
               ) : null}
             </span>
           </label>
