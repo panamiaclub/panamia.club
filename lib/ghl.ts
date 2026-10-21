@@ -322,9 +322,14 @@ export class GhlClient {
   async findByEmail(email: string): Promise<GhlContact | null> {
     const data = await this.request<{ contacts: GhlContact[] }>(
       'GET',
-      `/contacts/search?email=${encodeURIComponent(email)}&locationId=${encodeURIComponent(this.locationId)}`
+      `/contacts/?locationId=${encodeURIComponent(this.locationId)}&query=${encodeURIComponent(email)}`
     );
-    return data.contacts?.[0] ?? null;
+    const normalized = email.trim().toLowerCase();
+    return (
+      data.contacts?.find(
+        (contact) => contact.email?.trim().toLowerCase() === normalized
+      ) ?? null
+    );
   }
 
   /** Delete a contact by ID. */
