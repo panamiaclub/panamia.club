@@ -45,8 +45,11 @@ Configure:
 ```text
 STRIPE_SECRET_KEY
 STRIPE_WEBHOOK_SECRET
-STRIPE_SHIPPING_RATE_IDS=shr_standard,shr_express
 ```
+
+Merchandise Checkout defines two inline options: $5 Standard shipping with a
+3–7 business day estimate, and free Local pickup. No reusable Stripe Shipping
+Rate IDs are required.
 
 Register `/api/shop/webhook` for:
 

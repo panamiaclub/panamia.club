@@ -114,11 +114,3 @@ export async function getShopPriceBySlug(
   const prices = await listShopPrices();
   return prices.find((price) => price.slug === slug) ?? null;
 }
-
-export function shippingRateIds(): string[] {
-  return (
-    process.env.STRIPE_SHIPPING_RATE_IDS?.split(',')
-      .map((id) => id.trim())
-      .filter(Boolean) ?? []
-  );
-}

@@ -9,7 +9,7 @@ import {
   commerceOrderItems,
   commerceOrders,
 } from '@/lib/schema';
-import { getStripe, listShopPrices, shippingRateIds } from '@/lib/shop/stripe';
+import { getStripe, listShopPrices } from '@/lib/shop/stripe';
 import type { ShopCartItem } from '@/lib/shop/types';
 
 const CHECKOUT_TTL_SECONDS = 30 * 60;
@@ -131,15 +131,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const rates = shippingRateIds();
-    if (kind === 'merchandise' && rates.length === 0) {
-      console.error('[shop] STRIPE_SHIPPING_RATE_IDS is not configured');
-      return NextResponse.json(
-        { error: 'Shipping is temporarily unavailable' },
-        { status: 503 }
-      );
-    }
-
     const session = await auth();
     const orderId = createId();
     const expiresAt = new Date(Date.now() + CHECKOUT_TTL_SECONDS * 1000);
@@ -228,7 +219,26 @@ export async function POST(request: NextRequest) {
             : undefined,
         shipping_options:
           kind === 'merchandise'
-            ? rates.map((shipping_rate) => ({ shipping_rate }))
+            ? [
+                {
+                  shipping_rate_data: {
+                    type: 'fixed_amount',
+                    fixed_amount: { amount: 500, currency: 'usd' },
+                    display_name: 'Standard shipping',
+                    delivery_estimate: {
+                      minimum: { unit: 'business_day', value: 3 },
+                      maximum: { unit: 'business_day', value: 7 },
+                    },
+                  },
+                },
+                {
+                  shipping_rate_data: {
+                    type: 'fixed_amount',
+                    fixed_amount: { amount: 0, currency: 'usd' },
+                    display_name: 'Local pickup',
+                  },
+                },
+              ]
             : undefined,
         phone_number_collection:
           kind === 'merchandise' ? { enabled: true } : undefined,
