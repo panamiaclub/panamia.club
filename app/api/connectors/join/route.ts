@@ -9,6 +9,12 @@ import {
   parseConnector,
   type ProfileConnector,
 } from '@/lib/connectors/membership';
+import {
+  normalizeSmsPhone,
+  requestIp,
+  subscribeProfileToSms,
+  unsubscribeProfileFromSms,
+} from '@/lib/sms-subscriptions';
 
 /**
  * Apply to the Connectors programme, or change what you picked.
@@ -89,6 +95,19 @@ export async function POST(request: NextRequest) {
     typeof payload.bring === 'string'
       ? payload.bring.trim().slice(0, BRING_MAX)
       : '';
+  const smsOptIn =
+    typeof payload.smsOptIn === 'boolean' ? payload.smsOptIn : null;
+  const smsPhone =
+    typeof payload.smsPhone === 'string' ? payload.smsPhone.trim() : '';
+  if (smsOptIn === true && !normalizeSmsPhone(smsPhone)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Enter a valid mobile number for text updates.',
+      },
+      { status: 400 }
+    );
+  }
 
   // The identity profile, not the one they may be acting as.
   const existing = await db.query.profiles.findFirst({
@@ -125,8 +144,30 @@ export async function POST(request: NextRequest) {
       .set({ connector: membership })
       .where(eq(profiles.id, existing.id));
 
+    let sms = null;
+    let smsError: string | null = null;
+    try {
+      sms =
+        smsOptIn === true
+          ? await subscribeProfileToSms({
+              profileId: existing.id,
+              phone: smsPhone,
+              source: 'connectors_join',
+              ip: requestIp(request),
+            })
+          : smsOptIn === false
+            ? await unsubscribeProfileFromSms(existing.id)
+            : null;
+    } catch (error) {
+      smsError =
+        error instanceof Error
+          ? error.message
+          : 'Text-message preference could not be saved.';
+      console.error('connectors/join SMS preference failed', error);
+    }
+
     return NextResponse.json(
-      { success: true, data: membership },
+      { success: true, data: membership, sms, smsError },
       { status: 200 }
     );
   } catch (e) {

@@ -3596,6 +3596,38 @@ export const communitySmsRecipients = pgTable(
   ]
 );
 
+export const smsSubscriptions = pgTable(
+  'sms_subscriptions',
+  {
+    profileId: text('profile_id')
+      .primaryKey()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdateFn(() => new Date()),
+    phone: text('phone').notNull(),
+    status: text('status').notNull().default('pending'),
+    consentVersion: text('consent_version').notNull(),
+    consentSource: text('consent_source').notNull(),
+    consentIp: text('consent_ip'),
+    consentedAt: timestamp('consented_at', { withTimezone: true }),
+    optedOutAt: timestamp('opted_out_at', { withTimezone: true }),
+    syncedAt: timestamp('synced_at', { withTimezone: true }),
+    syncError: text('sync_error'),
+  },
+  (table) => [
+    index('sms_subscriptions_retry_idx')
+      .on(table.updatedAt)
+      .where(
+        sql`${table.status} = 'pending' OR ${table.syncError} IS NOT NULL`
+      ),
+  ]
+);
+
 // =============================================================================
 // Inferred Types
 // =============================================================================
@@ -3675,3 +3707,4 @@ export type RelayReport = typeof relayReports.$inferSelect;
 export type JobRun = typeof jobRuns.$inferSelect;
 export type CommunitySmsCampaign = typeof communitySmsCampaigns.$inferSelect;
 export type CommunitySmsRecipient = typeof communitySmsRecipients.$inferSelect;
+export type SmsSubscription = typeof smsSubscriptions.$inferSelect;

@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { ConnectorJoinForm } from '@/components/connectors/join-form';
 import { getMyConnector } from '@/lib/connectors/membership';
 import { redirectToSignIn } from '@/lib/signin-redirect';
+import { getSmsSubscriptionForUser } from '@/lib/sms-subscriptions';
 
 /**
  * Where "Apply to be a Connector" goes.
@@ -43,7 +44,10 @@ export default async function ConnectorJoinPage() {
     redirectToSignIn('/connectors/join');
   }
 
-  const me = await getMyConnector(session.user.id);
+  const [me, smsSubscription] = await Promise.all([
+    getMyConnector(session.user.id),
+    getSmsSubscriptionForUser(session.user.id),
+  ]);
   if (me?.membership.status === 'declined') {
     redirect('/connectors/hq');
   }
@@ -53,6 +57,11 @@ export default async function ConnectorJoinPage() {
       initialPod={me?.membership.pod ?? null}
       initialHouses={me?.membership.houses ?? []}
       initialBring={me?.membership.bring ?? ''}
+      initialSmsOptIn={
+        smsSubscription?.status === 'active' ||
+        smsSubscription?.status === 'pending'
+      }
+      initialSmsPhone={smsSubscription?.phone ?? ''}
       isEditing={me !== null}
       isPending={me?.membership.status === 'pending'}
     />

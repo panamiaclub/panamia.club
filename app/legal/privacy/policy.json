@@ -412,8 +412,10 @@
           "data": [
             "email",
             "name",
+            "mobile_number",
             "contact_id",
             "newsletter_membership",
+            "sms_consent_status",
             "inquiry_message"
           ],
           "deletionMechanism": "ghl_api_or_manual",
@@ -468,21 +470,23 @@
           "data": [
             "email",
             "name",
+            "mobile_number",
             "contact_id",
             "newsletter_membership",
+            "sms_consent_status",
             "inquiry_message"
           ],
           "source": "user_provided",
-          "purpose": "contact_management_and_newsletter",
+          "purpose": "contact_management_newsletter_and_consented_sms",
           "retention": "active_account_lifetime",
           "display": {
             "icon": "globe",
             "source": "You provide",
-            "purpose": "Contact management and newsletter",
+            "purpose": "Contact management, newsletter, and consented texts",
             "retention": "Account lifetime",
             "sharedWith": "GoHighLevel",
-            "prose": "GoHighLevel — contact ID, email, name, newsletter list membership",
-            "blurb": "Your contact record in our newsletter/CRM system (GoHighLevel), including newsletter list membership."
+            "prose": "GoHighLevel — contact ID, email, name, mobile number, newsletter membership, and SMS consent status",
+            "blurb": "Your contact record in GoHighLevel, including any mobile number and text-message preference you explicitly provide."
           }
         },
         {

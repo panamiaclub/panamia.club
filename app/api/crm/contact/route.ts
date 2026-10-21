@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { profiles } from '@/lib/schema';
+import { profiles, smsSubscriptions } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { GhlClient } from '@/lib/ghl';
 import { checkSameOrigin } from '@/lib/csrf';
@@ -103,10 +103,15 @@ export async function DELETE(request: Request) {
 
   // Always set ghlOptedOut regardless of whether the GHL delete succeeds,
   // so the CRM worker never recreates this contact.
-  await db
-    .update(profiles)
-    .set({ ghlOptedOut: true, ghlContactId: null })
-    .where(eq(profiles.id, profile.id));
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(smsSubscriptions)
+      .where(eq(smsSubscriptions.profileId, profile.id));
+    await tx
+      .update(profiles)
+      .set({ ghlOptedOut: true, ghlContactId: null })
+      .where(eq(profiles.id, profile.id));
+  });
 
   if (!profile.ghlContactId) {
     return NextResponse.json({ success: true });
