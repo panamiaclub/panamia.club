@@ -1,4 +1,4 @@
--- Migration: 0067_community_sms_campaigns
+-- Migration: 0068_community_sms_campaigns
 -- Purpose: Persist staff-created community SMS campaigns and each recipient's
 --          eligibility and HighLevel submission outcome.
 --

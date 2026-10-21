@@ -29,6 +29,10 @@ interface ContactSubmission {
   // screenname it had at submit time.
   userId: string | null;
   screenname: string | null;
+  pageUrl: string | null;
+  screenshotUrl: string | null;
+  userAgent: string | null;
+  viewport: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -185,6 +189,59 @@ export default function AdminContactUsPage() {
               </div>
             )}
 
+            {(item.pageUrl ||
+              item.screenshotUrl ||
+              item.userAgent ||
+              item.viewport) && (
+              <div className="space-y-3 rounded-md border bg-blue-50/50 p-4 text-sm">
+                <div className="font-semibold">Bug report context</div>
+                {item.pageUrl && (
+                  <div>
+                    <span className="font-semibold">Page:</span>{' '}
+                    <a
+                      href={item.pageUrl}
+                      className="text-pana-navy break-all underline underline-offset-2"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {item.pageUrl}
+                    </a>
+                  </div>
+                )}
+                {item.viewport && (
+                  <div>
+                    <span className="font-semibold">Viewport:</span>{' '}
+                    {item.viewport}
+                  </div>
+                )}
+                {item.userAgent && (
+                  <div>
+                    <div className="font-semibold">Browser and language:</div>
+                    <pre className="text-muted-foreground mt-1 overflow-x-auto whitespace-pre-wrap">
+                      {item.userAgent}
+                    </pre>
+                  </div>
+                )}
+                {item.screenshotUrl && (
+                  <div className="space-y-2">
+                    <a
+                      href={item.screenshotUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-pana-navy font-semibold underline underline-offset-2"
+                    >
+                      Open full-size screenshot
+                    </a>
+                    <img
+                      src={item.screenshotUrl}
+                      alt="Screenshot attached to this bug report"
+                      className="max-h-96 max-w-full rounded-md border object-contain"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Prior decision, if any. Nothing here is terminal — a handled
                 submission can always be reopened. */}
             {item.status !== 'open' && (
@@ -259,8 +316,8 @@ export default function AdminContactUsPage() {
           title="Contact submissions"
           description={
             <p>
-              Questions, partnership requests, and support messages sent through
-              the public contact form.
+              Questions, partnership requests, support messages, and bug reports
+              sent through the platform.
             </p>
           }
         />
