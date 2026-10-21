@@ -4,6 +4,11 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { ADMIN_CHROME } from '@/lib/admin/theme';
+import {
+  GRANTABLE_ROLES,
+  canGrant,
+  type GrantableRole,
+} from '@/lib/admin/roles';
 import { REASON_MIN } from '@/lib/admin/user-locks';
 
 /**
@@ -65,18 +70,28 @@ function joined(iso: string) {
 function Tag({ label, tone }: { label: string; tone: string }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border border-pana-ink/15 px-2 py-0.5 text-[11px] font-bold ${tone}`}
+      className={`border-pana-ink/15 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-bold ${tone}`}
     >
       {label}
     </span>
   );
 }
 
-export function UsersTable({ rows }: { rows: AccountRow[] }) {
+export function UsersTable({
+  rows,
+  viewerIsAdmin,
+  viewerIsSuperAdmin,
+}: {
+  rows: AccountRow[];
+  viewerIsAdmin: boolean;
+  viewerIsSuperAdmin: boolean;
+}) {
   const router = useRouter();
   const [openFor, setOpenFor] = useState<string | null>(null);
+  const [rolesFor, setRolesFor] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [roleBusy, setRoleBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
@@ -105,6 +120,7 @@ export function UsersTable({ rows }: { rows: AccountRow[] }) {
         setError(payload.error ?? 'That did not go through.');
         return;
       }
+
       /* Say how many sessions were ended, because that is the part an admin
        * cannot see and would otherwise have to take on trust. Zero is worth
        * reporting too — it means they were not signed in anywhere, not that
@@ -126,9 +142,50 @@ export function UsersTable({ rows }: { rows: AccountRow[] }) {
     }
   }
 
+  function holdsRole(row: AccountRow, role: GrantableRole) {
+    return role.id === 'admin' ? row.isAdmin : row.isContentModerator;
+  }
+
+  async function setRole(row: AccountRow, role: GrantableRole, next: boolean) {
+    const action = next ? `Give ${role.badge}` : `Remove ${role.badge}`;
+    if (!window.confirm(`${action} ${next ? 'to' : 'from'} ${row.email}?`)) {
+      return;
+    }
+
+    const key = `${row.id}:${role.id}`;
+    setRoleBusy(key);
+    setError(null);
+    setNote(null);
+    try {
+      const response = await fetch(role.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: row.id,
+          [role.field]: next,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!response.ok) {
+        setError(payload.error ?? `Could not change ${role.badge}.`);
+        return;
+      }
+      setNote(
+        `${role.badge} ${next ? 'granted' : 'removed'} for ${row.email}.`
+      );
+      router.refresh();
+    } catch {
+      setError('Network error. Nothing was changed.');
+    } finally {
+      setRoleBusy(null);
+    }
+  }
+
   if (rows.length === 0) {
     return (
-      <p className="px-5 py-8 text-center text-sm text-pana-ink/60">
+      <p className="text-pana-ink/60 px-5 py-8 text-center text-sm">
         No accounts match that.
       </p>
     );
@@ -137,7 +194,7 @@ export function UsersTable({ rows }: { rows: AccountRow[] }) {
   return (
     <div>
       {note ? (
-        <p className="border-b-2 border-pana-ink/10 bg-pana-butter-2 px-5 py-2 text-sm font-bold text-pana-ink">
+        <p className="border-pana-ink/10 bg-pana-butter-2 text-pana-ink border-b-2 px-5 py-2 text-sm font-bold">
           {note}
         </p>
       ) : null}
@@ -158,34 +215,45 @@ export function UsersTable({ rows }: { rows: AccountRow[] }) {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-extrabold text-pana-ink">{label}</span>
+                    <span className="text-pana-ink font-extrabold">
+                      {label}
+                    </span>
                     {row.isSuperAdmin ? (
-                      <Tag label="Founder" tone="bg-pana-indigo text-pana-cream" />
+                      <Tag
+                        label="Founder"
+                        tone="bg-pana-indigo text-pana-cream"
+                      />
                     ) : null}
                     {row.grantedAdmin ? (
                       <Tag label="Admin" tone="bg-pana-blue text-pana-ink" />
                     ) : null}
                     {row.isContentModerator ? (
-                      <Tag label="Moderator" tone="bg-pana-butter text-pana-ink" />
+                      <Tag
+                        label="Moderator"
+                        tone="bg-pana-butter text-pana-ink"
+                      />
                     ) : null}
                     {locked ? (
                       <Tag label="Locked" tone="bg-pana-red text-pana-cream" />
                     ) : null}
                     {!row.emailVerified ? (
-                      <Tag label="Unverified" tone="bg-pana-flame text-pana-ink" />
+                      <Tag
+                        label="Unverified"
+                        tone="bg-pana-flame text-pana-ink"
+                      />
                     ) : null}
                   </div>
-                  <p className="mt-1 truncate text-sm text-pana-ink/70">
+                  <p className="text-pana-ink/70 mt-1 truncate text-sm">
                     {row.email}
                   </p>
-                  <p className="mt-0.5 text-xs text-pana-ink/60">
+                  <p className="text-pana-ink/60 mt-0.5 text-xs">
                     {row.accountType} · joined {joined(row.createdAt)}
                     {row.screenname ? ` · @${row.screenname}` : ''}
                   </p>
                   {/* The reason, where it is asked for: next to the state it
                       explains, not behind a click into a separate log. */}
                   {locked && row.lockReason ? (
-                    <p className="mt-1 text-xs text-pana-ink/80">
+                    <p className="text-pana-ink/80 mt-1 text-xs">
                       <span className="font-bold">Locked</span>
                       {row.lockedAt ? ` ${joined(row.lockedAt)}` : ''}
                       {row.lockedBy ? ` by ${row.lockedBy}` : ''} — “
@@ -195,7 +263,7 @@ export function UsersTable({ rows }: { rows: AccountRow[] }) {
                   {locked && !row.lockReason ? (
                     /* Imported from the old MongoDB migration, which set the
                        column directly and left no record behind it. */
-                    <p className="mt-1 text-xs text-pana-ink/60">
+                    <p className="text-pana-ink/60 mt-1 text-xs">
                       Locked before this log existed — no reason on file.
                     </p>
                   ) : null}
@@ -204,50 +272,135 @@ export function UsersTable({ rows }: { rows: AccountRow[] }) {
                 <div className="flex shrink-0 items-center gap-3">
                   {/* Read before the button is pressed, not after. */}
                   {row.administers > 0 ? (
-                    <span className="text-xs font-bold text-pana-ink/70">
+                    <span className="text-pana-ink/70 text-xs font-bold">
                       runs {row.administers} listing
                       {row.administers === 1 ? '' : 's'}
                     </span>
                   ) : null}
                   {row.hasProfile ? (
-                    <a
-                      className="text-xs font-bold text-pana-indigo underline"
-                      href={`/admin/users/roles?q=${encodeURIComponent(row.email)}`}
+                    <button
+                      type="button"
+                      className="text-pana-indigo text-xs font-bold underline"
+                      onClick={() => {
+                        setRolesFor(rolesFor === row.id ? null : row.id);
+                        setOpenFor(null);
+                        setError(null);
+                      }}
                     >
-                      Roles
-                    </a>
+                      {rolesFor === row.id ? 'Close access' : 'Roles & access'}
+                    </button>
                   ) : null}
                   {lockable ? (
                     <button
                       type="button"
                       onClick={() => (open ? setOpenFor(null) : begin(row.id))}
-                      className={`rounded-full border-2 border-pana-ink px-3 py-1 text-xs font-extrabold ${
+                      className={`border-pana-ink rounded-full border-2 px-3 py-1 text-xs font-extrabold ${
                         locked
-                          ? 'bg-white text-pana-ink'
+                          ? 'text-pana-ink bg-white'
                           : 'bg-pana-red text-pana-cream'
                       }`}
                     >
                       {open ? 'Cancel' : locked ? 'Unlock' : 'Lock'}
                     </button>
                   ) : (
-                    <span className="text-xs text-pana-ink/50">
+                    <span className="text-pana-ink/50 text-xs">
                       Holds admin — demote first
                     </span>
                   )}
                 </div>
               </div>
 
+              {rolesFor === row.id ? (
+                <div className="border-pana-ink/20 bg-pana-blue/20 mt-3 rounded-lg border-2 p-3">
+                  <p className="text-pana-ink text-sm font-extrabold">
+                    Roles & access
+                  </p>
+                  <div className="divide-pana-ink/10 mt-2 divide-y-2">
+                    {GRANTABLE_ROLES.map((role) => {
+                      const held = holdsRole(row, role);
+                      const permitted = canGrant(role, {
+                        isAdmin: viewerIsAdmin,
+                        isSuperAdmin: viewerIsSuperAdmin,
+                      });
+                      const founderRole =
+                        role.id === 'admin' && row.isSuperAdmin;
+                      const key = `${row.id}:${role.id}`;
+
+                      return (
+                        <div
+                          key={role.id}
+                          className="flex flex-wrap items-center justify-between gap-3 py-3"
+                        >
+                          <div className="min-w-[14rem] flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-pana-ink text-sm font-bold">
+                                {role.badge}
+                              </span>
+                              <Tag
+                                label={held ? 'Granted' : 'Not granted'}
+                                tone={
+                                  held
+                                    ? 'bg-pana-indigo text-pana-cream'
+                                    : 'bg-white text-pana-ink/60'
+                                }
+                              />
+                            </div>
+                            <p className="text-pana-ink/65 mt-1 text-xs leading-relaxed">
+                              {role.grants}
+                            </p>
+                            {founderRole ? (
+                              <p className="text-pana-ink/60 mt-1 text-xs font-bold">
+                                Founder access is managed through ADMIN_EMAILS.
+                              </p>
+                            ) : !permitted ? (
+                              <p className="text-pana-ink/60 mt-1 text-xs font-bold">
+                                {role.grantedBy === 'super-admin'
+                                  ? 'Only a founder can change this role.'
+                                  : 'Only an admin can change this role.'}
+                              </p>
+                            ) : null}
+                          </div>
+                          {!founderRole && permitted ? (
+                            <button
+                              type="button"
+                              disabled={roleBusy === key}
+                              onClick={() => setRole(row, role, !held)}
+                              className={`border-pana-ink rounded-full border-2 px-3 py-1 text-xs font-extrabold disabled:opacity-50 ${
+                                held
+                                  ? 'text-pana-ink bg-white'
+                                  : `${ADMIN_CHROME.FILL} ${ADMIN_CHROME.ON_FILL}`
+                              }`}
+                            >
+                              {roleBusy === key
+                                ? 'Saving…'
+                                : held
+                                  ? `Remove ${role.badge.toLowerCase()}`
+                                  : `Grant ${role.badge.toLowerCase()}`}
+                            </button>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {error ? (
+                    <p className="text-pana-red-deep mt-2 text-sm font-bold">
+                      {error}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
               {open ? (
-                <div className="mt-3 rounded-lg border-2 border-pana-ink/20 bg-pana-cream p-3">
+                <div className="border-pana-ink/20 bg-pana-cream mt-3 rounded-lg border-2 p-3">
                   {!locked && row.administers > 0 ? (
-                    <p className="mb-2 text-sm font-bold text-pana-ink">
+                    <p className="text-pana-ink mb-2 text-sm font-bold">
                       This account administers {row.administers} listing
                       {row.administers === 1 ? '' : 's'}. They stay live and
                       visible — locking the owner does not delist them.
                     </p>
                   ) : null}
                   <label
-                    className="block text-xs font-bold text-pana-ink/70"
+                    className="text-pana-ink/70 block text-xs font-bold"
                     htmlFor={`reason-${row.id}`}
                   >
                     Why? Recorded against your name, and shown on appeal.
@@ -257,7 +410,7 @@ export function UsersTable({ rows }: { rows: AccountRow[] }) {
                     value={reason}
                     onChange={(event) => setReason(event.target.value)}
                     rows={2}
-                    className="mt-1 w-full rounded-lg border-2 border-pana-ink/20 bg-white px-3 py-2 text-sm text-pana-ink"
+                    className="border-pana-ink/20 text-pana-ink mt-1 w-full rounded-lg border-2 bg-white px-3 py-2 text-sm"
                     placeholder={
                       locked
                         ? 'Appeal upheld — reported account was not theirs.'
@@ -265,7 +418,7 @@ export function UsersTable({ rows }: { rows: AccountRow[] }) {
                     }
                   />
                   {error ? (
-                    <p className="mt-2 text-sm font-bold text-pana-red-deep">
+                    <p className="text-pana-red-deep mt-2 text-sm font-bold">
                       {error}
                     </p>
                   ) : null}
@@ -274,7 +427,7 @@ export function UsersTable({ rows }: { rows: AccountRow[] }) {
                       type="button"
                       disabled={busy || reason.trim().length < REASON_MIN}
                       onClick={() => submit(row)}
-                      className="rounded-full border-2 border-pana-ink bg-pana-ink px-4 py-1.5 text-xs font-extrabold text-pana-cream disabled:opacity-40"
+                      className="border-pana-ink bg-pana-ink text-pana-cream rounded-full border-2 px-4 py-1.5 text-xs font-extrabold disabled:opacity-40"
                     >
                       {busy
                         ? 'Working…'
@@ -282,7 +435,7 @@ export function UsersTable({ rows }: { rows: AccountRow[] }) {
                           ? 'Unlock account'
                           : 'Lock and end sessions'}
                     </button>
-                    <span className="text-xs text-pana-ink/60">
+                    <span className="text-pana-ink/60 text-xs">
                       {reason.trim().length < REASON_MIN
                         ? `${REASON_MIN - reason.trim().length} more characters`
                         : locked
