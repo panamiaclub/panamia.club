@@ -1,6 +1,7 @@
 'use client';
 
 import { useAdminGate } from '@/components/Admin/gate';
+import { AdminPageHeader } from '@/components/Admin/parts';
 import PageMeta from '@/components/PageMeta';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,7 +40,16 @@ export default function AdminDownloadProfilesPage() {
     <>
       <PageMeta title="Download Profiles | Admin" desc="" />
       <div>
-        <h2 className="mb-6 text-3xl font-bold">Download Profiles</h2>
+        <AdminPageHeader
+          eyebrow="Data"
+          title="Download profiles"
+          description={
+            <p>
+              Export the current active profile roster for approved operational
+              use.
+            </p>
+          }
+        />
         <Card>
           <CardHeader>
             <CardTitle>All Active Profiles</CardTitle>

@@ -1,11 +1,14 @@
 import { notFound } from 'next/navigation';
 
 import { auth } from '@/auth';
-import { AdminEyebrow } from '@/components/Admin/eyebrow';
-import { Panel, StatBand } from '@/components/Admin/parts';
+import { AdminPageHeader, Panel, StatBand } from '@/components/Admin/parts';
 import { UsersTable } from '@/components/Admin/users-table';
 import { ADMIN_CHROME } from '@/lib/admin/theme';
-import { ACCOUNT_TYPES, USER_STATES, isUserState } from '@/lib/admin/user-filters';
+import {
+  ACCOUNT_TYPES,
+  USER_STATES,
+  isUserState,
+} from '@/lib/admin/user-filters';
 import { listUsers, latestLocksFor, userStats } from '@/lib/admin/users';
 import { redirectToSignIn } from '@/lib/signin-redirect';
 
@@ -127,14 +130,18 @@ export default async function AdminUsersPage({
 
   return (
     <>
-      <AdminEyebrow>Community</AdminEyebrow>
-      <h1 className="mt-1 text-3xl font-extrabold text-pana-ink">Accounts</h1>
-      <p className="mt-1 max-w-2xl text-sm text-pana-ink/70">
-        Everyone with a sign-in. Locking ends their sessions immediately and
-        refuses the next one — it does not touch the listings they run.
-      </p>
+      <AdminPageHeader
+        eyebrow="Community"
+        title="Accounts"
+        description={
+          <p>
+            Everyone with a sign-in. Locking ends their sessions immediately and
+            refuses the next one — it does not touch the listings they run.
+          </p>
+        }
+      />
 
-      <div className="mt-6">
+      <div>
         <StatBand
           stats={[
             {
@@ -163,7 +170,7 @@ export default async function AdminUsersPage({
             <div className="min-w-[14rem] flex-1">
               <label
                 htmlFor="q"
-                className="block text-xs font-bold text-pana-ink/70"
+                className="text-pana-ink/70 block text-xs font-bold"
               >
                 Name, screenname or email
               </label>
@@ -172,13 +179,13 @@ export default async function AdminUsersPage({
                 name="q"
                 defaultValue={query}
                 placeholder="maria, @mariacooks, maria@…"
-                className="mt-1 w-full rounded-lg border-2 border-pana-ink/20 bg-white px-3 py-2 text-sm text-pana-ink"
+                className="border-pana-ink/20 text-pana-ink mt-1 w-full rounded-lg border-2 bg-white px-3 py-2 text-sm"
               />
             </div>
             <div>
               <label
                 htmlFor="state"
-                className="block text-xs font-bold text-pana-ink/70"
+                className="text-pana-ink/70 block text-xs font-bold"
               >
                 Showing
               </label>
@@ -186,7 +193,7 @@ export default async function AdminUsersPage({
                 id="state"
                 name="state"
                 defaultValue={state}
-                className="mt-1 rounded-lg border-2 border-pana-ink/20 bg-white px-3 py-2 text-sm text-pana-ink"
+                className="border-pana-ink/20 text-pana-ink mt-1 rounded-lg border-2 bg-white px-3 py-2 text-sm"
               >
                 {USER_STATES.map((value) => (
                   <option key={value} value={value}>
@@ -198,7 +205,7 @@ export default async function AdminUsersPage({
             <div>
               <label
                 htmlFor="type"
-                className="block text-xs font-bold text-pana-ink/70"
+                className="text-pana-ink/70 block text-xs font-bold"
               >
                 Account type
               </label>
@@ -206,7 +213,7 @@ export default async function AdminUsersPage({
                 id="type"
                 name="type"
                 defaultValue={type}
-                className="mt-1 rounded-lg border-2 border-pana-ink/20 bg-white px-3 py-2 text-sm text-pana-ink"
+                className="border-pana-ink/20 text-pana-ink mt-1 rounded-lg border-2 bg-white px-3 py-2 text-sm"
               >
                 <option value="">Any</option>
                 {ACCOUNT_TYPES.map((value) => (
@@ -218,14 +225,14 @@ export default async function AdminUsersPage({
             </div>
             <button
               type="submit"
-              className={`rounded-full border-2 border-pana-ink ${ADMIN_CHROME.FILL} px-4 py-2 text-sm font-extrabold ${ADMIN_CHROME.ON_FILL}`}
+              className={`border-pana-ink rounded-full border-2 ${ADMIN_CHROME.FILL} px-4 py-2 text-sm font-extrabold ${ADMIN_CHROME.ON_FILL}`}
             >
               Search
             </button>
             {filtering ? (
               <a
                 href="/admin/users"
-                className="text-sm font-bold text-pana-indigo underline"
+                className="text-pana-indigo text-sm font-bold underline"
               >
                 Clear
               </a>
@@ -236,7 +243,9 @@ export default async function AdminUsersPage({
 
       <div className="mt-6">
         <Panel
-          title={filtering ? `${result.total} matching` : `${result.total} accounts`}
+          title={
+            filtering ? `${result.total} matching` : `${result.total} accounts`
+          }
           action={
             result.totalPages > 1 ? (
               <span className={`text-xs font-bold ${ADMIN_CHROME.ON_FILL}`}>
@@ -258,11 +267,11 @@ export default async function AdminUsersPage({
             })}
           />
           {result.totalPages > 1 ? (
-            <div className="flex items-center justify-between border-t-2 border-pana-ink/10 px-5 py-3">
+            <div className="border-pana-ink/10 flex items-center justify-between border-t-2 px-5 py-3">
               {result.page > 1 ? (
                 <a
                   href={pageHref(result.page - 1)}
-                  className="text-sm font-bold text-pana-indigo underline"
+                  className="text-pana-indigo text-sm font-bold underline"
                 >
                   ← Previous
                 </a>
@@ -272,7 +281,7 @@ export default async function AdminUsersPage({
               {result.page < result.totalPages ? (
                 <a
                   href={pageHref(result.page + 1)}
-                  className="text-sm font-bold text-pana-indigo underline"
+                  className="text-pana-indigo text-sm font-bold underline"
                 >
                   Next →
                 </a>
@@ -284,9 +293,12 @@ export default async function AdminUsersPage({
         </Panel>
       </div>
 
-      <p className="mt-4 max-w-2xl text-xs text-pana-ink/60">
+      <p className="text-pana-ink/60 mt-4 max-w-2xl text-xs">
         Admin and moderator roles are granted on{' '}
-        <a className="font-bold text-pana-indigo underline" href="/admin/users/roles">
+        <a
+          className="text-pana-indigo font-bold underline"
+          href="/admin/users/roles"
+        >
           Roles &amp; permissions
         </a>
         . Accounts holding admin cannot be locked from here — remove the role

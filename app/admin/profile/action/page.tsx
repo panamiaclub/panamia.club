@@ -6,6 +6,7 @@ import Link from 'next/link';
 import axios from 'axios';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { AdminPageHeader } from '@/components/Admin/parts';
 
 function ProfileActionContent() {
   const searchParams = useSearchParams();
@@ -54,29 +55,34 @@ function ProfileActionContent() {
 
   return (
     <div>
-      <div>
-        <Card>
-          <CardContent className="space-y-4 p-6 text-center">
-            <p>
-              <strong>Profile:</strong> {profileName}
-            </p>
-            <p>
-              <strong>Status:</strong> {actionResponse}
-            </p>
-            {profileUrl && (
-              <Button asChild>
-                <Link href={profileUrl}>View Profile</Link>
-              </Button>
-            )}
-            <p>
-              <small>
-                Active Profiles:{' '}
-                {totalProfiles > 0 ? totalProfiles : 'calculating...'}
-              </small>
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <AdminPageHeader
+        eyebrow="Directory"
+        title="Profile decision"
+        description={
+          <p>The result of the approval or decline link that was opened.</p>
+        }
+      />
+      <Card>
+        <CardContent className="space-y-4 p-6 text-center">
+          <p>
+            <strong>Profile:</strong> {profileName}
+          </p>
+          <p>
+            <strong>Status:</strong> {actionResponse}
+          </p>
+          {profileUrl && (
+            <Button asChild>
+              <Link href={profileUrl}>View Profile</Link>
+            </Button>
+          )}
+          <p>
+            <small>
+              Active Profiles:{' '}
+              {totalProfiles > 0 ? totalProfiles : 'calculating...'}
+            </small>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -86,11 +92,14 @@ export default function AdminProfileActionPage() {
     <Suspense
       fallback={
         <div>
-          <div>
-            <Card>
-              <CardContent className="p-6 text-center">Loading...</CardContent>
-            </Card>
-          </div>
+          <AdminPageHeader
+            eyebrow="Directory"
+            title="Profile decision"
+            description={<p>Processing the requested action…</p>}
+          />
+          <Card>
+            <CardContent className="p-6 text-center">Loading...</CardContent>
+          </Card>
         </div>
       }
     >

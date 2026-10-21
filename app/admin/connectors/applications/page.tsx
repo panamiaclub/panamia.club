@@ -1,6 +1,5 @@
-import { Panel } from '@/components/Admin/parts';
+import { AdminPageHeader, Panel } from '@/components/Admin/parts';
 import { ApplicationQueue } from '@/components/connectors/application-queue';
-import { AdminEyebrow } from '@/components/Admin/eyebrow';
 import { requireConnectorsAdmin } from '@/lib/connectors/admin-gate';
 import { listConnectorApplications } from '@/lib/connectors/membership';
 
@@ -56,19 +55,19 @@ export default async function AdminConnectorApplicationsPage() {
 
   return (
     <>
-      <header className="pb-6">
-        <AdminEyebrow>Community</AdminEyebrow>
-        <h1 className="mt-2 text-4xl leading-tight font-extrabold sm:text-5xl">
-          Applications
-        </h1>
-        <p className="text-pana-ink/70 mt-3 max-w-2xl text-sm leading-relaxed">
-          {applications.length === 0
-            ? 'Nobody is waiting. New applications land here as they come in.'
-            : `${applications.length} ${
-                applications.length === 1 ? 'person is' : 'people are'
-              } waiting on an answer, longest wait first.`}
-        </p>
-      </header>
+      <AdminPageHeader
+        eyebrow="Community"
+        title="Applications"
+        description={
+          <p>
+            {applications.length === 0
+              ? 'Nobody is waiting. New applications land here as they come in.'
+              : `${applications.length} ${
+                  applications.length === 1 ? 'person is' : 'people are'
+                } waiting on an answer, longest wait first.`}
+          </p>
+        }
+      />
 
       <Panel title="Waiting on a decision">
         <ApplicationQueue applications={applications} />

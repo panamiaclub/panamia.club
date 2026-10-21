@@ -4,8 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 
 import { useAdminGate } from '@/components/Admin/gate';
-import { AdminEyebrow } from '@/components/Admin/eyebrow';
-import { Panel, StatBand } from '@/components/Admin/parts';
+import { AdminPageHeader, Panel, StatBand } from '@/components/Admin/parts';
 import PageMeta from '@/components/PageMeta';
 import { ADMIN_CHROME } from '@/lib/admin/theme';
 import {
@@ -120,7 +119,11 @@ export default function AdminListingsPage() {
   }, [load]);
 
   const decide = useCallback(
-    async (listing: QueueListing, decision: 'approve' | 'decline', reason?: string) => {
+    async (
+      listing: QueueListing,
+      decision: 'approve' | 'decline',
+      reason?: string
+    ) => {
       setBusyId(listing.id);
       setActionError(undefined);
       try {
@@ -195,35 +198,36 @@ export default function AdminListingsPage() {
     <>
       <PageMeta title="Directory listings | Pana Admin" desc="" />
 
-      <header className="pb-6">
-        <AdminEyebrow>Directory</AdminEyebrow>
-        <h1 className="mt-2 text-4xl font-extrabold leading-tight sm:text-5xl">
-          Directory listings
-        </h1>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-pana-ink/70">
-          Applications to the directory that have not been answered yet. Oldest
-          first, because the oldest one is the one somebody has been waiting on.
-        </p>
-      </header>
+      <AdminPageHeader
+        eyebrow="Directory"
+        title="Directory listings"
+        description={
+          <p>
+            Applications to the directory that have not been answered yet.
+            Oldest first, because the oldest one is the one somebody has been
+            waiting on.
+          </p>
+        }
+      />
 
       <div className="flex flex-col gap-6">
         <StatBand stats={listingStats(pending)} />
 
         {/* The honest note about why this page exists. Sits under the band
-          * rather than above it so the numbers land first — the numbers are
-          * the argument and this is the explanation of it. */}
+         * rather than above it so the numbers land first — the numbers are
+         * the argument and this is the explanation of it. */}
         <section
           className={`rounded-xl border-2 border-dashed ${ADMIN_CHROME.BORDER} bg-pana-cream p-5`}
         >
-          <h2 className="text-sm font-extrabold uppercase tracking-wide">
+          <h2 className="text-sm font-extrabold tracking-wide uppercase">
             Why some of these are a month old
           </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-pana-ink/70">
+          <p className="text-pana-ink/70 mt-2 max-w-3xl text-sm leading-relaxed">
             Until this screen, an application could only be answered by clicking
             a link in the email it generated. That link still works and still
             posts to{' '}
-            <code className="text-pana-ink/60">/api/admin/profile/action</code> —
-            staff answer applications from phones that are not signed in, and
+            <code className="text-pana-ink/60">/api/admin/profile/action</code>{' '}
+            — staff answer applications from phones that are not signed in, and
             taking that away would cost more than it saved. What did not exist
             was any way to see what was waiting, so an application whose email
             got buried had nothing left pointing at it. Everything below was
@@ -232,7 +236,7 @@ export default function AdminListingsPage() {
         </section>
 
         {loadError && (
-          <p className="rounded-xl border-2 border-pana-red/50 bg-white p-4 text-sm font-bold text-pana-ink">
+          <p className="border-pana-red/50 text-pana-ink rounded-xl border-2 bg-white p-4 text-sm font-bold">
             {loadError}
           </p>
         )}
@@ -248,7 +252,7 @@ export default function AdminListingsPage() {
           <div className="flex flex-col gap-3">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <label className="flex flex-col gap-1">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-pana-ink/60">
+                <span className="text-pana-ink/60 text-xs font-extrabold tracking-wider uppercase">
                   Search
                 </span>
                 <input
@@ -260,7 +264,7 @@ export default function AdminListingsPage() {
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-pana-ink/60">
+                <span className="text-pana-ink/60 text-xs font-extrabold tracking-wider uppercase">
                   Category
                 </span>
                 <select
@@ -278,7 +282,7 @@ export default function AdminListingsPage() {
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-pana-ink/60">
+                <span className="text-pana-ink/60 text-xs font-extrabold tracking-wider uppercase">
                   Flagged
                 </span>
                 <select
@@ -296,22 +300,22 @@ export default function AdminListingsPage() {
                 </select>
               </label>
             </div>
-            <p className="text-xs leading-relaxed text-pana-ink/60">
+            <p className="text-pana-ink/60 text-xs leading-relaxed">
               Filters narrow the queue. They do not reorder it — see the note in
               the source for why nothing here sorts.
             </p>
           </div>
 
           {actionError && (
-            <p className="mt-4 rounded-lg border-2 border-pana-red/50 px-4 py-3 text-sm font-bold">
+            <p className="border-pana-red/50 mt-4 rounded-lg border-2 px-4 py-3 text-sm font-bold">
               {actionError}
             </p>
           )}
 
           {loading ? (
-            <p className="mt-5 text-sm text-pana-ink/60">Reading the table…</p>
+            <p className="text-pana-ink/60 mt-5 text-sm">Reading the table…</p>
           ) : queue.length === 0 ? (
-            <p className="mt-5 text-sm leading-relaxed text-pana-ink/70">
+            <p className="text-pana-ink/70 mt-5 text-sm leading-relaxed">
               {pending.length === 0
                 ? 'Nothing is waiting. Every application has been answered.'
                 : 'No application matches those filters. Clear them to see the rest of the queue.'}
@@ -332,7 +336,7 @@ export default function AdminListingsPage() {
         </Panel>
 
         <Panel title="Recently decided">
-          <p className="mb-4 text-sm leading-relaxed text-pana-ink/70">
+          <p className="text-pana-ink/70 mb-4 text-sm leading-relaxed">
             The last few answers, so somebody picking up the queue can see what
             has already been handled and roughly where the line is being drawn.
             Decisions made here are attributed; the ones answered from an email
@@ -340,7 +344,7 @@ export default function AdminListingsPage() {
           </p>
 
           {decided.length === 0 ? (
-            <p className="text-sm text-pana-ink/60">
+            <p className="text-pana-ink/60 text-sm">
               {loading ? 'Reading the table…' : 'Nothing has been decided yet.'}
             </p>
           ) : (
@@ -353,7 +357,7 @@ export default function AdminListingsPage() {
                   className="flex flex-col gap-1 py-3 sm:flex-row sm:items-baseline sm:gap-4"
                 >
                   <span
-                    className={`w-24 shrink-0 text-xs font-extrabold uppercase tracking-wider ${
+                    className={`w-24 shrink-0 text-xs font-extrabold tracking-wider uppercase ${
                       row.decision === 'approved'
                         ? ADMIN_CHROME.ACCENT
                         : 'text-pana-ink/50'
@@ -361,26 +365,28 @@ export default function AdminListingsPage() {
                   >
                     {row.decision}
                   </span>
-                  <span className="min-w-[12rem] font-bold leading-snug">
+                  <span className="min-w-[12rem] leading-snug font-bold">
                     {row.name}
                     {row.locality && (
-                      <span className="font-normal text-pana-ink/60">
+                      <span className="text-pana-ink/60 font-normal">
                         {' '}
                         · {row.locality}
                       </span>
                     )}
                   </span>
-                  <span className="flex-1 text-sm leading-relaxed text-pana-ink/70">
+                  <span className="text-pana-ink/70 flex-1 text-sm leading-relaxed">
                     {row.reason ||
                       (row.decision === 'approved'
                         ? 'Published to the directory.'
                         : 'No reason recorded.')}
                   </span>
-                  <span className="text-xs text-pana-ink/50">
+                  <span className="text-pana-ink/50 text-xs">
                     {row.decidedAt
                       ? `${waitLabel(daysWaiting(row.decidedAt))} ago`
                       : 'date not recorded'}
-                    {row.decidedBy ? ` · ${row.decidedBy}` : ' · from an email link'}
+                    {row.decidedBy
+                      ? ` · ${row.decidedBy}`
+                      : ' · from an email link'}
                   </span>
                 </li>
               ))}
@@ -429,13 +435,13 @@ function ListingRow({
   const locale = [listing.locality, listing.region].filter(Boolean).join(', ');
 
   return (
-    <li className="rounded-xl border-2 border-pana-ink p-5">
+    <li className="border-pana-ink rounded-xl border-2 p-5">
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-[16rem] flex-1">
-          <h3 className="text-xl font-extrabold leading-tight">
+          <h3 className="text-xl leading-tight font-extrabold">
             {listing.name}
           </h3>
-          <p className="mt-1 text-sm text-pana-ink/70">
+          <p className="text-pana-ink/70 mt-1 text-sm">
             {listing.fiveWords || 'No summary given'}
             {locale && <span className="text-pana-ink/60"> · {locale}</span>}
           </p>
@@ -443,8 +449,8 @@ function ListingRow({
 
         <div className="text-right">
           {/* Ink at 70% rather than red. Red would read as "this one is bad"
-            * when all it means is "this one has been ignored longest", and the
-            * business is not the party at fault. */}
+           * when all it means is "this one has been ignored longest", and the
+           * business is not the party at fault. */}
           <p
             className={`text-sm font-extrabold ${
               overdue ? ADMIN_CHROME.ACCENT : 'text-pana-ink/70'
@@ -453,7 +459,7 @@ function ListingRow({
             Waiting {waitLabel(days)}
             {overdue ? ' · over the window' : ''}
           </p>
-          <p className="mt-0.5 text-xs text-pana-ink/50">
+          <p className="text-pana-ink/50 mt-0.5 text-xs">
             {listing.pendingOwnerEmail
               ? `Claimed by ${listing.pendingOwnerEmail}`
               : 'Nobody has claimed this listing'}
@@ -461,7 +467,7 @@ function ListingRow({
         </div>
       </div>
 
-      <p className="mt-3 max-w-3xl text-sm leading-relaxed text-pana-ink/80">
+      <p className="text-pana-ink/80 mt-3 max-w-3xl text-sm leading-relaxed">
         {listing.details || 'The application left the description blank.'}
       </p>
 
@@ -470,7 +476,7 @@ function ListingRow({
           {listing.tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full border-2 border-pana-ink/30 px-2.5 py-0.5 text-xs font-bold text-pana-ink/70"
+              className="border-pana-ink/30 text-pana-ink/70 rounded-full border-2 px-2.5 py-0.5 text-xs font-bold"
             >
               {tag}
             </span>
@@ -478,7 +484,7 @@ function ListingRow({
         </div>
       )}
 
-      <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-pana-ink/60">
+      <dl className="text-pana-ink/60 mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs">
         <div className="flex gap-1.5">
           <dt className="font-bold">Contact</dt>
           <dd>{listing.email}</dd>
@@ -498,14 +504,14 @@ function ListingRow({
       </dl>
 
       {listing.flags.length > 0 && (
-        <ul className="mt-4 flex flex-col gap-1.5 border-t-2 border-dashed border-pana-ink/20 pt-3">
+        <ul className="border-pana-ink/20 mt-4 flex flex-col gap-1.5 border-t-2 border-dashed pt-3">
           {listing.flags.map((flag) => (
             <li
               key={flag}
               className="flex flex-wrap gap-x-2 text-xs leading-relaxed"
             >
               <span
-                className={`font-extrabold uppercase tracking-wider ${ADMIN_CHROME.ACCENT}`}
+                className={`font-extrabold tracking-wider uppercase ${ADMIN_CHROME.ACCENT}`}
               >
                 {FLAG_LABEL[flag]}
               </span>
@@ -518,7 +524,7 @@ function ListingRow({
       {declining ? (
         <div className="mt-4 flex flex-col gap-2">
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-pana-ink/60">
+            <span className="text-pana-ink/60 text-xs font-extrabold tracking-wider uppercase">
               Why this one is being declined
             </span>
             <input

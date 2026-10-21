@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 
-import { AdminEyebrow } from '@/components/Admin/eyebrow';
+import { AdminPageHeader } from '@/components/Admin/parts';
 import { StatusPill } from '@/components/Admin/status-pill';
 import { ADMIN_CHROME } from '@/lib/admin/theme';
 import {
@@ -49,30 +49,19 @@ import {
 export function AdminOverview() {
   return (
     <>
-      <header className="pb-9">
-        <AdminEyebrow>Pana Admin</AdminEyebrow>
-
-        {/* Uppercase display type here and sentence case on the nine tool
-            pages, on purpose. This is the surface's front door and gets the
-            homepage's display voice once; a workbench that shouts its own
-            name at you every time you open it is just loud. */}
-        <h1 className="mt-3 text-4xl leading-[0.95] font-black tracking-tight uppercase sm:text-5xl">
-          Back{' '}
-          {/* Indigo, not the surface blue and not ADMIN_CHROME.ACCENT. The
-              accent token is navy (#181c3d), which is four points off ink and
-              reads as no accent at all at display size; the surface blue is
-              2.21 on cream and fails outright. Indigo clears at 9.01 and is
-              the only palette colour that is both obviously not-ink and safe
-              here. A <span>, not an <em>: this is a colour change, and <em>
-              would announce an emphasis to a screen reader that the sentence
-              does not actually carry. */}
-          <span className="text-pana-indigo">office</span>
-        </h1>
-
-        <p className="text-pana-ink/70 mt-4 max-w-2xl text-base leading-relaxed">
-          Everything here changes what other panas see. Nothing here is yours.
-        </p>
-      </header>
+      <AdminPageHeader
+        eyebrow="Pana Admin"
+        title={
+          <span className="uppercase">
+            Back <span className="text-pana-indigo">office</span>
+          </span>
+        }
+        description={
+          <p>
+            Everything here changes what other panas see. Nothing here is yours.
+          </p>
+        }
+      />
 
       <div className="flex flex-col gap-7">
         {ADMIN_GROUPS.map((group, index) => (

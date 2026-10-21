@@ -1,6 +1,7 @@
 'use client';
 
 import { useAdminGate } from '@/components/Admin/gate';
+import { AdminPageHeader } from '@/components/Admin/parts';
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -148,7 +149,11 @@ export default function MentoringDashboard() {
   if (loading && !metrics) {
     return (
       <div>
-        <h1 className="mb-6 text-3xl font-bold">Mentoring Dashboard</h1>
+        <AdminPageHeader
+          eyebrow="Programs"
+          title="Mentoring dashboard"
+          description={<p>Loading program metrics…</p>}
+        />
         <p>Loading metrics...</p>
       </div>
     );
@@ -157,7 +162,11 @@ export default function MentoringDashboard() {
   if (error || !metrics) {
     return (
       <div>
-        <h1 className="mb-6 text-3xl font-bold">Mentoring Dashboard</h1>
+        <AdminPageHeader
+          eyebrow="Programs"
+          title="Mentoring dashboard"
+          description={<p>Platform metrics and mentoring performance.</p>}
+        />
         <Card>
           <CardContent className="p-6">
             <p className="text-red-600">
@@ -180,12 +189,11 @@ export default function MentoringDashboard() {
 
   return (
     <>
-      <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold">Mentoring Dashboard</h1>
-        <p className="text-gray-600 dark:text-gray-300">
-          Platform metrics and mentoring program performance
-        </p>
-      </div>
+      <AdminPageHeader
+        eyebrow="Programs"
+        title="Mentoring dashboard"
+        description={<p>Platform metrics and mentoring program performance.</p>}
+      />
 
       {/* Date Range Filter */}
       <Card className="mb-8">

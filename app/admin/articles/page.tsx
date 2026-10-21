@@ -9,6 +9,7 @@
 
 import { useSession } from '@/lib/auth-client';
 import { useAdminGate } from '@/components/Admin/gate';
+import { AdminPageHeader } from '@/components/Admin/parts';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -238,15 +239,14 @@ export default function AdminArticlesPage() {
     <>
       <PageMeta title="Articles | Admin" desc="" />
 
-      <div className="mb-6">
-        <h2 className="text-3xl font-bold">Article Management</h2>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          View and moderate all community articles
-        </p>
-      </div>
+      <AdminPageHeader
+        eyebrow="Publishing"
+        title="Article management"
+        description={<p>View and moderate all community articles.</p>}
+      />
 
       {/* Filters */}
-      <div className="mb-6 flex flex-wrap gap-4">
+      <div className="border-pana-ink/10 mb-6 flex flex-wrap gap-4 rounded-2xl border bg-white p-3 shadow-[0_8px_24px_rgb(17_13_13_/_0.05)]">
         <div className="relative min-w-[240px] flex-1">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input

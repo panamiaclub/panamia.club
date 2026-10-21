@@ -1,8 +1,7 @@
 import { CommitmentsTable } from '@/components/connectors/dashboard-parts';
 import { LoadTable } from '@/components/connectors/load-table';
 import { StaffingTable } from '@/components/connectors/staffing-table';
-import { Panel, StatBand } from '@/components/Admin/parts';
-import { AdminEyebrow } from '@/components/Admin/eyebrow';
+import { AdminPageHeader, Panel, StatBand } from '@/components/Admin/parts';
 import { requireConnectorsAdmin } from '@/lib/connectors/admin-gate';
 import { listRoster } from '@/lib/connectors/roster';
 import {
@@ -163,17 +162,17 @@ export default async function AdminConnectorSchedulingPage() {
 
   return (
     <>
-      <header className="pb-6">
-        <AdminEyebrow>Community</AdminEyebrow>
-        <h1 className="mt-2 text-4xl leading-tight font-extrabold sm:text-5xl">
-          Scheduling
-        </h1>
-        <p className="text-pana-ink/70 mt-3 max-w-2xl text-sm leading-relaxed">
-          Who is carrying what, so a new task goes to somebody who can take it.
-          Load is counted from open commitments — it is not a capacity, because
-          the programme has never set one.
-        </p>
-      </header>
+      <AdminPageHeader
+        eyebrow="Community"
+        title="Scheduling"
+        description={
+          <p>
+            Who is carrying what, so a new task goes to somebody who can take
+            it. Load is counted from open commitments — it is not a capacity,
+            because the programme has never set one.
+          </p>
+        }
+      />
 
       <div className="flex flex-col gap-6">
         <StatBand stats={band} />
