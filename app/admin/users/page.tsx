@@ -255,6 +255,8 @@ export default async function AdminUsersPage({
           }
         >
           <UsersTable
+            viewerIsAdmin={session.user.isAdmin}
+            viewerIsSuperAdmin={session.user.isSuperAdmin}
             rows={result.rows.map((row) => {
               const lock = locks.get(row.id);
               return {
