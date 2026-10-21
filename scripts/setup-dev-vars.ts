@@ -30,7 +30,6 @@ const KEYS = [
   'R2_PUBLIC_URL',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
-  'STRIPE_SHIPPING_RATE_IDS',
   'SHOP_USE_MOCK_PRODUCTS',
   // Google OAuth. Both halves must be listed or `dev:setup` drops them and
   // local Google sign-in fails at the token exchange rather than at startup:
