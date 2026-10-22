@@ -16,23 +16,22 @@ Measured 2026-10-19 unless noted. Verify before acting on it; deployments move.
 | `admin.pana.social`      | **200** at `/admin`  | The admin console. Bound as a Worker Custom Domain 2026-10-07.                                                 |
 | `events.pana.social`     | **Not planned**      | Nothing. Pana Events is served from `pana.social/e` instead — see [Events is path-only](#events-is-path-only). |
 | `relay.pana.social`      | Resolves             | The **separate** `panamia-nosflare` Worker, not this one.                                                      |
-| `www.panamia.club`       | **200**              | A **different, older site** — "All Things Local In SoFlo"                                                      |
+| `www.panamia.club`       | **200**              | Alias serving this app. Auth must trust both this origin and the apex.                                         |
 | `panamia.club` (apex)    | **200** (Cloudflare) | **This app.** The live production deployment.                                                                  |
 | `social.panamia.club`    | **522**              | DNS exists, but the origin is not healthy; `PANAVERSE_SUBDOMAINS` remains off.                                 |
 
 Every app surface that is getting a subdomain has one; `events.pana.social` is deliberately not among them. The bound ones still answer on the apex as well, at `pana.social/connectors` and `pana.social/admin` — binding a subdomain adds a front door, it does not move a route. Events only ever uses that apex door, at `pana.social/e`.
 
-`www.panamia.club` is not this codebase. It is a Next.js **Pages Router** app; this one is App Router. The titles are similar enough to mislead, so tell them apart by markup:
+`www.panamia.club` now serves this codebase as an alias of the apex. It
+previously served a separate Pages Router app, so older investigations may
+describe a different topology. Authentication treats origins exactly rather
+than by cookie domain: both `https://panamia.club` and
+`https://www.panamia.club` must be present in Better Auth's `trustedOrigins`.
+Otherwise every sign-in request from the alias is rejected before Google or
+email delivery begins.
 
-```
-                                www.panamia.club   pana.social
-__NEXT_DATA__                          1               0
-/_next/static/chunks/pages/            2               0
-<script type="module">                 0               4
-self.__next_f  (RSC marker)            0               0   <- does NOT discriminate
-```
-
-Counting RSC markers is the obvious test and is worthless here — this build emits none either, so "zero RSC markers" matches both sites. Use `__NEXT_DATA__`, which only the Pages Router ships.
+Measured 2026-10-22: `/signin` on both hosts returns the Vinext app and the same
+Google/email controls.
 
 ### The surface root is `pana.social`, not `panamia.club`
 

@@ -65,6 +65,26 @@ test.describe('better-auth API mount', () => {
       expect(res.headers()['content-type']).toContain('application/json');
     }
   });
+
+  test('accepts sign-in requests from the www production alias', async ({
+    request,
+  }) => {
+    const origin = 'https://www.panamia.club';
+    const res = await request.post('/api/auth/sign-in/social', {
+      headers: {
+        Origin: origin,
+        Referer: `${origin}/signin`,
+      },
+      data: {
+        provider: 'google',
+        callbackURL: `${origin}/`,
+      },
+    });
+
+    // Both production sign-in methods were rejected here before reaching
+    // their provider because www was absent from trustedOrigins.
+    expect(res.status()).not.toBe(403);
+  });
 });
 
 test.describe('OAuth callback paths', () => {

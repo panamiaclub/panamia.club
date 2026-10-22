@@ -19,7 +19,12 @@ import {
 } from '@/lib/server/profile-owners';
 import { describeDbError } from '@/lib/server/db-error';
 import { isAdminEmail } from '@/lib/server/admin-emails';
-import { SURFACES, originFor, originForFrom } from '@/lib/panaverse/surfaces';
+import {
+  SURFACES,
+  getRootDomain,
+  originFor,
+  originForFrom,
+} from '@/lib/panaverse/surfaces';
 import { envConfig } from '@/lib/env.config';
 
 // Custom email templates for magic link authentication
@@ -1081,6 +1086,12 @@ function getBetterAuth(): BetterAuthInstance {
     trustedOrigins: [
       process.env.NEXT_PUBLIC_HOST_URL,
       process.env.BETTER_AUTH_URL,
+      // The apex and www custom domains serve the same Worker. Surface
+      // derivation only yields the apex because the main surface has no
+      // subdomain, so accept the live alias explicitly. Without this, both
+      // Google and magic-link initiation fail with "Invalid origin" for
+      // anyone who entered through www.
+      `https://www.${getRootDomain()}`,
       // Every surface signs in against this one auth instance, so each surface
       // origin has to be trusted or its sign-in requests get rejected.
       ...SURFACES.map((surface) => originFor(surface)),
