@@ -2883,6 +2883,121 @@ button.bizprofile-update-action:hover {
   color: var(--color-pana-indigo);
 }
 
+.feed-groups-shelf {
+  border: 2px solid rgb(48 62 140 / 0.16);
+  border-radius: 1.125rem;
+  background: linear-gradient(
+    135deg,
+    rgb(252 237 190 / 0.8),
+    rgb(255 255 255 / 0.9)
+  );
+  padding: 1rem;
+}
+
+.feed-groups-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.625rem;
+}
+
+.feed-group-chip {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.625rem;
+  border: 1px solid rgb(17 13 13 / 0.1);
+  border-radius: 0.875rem;
+  background-color: rgb(255 255 255 / 0.78);
+  padding: 0.625rem;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.feed-group-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgb(48 62 140 / 0.4);
+  background-color: white;
+}
+
+.feed-community-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  border-bottom: 1px solid rgb(17 13 13 / 0.1);
+  background-color: rgb(252 237 190 / 0.42);
+  padding: 0.75rem 1rem;
+  transition: background-color 0.2s ease;
+}
+
+.feed-community-header:hover {
+  background-color: rgb(252 237 190 / 0.72);
+}
+
+.group-vote-control {
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgb(17 13 13 / 0.14);
+  border-radius: 999px;
+  background-color: rgb(252 237 190 / 0.42);
+  color: rgb(17 13 13 / 0.58);
+}
+
+.group-vote-control button {
+  display: grid;
+  height: 2rem;
+  width: 2rem;
+  place-items: center;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.group-vote-control button:hover {
+  background-color: rgb(48 62 140 / 0.08);
+  color: var(--color-pana-indigo);
+}
+
+.group-vote-control button[data-active='true'] {
+  background-color: var(--color-pana-indigo);
+  color: var(--color-pana-cream);
+}
+
+.group-vote-control button:last-child[data-active='true'] {
+  background-color: var(--color-pana-ink);
+}
+
+.group-vote-control > span {
+  min-width: 2.25rem;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.group-vote-control[data-orientation='vertical'] {
+  flex-direction: column;
+  border-radius: 0.875rem;
+}
+
+.group-vote-control[data-orientation='vertical'] button {
+  height: 1.75rem;
+  width: 2.25rem;
+}
+
+.group-vote-control[data-orientation='vertical'] > span {
+  min-width: 2.25rem;
+  padding: 0.125rem 0;
+}
+
+@media (max-width: 639px) {
+  .feed-groups-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Lit state for an engagement count the reader has already acted on. The base
    `.post-action` is muted by design, so likes and boosts need somewhere to go
    once they are on. Deep pink rather than the fill pink: this paints a count,

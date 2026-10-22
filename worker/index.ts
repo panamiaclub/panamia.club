@@ -27,6 +27,10 @@ import { resolveUserIdFromHeaders } from '../auth';
 import { getActiveProfileWithActor } from '../lib/server/active-profile';
 import { PATHNAME_HEADER, SEARCH_HEADER } from '../lib/panaverse/chrome';
 import { retryPendingSmsSubscriptions } from '../lib/sms-subscriptions';
+import {
+  isLocalMockDependencyRequest,
+  isLocalMockRequest,
+} from '../lib/server/local-mock-request';
 
 // Re-export Durable Object classes so wrangler can discover them
 export { SignalingRoom } from './signaling-room';
@@ -87,6 +91,7 @@ export default {
     assertPanaverseConfigured(request.headers.get('host'));
 
     const requestUrl = new URL(request.url);
+    const hasDatabaseBinding = Boolean(env.POSTGRES_URL || env.HYPERDRIVE);
     if (requestUrl.hostname === 'shop.panamia.club') {
       const destination =
         requestUrl.pathname === '/cart' ? '/shop/cart' : '/shop';
@@ -106,6 +111,60 @@ export default {
     // that reaches those routes over HTTP rather than the Service Binding.
     setInternalAuthToken(env);
 
+    // Image optimization never reads application data. Handle it before
+    // opening the request-scoped database so fixture pages can render their
+    // local images in a fresh worktree with no database credentials.
+    //
+    // The parseImageParams validation inside handleImageOptimization
+    // normalizes backslashes and validates the origin hasn't changed.
+    // Match both /_next/image (emitted by the next/image shim) and the
+    // /_vinext/image alias — matching only one path 404s the other.
+    if (isImageOptimizationPath(requestUrl.pathname)) {
+      const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
+      const images = env.IMAGES;
+      return handleImageOptimization(
+        request,
+        {
+          fetchAsset: (path) =>
+            env.ASSETS.fetch(new Request(new URL(path, request.url))),
+          // Omitted when the binding is absent: handleImageOptimization then
+          // serves the source image through its passthrough path directly,
+          // instead of throwing once per request and logging the failure.
+          transformImage: images
+            ? async (body, { width, format, quality }) => {
+                const result = await images
+                  .input(body)
+                  .transform(width > 0 ? { width } : {})
+                  .output({ format, quality });
+                return result.response();
+              }
+            : undefined,
+        },
+        allowedWidths
+      );
+    }
+
+    if (
+      isLocalMockDependencyRequest(
+        requestUrl,
+        request.headers.get('referer'),
+        hasDatabaseBinding
+      )
+    ) {
+      const headers = { 'Cache-Control': 'no-store' };
+
+      if (requestUrl.pathname === '/api/auth/get-session') {
+        return Response.json(null, { headers });
+      }
+
+      if (requestUrl.pathname === '/api/config/turnstile') {
+        return Response.json(
+          { error: 'Turnstile is not configured for local mocks' },
+          { status: 503, headers }
+        );
+      }
+    }
+
     /* Design mocks are deliberately self-contained fixtures, but the Worker
      * normally opens a database before it hands any request to the renderer.
      * That makes `/mock/*` impossible to review in a fresh worktree unless the
@@ -114,13 +173,7 @@ export default {
      * Keep this escape hatch local and mock-only. A deployed host still fails
      * closed when its database binding is missing, and no real route can use
      * the fixture path to sidestep the request-scoped DB context. */
-    if (
-      !env.POSTGRES_URL &&
-      !env.HYPERDRIVE &&
-      requestUrl.pathname.startsWith('/mock/') &&
-      (requestUrl.hostname === 'localhost' ||
-        requestUrl.hostname.endsWith('.localhost'))
-    ) {
+    if (isLocalMockRequest(requestUrl, hasDatabaseBinding)) {
       const routed = new Request(request);
       routed.headers.set(PATHNAME_HEADER, requestUrl.pathname);
       routed.headers.set(SEARCH_HEADER, requestUrl.search);
@@ -183,36 +236,6 @@ export default {
         const id = env.SIGNALING_ROOM.idFromName(roomId);
         const stub = env.SIGNALING_ROOM.get(id);
         return stub.fetch(request);
-      }
-
-      // Image optimization via Cloudflare Images binding.
-      // The parseImageParams validation inside handleImageOptimization
-      // normalizes backslashes and validates the origin hasn't changed.
-      // Match both /_next/image (emitted by the next/image shim) and the
-      // /_vinext/image alias — matching only one path 404s the other.
-      if (isImageOptimizationPath(url.pathname)) {
-        const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
-        const images = env.IMAGES;
-        return handleImageOptimization(
-          request,
-          {
-            fetchAsset: (path) =>
-              env.ASSETS.fetch(new Request(new URL(path, request.url))),
-            // Omitted when the binding is absent: handleImageOptimization then
-            // serves the source image through its passthrough path directly,
-            // instead of throwing once per request and logging the failure.
-            transformImage: images
-              ? async (body, { width, format, quality }) => {
-                  const result = await images
-                    .input(body)
-                    .transform(width > 0 ? { width } : {})
-                    .output({ format, quality });
-                  return result.response();
-                }
-              : undefined,
-          },
-          allowedWidths
-        );
       }
 
       // Panaverse host routing: a surface hostname serves that surface's front

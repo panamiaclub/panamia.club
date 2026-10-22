@@ -24,6 +24,7 @@ import { GroupHero } from './group-hero';
 import { GroupRail } from './group-rail';
 import { GroupManage } from './group-manage';
 import { EventCard, MemberRow } from './group-panels';
+import { GroupComposer } from './group-composer';
 
 /* Design mock for a Pana Social group home page.
  *
@@ -202,6 +203,10 @@ export function GroupMock({ surfaces }: { surfaces: MockSurface[] }) {
                 >
                   {activeTab === 'posts' && (
                     <div className="space-y-4">
+                      {isMember ? (
+                        <GroupComposer group={group} viewer={viewer} />
+                      ) : null}
+
                       {/* Non-members read but cannot post. The roadmap's
                           write path checks membership; saying so here keeps
                           the mock honest about it. */}
@@ -212,7 +217,11 @@ export function GroupMock({ surfaces }: { surfaces: MockSurface[] }) {
                         </p>
                       )}
                       {MOCK_GROUP_POSTS.map((post) => (
-                        <FeedPostCard key={post.id} post={post} />
+                        <FeedPostCard
+                          key={post.id}
+                          post={post}
+                          showGroupContext={false}
+                        />
                       ))}
                       <div className="feed-end mt-8">
                         <span>That&apos;s the whole group so far</span>
