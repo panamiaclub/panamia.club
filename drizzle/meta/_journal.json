@@ -498,6 +498,13 @@
       "when": 1792627200000,
       "tag": "0069_sms_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1792713600000,
+      "tag": "0070_directory_referrals",
+      "breakpoints": true
     }
   ]
 }

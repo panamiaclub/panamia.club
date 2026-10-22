@@ -685,6 +685,21 @@ export const verification = pgTable('verification_tokens', {
 });
 
 // =============================================================================
+// Directory Referrals
+// =============================================================================
+
+export const referralCodes = pgTable('referral_codes', {
+  code: text('code').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+// =============================================================================
 // Consent Receipts
 // =============================================================================
 // Phase 3 consent infrastructure. Each receipt records a user's consent to a
@@ -968,6 +983,67 @@ export const profiles = pgTable(
       table.pendingOwnerEmail
     ),
   })
+);
+
+export const referralAttributions = pgTable(
+  'referral_attributions',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    referralCode: text('referral_code')
+      .notNull()
+      .references(() => referralCodes.code, { onDelete: 'cascade' }),
+    referrerUserId: text('referrer_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    referredUserId: text('referred_user_id')
+      .unique()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    firstSeenAt: timestamp('first_seen_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    attachedAt: timestamp('attached_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('referral_attributions_referrer_idx').on(
+      table.referrerUserId,
+      table.firstSeenAt.desc()
+    ),
+  ]
+);
+
+export const referralEvents = pgTable(
+  'referral_events',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    attributionId: text('attribution_id')
+      .notNull()
+      .references(() => referralAttributions.id, { onDelete: 'cascade' }),
+    eventType: text('event_type').notNull(),
+    referredUserId: text('referred_user_id').references(() => users.id, {
+      onDelete: 'cascade',
+    }),
+    profileId: text('profile_id').references(() => profiles.id, {
+      onDelete: 'cascade',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex('referral_events_attribution_type_unique').on(
+      table.attributionId,
+      table.eventType
+    ),
+    index('referral_events_type_created_at_idx').on(
+      table.eventType,
+      table.createdAt.desc()
+    ),
+  ]
 );
 
 // =============================================================================
@@ -2907,6 +2983,19 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   screennameHistory: many(screennameHistory),
   consentReceipts: many(consentReceipts),
   profilesOwned: many(profileOwners),
+  referralCode: one(referralCodes, {
+    fields: [users.id],
+    references: [referralCodes.userId],
+  }),
+  referralsGiven: many(referralAttributions, {
+    relationName: 'referralAttributionReferrer',
+  }),
+  referralReceived: one(referralAttributions, {
+    fields: [users.id],
+    references: [referralAttributions.referredUserId],
+    relationName: 'referralAttributionReferredUser',
+  }),
+  referralEvents: many(referralEvents),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -2928,6 +3017,53 @@ export const consentReceiptsRelations = relations(
 );
 
 export const verificationRelations = relations(verification, () => ({}));
+
+export const referralCodesRelations = relations(
+  referralCodes,
+  ({ one, many }) => ({
+    user: one(users, {
+      fields: [referralCodes.userId],
+      references: [users.id],
+    }),
+    attributions: many(referralAttributions),
+  })
+);
+
+export const referralAttributionsRelations = relations(
+  referralAttributions,
+  ({ one, many }) => ({
+    referrer: one(users, {
+      fields: [referralAttributions.referrerUserId],
+      references: [users.id],
+      relationName: 'referralAttributionReferrer',
+    }),
+    referredUser: one(users, {
+      fields: [referralAttributions.referredUserId],
+      references: [users.id],
+      relationName: 'referralAttributionReferredUser',
+    }),
+    code: one(referralCodes, {
+      fields: [referralAttributions.referralCode],
+      references: [referralCodes.code],
+    }),
+    events: many(referralEvents),
+  })
+);
+
+export const referralEventsRelations = relations(referralEvents, ({ one }) => ({
+  attribution: one(referralAttributions, {
+    fields: [referralEvents.attributionId],
+    references: [referralAttributions.id],
+  }),
+  referredUser: one(users, {
+    fields: [referralEvents.referredUserId],
+    references: [users.id],
+  }),
+  profile: one(profiles, {
+    fields: [referralEvents.profileId],
+    references: [profiles.id],
+  }),
+}));
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   actorUser: one(users, {
@@ -2954,6 +3090,7 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   venuesOperated: many(venues),
   eventsHosted: many(events),
   eventAttendeeRows: many(eventAttendees),
+  referralEvents: many(referralEvents),
 }));
 
 export const profileSignalsRelations = relations(profileSignals, ({ one }) => ({

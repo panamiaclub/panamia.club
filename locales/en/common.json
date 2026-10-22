@@ -31,6 +31,8 @@
     "invitationWorking": "Saving…",
     "getListed": "Get listed",
     "getListedHint": "Add a shop, studio, band or project",
+    "referralLink": "Referral link",
+    "referralLinkHint": "Invite someone into Pana",
     "loadFailed": "Couldn't load your accounts",
     "tryAgain": "Try again",
     "yourGroups": "Groups you run",

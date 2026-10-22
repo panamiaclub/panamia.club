@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { profiles } from '@/lib/schema';
+import { profiles, referralEvents } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { verifyTurnstile } from '@/lib/turnstile';
 import { sendTemplateEmail } from '@/lib/email';
 import { createUniqueString } from '@/lib/standardized';
 import { BUSINESS_INTAKE_SOURCE } from '@/lib/server/profile-owners';
-import { sendMagicLinkTo } from '@/auth';
+import { auth, sendMagicLinkTo } from '@/auth';
 import { profileCategoryList } from '@/lib/lists';
 import type { ProfileDescriptions } from '@/lib/interfaces';
+import { REFERRAL_COOKIE } from '@/lib/referrals';
+import {
+  attachReferralToUser,
+  getActiveCookieAttribution,
+  resolveReferralAttribution,
+} from '@/lib/server/referrals';
 
 /**
  * Public business intake — the front door for getting listed.
@@ -281,60 +287,112 @@ export async function POST(request: NextRequest) {
       hearaboutus,
     };
 
-    await db.insert(profiles).values({
-      // No owner yet — this is the whole point of intake. The claim flow
-      // attaches a user later.
-      userId: null,
-      name,
-      email,
-      // Recorded, not honoured. This is an attacker-writable field on a public
-      // form, so it only ever becomes an invitation the named person can
-      // accept or dismiss once signed in — never an ownership grant. See
-      // lib/server/pending-listing-owner.ts.
-      pendingOwnerEmail,
-      phoneNumber: phoneNumber || null,
-      pronouns: pronouns || null,
-      addressLine1: addressLine1 || null,
-      addressLine2: addressLine2 || null,
-      addressLocality: addressLocality || null,
-      addressRegion: addressRegion || null,
-      addressPostalCode: addressPostalCode || null,
-      addressCountry: hasStorefront ? 'US' : null,
-      addressHours: addressHours || null,
-      active: false,
-      descriptions,
-      socials: { instagram, website },
-      status: {
-        submitted: new Date().toISOString(),
-        access: createUniqueString(),
-        // Marks this row as a business listing rather than a personal profile
-        // waiting for its owner. Implicit auto-claim at sign-in skips it so
-        // that claiming a business never overwrites someone's own identity —
-        // see lib/server/profile-owners.ts.
-        source: BUSINESS_INTAKE_SOURCE,
-        // An unclaimed row has no user to carry `users.accountType`, and the
-        // eligibility answer is about the submission rather than the business.
-        // Both are kept here as a record of what was submitted, for review.
-        //
-        // Do not copy accountType onto the claimant's user row when this
-        // listing is claimed. A listing is attached through profile_owners and
-        // the claimant's own account stays personal; writing it back would
-        // publish their identity profile in the directory, which is exactly
-        // the person/business conflation the become-a-pana removal undid. See
-        // app/api/listings/claim/verify/route.ts.
-        accountType,
-        locallyBased,
-        agreedToTermsAt: new Date().toISOString(),
-      },
+    const submittedAt = new Date();
+    const session = await auth();
+    const cookieAttribution = await getActiveCookieAttribution(request);
+    if (session?.user?.id && cookieAttribution) {
+      await attachReferralToUser(cookieAttribution.id, session.user.id);
+    }
+    const referralAttribution = await resolveReferralAttribution(
+      request,
+      session?.user?.id
+    );
+
+    await db.transaction(async (tx) => {
+      const [createdProfile] = await tx
+        .insert(profiles)
+        .values({
+          // No owner yet — this is the whole point of intake. The claim flow
+          // attaches a user later.
+          userId: null,
+          name,
+          email,
+          // Recorded, not honoured. This is an attacker-writable field on a public
+          // form, so it only ever becomes an invitation the named person can
+          // accept or dismiss once signed in — never an ownership grant. See
+          // lib/server/pending-listing-owner.ts.
+          pendingOwnerEmail,
+          phoneNumber: phoneNumber || null,
+          pronouns: pronouns || null,
+          addressLine1: addressLine1 || null,
+          addressLine2: addressLine2 || null,
+          addressLocality: addressLocality || null,
+          addressRegion: addressRegion || null,
+          addressPostalCode: addressPostalCode || null,
+          addressCountry: hasStorefront ? 'US' : null,
+          addressHours: addressHours || null,
+          active: false,
+          descriptions,
+          socials: { instagram, website },
+          status: {
+            submitted: submittedAt.toISOString(),
+            access: createUniqueString(),
+            // Marks this row as a business listing rather than a personal profile
+            // waiting for its owner. Implicit auto-claim at sign-in skips it so
+            // that claiming a business never overwrites someone's own identity —
+            // see lib/server/profile-owners.ts.
+            source: BUSINESS_INTAKE_SOURCE,
+            // An unclaimed row has no user to carry `users.accountType`, and the
+            // eligibility answer is about the submission rather than the business.
+            // Both are kept here as a record of what was submitted, for review.
+            //
+            // Do not copy accountType onto the claimant's user row when this
+            // listing is claimed. A listing is attached through profile_owners and
+            // the claimant's own account stays personal; writing it back would
+            // publish their identity profile in the directory, which is exactly
+            // the person/business conflation the become-a-pana removal undid. See
+            // app/api/listings/claim/verify/route.ts.
+            accountType,
+            locallyBased,
+            agreedToTermsAt: submittedAt.toISOString(),
+          },
+        })
+        .returning({ id: profiles.id });
+
+      if (referralAttribution && createdProfile) {
+        await tx
+          .insert(referralEvents)
+          .values({
+            attributionId: referralAttribution.id,
+            eventType: 'directory_submitted',
+            referredUserId:
+              session?.user?.id ?? referralAttribution.referredUserId,
+            profileId: createdProfile.id,
+            createdAt: submittedAt,
+          })
+          .onConflictDoNothing({
+            target: [referralEvents.attributionId, referralEvents.eventType],
+          });
+      }
     });
 
     await sendSubmissionEmails(email);
 
     if (pendingOwnerEmail) {
-      await sendOwnerMagicLink(pendingOwnerEmail, request);
+      const callbackParams = new URLSearchParams({ next: '/account' });
+      if (referralAttribution) {
+        callbackParams.set('attribution', referralAttribution.id);
+      }
+      await sendOwnerMagicLink(
+        pendingOwnerEmail,
+        request,
+        referralAttribution
+          ? `/referral/continue?${callbackParams.toString()}`
+          : '/account'
+      );
     }
 
-    return NextResponse.json({ success: true }, { status: 201 });
+    const response = NextResponse.json({ success: true }, { status: 201 });
+    if (session?.user?.id && cookieAttribution) {
+      response.cookies.set(REFERRAL_COOKIE, '', {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 0,
+      });
+    }
+    return response;
   } catch (error) {
     console.error('[listings/intake] submission failed', error);
     return NextResponse.json(
@@ -364,10 +422,11 @@ export async function POST(request: NextRequest) {
  */
 async function sendOwnerMagicLink(
   email: string,
-  request: NextRequest
+  request: NextRequest,
+  callbackUrl: string
 ): Promise<void> {
   try {
-    await sendMagicLinkTo(email, request.headers, '/account');
+    await sendMagicLinkTo(email, request.headers, callbackUrl);
   } catch (error) {
     console.error('[listings/intake] owner magic link failed', error);
   }

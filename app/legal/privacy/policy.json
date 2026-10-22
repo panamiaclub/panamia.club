@@ -2,7 +2,7 @@
   "@context": "https://schema.org",
   "@type": "PrivacyPolicy",
   "name": "Pana MIA Club Privacy Policy",
-  "version": "0.2",
+  "version": "0.3",
   "status": "draft",
   "effectiveDate": null,
   "url": "https://pana.social/legal/privacy",
@@ -62,6 +62,32 @@
             "sharedWith": "Public / ActivityPub",
             "prose": "Profile information (contact, address, descriptions, images, social links)",
             "blurb": "Your public directory listing: contact info, address, description, photos, and social links."
+          }
+        },
+        {
+          "name": "community_referrals",
+          "label": "Community Referrals",
+          "module": "profiles",
+          "data": [
+            "referral_code",
+            "referrer_account",
+            "referred_account",
+            "referred_directory_application",
+            "referred_connector_membership",
+            "30_day_browser_attribution"
+          ],
+          "source": "user_action",
+          "purpose": "measure_community_referrals",
+          "retention": "active_account_or_listing_lifetime",
+          "note": "A referral link stores an attribution identifier in the visitor's browser for up to 30 days. Account creation, directory submission, and accepted Community Connector membership are recorded as independent milestones. Once an account is connected, its referral attribution remains attached for later milestones.",
+          "display": {
+            "icon": "share-2",
+            "source": "Referral link activity",
+            "purpose": "Measure community referrals",
+            "retention": "Account or listing lifetime",
+            "sharedWith": "Referring member (their count) / site administrators",
+            "prose": "Community referral codes and milestone attribution. An attribution identifier is remembered in the visitor's browser for up to 30 days. If they connect a Pana account, that attribution stays with the account so account creation, directory submission, and accepted Community Connector membership can each be counted once.",
+            "blurb": "Which member referred someone who created an account, submitted a directory application, or became a Community Connector."
           }
         },
         {

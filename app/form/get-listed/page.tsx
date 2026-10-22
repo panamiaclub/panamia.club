@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { CheckCircle2, Send, Shield, Store } from 'lucide-react';
+import { CheckCircle2, Send, Shield, Store, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
 import { profileCategoryList } from '@/lib/lists';
@@ -324,11 +324,22 @@ function ListYourBusinessForm() {
                   {t('successBody', { email: submittedEmail })}
                 </p>
                 {submittedPersonalEmail && (
-                  <p className="text-pana-ink/75 dark:text-muted-foreground text-lg">
-                    {t('successPersonalEmail', {
-                      email: submittedPersonalEmail,
-                    })}
-                  </p>
+                  <div className="border-pana-indigo/20 bg-pana-blue/15 mt-5 flex gap-3 rounded-xl border p-4 text-left">
+                    <UserPlus
+                      className="text-pana-indigo mt-0.5 h-5 w-5 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <div>
+                      <p className="font-extrabold">
+                        {t('successAccountTitle')}
+                      </p>
+                      <p className="text-pana-ink/75 dark:text-muted-foreground mt-1 text-sm">
+                        {t('successPersonalEmail', {
+                          email: submittedPersonalEmail,
+                        })}
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -336,8 +347,12 @@ function ListYourBusinessForm() {
                 <h2 className="mb-3 font-extrabold">{t('successNextTitle')}</h2>
                 <ol className="text-pana-ink/75 dark:text-muted-foreground list-decimal space-y-2 pl-5 text-sm">
                   <li>{t('successNext1')}</li>
+                  <li>
+                    {submittedPersonalEmail
+                      ? t('successNextAccount')
+                      : t('successNextNoAccount')}
+                  </li>
                   <li>{t('successNext2')}</li>
-                  <li>{t('successNext3')}</li>
                 </ol>
               </div>
 
@@ -596,45 +611,64 @@ function ListYourBusinessForm() {
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="personal-email">
-                    {t('personalEmailLabel')}
-                  </Label>
-                  <Input
-                    id="personal-email"
-                    name="personalEmail"
-                    type="email"
-                    maxLength={100}
-                    placeholder={t('personalEmailPlaceholder')}
-                    value={personalEmail}
-                    onChange={(e) => {
-                      setPersonalEmail(e.target.value);
-                      if (personalEmailError) setPersonalEmailError('');
-                    }}
-                    disabled={isSubmitting}
-                    aria-invalid={personalEmailError ? true : undefined}
-                    aria-describedby={
-                      personalEmailError
-                        ? 'personal-email-error'
-                        : 'personal-email-note'
-                    }
-                  />
-                  {personalEmailError ? (
-                    <p
-                      id="personal-email-error"
-                      role="alert"
-                      className="text-destructive text-sm"
-                    >
-                      {personalEmailError}
-                    </p>
-                  ) : (
-                    <p
-                      id="personal-email-note"
-                      className="text-muted-foreground text-sm"
-                    >
-                      {t('personalEmailNote')}
-                    </p>
-                  )}
+                <div className="border-pana-indigo/20 bg-pana-blue/10 space-y-4 rounded-xl border p-4 sm:p-5">
+                  <div className="flex gap-3">
+                    <UserPlus
+                      className="text-pana-indigo mt-0.5 h-5 w-5 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <div>
+                      <p className="font-extrabold">
+                        {t('accountOptionTitle')}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-sm">
+                        {t('accountOptionBody')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="personal-email">
+                      {t('personalEmailLabel')}
+                    </Label>
+                    <Input
+                      id="personal-email"
+                      name="personalEmail"
+                      type="email"
+                      maxLength={100}
+                      placeholder={t('personalEmailPlaceholder')}
+                      value={personalEmail}
+                      onChange={(e) => {
+                        setPersonalEmail(e.target.value);
+                        if (personalEmailError) setPersonalEmailError('');
+                      }}
+                      disabled={isSubmitting}
+                      aria-invalid={personalEmailError ? true : undefined}
+                      aria-describedby={
+                        personalEmailError
+                          ? 'personal-email-error'
+                          : 'personal-email-note'
+                      }
+                    />
+                    {personalEmailError ? (
+                      <p
+                        id="personal-email-error"
+                        role="alert"
+                        className="text-destructive text-sm"
+                      >
+                        {personalEmailError}
+                      </p>
+                    ) : (
+                      <p
+                        id="personal-email-note"
+                        className="text-muted-foreground text-sm"
+                      >
+                        {personalEmail
+                          ? t('personalEmailReady', { email: personalEmail })
+                          : t('personalEmailNote')}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
