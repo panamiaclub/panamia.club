@@ -79,6 +79,9 @@ export const inventory: Record<TableExport, Classification> = {
     'crm', // ghl_contact_id
     'visible_profile_info',
   ],
+  referralCodes: ['community_referrals'],
+  referralAttributions: ['community_referrals'],
+  referralEvents: ['community_referrals'],
   // Staff-authored message and aggregate delivery totals. The recipient rows
   // below carry the profile association; the campaign itself carries the
   // exact communication sent and the staff account that initiated it.

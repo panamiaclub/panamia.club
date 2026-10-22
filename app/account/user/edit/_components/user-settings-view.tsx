@@ -47,6 +47,7 @@ import {
 import { SETTINGS_SECTIONS, SettingsNav, type SectionId } from './settings-nav';
 import { AvatarEditor } from './avatar-editor';
 import { SmsSubscriptionCard } from './sms-subscription-card';
+import { ReferralCard } from './referral-card';
 
 // Channels the app manages, spelled as GHL requires. Mirrors GHL_DND_CHANNELS
 // in lib/ghl.ts; kept local so this client component does not pull in the
@@ -1130,6 +1131,11 @@ export function UserSettingsView({
                   </>
                 )}
               </div>
+            </Section>
+
+            {/* ---- Referrals -------------------------------------------- */}
+            <Section id="referrals">
+              <ReferralCard />
             </Section>
 
             {/* ---- Data -------------------------------------------------- */}

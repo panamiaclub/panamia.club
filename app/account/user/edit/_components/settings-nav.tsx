@@ -7,16 +7,13 @@ import {
   KeyRound,
   Megaphone,
   Scale,
+  Share2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { SettingScope } from './settings-primitives';
 
 export type SectionId =
-  | 'identity'
-  | 'signin'
-  | 'publishing'
-  | 'messages'
-  | 'data';
+  'identity' | 'signin' | 'referrals' | 'publishing' | 'messages' | 'data';
 
 export interface SettingsSection {
   id: SectionId;
@@ -54,6 +51,14 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     lede: 'One email signs you into every surface. Your Nostr keys sign what you publish, and only you hold them.',
     scope: 'everywhere',
     icon: KeyRound,
+  },
+  {
+    id: 'referrals',
+    label: 'Referrals',
+    heading: 'Bring someone into Pana',
+    lede: 'Share one stable invitation. It independently tracks when someone creates an account, submits a directory application, or becomes a Community Connector.',
+    scope: 'everywhere',
+    icon: Share2,
   },
   {
     id: 'publishing',

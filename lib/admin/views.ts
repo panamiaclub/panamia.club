@@ -31,6 +31,7 @@ import {
   MessageSquareText,
   ShoppingBag,
   Store,
+  UserPlus,
   UsersRound,
 } from 'lucide-react';
 
@@ -166,6 +167,20 @@ export const ADMIN_VIEWS: readonly AdminView[] = [
     does: ['Download every profile as CSV'],
     status: 'live',
     icon: Download,
+  },
+  {
+    id: 'referrals',
+    name: 'Community referrals',
+    href: '/admin/referrals',
+    group: 'community',
+    blurb: 'Who is bringing new people into Pana, and what they go on to do.',
+    does: [
+      'Rank members by successful referrals',
+      'Compare account, directory and Connector milestones',
+      'See when each member most recently produced a milestone',
+    ],
+    status: 'live',
+    icon: UserPlus,
   },
   {
     id: 'connectors',

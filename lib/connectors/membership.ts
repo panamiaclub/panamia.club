@@ -1,7 +1,7 @@
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import { profiles } from '@/lib/schema';
+import { profiles, referralAttributions, referralEvents } from '@/lib/schema';
 import {
   HOUSES,
   PODS,
@@ -345,29 +345,58 @@ export async function decideConnectorApplication(
   decision: 'active' | 'declined',
   adminUserId: string
 ): Promise<ProfileConnector | null> {
-  const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.id, profileId),
-    columns: { id: true, connector: true },
+  return db.transaction(async (tx) => {
+    const [profile] = await tx
+      .select({
+        id: profiles.id,
+        userId: profiles.userId,
+        connector: profiles.connector,
+      })
+      .from(profiles)
+      .where(eq(profiles.id, profileId))
+      .limit(1);
+    if (!profile) return null;
+
+    const membership = parseConnector(profile.connector);
+    if (!membership || membership.status !== 'pending') return null;
+
+    const decided: ProfileConnector = {
+      ...membership,
+      status: decision,
+      decidedAt: new Date().toISOString(),
+      decidedBy: adminUserId,
+      offboardedAt: null,
+      offboardedBy: null,
+      offboardReason: null,
+    };
+
+    await tx
+      .update(profiles)
+      .set({ connector: decided })
+      .where(eq(profiles.id, profileId));
+
+    if (decision === 'active' && profile.userId) {
+      const [attribution] = await tx
+        .select({ id: referralAttributions.id })
+        .from(referralAttributions)
+        .where(eq(referralAttributions.referredUserId, profile.userId))
+        .limit(1);
+
+      if (attribution) {
+        await tx
+          .insert(referralEvents)
+          .values({
+            attributionId: attribution.id,
+            eventType: 'connector_active',
+            referredUserId: profile.userId,
+            profileId,
+          })
+          .onConflictDoNothing({
+            target: [referralEvents.attributionId, referralEvents.eventType],
+          });
+      }
+    }
+
+    return decided;
   });
-  if (!profile) return null;
-
-  const membership = parseConnector(profile.connector);
-  if (!membership || membership.status !== 'pending') return null;
-
-  const decided: ProfileConnector = {
-    ...membership,
-    status: decision,
-    decidedAt: new Date().toISOString(),
-    decidedBy: adminUserId,
-    offboardedAt: null,
-    offboardedBy: null,
-    offboardReason: null,
-  };
-
-  await db
-    .update(profiles)
-    .set({ connector: decided })
-    .where(eq(profiles.id, profileId));
-
-  return decided;
 }

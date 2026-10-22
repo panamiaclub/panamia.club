@@ -8,6 +8,7 @@ import {
   Plus,
   RefreshCw,
   Settings,
+  Share2,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -433,6 +434,26 @@ export function IdentityMenu() {
             {error && <p className={styles.error}>{error}</p>}
 
             <div className={styles.separator} />
+
+            <Link
+              href="/account/user/edit#referrals"
+              role="menuitem"
+              data-menu-row
+              onClick={() => close(false)}
+              className={styles.row}
+            >
+              <span className={styles.addIcon} aria-hidden="true">
+                <Share2 className="h-4 w-4" />
+              </span>
+              <span className={styles.rowMeta}>
+                <span className={styles.rowName}>
+                  {t('identity.referralLink')}
+                </span>
+                <span className={styles.rowHandle}>
+                  {t('identity.referralLinkHint')}
+                </span>
+              </span>
+            </Link>
 
             <Link
               href="/form/get-listed"
