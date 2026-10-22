@@ -170,6 +170,8 @@ export interface MockGroup {
   handle: string;
   /** socialGroups.name */
   name: string;
+  /** socialActors.iconUrl, shown anywhere the group is the authoring context. */
+  avatar: string;
   /** socialGroups.visibility.
    *
    * Load-bearing in the composer, not a badge. `visibleGroupStatuses` reads
@@ -179,6 +181,10 @@ export interface MockGroup {
   visibility: 'public' | 'private';
   /** socialGroupMembers rows at status='active'. */
   memberCount: number;
+  /** Unread statuses since the viewer last opened the group. */
+  unreadCount: number;
+  /** Short activity summary for the front-page group shelf. */
+  activity: string;
 }
 
 /** The six in `MOCK_VIEWER.groups`, named so the count and the list agree.
@@ -190,43 +196,61 @@ export const MOCK_MY_GROUPS: MockGroup[] = [
     id: 'group-1',
     handle: 'littlehaitimakers',
     name: 'Little Haiti Makers',
+    avatar: '/img/impact/zine-series.webp',
     visibility: 'public',
     memberCount: 212,
+    unreadCount: 8,
+    activity: '31 posts this week',
   },
   {
     id: 'group-2',
     handle: 'heatwavevisions',
     name: 'Heatwave Visions',
+    avatar: '/img/impact/heatwave-visions.webp',
     visibility: 'private',
     memberCount: 34,
+    unreadCount: 3,
+    activity: 'Critique on Tuesday',
   },
   {
     id: 'group-3',
     handle: 'bikesofbroward',
     name: 'Bikes of Broward',
+    avatar: '/img/directory/services-01.jpg',
     visibility: 'public',
     memberCount: 478,
+    unreadCount: 0,
+    activity: 'Ride this Saturday',
   },
   {
     id: 'group-4',
     handle: 'surplusandswap',
     name: 'Surplus & Swap',
+    avatar: '/img/directory/market-01.jpg',
     visibility: 'public',
     memberCount: 903,
+    unreadCount: 12,
+    activity: '64 new listings',
   },
   {
     id: 'group-5',
     handle: 'vendorsunion',
     name: 'Vendors Union 305',
+    avatar: '/img/impact/community-group.webp',
     visibility: 'private',
     memberCount: 61,
+    unreadCount: 1,
+    activity: 'Permit thread updated',
   },
   {
     id: 'group-6',
     handle: 'nightmarketcrew',
     name: 'Night Market Crew',
+    avatar: '/img/impact/hero-mixer.webp',
     visibility: 'private',
     memberCount: 18,
+    unreadCount: 0,
+    activity: 'Next market in 9 days',
   },
 ];
 
@@ -565,18 +589,18 @@ export const MOCK_EMPTY_STEPS: MockEmptyStep[] = [
 export const FEED_FILTERS: { id: FeedFilter; label: string; hint: string }[] = [
   {
     id: 'panas',
-    label: 'Panas',
-    hint: 'Posts from the people you follow who follow you back.',
+    label: 'Home',
+    hint: 'The best new posts from your Panas and the groups you joined.',
   },
   {
     id: 'everyone',
-    label: 'Everyone',
-    hint: 'Every public post from Pana Mia members, newest first.',
+    label: 'Nearby',
+    hint: 'Public posts from Pana Mia members around Miami-Dade and Broward.',
   },
   {
     id: 'groups',
-    label: 'Groups',
-    hint: 'Posts addressed to the groups you belong to.',
+    label: 'My groups',
+    hint: 'Every new post from the communities you belong to, newest first.',
   },
   {
     id: 'voice',

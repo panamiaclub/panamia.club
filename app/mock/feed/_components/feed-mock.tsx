@@ -19,6 +19,8 @@ import { FeedPostCard } from './feed-post-card';
 import { FeedRail } from './feed-rail';
 import { FeedEmpty } from './feed-empty';
 import { FeedCalendar } from './feed-calendar';
+import { FeedGroupsShelf } from './feed-groups-shelf';
+import { FeedGroupEvent } from './feed-group-event';
 import {
   DirectoryModule,
   EventsModule,
@@ -99,6 +101,8 @@ export function FeedMock({ surfaces }: { surfaces: MockSurface[] }) {
 
                 {state === 'populated' ? (
                   <>
+                    <FeedGroupsShelf />
+
                     <div
                       className="mt-6"
                       role="tablist"
@@ -156,7 +160,8 @@ export function FeedMock({ surfaces }: { surfaces: MockSurface[] }) {
                         withModules(
                           posts.map((post) => (
                             <FeedPostCard key={post.id} post={post} />
-                          ))
+                          )),
+                          filter
                         )
                       ) : (
                         <FilterEmpty label={activeFilter?.label ?? ''} />
@@ -199,12 +204,15 @@ export function FeedMock({ surfaces }: { surfaces: MockSurface[] }) {
    or fourth card — not of any particular post. Injecting after the fact also
    means a filter that returns two posts still gets a module, instead of
    inheriting whatever position a longer list would have used. */
-function withModules(cards: ReactNode[]): ReactNode[] {
+function withModules(cards: ReactNode[], filter: FeedFilter): ReactNode[] {
   const out: ReactNode[] = [];
 
   cards.forEach((card, index) => {
     out.push(card);
 
+    if (index === 0 && (filter === 'panas' || filter === 'groups')) {
+      out.push(<FeedGroupEvent key="group-event" />);
+    }
     if (index === 1) {
       out.push(<SuggestionsModule key="module-panas" />);
     }
@@ -219,7 +227,7 @@ function withModules(cards: ReactNode[]): ReactNode[] {
   /* Short lists would otherwise end on a post with nothing after it. One
      module is the difference between "that's everything" and "that's all we
      have" — the second is the feeling the current feed gives off. */
-  if (cards.length > 0 && cards.length <= 2) {
+  if (cards.length === 1) {
     out.push(<SuggestionsModule key="module-panas-tail" />);
   }
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   BadgeCheck,
   ChevronDown,
@@ -17,7 +18,11 @@ import {
   Share2,
   Users,
 } from 'lucide-react';
-import type { MockAttachment, MockPost } from '../_data/mock-feed';
+import {
+  MOCK_MY_GROUPS,
+  type MockAttachment,
+  type MockPost,
+} from '../_data/mock-feed';
 
 /* One status in the timeline.
  *
@@ -28,9 +33,19 @@ import type { MockAttachment, MockPost } from '../_data/mock-feed';
  * Client component because three things here are genuinely interactive at mock
  * fidelity: the content-warning disclosure, the like state, and the voice memo
  * transport. Everything else is static markup. */
-export function FeedPostCard({ post }: { post: MockPost }) {
+export function FeedPostCard({
+  post,
+  showGroupContext = true,
+}: {
+  post: MockPost;
+  showGroupContext?: boolean;
+}) {
   const [cwOpen, setCwOpen] = useState(false);
   const [liked, setLiked] = useState(Boolean(post.liked));
+  const [vote, setVote] = useState<-1 | 0 | 1>(post.liked ? 1 : 0);
+  const group = post.group
+    ? MOCK_MY_GROUPS.find((entry) => entry.name === post.group)
+    : undefined;
 
   /* The CW hides the body *and* the media. Revealing the text but leaving a
      photograph on screen would defeat the entire point of the warning. */
@@ -40,9 +55,44 @@ export function FeedPostCard({ post }: { post: MockPost }) {
      it back from state. Otherwise unliking leaves the total untouched and the
      number reads as decoration. */
   const likesWithoutViewer = post.likesCount - (post.liked ? 1 : 0);
+  const visibleScore = likesWithoutViewer + vote;
 
   return (
     <article className="profile-card p-4 sm:p-5">
+      {post.group && showGroupContext ? (
+        <Link
+          href="/mock/group"
+          className="feed-community-header -m-4 mb-4 sm:-m-5 sm:mb-5"
+        >
+          <span className="border-pana-ink/10 relative h-9 w-9 flex-none overflow-hidden rounded-lg border">
+            {group ? (
+              <Image
+                src={group.avatar}
+                alt=""
+                fill
+                sizes="36px"
+                className="object-cover"
+              />
+            ) : (
+              <Users className="text-pana-indigo h-4 w-4" aria-hidden="true" />
+            )}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[13px] font-black">
+              {post.group}
+            </span>
+            <span className="text-pana-ink/50 block truncate text-[11px] font-bold">
+              {group
+                ? `${group.memberCount} members · ${group.activity}`
+                : 'Community post'}
+            </span>
+          </span>
+          <span className="text-pana-indigo text-[11px] font-black">
+            View group
+          </span>
+        </Link>
+      ) : null}
+
       {/* Attribution for a boost sits above the author row, because the reason
           this post is in the feed is the first thing that has to be explained —
           otherwise a stranger's post looks like a bug. */}
@@ -54,14 +104,46 @@ export function FeedPostCard({ post }: { post: MockPost }) {
       )}
 
       <div className="flex items-start gap-3">
-        <div className="border-pana-ink/10 relative h-11 w-11 flex-none overflow-hidden rounded-full border-2">
-          <Image
-            src={post.author.avatar}
-            alt=""
-            fill
-            sizes="44px"
-            className="object-cover"
-          />
+        <div className="flex flex-none flex-col items-center gap-2">
+          <div className="border-pana-ink/10 relative h-11 w-11 overflow-hidden rounded-full border-2">
+            <Image
+              src={post.author.avatar}
+              alt=""
+              fill
+              sizes="44px"
+              className="object-cover"
+            />
+          </div>
+
+          {post.group ? (
+            <div
+              className="group-vote-control"
+              data-orientation="vertical"
+              aria-label="Community voting"
+            >
+              <button
+                type="button"
+                data-active={vote === 1}
+                aria-pressed={vote === 1}
+                onClick={() => setVote((current) => (current === 1 ? 0 : 1))}
+                aria-label="Upvote"
+              >
+                <ChevronUp className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <span aria-label={`${visibleScore} net votes`}>
+                {visibleScore}
+              </span>
+              <button
+                type="button"
+                data-active={vote === -1}
+                aria-pressed={vote === -1}
+                onClick={() => setVote((current) => (current === -1 ? 0 : -1))}
+                aria-label="Downvote"
+              >
+                <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div className="min-w-0 flex-1">
@@ -86,7 +168,7 @@ export function FeedPostCard({ post }: { post: MockPost }) {
             )}
           </div>
 
-          {post.group && (
+          {post.group && !showGroupContext && (
             <p className="feed-context mt-1.5">
               <Users className="h-3 w-3" aria-hidden="true" />
               Posted in {post.group}
@@ -163,33 +245,47 @@ export function FeedPostCard({ post }: { post: MockPost }) {
             </div>
           )}
 
-          <div className="mt-3.5 flex items-center gap-5 sm:gap-7">
-            <button type="button" className="post-action">
-              <MessageCircle className="h-4 w-4" aria-hidden="true" />
-              {post.repliesCount}
-              <span className="sr-only">replies</span>
-            </button>
-            <button type="button" className="post-action" data-tone="boost">
-              <Repeat2 className="h-4 w-4" aria-hidden="true" />
-              {post.announcesCount}
-              <span className="sr-only">boosts</span>
-            </button>
-            <button
-              type="button"
-              className="post-action"
-              data-active={liked}
-              aria-pressed={liked}
-              onClick={() => setLiked((value) => !value)}
-            >
-              <Heart className="h-4 w-4" aria-hidden="true" />
-              {likesWithoutViewer + (liked ? 1 : 0)}
-              <span className="sr-only">likes</span>
-            </button>
-            <button type="button" className="post-action ml-auto">
-              <Share2 className="h-4 w-4" aria-hidden="true" />
-              <span className="sr-only">Share this post</span>
-            </button>
-          </div>
+          {post.group ? (
+            <div className="mt-3.5 flex items-center gap-3">
+              <button type="button" className="post-action">
+                <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                {post.repliesCount}
+                <span className="sr-only">replies</span>
+              </button>
+              <button type="button" className="post-action ml-auto">
+                <Share2 className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Share this post</span>
+              </button>
+            </div>
+          ) : (
+            <div className="mt-3.5 flex items-center gap-5 sm:gap-7">
+              <button type="button" className="post-action">
+                <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                {post.repliesCount}
+                <span className="sr-only">replies</span>
+              </button>
+              <button type="button" className="post-action" data-tone="boost">
+                <Repeat2 className="h-4 w-4" aria-hidden="true" />
+                {post.announcesCount}
+                <span className="sr-only">boosts</span>
+              </button>
+              <button
+                type="button"
+                className="post-action"
+                data-active={liked}
+                aria-pressed={liked}
+                onClick={() => setLiked((value) => !value)}
+              >
+                <Heart className="h-4 w-4" aria-hidden="true" />
+                {likesWithoutViewer + (liked ? 1 : 0)}
+                <span className="sr-only">likes</span>
+              </button>
+              <button type="button" className="post-action ml-auto">
+                <Share2 className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Share this post</span>
+              </button>
+            </div>
+          )}
 
           {post.topReply && !bodyHidden && (
             <div className="reply-preview mt-3.5">
