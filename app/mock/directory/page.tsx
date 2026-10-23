@@ -100,39 +100,39 @@ export default function DirectoryMockPage() {
       <MockControls state={mock} onChange={handleMockChange} />
 
       <main className="dirmock">
-        <SearchBand
-          term={query.term}
-          resultCount={entries.length}
-          totalCount={directoryResults.length}
-          locationShared={mock.locationShared}
-          nearestFirst={query.sort === 'nearest'}
-          viewerPlace="Wynwood"
-          onSearch={(term) => setQuery((prev) => ({ ...prev, term }))}
-          onShareLocation={() =>
-            setMock((prev) => ({ ...prev, locationShared: true }))
-          }
-        />
-
-        <FilterBar
-          query={query}
-          onChange={setQuery}
-          view={view}
-          onViewChange={setView}
-          locationShared={mock.locationShared}
-        />
-
         <section className="dirmock-workspace" data-view={view}>
-          {entries.length === 0 ? (
-            <div className="dirmock-empty">
-              <EmptyState
-                query={query}
-                activeFilterCount={activeFilterCount}
-                onChange={setQuery}
-              />
-            </div>
-          ) : (
-            <>
-              <div className="dirmock-listpane">
+          <div className="dirmock-listpane">
+            <SearchBand
+              term={query.term}
+              resultCount={entries.length}
+              totalCount={directoryResults.length}
+              locationShared={mock.locationShared}
+              nearestFirst={query.sort === 'nearest'}
+              viewerPlace="Wynwood"
+              onSearch={(term) => setQuery((prev) => ({ ...prev, term }))}
+              onShareLocation={() =>
+                setMock((prev) => ({ ...prev, locationShared: true }))
+              }
+            />
+
+            <FilterBar
+              query={query}
+              onChange={setQuery}
+              view={view}
+              onViewChange={setView}
+              locationShared={mock.locationShared}
+            />
+
+            <div className="dirmock-listscroll">
+              {entries.length === 0 ? (
+                <div className="dirmock-empty">
+                  <EmptyState
+                    query={query}
+                    activeFilterCount={activeFilterCount}
+                    onChange={setQuery}
+                  />
+                </div>
+              ) : (
                 <ul className="dirmock-list">
                   {entries.map((entry, index) => {
                     const activeId = hoveredId ?? selectedId;
@@ -154,31 +154,31 @@ export default function DirectoryMockPage() {
                     );
                   })}
                 </ul>
+              )}
 
-                <div className="dirmock-tail">
-                  <div>
-                    <strong>Know a place we missed?</strong>
-                    <span>Help the directory grow.</span>
-                  </div>
-                  <Link href="/join">
-                    Add a business
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
+              <div className="dirmock-tail">
+                <div>
+                  <strong>Know a place we missed?</strong>
+                  <span>Help the directory grow.</span>
                 </div>
+                <Link href="/join">
+                  Add a business
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
               </div>
+            </div>
+          </div>
 
-              <div className="dirmock-mappane">
-                <MapPanel
-                  entries={entries}
-                  locationShared={mock.locationShared}
-                  viewerPlace="Wynwood"
-                  selectedId={hoveredId ?? selectedId}
-                  onSelect={setSelectedId}
-                  onHover={setHoveredId}
-                />
-              </div>
-            </>
-          )}
+          <div className="dirmock-mappane">
+            <MapPanel
+              entries={entries}
+              locationShared={mock.locationShared}
+              viewerPlace="Wynwood"
+              selectedId={hoveredId ?? selectedId}
+              onSelect={setSelectedId}
+              onHover={setHoveredId}
+            />
+          </div>
         </section>
       </main>
     </PanaGateProvider>

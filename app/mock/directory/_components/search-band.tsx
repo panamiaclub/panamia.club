@@ -3,8 +3,6 @@
 import { type FormEvent, useState } from 'react';
 import { Crosshair, MapPin, Search } from 'lucide-react';
 
-const QUICK_SEARCHES = ['Food', 'Art', 'Wellness', 'Bike repair'];
-
 interface SearchBandProps {
   term: string;
   resultCount: number;
@@ -53,27 +51,6 @@ export function SearchBand({
   return (
     <section className="dirmock-band">
       <div className="dirmock-bandinner">
-        <div className="dirmock-heading">
-          <span className="section-eyebrow">Directory</span>
-          <h1>Connect to your local community 🏘️</h1>
-          <p role="status" aria-live="polite">
-            {resultCount === 0 ? (
-              <>No matches yet — try a broader search</>
-            ) : (
-              <>
-                <strong>{resultCount}</strong>
-                {resultCount === totalCount
-                  ? ' local businesses'
-                  : ` of ${totalCount} local businesses`}
-                {locationShared &&
-                  (nearestFirst
-                    ? ', closest first'
-                    : `, with distances from ${viewerPlace}`)}
-              </>
-            )}
-          </p>
-        </div>
-
         <div className="dirmock-tools">
           <form onSubmit={handleSubmit} className="dirmock-search">
             <label htmlFor="dirsearch-input" className="sr-only">
@@ -92,12 +69,26 @@ export function SearchBand({
           </form>
 
           <div className="dirmock-toolrow">
+            <p className="dirmock-resultcount" role="status" aria-live="polite">
+              {resultCount === 0 ? (
+                <>No matches yet</>
+              ) : (
+                <>
+                  <strong>{resultCount}</strong>
+                  {resultCount === totalCount
+                    ? ' listings'
+                    : ` of ${totalCount} listings`}
+                  {locationShared && nearestFirst ? ', closest first' : ''}
+                </>
+              )}
+            </p>
+
             <div className="dirmock-location">
               {locationShared ? (
                 <>
                   <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
                   <span>
-                    Distances from <strong>{viewerPlace}</strong>
+                    From <strong>{viewerPlace}</strong>
                   </span>
                   <button type="button">Change</button>
                 </>
@@ -110,22 +101,6 @@ export function SearchBand({
                   </button>
                 </>
               )}
-            </div>
-
-            <div className="dirmock-quick" aria-label="Popular searches">
-              <span>Popular:</span>
-              {QUICK_SEARCHES.map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => {
-                    setDraft(label.toLowerCase());
-                    onSearch(label.toLowerCase());
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
             </div>
           </div>
         </div>

@@ -50,9 +50,7 @@ test.describe('Public Navigation', () => {
   test('directory search loads', async ({ page }) => {
     const res = await page.goto('/directory/search');
     expect(res?.status()).toBe(200);
-    await expect(page.locator('h1').first()).toContainText(
-      'Connect to your local community'
-    );
+    await expect(page.locator('h1').first()).toContainText('Directory search');
   });
 
   // The scope menu moved to the home hero and the four scopes became four

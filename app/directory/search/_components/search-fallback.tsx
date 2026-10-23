@@ -71,39 +71,24 @@ export function SearchFallback() {
       className="dirsearch dirsearch-split max-[71.999rem]:min-h-screen"
       data-view="list"
     >
-      <section className="dirsearch-band">
-        <div className="container mx-auto px-4">
-          <span className="section-eyebrow">Directory</span>
-
-          {/* A real heading, not a shimmer bar. This markup ships in the
-              server HTML, so it is what a crawler and anyone landing on an
-              assistive technology early have to go on. It is also the one
-              line that does not change across the swap when no term has been
-              searched, which is the common case on /d. */}
-          <h1 className="dirsearch-title">Find your people</h1>
-
-          <div className="animate-pulse" aria-hidden="true">
-            {/* The count line. A bar rather than the word "Searching…",
-                because the live page puts a `role="status"` here and a second
-                voice saying the same thing from the fallback is noise. */}
-            <div className="bg-pana-ink/10 mt-[0.6rem] h-4 w-64 rounded-full" />
-
-            {/* The search pill. A block, not a disabled input: an input
-                invites a click and a first keystroke, and both are lost the
-                moment the real page mounts over this one. */}
-            <div className="dirsearch-searchrow">
-              <div className="bg-pana-ink/10 h-[3.4rem] w-full max-w-[720px] rounded-full" />
-            </div>
-
-            {/* The location bar. */}
-            <div className="bg-pana-ink/10 mt-[0.95rem] h-4 w-72 rounded-full" />
-          </div>
-        </div>
-      </section>
-
       <div className="dirsearch-panes">
         <section className="dirsearch-listpane" aria-label="Search results">
           <div className="dirsearch-listhead">
+            <section className="dirsearch-band">
+              <div className="dirsearch-bandinner">
+                <h1 className="sr-only">Directory search</h1>
+                <div className="animate-pulse" aria-hidden="true">
+                  <div className="dirsearch-searchrow">
+                    <div className="bg-pana-ink/10 h-[3.4rem] w-full rounded-full" />
+                  </div>
+                  <div className="dirsearch-toolrow">
+                    <div className="bg-pana-ink/10 h-4 w-24 rounded-full" />
+                    <div className="bg-pana-ink/10 h-4 w-40 rounded-full" />
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <div className="dirsearch-filters">
               <div className="dirsearch-filterinner dirsearch-filterinner--menus">
                 <div
