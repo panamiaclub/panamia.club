@@ -190,7 +190,10 @@ export function IdentitySection({
                 />
               )}
               {status === 'available' && (
-                <Check className="text-pana-indigo h-4 w-4" aria-hidden="true" />
+                <Check
+                  className="text-pana-indigo h-4 w-4"
+                  aria-hidden="true"
+                />
               )}
               {(status === 'taken' || status === 'invalid') && (
                 <X className="text-pana-red h-4 w-4" aria-hidden="true" />
@@ -261,7 +264,7 @@ export function IdentitySection({
           note="Your bio, links, categories, and the location shown on your listing are part of your profile, and are edited together in one place."
           control={
             <Link
-              href="/account/profile/edit"
+              href="/account/user/edit#profile"
               className="settings-btn"
               data-variant="quiet"
             >
@@ -597,7 +600,11 @@ export function DataSection() {
           label="Delete your marketing record"
           note="Removes the contact above from HighLevel. Your Pana Mia account, your posts, and your listings are untouched."
           control={
-            <button type="button" className="settings-btn" data-variant="danger">
+            <button
+              type="button"
+              className="settings-btn"
+              data-variant="danger"
+            >
               <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
               Delete record
             </button>
@@ -619,7 +626,11 @@ export function DataSection() {
             </>
           }
           control={
-            <button type="button" className="settings-btn" data-variant="danger">
+            <button
+              type="button"
+              className="settings-btn"
+              data-variant="danger"
+            >
               Delete account
             </button>
           }

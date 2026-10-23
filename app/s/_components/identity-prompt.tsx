@@ -102,7 +102,7 @@ export function IdentityPrompt({
         )}
         {needsAvatar && (
           <Button asChild size="sm" variant={needsName ? 'outline' : 'default'}>
-            <SurfaceLink href="/account/profile/images">
+            <SurfaceLink href="/account/user/edit#profile-images">
               <ImagePlus className="mr-1.5 h-4 w-4" />
               {t('onboarding.identityAddPhoto')}
             </SurfaceLink>

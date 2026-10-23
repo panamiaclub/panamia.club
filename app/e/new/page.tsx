@@ -59,7 +59,7 @@ export default async function NewEventPage() {
                 post under until you have one.
               </p>
               <Link
-                href="/account/profile/edit"
+                href="/account/user/edit#profile"
                 className="dirsearch-tail-primary mt-4 inline-flex"
               >
                 Set up your profile

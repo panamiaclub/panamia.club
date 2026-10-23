@@ -65,6 +65,28 @@ test.describe('Authenticated User Navigation', () => {
 });
 
 test.describe('Authenticated Profile Navigation', () => {
+  test('retired profile editor URLs redirect to current account settings', async ({
+    request,
+  }) => {
+    for (const path of [
+      '/account/profile',
+      '/account/profile/edit',
+      '/account/profile/contact',
+      '/account/profile/address',
+      '/account/profile/categories',
+      '/account/profile/desc',
+      '/account/profile/social',
+      '/account/profile/images',
+      '/account/profile/gentedepana',
+    ]) {
+      const response = await request.get(path, { maxRedirects: 0 });
+      expect(response.status(), path).toBe(308);
+      expect(response.headers().location, path).toBe(
+        '/account/user/edit#profile'
+      );
+    }
+  });
+
   // Every /account/* route below renders components/Page/Status401_Unauthorized
   // for anonymous visitors, which shows an UNAUTHORIZED card and then
   // router.replace()s to the sign-in page. So unauthenticated runs cannot
