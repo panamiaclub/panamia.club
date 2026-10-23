@@ -49,6 +49,7 @@ interface Pin {
   result: SearchResultsInterface;
   coords: Coords;
   distance: number | null;
+  index: number;
 }
 
 /** The pins' coordinates, which are all the framing maths needs. */
@@ -78,7 +79,7 @@ export function MapPanel({
 }: MapPanelProps) {
   const pins = useMemo<Pin[]>(
     () =>
-      results.flatMap((result) => {
+      results.flatMap((result, index) => {
         if (result.online_only) return [];
         const coords = resultCoords(result);
         if (!coords) return [];
@@ -89,6 +90,7 @@ export function MapPanel({
             distance: viewerCoords
               ? distanceInMiles(viewerCoords, coords)
               : null,
+            index: index + 1,
           },
         ];
       }),
@@ -185,7 +187,7 @@ export function MapPanel({
   // to place a node on the map, and nothing about what a result looks like.
   const canvasPins = useMemo<MapCanvasPin[]>(
     () =>
-      pins.map(({ result, coords }) => ({
+      pins.map(({ result, coords, index }) => ({
         id: result._id,
         lat: coords.lat,
         lng: coords.lng,
@@ -197,6 +199,7 @@ export function MapPanel({
             onClick={() => select(result._id)}
             aria-label={`${result.name}, ${result.primary_address?.city ?? 'South Florida'}`}
           >
+            <span aria-hidden="true">{index}</span>
             <Image
               src={result.images?.primaryCDN || FALLBACK_LOGO}
               alt=""

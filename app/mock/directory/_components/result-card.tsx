@@ -23,6 +23,7 @@ import {
 
 interface ResultCardProps {
   entry: ScoredResult;
+  index: number;
   /** True once the viewer has shared a location, so "near me" has an answer. */
   locationShared: boolean;
 }
@@ -40,7 +41,7 @@ interface ResultCardProps {
  * a place you may never have been — cheapens the signal the profile page
  * depends on. The count is shown; the button lives one click deeper.
  */
-export function ResultCard({ entry, locationShared }: ResultCardProps) {
+export function ResultCard({ entry, index, locationShared }: ResultCardProps) {
   const { result, distance } = entry;
   const { showsPanaActions, requirePana } = usePanaGate();
   const [saved, setSaved] = useState(false);
@@ -62,6 +63,9 @@ export function ResultCard({ entry, locationShared }: ResultCardProps) {
         className="dirsearch-card-media"
         aria-label={`${result.name} — view profile`}
       >
+        <span className="dirmock-cardnumber" aria-hidden="true">
+          {index}
+        </span>
         <Image
           src={result.coverImage}
           alt={result.coverAlt}
@@ -157,11 +161,23 @@ export function ResultCard({ entry, locationShared }: ResultCardProps) {
                 ))}
               </span>
             )}
-            <span className="dirsearch-card-counts">
-              <strong>{result.recommendedCount}</strong> recommend
-              <i aria-hidden="true">·</i>
-              <strong>{result.savedCount}</strong> saved
-            </span>
+            {(result.recommendedCount > 0 || result.savedCount > 0) && (
+              <span className="dirsearch-card-counts">
+                {result.recommendedCount > 0 && (
+                  <>
+                    <strong>{result.recommendedCount}</strong> recommend
+                  </>
+                )}
+                {result.recommendedCount > 0 && result.savedCount > 0 && (
+                  <i aria-hidden="true">·</i>
+                )}
+                {result.savedCount > 0 && (
+                  <>
+                    <strong>{result.savedCount}</strong> saved
+                  </>
+                )}
+              </span>
+            )}
             {lastActive && (
               <span className="dirsearch-card-active">{lastActive}</span>
             )}

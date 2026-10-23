@@ -1,6 +1,12 @@
 'use client';
 
-import { LayoutList, Map as MapIcon, X } from 'lucide-react';
+import {
+  BadgeCheck,
+  CalendarDays,
+  LayoutList,
+  Map as MapIcon,
+  RotateCcw,
+} from 'lucide-react';
 import { countyList, profileCategoryList } from '@/lib/lists';
 import {
   COUNTY_LABEL,
@@ -39,11 +45,6 @@ export function FilterBar({
   onViewChange,
   locationShared,
 }: FilterBarProps) {
-  const toggleIn = (list: string[], value: string) =>
-    list.includes(value)
-      ? list.filter((item) => item !== value)
-      : [...list, value];
-
   const activeCount =
     query.categories.length +
     query.counties.length +
@@ -51,95 +52,50 @@ export function FilterBar({
     (query.openToEvents ? 1 : 0);
 
   return (
-    <div className="dirsearch-filters">
-      <div className="container mx-auto px-4">
-        <div className="dirsearch-filterrow">
-          <span className="dirsearch-filterlabel">Category</span>
-          <ul className="dirsearch-chiprow">
-            {profileCategoryList.map((category) => {
-              const on = query.categories.includes(category.value);
-              return (
-                <li key={category.value}>
-                  <button
-                    type="button"
-                    className="dirsearch-chip"
-                    data-on={on}
-                    aria-pressed={on}
-                    onClick={() =>
-                      onChange({
-                        ...query,
-                        categories: toggleIn(query.categories, category.value),
-                      })
-                    }
-                  >
-                    {category.desc}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+    <div className="dirmock-filters">
+      <div className="dirmock-filterinner">
+        <div className="dirmock-selects">
+          <label>
+            <span>Category</span>
+            <select
+              value={query.categories[0] ?? ''}
+              onChange={(event) =>
+                onChange({
+                  ...query,
+                  categories: event.target.value ? [event.target.value] : [],
+                })
+              }
+            >
+              <option value="">All categories</option>
+              {profileCategoryList.map((category) => (
+                <option key={category.value} value={category.value}>
+                  {category.desc}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <div className="dirsearch-filterrow">
-          <span className="dirsearch-filterlabel">Where</span>
-          <ul className="dirsearch-chiprow">
-            {[...countyList].reverse().map((county) => {
-              const on = query.counties.includes(county.value);
-              return (
-                <li key={county.value}>
-                  <button
-                    type="button"
-                    className="dirsearch-chip"
-                    data-on={on}
-                    aria-pressed={on}
-                    onClick={() =>
-                      onChange({
-                        ...query,
-                        counties: toggleIn(query.counties, county.value),
-                      })
-                    }
-                  >
-                    {COUNTY_LABEL[county.value] ?? county.desc}
-                  </button>
-                </li>
-              );
-            })}
+          <label>
+            <span>Area</span>
+            <select
+              value={query.counties[0] ?? ''}
+              onChange={(event) =>
+                onChange({
+                  ...query,
+                  counties: event.target.value ? [event.target.value] : [],
+                })
+              }
+            >
+              <option value="">All South Florida</option>
+              {[...countyList].reverse().map((county) => (
+                <option key={county.value} value={county.value}>
+                  {COUNTY_LABEL[county.value] ?? county.desc}
+                </option>
+              ))}
+            </select>
+          </label>
 
-            <li aria-hidden="true" className="dirsearch-chipdivide" />
-
-            <li>
-              <button
-                type="button"
-                className="dirsearch-chip"
-                data-on={query.certifiedOnly}
-                aria-pressed={query.certifiedOnly}
-                title="Vetted by Pana Mia staff"
-                onClick={() =>
-                  onChange({ ...query, certifiedOnly: !query.certifiedOnly })
-                }
-              >
-                Pana Certified
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                className="dirsearch-chip"
-                data-on={query.openToEvents}
-                aria-pressed={query.openToEvents}
-                title="Has something on in the next three months"
-                onClick={() =>
-                  onChange({ ...query, openToEvents: !query.openToEvents })
-                }
-              >
-                Has events coming up
-              </button>
-            </li>
-          </ul>
-        </div>
-
-        <div className="dirsearch-filterfoot">
-          <label className="dirsearch-sort">
+          <label>
             <span>Sort</span>
             <select
               value={query.sort}
@@ -164,11 +120,36 @@ export function FilterBar({
               ))}
             </select>
           </label>
+        </div>
+
+        <div className="dirmock-softfilters">
+          <button
+            type="button"
+            data-on={query.certifiedOnly}
+            aria-pressed={query.certifiedOnly}
+            onClick={() =>
+              onChange({ ...query, certifiedOnly: !query.certifiedOnly })
+            }
+          >
+            <BadgeCheck className="h-4 w-4" aria-hidden="true" />
+            Pana Certified
+          </button>
+          <button
+            type="button"
+            data-on={query.openToEvents}
+            aria-pressed={query.openToEvents}
+            onClick={() =>
+              onChange({ ...query, openToEvents: !query.openToEvents })
+            }
+          >
+            <CalendarDays className="h-4 w-4" aria-hidden="true" />
+            Events soon
+          </button>
 
           {activeCount > 0 && (
             <button
               type="button"
-              className="dirsearch-clear"
+              className="dirmock-clear"
               onClick={() =>
                 onChange({
                   ...query,
@@ -179,34 +160,31 @@ export function FilterBar({
                 })
               }
             >
-              <X className="h-3.5 w-3.5" aria-hidden="true" />
-              Clear {activeCount} filter{activeCount === 1 ? '' : 's'}
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              Reset
             </button>
           )}
+        </div>
 
-          {/* A map is how you answer "what is near me" when you do not yet
-              know what you are looking for, which is most of the time. It is
-              a peer of the list, not a setting, so it sits here. */}
-          <div className="dirsearch-viewtoggle">
-            <button
-              type="button"
-              data-on={view === 'list'}
-              aria-pressed={view === 'list'}
-              onClick={() => onViewChange('list')}
-            >
-              <LayoutList className="h-4 w-4" aria-hidden="true" />
-              List
-            </button>
-            <button
-              type="button"
-              data-on={view === 'map'}
-              aria-pressed={view === 'map'}
-              onClick={() => onViewChange('map')}
-            >
-              <MapIcon className="h-4 w-4" aria-hidden="true" />
-              Map
-            </button>
-          </div>
+        <div className="dirmock-viewtoggle">
+          <button
+            type="button"
+            data-on={view === 'list'}
+            aria-pressed={view === 'list'}
+            onClick={() => onViewChange('list')}
+          >
+            <LayoutList className="h-4 w-4" aria-hidden="true" />
+            List
+          </button>
+          <button
+            type="button"
+            data-on={view === 'map'}
+            aria-pressed={view === 'map'}
+            onClick={() => onViewChange('map')}
+          >
+            <MapIcon className="h-4 w-4" aria-hidden="true" />
+            Map
+          </button>
         </div>
       </div>
     </div>

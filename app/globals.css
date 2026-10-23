@@ -6873,6 +6873,7 @@ body {
 body:has([data-density]),
 body:has(.dirsearch),
 body:has(.dirscope),
+body:has(.dirmock),
 body:has(.offering) {
   --story-blue: #3565f2;
   --story-ink: #020811;
@@ -10376,6 +10377,1058 @@ body:has(.dirsearch) {
 
 .dirsearch .dirsearch-cta p {
   color: rgb(2 8 17 / 0.66);
+}
+
+/* ==========================================================================
+   Directory desktop workspace mock
+
+   Kept under `.dirmock` so the concept at /mock/directory can be reviewed
+   without moving any of its layout decisions onto the shipped directory.
+   ======================================================================== */
+
+.dirmock {
+  --dirmock-line: rgb(2 8 17 / 0.1);
+  --dirmock-muted: rgb(2 8 17 / 0.62);
+  min-height: 100vh;
+  background: var(--story-cream);
+  color: var(--story-ink);
+}
+
+.dirmock-band {
+  padding: 1.5rem max(1rem, calc((100vw - 92rem) / 2));
+  background:
+    radial-gradient(
+      32rem 13rem at 18% 55%,
+      rgb(242 136 47 / 0.2),
+      transparent 72%
+    ),
+    var(--story-cream);
+  border-bottom: 1px solid var(--dirmock-line);
+}
+
+.dirmock-bandinner {
+  display: grid;
+  grid-template-columns: minmax(16rem, 0.72fr) minmax(30rem, 1.55fr);
+  align-items: end;
+  gap: clamp(2rem, 5vw, 5rem);
+}
+
+.dirmock-heading h1 {
+  margin-top: 0.55rem;
+  font-family: var(--font-montserrat);
+  font-size: clamp(1.8rem, 2.5vw, 2.55rem);
+  font-weight: 900;
+  line-height: 1.03;
+  letter-spacing: -0.025em;
+}
+
+.dirmock-heading h1 em {
+  color: var(--story-coral);
+  font-style: normal;
+}
+
+.dirmock-heading p {
+  margin-top: 0.55rem;
+  color: var(--dirmock-muted);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.dirmock-heading p strong {
+  color: var(--story-blue);
+  font-weight: 900;
+}
+
+.dirmock-tools {
+  min-width: 0;
+}
+
+.dirmock-search {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 3.35rem;
+  padding: 0.36rem 0.38rem 0.36rem 1rem;
+  border: 1px solid rgb(2 8 17 / 0.14);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgb(2 8 17 / 0.09);
+}
+
+.dirmock-search > svg {
+  color: rgb(2 8 17 / 0.42);
+}
+
+.dirmock-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--story-ink);
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.dirmock-search input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.dirmock-search button {
+  align-self: stretch;
+  padding-inline: 1.45rem;
+  border-radius: 999px;
+  background: var(--story-blue);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 850;
+  transition:
+    background-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.dirmock-search button:hover {
+  background: var(--story-ink);
+  transform: translateY(-1px);
+}
+
+.dirmock-toolrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.65rem;
+  padding-inline: 0.4rem;
+}
+
+.dirmock-location,
+.dirmock-quick {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--dirmock-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.dirmock-location strong {
+  color: var(--story-ink);
+  font-weight: 850;
+}
+
+.dirmock-location button,
+.dirmock-quick button {
+  color: var(--story-blue);
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-color: rgb(48 62 140 / 0.3);
+  text-underline-offset: 3px;
+}
+
+.dirmock-location button:hover,
+.dirmock-quick button:hover {
+  text-decoration-color: currentColor;
+}
+
+.dirmock-quick {
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.dirmock-quick span {
+  color: rgb(2 8 17 / 0.42);
+}
+
+.dirmock-filters {
+  position: relative;
+  z-index: 20;
+  padding: 0.65rem max(1rem, calc((100vw - 92rem) / 2));
+  border-bottom: 1px solid var(--dirmock-line);
+  background: color-mix(in srgb, var(--story-cream) 92%, #fff);
+}
+
+.dirmock-filterinner {
+  display: flex;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.dirmock-selects {
+  display: flex;
+  align-items: end;
+  gap: 0.55rem;
+}
+
+.dirmock-selects label {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.dirmock-selects label > span {
+  padding-left: 0.25rem;
+  color: rgb(2 8 17 / 0.47);
+  font-size: 0.625rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dirmock-selects select {
+  min-width: 9rem;
+  height: 2.35rem;
+  padding: 0 2rem 0 0.75rem;
+  border: 1px solid rgb(2 8 17 / 0.16);
+  border-radius: 0.75rem;
+  background: #fff;
+  color: var(--story-ink);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.dirmock-softfilters {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-bottom: 0.05rem;
+}
+
+.dirmock-softfilters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 2.35rem;
+  padding-inline: 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: rgb(2 8 17 / 0.55);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.dirmock-softfilters button:hover {
+  color: var(--story-ink);
+  background: rgb(2 8 17 / 0.04);
+}
+
+.dirmock-softfilters button[data-on='true'] {
+  border-color: rgb(48 62 140 / 0.18);
+  background: rgb(48 62 140 / 0.09);
+  color: var(--story-blue);
+}
+
+.dirmock-softfilters .dirmock-clear {
+  color: var(--story-coral);
+}
+
+.dirmock-viewtoggle {
+  display: none;
+  align-items: center;
+  gap: 0.2rem;
+  margin-left: auto;
+  padding: 0.2rem;
+  border: 1px solid rgb(2 8 17 / 0.14);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.dirmock-viewtoggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.7rem;
+  border-radius: 999px;
+  color: var(--dirmock-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.dirmock-viewtoggle button[data-on='true'] {
+  background: var(--story-ink);
+  color: #fff;
+}
+
+.dirmock-workspace {
+  display: grid;
+  grid-template-columns: minmax(35rem, 1.08fr) minmax(32rem, 0.92fr);
+  height: max(39rem, calc(100svh - 20.5rem));
+  min-height: 0;
+}
+
+.dirmock-listpane {
+  min-width: 0;
+  overflow-y: auto;
+  padding: 1rem clamp(1rem, 2vw, 2rem) 1.5rem;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.dirmock-list {
+  display: grid;
+  gap: 0.8rem;
+  width: 100%;
+  max-width: none;
+}
+
+.dirmock-list > li {
+  scroll-margin-block: 1rem;
+}
+
+.dirmock-list .dirsearch-card {
+  min-height: 12.5rem;
+  border-width: 1px;
+  border-color: rgb(2 8 17 / 0.09);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--story-cream) 28%, #fff);
+  box-shadow: 0 5px 16px rgb(2 8 17 / 0.055);
+}
+
+.dirmock-list > li[data-on='true'] .dirsearch-card,
+.dirmock-list > li[data-selected='true'] .dirsearch-card {
+  border-color: rgb(242 136 47 / 0.7);
+  box-shadow:
+    0 0 0 2px rgb(242 136 47 / 0.14),
+    0 13px 26px rgb(2 8 17 / 0.08);
+  transform: translateY(-1px);
+}
+
+.dirmock-list .dirsearch-card-media {
+  width: clamp(10.5rem, 20vw, 13rem);
+  min-height: 12.5rem;
+}
+
+.dirmock-list .dirsearch-card-body {
+  min-width: 0;
+  gap: 0.42rem;
+  padding: 0.85rem 1rem 0.9rem;
+}
+
+.dirmock-list .dirsearch-card-logo {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.dirmock-list .dirsearch-card-name {
+  font-size: 1.05rem;
+}
+
+.dirmock-list .dirsearch-card-tagline,
+.dirmock-list .dirsearch-card-blurb {
+  font-size: 0.78rem;
+}
+
+.dirmock-list .dirsearch-card-blurb {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.45;
+}
+
+.dirmock-list .dirsearch-card-cats li {
+  padding: 0.15rem 0.48rem;
+  font-size: 0.6rem;
+}
+
+.dirmock-list .dirsearch-card-event {
+  padding: 0.36rem 0.6rem;
+  font-size: 0.72rem;
+}
+
+.dirmock-list .dirsearch-card-foot {
+  gap: 0.45rem;
+  padding-top: 0.5rem;
+}
+
+.dirmock-list .dirsearch-card-active {
+  display: none;
+}
+
+.dirmock-list .dirsearch-save,
+.dirmock-list .dirsearch-view,
+.dirmock-list .dirsearch-claim {
+  padding: 0.34rem 0.72rem;
+  font-size: 0.72rem;
+}
+
+.dirmock-cardnumber {
+  position: absolute;
+  top: 0.65rem;
+  left: 0.65rem;
+  z-index: 2;
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--story-blue);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 900;
+  box-shadow: 0 5px 12px rgb(2 8 17 / 0.2);
+}
+
+.dirmock-list .dirsearch-card-cert {
+  right: 0.65rem;
+  left: auto;
+}
+
+.dirmock-tail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px dashed rgb(2 8 17 / 0.18);
+  border-radius: 1rem;
+  background: rgb(255 220 113 / 0.14);
+}
+
+.dirmock-tail div {
+  display: grid;
+}
+
+.dirmock-tail strong {
+  font-family: var(--font-montserrat);
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+.dirmock-tail span {
+  margin-top: 0.12rem;
+  color: var(--dirmock-muted);
+  font-size: 0.75rem;
+}
+
+.dirmock-tail a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--story-blue);
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+.dirmock-mappane {
+  min-width: 0;
+  border-left: 1px solid var(--dirmock-line);
+}
+
+.dirmock-map {
+  position: sticky;
+  top: 0;
+  height: 100%;
+  min-height: 32rem;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      117deg,
+      transparent 48%,
+      rgb(255 255 255 / 0.8) 49% 51%,
+      transparent 52%
+    ),
+    linear-gradient(
+      25deg,
+      transparent 44%,
+      rgb(255 255 255 / 0.75) 45% 47%,
+      transparent 48%
+    ),
+    linear-gradient(90deg, #dce7bd 0 31%, #f2eadb 31% 77%, #bed2ed 77%);
+}
+
+.dirmock-map::before,
+.dirmock-map::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+.dirmock-map::before {
+  inset: 0 23% 0 31%;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 3.8rem,
+      rgb(234 177 108 / 0.42) 3.85rem 4rem
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 4.4rem,
+      rgb(234 177 108 / 0.35) 4.45rem 4.6rem
+    );
+  opacity: 0.7;
+}
+
+.dirmock-map::after {
+  top: 0;
+  right: 22%;
+  bottom: 0;
+  width: 0.28rem;
+  background: rgb(242 136 47 / 0.65);
+  transform: rotate(3deg);
+}
+
+.dirmock-mapgrid {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at 54% 15%,
+      rgb(48 62 140 / 0.08) 0 0.3rem,
+      transparent 0.34rem
+    ),
+    radial-gradient(
+      circle at 64% 44%,
+      rgb(48 62 140 / 0.08) 0 0.35rem,
+      transparent 0.39rem
+    ),
+    radial-gradient(
+      circle at 57% 78%,
+      rgb(48 62 140 / 0.08) 0 0.28rem,
+      transparent 0.32rem
+    );
+}
+
+.dirmock-pin {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  padding: 0.18rem;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 6px 15px rgb(2 8 17 / 0.24);
+  transform: translate(-50%, -50%);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.dirmock-pin > span {
+  display: grid;
+  width: 1.4rem;
+  height: 1.4rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--story-blue);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
+.dirmock-pin img {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.dirmock-pin:hover,
+.dirmock-pin[data-on='true'] {
+  z-index: 6;
+  box-shadow:
+    0 0 0 4px rgb(242 136 47 / 0.35),
+    0 10px 24px rgb(2 8 17 / 0.26);
+  transform: translate(-50%, -50%) scale(1.13);
+}
+
+.dirmock-pin[data-on='true'] > span {
+  background: var(--story-coral);
+}
+
+.dirmock-you {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.48rem;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: var(--story-ink);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 900;
+  box-shadow: 0 5px 14px rgb(2 8 17 / 0.25);
+  transform: translate(-50%, -50%);
+}
+
+.dirmock-you > span {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--color-pana-butter);
+}
+
+.dirmock-offmap {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid rgb(2 8 17 / 0.1);
+  border-radius: 0.7rem;
+  background: rgb(255 255 255 / 0.9);
+  color: var(--dirmock-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  box-shadow: 0 6px 16px rgb(2 8 17 / 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.dirmock-mapcard {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 28rem;
+  margin-inline: auto;
+  padding: 0.72rem;
+  border: 1px solid rgb(2 8 17 / 0.1);
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 0.94);
+  box-shadow: 0 14px 38px rgb(2 8 17 / 0.2);
+  backdrop-filter: blur(12px);
+}
+
+.dirmock-mapcard img {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.7rem;
+  object-fit: contain;
+  background: #fff;
+}
+
+.dirmock-mapcard p {
+  overflow: hidden;
+  font-family: var(--font-montserrat);
+  font-size: 0.9rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dirmock-mapcard span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.18rem;
+  color: var(--dirmock-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.dirmock-mapcard > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.72rem;
+  border-radius: 999px;
+  background: var(--story-coral);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.dirmock-empty {
+  grid-column: 1 / -1;
+  padding: 2rem;
+}
+
+@media (max-width: 71.999rem) {
+  .dirmock-bandinner {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .dirmock-filterinner {
+    flex-wrap: wrap;
+  }
+
+  .dirmock-viewtoggle {
+    display: flex;
+  }
+
+  .dirmock-workspace {
+    display: block;
+    height: auto;
+    min-height: 36rem;
+  }
+
+  .dirmock-workspace[data-view='map'] .dirmock-listpane,
+  .dirmock-workspace[data-view='list'] .dirmock-mappane {
+    display: none;
+  }
+
+  .dirmock-listpane {
+    overflow: visible;
+  }
+
+  .dirmock-mappane,
+  .dirmock-map {
+    min-height: 38rem;
+  }
+}
+
+@media (max-width: 47.999rem) {
+  .dirmock-band {
+    padding-block: 1.25rem;
+  }
+
+  .dirmock-toolrow,
+  .dirmock-filterinner,
+  .dirmock-selects {
+    align-items: stretch;
+  }
+
+  .dirmock-toolrow {
+    flex-direction: column;
+  }
+
+  .dirmock-quick {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .dirmock-filterinner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+
+  .dirmock-selects {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dirmock-selects label:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .dirmock-selects select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dirmock-softfilters {
+    overflow-x: auto;
+  }
+
+  .dirmock-softfilters button {
+    white-space: nowrap;
+  }
+
+  .dirmock-list .dirsearch-card-media {
+    width: auto;
+    min-height: 9rem;
+  }
+
+  .dirmock-list .dirsearch-card-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* --- Shipped directory workspace --------------------------------------- */
+
+.dirsearch-bandinner {
+  width: min(100%, 92rem);
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+.dirsearch-tools {
+  min-width: 0;
+}
+
+.dirsearch-toolrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.65rem;
+  padding-inline: 0.35rem;
+}
+
+.dirsearch-toolrow .dirsearch-locbar {
+  margin-top: 0;
+}
+
+.dirsearch-quick {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  color: rgb(2 8 17 / 0.58);
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.dirsearch-quick > span {
+  opacity: 0.65;
+}
+
+.dirsearch-quick button {
+  color: var(--story-blue);
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-color: rgb(53 101 242 / 0.28);
+  text-underline-offset: 3px;
+}
+
+.dirsearch-quick button:hover {
+  text-decoration-color: currentColor;
+}
+
+.dirsearch-card-number {
+  position: absolute;
+  top: 0.65rem;
+  left: 0.65rem;
+  z-index: 2;
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--story-blue);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 900;
+  box-shadow: 0 5px 12px rgb(2 8 17 / 0.2);
+}
+
+.dirsearch-card-media:has(.dirsearch-card-number) .dirsearch-card-cert {
+  right: 0.65rem;
+  left: auto;
+}
+
+/* Number and logo travel together. The number links the map to the list at a
+   glance; the logo keeps the identity that made the original pins useful. */
+.dirsearch-pin {
+  display: flex;
+  align-items: center;
+  width: auto;
+  height: auto;
+  padding: 0.16rem;
+  border-width: 2px;
+  border-radius: 999px;
+  overflow: visible;
+}
+
+.dirsearch-pin > span {
+  display: grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--story-blue);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.dirsearch-pin img {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+}
+
+.dirsearch-pin[data-on='true'] {
+  border-color: #fff;
+  box-shadow:
+    0 0 0 4px rgb(242 136 47 / 0.38),
+    0 8px 20px rgb(17 13 13 / 0.26);
+}
+
+.dirsearch-pin[data-on='true'] > span {
+  background: var(--story-coral);
+}
+
+@media (min-width: 72rem) {
+  .dirsearch-split .dirsearch-band {
+    padding-block: 1.25rem 1.15rem;
+  }
+
+  .dirsearch-split .dirsearch-bandinner {
+    display: grid;
+    grid-template-columns: minmax(16rem, 0.72fr) minmax(30rem, 1.55fr);
+    align-items: end;
+    gap: clamp(2rem, 5vw, 5rem);
+  }
+
+  .dirsearch-split .dirsearch-title {
+    margin-top: 0.55rem;
+    font-size: clamp(1.8rem, 2.5vw, 2.55rem);
+  }
+
+  .dirsearch-split .dirsearch-count {
+    margin-top: 0.55rem;
+    font-size: 0.9rem;
+  }
+
+  .dirsearch-split .dirsearch-searchrow {
+    margin-top: 0;
+  }
+
+  .dirsearch-split .dirsearch-pill {
+    min-height: 3.35rem;
+    padding-block: 0.36rem;
+  }
+
+  .dirsearch-split .dirsearch-filters {
+    padding-block: 0.62rem 0.55rem;
+  }
+
+  .dirsearch-split .dirsearch-filterinner--menus .dirsearch-menurow {
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+  }
+
+  .dirsearch-split .dirsearch-menubtn {
+    min-height: 2.35rem;
+    border-width: 1px;
+    border-color: rgb(2 8 17 / 0.16);
+    border-radius: 0.75rem;
+    background: #fff;
+    color: var(--story-ink);
+  }
+
+  .dirsearch-split .dirsearch-menubtn[data-on='true'] {
+    border-color: var(--story-blue);
+    background: var(--story-blue);
+    color: #fff;
+  }
+
+  .dirsearch-split .dirsearch-checkfilter {
+    min-height: 2.35rem;
+    padding-inline: 0.65rem;
+    border-width: 1px;
+    border-color: transparent;
+    color: rgb(2 8 17 / 0.58);
+    font-size: 0.75rem;
+  }
+
+  .dirsearch-split .dirsearch-checkfilter:hover {
+    border-color: transparent;
+    background: rgb(2 8 17 / 0.04);
+    color: var(--story-ink);
+  }
+
+  .dirsearch-split .dirsearch-checkfilter[data-on='true'] {
+    border-color: rgb(53 101 242 / 0.2);
+    background: rgb(53 101 242 / 0.09);
+    color: var(--story-blue);
+  }
+
+  .dirsearch-split .dirsearch-checkinput {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .dirsearch-split .dirsearch-listbody {
+    padding-inline: clamp(1rem, 2vw, 2rem);
+  }
+
+  .dirsearch-split .dirsearch-grid {
+    max-width: none;
+    gap: 0.8rem;
+  }
+
+  .dirsearch-split .dirsearch-card {
+    min-height: 12.5rem;
+    border-radius: 1rem;
+  }
+
+  .dirsearch-split .dirsearch-card-media {
+    width: clamp(10.5rem, 20vw, 13rem);
+    min-height: 12.5rem;
+  }
+
+  .dirsearch-split .dirsearch-card-body {
+    min-width: 0;
+    gap: 0.42rem;
+    padding: 0.85rem 1rem 0.9rem;
+  }
+
+  .dirsearch-split .dirsearch-card-logo {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .dirsearch-split .dirsearch-card-name {
+    font-size: 1.05rem;
+  }
+
+  .dirsearch-split .dirsearch-card-tagline,
+  .dirsearch-split .dirsearch-card-blurb {
+    font-size: 0.78rem;
+  }
+
+  .dirsearch-split .dirsearch-card-blurb {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-height: 1.45;
+  }
+
+  .dirsearch-split .dirsearch-card-cats li {
+    padding: 0.15rem 0.48rem;
+    font-size: 0.6rem;
+  }
+
+  .dirsearch-split .dirsearch-card-event {
+    padding: 0.36rem 0.6rem;
+    font-size: 0.72rem;
+  }
+
+  .dirsearch-split .dirsearch-card-foot {
+    gap: 0.45rem;
+    padding-top: 0.5rem;
+  }
+
+  .dirsearch-split .dirsearch-save,
+  .dirsearch-split .dirsearch-view,
+  .dirsearch-split .dirsearch-claim,
+  .dirsearch-split .dirsearch-card-actions .dirsearch-follow {
+    padding: 0.34rem 0.72rem;
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 71.999rem) {
+  .dirsearch-toolrow {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 47.999rem) {
+  .dirsearch-toolrow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dirsearch-quick {
+    justify-content: flex-start;
+    max-width: 100%;
+    overflow-x: auto;
+  }
 }
 
 /* --- Masthead ----------------------------------------------------------- */
