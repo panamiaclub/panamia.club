@@ -9,8 +9,6 @@ import {
 import { DirectorySuggest } from '@/components/directory-suggest';
 import { ScopeMenuLive } from '@/components/scope-menu-live';
 
-const QUICK_SEARCHES = ['Food', 'Art', 'Wellness', 'Bike repair'];
-
 interface SearchBandProps {
   term: string;
   resultCount: number;
@@ -25,46 +23,28 @@ interface SearchBandProps {
 }
 
 /**
- * The top of the directory view.
+ * Search controls at the top of the results pane.
  *
- * The directory is now the only thing this band sits on top of. It used to be
- * shared with four scope pages — Everything, Panas, Groups, Events all
- * rendered it — and the shape it has is still owed to that: a tall indigo
- * band with the term as a headline, because a compact white toolbar and a
- * tall band on the same search made the site look like two products depending
- * on which URL you arrived through. The scope pages are gone, each kind now
- * having a page built for it, but the band stays because it is the better of
- * the two and the rest of the club now matches it.
- *
- * The cost is real and was accepted deliberately. This page does not scroll —
- * the map holds the right half and the list scrolls inside its own pane — so
- * every pixel spent here is a pixel taken from results rather than from empty
- * space. The counter-argument was that this makes a band the wrong shape for
- * a page you refine five times in a row. That argument lost to consistency: a
- * member who cannot tell whether they are still in the same product is a
- * worse outcome than a member who sees three results instead of four before
- * scrolling.
- *
- * Four things must keep surviving any future edit here:
+ * The map begins at the top of the workspace, so this belongs inside the list
+ * pane rather than spanning both panes. It stays outside the list scroller:
+ * searching and changing location remain available while cards move beneath
+ * them.
  *
  * - The count is `role="status"`. It changes client-side, so it has to
  *   announce rather than silently rewrite itself.
  * - Submitting runs `onSearch` rather than navigating. The filters, sort and
  *   map view live in this page's query string and a route push would drop
  *   them.
- * - The location bar stays. It is the one control that turns a list of
- *   listings into a list you can get to, and it has no equivalent on the
- *   other three pages because only directory listings have addresses to
- *   measure from.
+ * - The location control stays beside the count. It is what turns listings
+ *   into places the viewer can reach.
  * - The scope menu stays, in link mode. The directory holds one kind now, so
  *   the menu is no longer a filter over this page's results — it is the way
  *   out to the other three, carrying the term you already typed. Someone who
  *   searched "cumbia" and got listings should be one click from the events.
  *
- * "Listings" rather than "businesses" throughout, which is not a synonym
- * swap: a directory account can be claimed by a band, a co-op or a non-profit
- * as well as a shop, and calling all of them businesses told a good share of
- * the people in here that the page was not for them.
+ * The h1 remains for document structure but is visually hidden; the search
+ * field already says what the workspace is for, and repeating that as a large
+ * marketing headline spent card space without adding information.
  */
 export function SearchBand({
   term,
@@ -83,34 +63,7 @@ export function SearchBand({
   return (
     <section className="dirsearch-band">
       <div className="dirsearch-bandinner">
-        <div className="dirsearch-heading">
-          <span className="section-eyebrow">Directory</span>
-          <h1 className="dirsearch-title">
-            Connect to your local community 🏘️
-          </h1>
-
-          <p className="dirsearch-count" role="status" aria-live="polite">
-            {loading ? (
-              <>Searching…</>
-            ) : resultCount === 0 ? (
-              <>No matches yet — try a broader search</>
-            ) : (
-              <>
-                <strong>{resultCount}</strong>
-                {resultCount === totalCount
-                  ? resultCount === 1
-                    ? ' listing'
-                    : ' listings'
-                  : ` of ${totalCount}`}{' '}
-                {shared && radiusMiles !== null
-                  ? ` within ${radiusMiles} miles`
-                  : ' in South Florida'}
-                {shared &&
-                  (nearestFirst ? ', closest first' : ', with distances')}
-              </>
-            )}
-          </p>
-        </div>
+        <h1 className="sr-only">Directory search</h1>
 
         <div className="dirsearch-tools">
           <div className="dirsearch-searchrow">
@@ -129,6 +82,28 @@ export function SearchBand({
           </div>
 
           <div className="dirsearch-toolrow">
+            <p
+              className="dirsearch-resultcount"
+              role="status"
+              aria-live="polite"
+            >
+              {loading ? (
+                <>Searching…</>
+              ) : resultCount === 0 ? (
+                <>No matches yet</>
+              ) : (
+                <>
+                  <strong>{resultCount}</strong>
+                  {resultCount === totalCount
+                    ? resultCount === 1
+                      ? ' listing'
+                      : ' listings'
+                    : ` of ${totalCount} listings`}
+                  {shared && nearestFirst ? ', closest first' : ''}
+                </>
+              )}
+            </p>
+
             <div className="dirsearch-locbar">
               {shared ? (
                 <>
@@ -136,12 +111,11 @@ export function SearchBand({
                   <span>
                     {radiusMiles === null ? (
                       <>
-                        Distances from <strong>your location</strong>
+                        From <strong>your location</strong>
                       </>
                     ) : (
                       <>
-                        Within <strong>{radiusMiles} miles</strong> of your
-                        location
+                        Within <strong>{radiusMiles} miles</strong>
                       </>
                     )}
                   </span>
@@ -167,19 +141,6 @@ export function SearchBand({
                   </button>
                 </>
               )}
-            </div>
-
-            <div className="dirsearch-quick" aria-label="Popular searches">
-              <span>Popular:</span>
-              {QUICK_SEARCHES.map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => onSearch(label.toLowerCase())}
-                >
-                  {label}
-                </button>
-              ))}
             </div>
           </div>
         </div>

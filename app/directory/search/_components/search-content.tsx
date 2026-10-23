@@ -310,31 +310,24 @@ export function DirectorySearchContent({
           screen belongs to. Above it the attribute is inert: both panes show,
           and the toggle is hidden. */}
       <main className="dirsearch dirsearch-split" data-view={params.view}>
-        {/* Above the panes, not inside the list column. The band is the page's
-            header — it names the scope, carries the term and owns the h1 — and
-            a header that sits in one of two side-by-side panes reads as a
-            property of that pane. The scope pages put it full width; so does
-            this now. `.dirsearch-split` is the flex column that lets the panes
-            take whatever height is left over. */}
-        <SearchBand
-          term={params.searchTerm}
-          resultCount={results.length}
-          totalCount={totalResults}
-          loading={busy}
-          locationStatus={locationStatus}
-          radius={effectiveRadius}
-          nearestFirst={sort === 'nearest'}
-          onSearch={handleSearch}
-          onShareLocation={request}
-        />
-
         <div className="dirsearch-panes">
           <section className="dirsearch-listpane" aria-label="Search results">
-            {/* Outside the scroller on purpose. The controls that change the
-                results are the ones you reach for after reading a few, and a
-                header you have to scroll back up to find is a header that gets
-                used once. */}
+            {/* Outside the scroller on purpose. Search and refinement remain
+                available while the cards move beneath them; the map is the
+                other pane and begins at this same top edge. */}
             <div className="dirsearch-listhead">
+              <SearchBand
+                term={params.searchTerm}
+                resultCount={results.length}
+                totalCount={totalResults}
+                loading={busy}
+                locationStatus={locationStatus}
+                radius={effectiveRadius}
+                nearestFirst={sort === 'nearest'}
+                onSearch={handleSearch}
+                onShareLocation={request}
+              />
+
               <FilterBar
                 filters={filters}
                 onChange={applyFilters}

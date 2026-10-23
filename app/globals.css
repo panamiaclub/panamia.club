@@ -10396,22 +10396,13 @@ body:has(.dirsearch) {
 }
 
 .dirmock-band {
-  padding: 1.5rem max(1rem, calc((100vw - 92rem) / 2));
-  background:
-    radial-gradient(
-      32rem 13rem at 18% 55%,
-      rgb(242 136 47 / 0.2),
-      transparent 72%
-    ),
-    var(--story-cream);
+  padding: 0.85rem 1rem 0.65rem;
+  background: var(--story-cream);
   border-bottom: 1px solid var(--dirmock-line);
 }
 
 .dirmock-bandinner {
-  display: grid;
-  grid-template-columns: minmax(16rem, 0.72fr) minmax(30rem, 1.55fr);
-  align-items: end;
-  gap: clamp(2rem, 5vw, 5rem);
+  display: block;
 }
 
 .dirmock-heading h1 {
@@ -10502,6 +10493,18 @@ body:has(.dirsearch) {
   padding-inline: 0.4rem;
 }
 
+.dirmock-resultcount {
+  color: var(--dirmock-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.dirmock-resultcount strong {
+  color: var(--story-blue);
+  font-weight: 900;
+}
+
 .dirmock-location,
 .dirmock-quick {
   display: flex;
@@ -10543,7 +10546,7 @@ body:has(.dirsearch) {
 .dirmock-filters {
   position: relative;
   z-index: 20;
-  padding: 0.65rem max(1rem, calc((100vw - 92rem) / 2));
+  padding: 0.55rem 1rem;
   border-bottom: 1px solid var(--dirmock-line);
   background: color-mix(in srgb, var(--story-cream) 92%, #fff);
 }
@@ -10651,17 +10654,26 @@ body:has(.dirsearch) {
 .dirmock-workspace {
   display: grid;
   grid-template-columns: minmax(35rem, 1.08fr) minmax(32rem, 0.92fr);
-  height: max(39rem, calc(100svh - 20.5rem));
+  height: max(39rem, calc(100svh - 11.25rem));
   min-height: 0;
 }
 
 .dirmock-listpane {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  container-type: inline-size;
+}
+
+.dirmock-listscroll {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: 1rem clamp(1rem, 2vw, 2rem) 1.5rem;
-  overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  container-type: inline-size;
 }
 
 .dirmock-list {
@@ -11065,11 +11077,6 @@ body:has(.dirsearch) {
 }
 
 @media (max-width: 71.999rem) {
-  .dirmock-bandinner {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
-  }
-
   .dirmock-filterinner {
     flex-wrap: wrap;
   }
@@ -11084,12 +11091,16 @@ body:has(.dirsearch) {
     min-height: 36rem;
   }
 
-  .dirmock-workspace[data-view='map'] .dirmock-listpane,
+  .dirmock-workspace[data-view='map'] .dirmock-listscroll,
   .dirmock-workspace[data-view='list'] .dirmock-mappane {
     display: none;
   }
 
   .dirmock-listpane {
+    overflow: visible;
+  }
+
+  .dirmock-listscroll {
     overflow: visible;
   }
 
@@ -11111,7 +11122,8 @@ body:has(.dirsearch) {
   }
 
   .dirmock-toolrow {
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
   }
 
   .dirmock-quick {
@@ -11156,13 +11168,21 @@ body:has(.dirsearch) {
 /* --- Shipped directory workspace --------------------------------------- */
 
 .dirsearch-bandinner {
-  width: min(100%, 92rem);
-  margin-inline: auto;
-  padding-inline: 1rem;
+  width: 100%;
 }
 
 .dirsearch-tools {
   min-width: 0;
+}
+
+.dirsearch-split .dirsearch-band {
+  padding: 0.85rem 1rem 0.65rem;
+  background-image: none;
+  border-bottom: 1px solid rgb(2 8 17 / 0.08);
+}
+
+.dirsearch-split .dirsearch-searchrow {
+  margin-top: 0;
 }
 
 .dirsearch-toolrow {
@@ -11172,6 +11192,18 @@ body:has(.dirsearch) {
   gap: 1rem;
   margin-top: 0.65rem;
   padding-inline: 0.35rem;
+}
+
+.dirsearch-resultcount {
+  color: rgb(2 8 17 / 0.62);
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.dirsearch-resultcount strong {
+  color: var(--story-blue);
+  font-weight: 900;
 }
 
 .dirsearch-toolrow .dirsearch-locbar {
@@ -11308,24 +11340,11 @@ body:has(.dirsearch) {
 
 @media (min-width: 72rem) {
   .dirsearch-split .dirsearch-band {
-    padding-block: 1.25rem 1.15rem;
+    padding: 0.85rem 1rem 0.65rem;
   }
 
   .dirsearch-split .dirsearch-bandinner {
-    display: grid;
-    grid-template-columns: minmax(16rem, 0.72fr) minmax(30rem, 1.55fr);
-    align-items: end;
-    gap: clamp(2rem, 5vw, 5rem);
-  }
-
-  .dirsearch-split .dirsearch-title {
-    margin-top: 0.55rem;
-    font-size: clamp(1.8rem, 2.5vw, 2.55rem);
-  }
-
-  .dirsearch-split .dirsearch-count {
-    margin-top: 0.55rem;
-    font-size: 0.9rem;
+    display: block;
   }
 
   .dirsearch-split .dirsearch-searchrow {
