@@ -81,7 +81,7 @@ export default async function ReferralLandingPage({
               <Button asChild className="w-full font-extrabold">
                 <Link
                   href={continueHref(
-                    '/account/user/edit#referrals',
+                    '/welcome?next=%2Faccount%2Fuser%2Fedit%23referrals',
                     attributionId
                   )}
                 >
