@@ -66,6 +66,8 @@ export default function DirectoryMockPage() {
   });
 
   const [view, setView] = useState<ResultView>('list');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const viewerCoords = mock.locationShared ? MOCK_VIEWER_COORDS : null;
   const entries = useMemo(
@@ -97,85 +99,88 @@ export default function DirectoryMockPage() {
     >
       <MockControls state={mock} onChange={handleMockChange} />
 
-      <SearchBand
-        term={query.term}
-        resultCount={entries.length}
-        totalCount={directoryResults.length}
-        locationShared={mock.locationShared}
-        nearestFirst={query.sort === 'nearest'}
-        viewerPlace="Wynwood"
-        onSearch={(term) => setQuery((prev) => ({ ...prev, term }))}
-        onShareLocation={() =>
-          setMock((prev) => ({ ...prev, locationShared: true }))
-        }
-      />
+      <main className="dirmock">
+        <SearchBand
+          term={query.term}
+          resultCount={entries.length}
+          totalCount={directoryResults.length}
+          locationShared={mock.locationShared}
+          nearestFirst={query.sort === 'nearest'}
+          viewerPlace="Wynwood"
+          onSearch={(term) => setQuery((prev) => ({ ...prev, term }))}
+          onShareLocation={() =>
+            setMock((prev) => ({ ...prev, locationShared: true }))
+          }
+        />
 
-      <FilterBar
-        query={query}
-        onChange={setQuery}
-        view={view}
-        onViewChange={setView}
-        locationShared={mock.locationShared}
-      />
+        <FilterBar
+          query={query}
+          onChange={setQuery}
+          view={view}
+          onViewChange={setView}
+          locationShared={mock.locationShared}
+        />
 
-      <section className="surface-cream dirsearch-results">
-        <div className="container mx-auto px-4">
+        <section className="dirmock-workspace" data-view={view}>
           {entries.length === 0 ? (
-            <EmptyState
-              query={query}
-              activeFilterCount={activeFilterCount}
-              onChange={setQuery}
-            />
-          ) : view === 'map' ? (
-            <MapPanel
-              entries={entries}
-              locationShared={mock.locationShared}
-              viewerPlace="Wynwood"
-            />
+            <div className="dirmock-empty">
+              <EmptyState
+                query={query}
+                activeFilterCount={activeFilterCount}
+                onChange={setQuery}
+              />
+            </div>
           ) : (
-            /* Deliberately not wrapped in ScrollReveal. That component hides
-               [data-rv] until a scroll sweep reaches them, and this list
-               re-renders on every filter click — results would blank out until
-               the visitor happened to scroll. Reveal-on-scroll suits a page
-               you read top to bottom, not one you interrogate. */
-            <ul className="dirsearch-grid">
-              {entries.map((entry) => (
-                <li key={entry.result.id}>
-                  <ResultCard
-                    entry={entry}
-                    locationShared={mock.locationShared}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
+            <>
+              <div className="dirmock-listpane">
+                <ul className="dirmock-list">
+                  {entries.map((entry, index) => {
+                    const activeId = hoveredId ?? selectedId;
+                    return (
+                      <li
+                        key={entry.result.id}
+                        data-on={activeId === entry.result.id}
+                        data-selected={selectedId === entry.result.id}
+                        onMouseEnter={() => setHoveredId(entry.result.id)}
+                        onMouseLeave={() => setHoveredId(null)}
+                        onClick={() => setSelectedId(entry.result.id)}
+                      >
+                        <ResultCard
+                          entry={entry}
+                          index={index + 1}
+                          locationShared={mock.locationShared}
+                        />
+                      </li>
+                    );
+                  })}
+                </ul>
 
-      {/* The directory is small, and a search that half-worked is the best
-          moment to ask someone to add to it. */}
-      <section className="surface-butter dirsearch-tail">
-        <div className="container mx-auto px-4">
-          <span className="section-eyebrow">Not finding them?</span>
-          <h2 className="section-display">
-            The directory grows when panas add to it
-          </h2>
-          <p className="section-lede">
-            Every listing here was submitted by someone local. If the spot you
-            love is missing, put them on the map.
-          </p>
-          <div className="dirsearch-tail-actions">
-            <Link href="/join" className="dirsearch-tail-primary">
-              Add a business
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-            <Link href="/form/contact-us" className="link-arrow">
-              Recommend one to us
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </div>
-        </div>
-      </section>
+                <div className="dirmock-tail">
+                  <div>
+                    <strong>Know a place we missed?</strong>
+                    <span>Help the directory grow.</span>
+                  </div>
+                  <Link href="/join">
+                    Add a business
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="dirmock-mappane">
+                <MapPanel
+                  entries={entries}
+                  locationShared={mock.locationShared}
+                  viewerPlace="Wynwood"
+                  selectedId={hoveredId ?? selectedId}
+                  onSelect={setSelectedId}
+                  onHover={setHoveredId}
+                />
+              </div>
+            </>
+          )}
+        </section>
+      </main>
     </PanaGateProvider>
   );
 }

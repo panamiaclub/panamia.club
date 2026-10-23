@@ -27,6 +27,7 @@ const FALLBACK_COVER = '/img/bg_coconut_blue.jpg';
 
 interface ResultCardProps {
   result: SearchResultsInterface;
+  index: number;
   /** The viewer's coordinates, or null until they share a location. */
   viewerCoords: Coords | null;
 }
@@ -45,7 +46,7 @@ interface ResultCardProps {
  * a place you may never have been — cheapens the signal the profile page
  * depends on. The count is shown; the button lives one click deeper.
  */
-export function ResultCard({ result, viewerCoords }: ResultCardProps) {
+export function ResultCard({ result, index, viewerCoords }: ResultCardProps) {
   const { showsPanaActions, isSaved, toggleSave, saveCount } =
     useDirectoryViewer();
 
@@ -80,6 +81,9 @@ export function ResultCard({ result, viewerCoords }: ResultCardProps) {
         aria-label={`${result.name} — view profile`}
         tabIndex={-1}
       >
+        <span className="dirsearch-card-number" aria-hidden="true">
+          {index}
+        </span>
         <Image
           src={cover}
           alt=""

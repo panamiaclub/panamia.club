@@ -367,7 +367,7 @@ export function DirectorySearchContent({
                 ) : (
                   <div className="dirsearch-results">
                     <ul className="dirsearch-grid">
-                      {results.map((result) => (
+                      {results.map((result, index) => (
                         <li
                           key={result._id}
                           id={`dirsearch-result-${result._id}`}
@@ -378,7 +378,11 @@ export function DirectorySearchContent({
                           onFocus={() => setHoveredId(result._id)}
                           onBlur={() => setHoveredId(null)}
                         >
-                          <ResultCard result={result} viewerCoords={coords} />
+                          <ResultCard
+                            result={result}
+                            index={index + 1}
+                            viewerCoords={coords}
+                          />
                         </li>
                       ))}
                     </ul>

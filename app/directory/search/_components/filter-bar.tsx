@@ -1,6 +1,12 @@
 'use client';
 
-import { LayoutList, Map as MapIcon, X } from 'lucide-react';
+import {
+  BadgeCheck,
+  CalendarDays,
+  LayoutList,
+  Map as MapIcon,
+  X,
+} from 'lucide-react';
 import { profileCategoryList } from '@/lib/lists';
 import type { DirectorySort } from '@/lib/query/directory';
 import {
@@ -140,6 +146,17 @@ export function FilterBar({
             }
           />
 
+          <FilterMenu
+            label="Sort"
+            options={sortOptions}
+            selected={[filters.sort]}
+            single
+            defaultValue="relevance"
+            onChange={([sort]) =>
+              onChange({ ...filters, sort: sort as DirectorySort })
+            }
+          />
+
           <label
             className="dirsearch-checkfilter"
             data-on={filters.certifiedOnly}
@@ -155,6 +172,7 @@ export function FilterBar({
                 })
               }
             />
+            <BadgeCheck className="h-4 w-4" aria-hidden="true" />
             <span>Pana Certified</span>
           </label>
 
@@ -173,19 +191,9 @@ export function FilterBar({
                 })
               }
             />
+            <CalendarDays className="h-4 w-4" aria-hidden="true" />
             <span>Upcoming events</span>
           </label>
-
-          <FilterMenu
-            label="Sort"
-            options={sortOptions}
-            selected={[filters.sort]}
-            single
-            defaultValue="relevance"
-            onChange={([sort]) =>
-              onChange({ ...filters, sort: sort as DirectorySort })
-            }
-          />
 
           {hasActiveFilters && (
             <button

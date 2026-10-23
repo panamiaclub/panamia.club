@@ -9,6 +9,8 @@ import {
 import { DirectorySuggest } from '@/components/directory-suggest';
 import { ScopeMenuLive } from '@/components/scope-menu-live';
 
+const QUICK_SEARCHES = ['Food', 'Art', 'Wellness', 'Bike repair'];
+
 interface SearchBandProps {
   term: string;
   resultCount: number;
@@ -80,125 +82,106 @@ export function SearchBand({
 
   return (
     <section className="dirsearch-band">
-      <div className="container mx-auto px-4">
-        <span className="section-eyebrow">Directory</span>
+      <div className="dirsearch-bandinner">
+        <div className="dirsearch-heading">
+          <span className="section-eyebrow">Directory</span>
+          <h1 className="dirsearch-title">
+            Connect to your local community 🏘️
+          </h1>
 
-        {/* The page's heading is the page's heading. This view used to hide an
-            h1 behind a toolbar because the toolbar had no room for type. It
-            has room now. */}
-        <h1 className="dirsearch-title">
-          {term ? (
-            <>
-              <em>{term}</em> — listings
-            </>
-          ) : (
-            <>Find your people</>
-          )}
-        </h1>
-
-        {/* Headline and count are separate lines. It is a status message, not
-            a heading — it says what the search is doing right now, so it
-            announces itself when the answer changes instead of silently
-            rewriting the page. */}
-        <p className="dirsearch-count" role="status" aria-live="polite">
-          {loading ? (
-            <>Searching…</>
-          ) : resultCount === 0 ? (
-            <>
-              No matches
-              {term ? (
-                <>
-                  {' '}
-                  for <em>{term}</em>
-                </>
-              ) : null}{' '}
-              yet — try a broader search
-            </>
-          ) : (
-            <>
-              <strong>{resultCount}</strong>
-              {/* "1 listings" is the kind of seam that makes a page look
-                  unfinished on the exact search that found one perfect
-                  answer. Only the all-shown branch names the noun; the
-                  "12 of 340" branch is a ratio, which needs none. */}
-              {resultCount === totalCount
-                ? resultCount === 1
-                  ? ' listing'
-                  : ' listings'
-                : ` of ${totalCount}`}
-              {term ? (
-                <>
-                  {' '}
-                  for <em>{term}</em>
-                </>
-              ) : null}{' '}
-              {shared && radiusMiles !== null
-                ? ` within ${radiusMiles} miles`
-                : ' in South Florida'}
-              {/* Only claim an ordering the page is actually using. Saying
-                  "closest first" under Best match is the kind of small lie
-                  that makes people stop trusting the sort. */}
-              {shared &&
-                (nearestFirst ? ', closest first' : ', with distances')}
-            </>
-          )}
-        </p>
-
-        <div className="dirsearch-searchrow">
-          <DirectorySuggest
-            layout="pill"
-            scope="directory"
-            initialTerm={term}
-            label="Search the Pana Mia directory"
-            ariaLabel="Search the Pana Mia directory"
-            placeholder="Try food, art, Hialeah, bike repair…"
-            buttonLabel="Search"
-            onSearch={onSearch}
-            leading={<ScopeMenuLive scope="directory" term={term} />}
-          />
+          <p className="dirsearch-count" role="status" aria-live="polite">
+            {loading ? (
+              <>Searching…</>
+            ) : resultCount === 0 ? (
+              <>No matches yet — try a broader search</>
+            ) : (
+              <>
+                <strong>{resultCount}</strong>
+                {resultCount === totalCount
+                  ? resultCount === 1
+                    ? ' listing'
+                    : ' listings'
+                  : ` of ${totalCount}`}{' '}
+                {shared && radiusMiles !== null
+                  ? ` within ${radiusMiles} miles`
+                  : ' in South Florida'}
+                {shared &&
+                  (nearestFirst ? ', closest first' : ', with distances')}
+              </>
+            )}
+          </p>
         </div>
 
-        {/* The local-first control. One sentence and one button rather than a
-            permissions-style dialog, because the honest ask is small. Precise
-            coordinates stay in the browser; only the existing 2dp coarse
-            version reaches directory search. */}
-        <div className="dirsearch-locbar">
-          {shared ? (
-            <>
-              <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>
-                {radiusMiles === null ? (
-                  <>
-                    Showing <strong>all South Florida</strong>, with distances
-                    from your location
-                  </>
-                ) : (
-                  <>
-                    Showing listings within <strong>{radiusMiles} miles</strong>{' '}
-                    of your location
-                  </>
-                )}
-              </span>
-            </>
-          ) : locationStatus === 'denied' ? (
-            <>
-              <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>Location is unavailable. Showing all South Florida.</span>
-            </>
-          ) : (
-            <>
-              <Crosshair className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>See what is closest to you</span>
-              <button
-                type="button"
-                className="dirsearch-locshare"
-                disabled={locationStatus === 'asking'}
-                onClick={onShareLocation}
-              >
-                {locationStatus === 'asking' ? 'Locating…' : 'Use my location'}
-              </button>
-            </>
-          )}
+        <div className="dirsearch-tools">
+          <div className="dirsearch-searchrow">
+            <DirectorySuggest
+              key={term}
+              layout="pill"
+              scope="directory"
+              initialTerm={term}
+              label="Search the Pana Mia directory"
+              ariaLabel="Search the Pana Mia directory"
+              placeholder="Try food, art, Hialeah, bike repair…"
+              buttonLabel="Search"
+              onSearch={onSearch}
+              leading={<ScopeMenuLive scope="directory" term={term} />}
+            />
+          </div>
+
+          <div className="dirsearch-toolrow">
+            <div className="dirsearch-locbar">
+              {shared ? (
+                <>
+                  <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>
+                    {radiusMiles === null ? (
+                      <>
+                        Distances from <strong>your location</strong>
+                      </>
+                    ) : (
+                      <>
+                        Within <strong>{radiusMiles} miles</strong> of your
+                        location
+                      </>
+                    )}
+                  </span>
+                </>
+              ) : locationStatus === 'denied' ? (
+                <>
+                  <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>Location unavailable. Showing South Florida.</span>
+                </>
+              ) : (
+                <>
+                  <Crosshair className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>See what is closest to you</span>
+                  <button
+                    type="button"
+                    className="dirsearch-locshare"
+                    disabled={locationStatus === 'asking'}
+                    onClick={onShareLocation}
+                  >
+                    {locationStatus === 'asking'
+                      ? 'Locating…'
+                      : 'Use my location'}
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="dirsearch-quick" aria-label="Popular searches">
+              <span>Popular:</span>
+              {QUICK_SEARCHES.map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => onSearch(label.toLowerCase())}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>
