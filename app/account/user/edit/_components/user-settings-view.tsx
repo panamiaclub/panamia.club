@@ -356,16 +356,16 @@ export function UserSettingsView({
       const data = await res.json();
       setGhlContact(res.ok ? (data.data ?? 'empty') : 'empty');
       if (!res.ok) {
-        /* This used to blame HighLevel for every non-ok status, including 401
-           and 404 — neither of which involves HighLevel at all. Reading an
-           expired session or a missing profile as "HighLevel is down" sends
-           you looking at the wrong system entirely. */
+        /* A brand-new account reaches onboarding before it has a profile.
+           ScreennameGate can briefly mount this settings page on the way
+           there, so 404 is an expected empty state rather than an error worth
+           carrying into the welcome screen as a destructive toast. */
+        if (res.status === 404) return;
+
         const description =
           res.status === 401
             ? 'Your session has expired. Please sign in again.'
-            : res.status === 404
-              ? 'We could not find your profile, so there is no marketing data to show.'
-              : 'Could not reach HighLevel, please try again later.';
+            : 'Could not reach HighLevel, please try again later.';
         toast({
           title: 'Error',
           description,

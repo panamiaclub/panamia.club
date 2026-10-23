@@ -13,6 +13,7 @@ const ALLOWED_DESTINATIONS = new Set([
   '/form/get-listed',
   '/connectors/join',
   '/account/user/edit#referrals',
+  '/welcome?next=%2Faccount%2Fuser%2Fedit%23referrals',
 ]);
 
 export async function GET(request: NextRequest) {
