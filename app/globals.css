@@ -9989,6 +9989,7 @@ body:has(.dirsearch) {
    the edge of the pane instead of down the middle of the padding. */
 .dirsearch-listbody {
   padding-inline: 1rem;
+  container-type: inline-size;
 }
 
 .dirsearch-mappane {
@@ -10660,11 +10661,13 @@ body:has(.dirsearch) {
   padding: 1rem clamp(1rem, 2vw, 2rem) 1.5rem;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+  container-type: inline-size;
 }
 
 .dirmock-list {
   display: grid;
   gap: 0.8rem;
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
   max-width: none;
 }
@@ -10674,6 +10677,8 @@ body:has(.dirsearch) {
 }
 
 .dirmock-list .dirsearch-card {
+  flex-direction: column;
+  height: 100%;
   min-height: 12.5rem;
   border-width: 1px;
   border-color: rgb(2 8 17 / 0.09);
@@ -10692,11 +10697,13 @@ body:has(.dirsearch) {
 }
 
 .dirmock-list .dirsearch-card-media {
-  width: clamp(10.5rem, 20vw, 13rem);
-  min-height: 12.5rem;
+  width: 100%;
+  height: clamp(9rem, 22cqw, 12rem);
+  min-height: 0;
 }
 
 .dirmock-list .dirsearch-card-body {
+  flex: 1;
   min-width: 0;
   gap: 0.42rem;
   padding: 0.85rem 1rem 0.9rem;
@@ -10737,6 +10744,7 @@ body:has(.dirsearch) {
 .dirmock-list .dirsearch-card-foot {
   gap: 0.45rem;
   padding-top: 0.5rem;
+  margin-top: auto;
 }
 
 .dirmock-list .dirsearch-card-active {
@@ -10748,6 +10756,18 @@ body:has(.dirsearch) {
 .dirmock-list .dirsearch-claim {
   padding: 0.34rem 0.72rem;
   font-size: 0.72rem;
+}
+
+@container (min-width: 44rem) {
+  .dirmock-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 66rem) {
+  .dirmock-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .dirmock-cardnumber {
@@ -11127,11 +11147,6 @@ body:has(.dirsearch) {
     white-space: nowrap;
   }
 
-  .dirmock-list .dirsearch-card-media {
-    width: auto;
-    min-height: 9rem;
-  }
-
   .dirmock-list .dirsearch-card-actions {
     width: 100%;
     justify-content: flex-end;
@@ -11211,6 +11226,42 @@ body:has(.dirsearch) {
 .dirsearch-card-media:has(.dirsearch-card-number) .dirsearch-card-cert {
   right: 0.65rem;
   left: auto;
+}
+
+.dirsearch-listbody .dirsearch-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dirsearch-listbody .dirsearch-card {
+  flex-direction: column;
+  height: 100%;
+}
+
+.dirsearch-listbody .dirsearch-card-media {
+  width: 100%;
+  height: clamp(9rem, 22cqw, 12rem);
+  min-height: 0;
+}
+
+.dirsearch-listbody .dirsearch-card-body {
+  flex: 1;
+}
+
+.dirsearch-listbody .dirsearch-card-foot {
+  margin-top: auto;
+}
+
+@container (min-width: 44rem) {
+  .dirsearch-listbody .dirsearch-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 66rem) {
+  .dirsearch-listbody .dirsearch-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 /* Number and logo travel together. The number links the map to the list at a
@@ -11356,8 +11407,9 @@ body:has(.dirsearch) {
   }
 
   .dirsearch-split .dirsearch-card-media {
-    width: clamp(10.5rem, 20vw, 13rem);
-    min-height: 12.5rem;
+    width: 100%;
+    height: clamp(9rem, 22cqw, 12rem);
+    min-height: 0;
   }
 
   .dirsearch-split .dirsearch-card-body {

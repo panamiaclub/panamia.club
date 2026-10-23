@@ -13,7 +13,9 @@ test.describe('Critical User Paths', () => {
 
     // Search should load without errors (don't wait for networkidle - Atlas search may be slow)
     expect(res?.status()).toBe(200);
-    await expect(page.locator('h1').first()).toContainText('Find your people');
+    await expect(page.locator('h1').first()).toContainText(
+      'Connect to your local community'
+    );
   });
 
   test('become a pana forwards to the business listing form', async ({

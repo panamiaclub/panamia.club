@@ -50,7 +50,9 @@ test.describe('Public Navigation', () => {
   test('directory search loads', async ({ page }) => {
     const res = await page.goto('/directory/search');
     expect(res?.status()).toBe(200);
-    await expect(page.locator('h1').first()).toContainText('Find your people');
+    await expect(page.locator('h1').first()).toContainText(
+      'Connect to your local community'
+    );
   });
 
   // The scope menu moved to the home hero and the four scopes became four
@@ -320,10 +322,7 @@ test.describe('Navigation Links', () => {
     ).toHaveCount(0);
 
     for (const [parent, children] of [
-      [
-        'About Pana',
-        ['Our Story', 'Meet the Team', 'Why local', 'Pillars'],
-      ],
+      ['About Pana', ['Our Story', 'Meet the Team', 'Why local', 'Pillars']],
       [
         'Our Impact',
         [
@@ -404,11 +403,7 @@ test.describe('Navigation Links', () => {
       drawer.getByRole('link', { name: 'Panavizion', exact: true })
     ).toBeVisible();
 
-    for (const removedLabel of [
-      'Events',
-      'PanaVizión',
-      'Get Involved',
-    ]) {
+    for (const removedLabel of ['Events', 'PanaVizión', 'Get Involved']) {
       await expect(
         drawer.getByRole('link', { name: removedLabel, exact: true })
       ).toHaveCount(0);

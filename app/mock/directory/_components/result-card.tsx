@@ -70,7 +70,7 @@ export function ResultCard({ entry, index, locationShared }: ResultCardProps) {
           src={result.coverImage}
           alt={result.coverAlt}
           fill
-          sizes="(max-width: 900px) 100vw, 260px"
+          sizes="(max-width: 48rem) 100vw, (max-width: 72rem) 50vw, 28rem"
           className="object-cover"
         />
         {result.certified && (
