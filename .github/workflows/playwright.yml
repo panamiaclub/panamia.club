@@ -25,12 +25,12 @@ on:
 # nothing, and main landing unverified 15 times.
 #
 # This group does something different: it caps runner consumption per ref.
-# Each run now owns a throwaway container that dies with the runner, so there
-# is no shared state to corrupt and cancellation is free. That is precisely
+# Each run now owns a throwaway PostgreSQL cluster on its hosted runner, so
+# there is no shared state to corrupt and cancellation is free. That is precisely
 # why the old group could never set cancel-in-progress -- killing a run
 # mid-DROP SCHEMA or mid-migration left the shared database indeterminate for
 # whatever ran next. Removing the shared database is what makes cancelling
-# safe, so this only became available once the container landed.
+# safe, so this only became available once the per-run database landed.
 #
 # Without it, three pushes to a PR branch mean three concurrent 13-minute runs
 # on a repo where runner scarcity is measured and recurring (jobs sit queued
@@ -49,55 +49,45 @@ concurrency:
 jobs:
   test:
     timeout-minutes: 60
-    runs-on: ubuntu-latest
-
-    # Throwaway database, one per run. Pinned to 17 because that is the version
-    # measured on the shared Supabase project this replaced (17.6), not a guess
-    # -- and the same probe confirmed Supabase resolves both pg_trgm and
-    # unaccent to `public`, exactly as stock postgres:17 does, so the schema
-    # placement assertions in migrations 0041 and 0045 take the same branch here
-    # as they did there. The replay was also verified green on 15 and 16.
-    #
-    # Pulled from AWS's public mirror rather than `postgres:17` on Docker Hub.
-    # Same Docker Official Image, so everything above still holds -- the only
-    # thing that changes is who serves it. Docker Hub meters anonymous pulls per
-    # source IP, and Actions runners share those IPs with every other anonymous
-    # puller on the hosted fleet, so the quota is not ours to stay inside: on
-    # 2026-10-09 every run in this repo failed `Initialize containers` with
-    # `toomanyrequests` for about an hour, across fresh runners, with no Docker
-    # Hub credentials in the repo to authenticate our way out. public.ecr.aws
-    # does not meter anonymous pulls, which removes the shared failure mode
-    # rather than waiting it out.
-    #
-    # If this ever needs to go back to Docker Hub, add DOCKERHUB_USERNAME and
-    # DOCKERHUB_TOKEN as secrets and log in first -- authenticated pulls are
-    # metered per account, so they do not inherit the fleet's exhausted budget.
-    services:
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # Pinned rather than `ubuntu-latest`: GitHub began moving that label to
+    # Ubuntu 26 in October 2026. Ubuntu 24 ships PostgreSQL 16, one of the
+    # versions this full migration replay is already verified against.
+    runs-on: ubuntu-24.04
 
     # Set once at job level so no step can quietly diverge onto a different
-    # database. Plain TCP to the runner's loopback with no pooler in front of
+    # database. Plain TCP to the runner-local server with no pooler in front of
     # it, so none of the IPv4/IPv6 routing and 15-connection constraints that
     # used to shape this file apply, and postgres.js defaults (ssl: false)
-    # connect to it as-is. 127.0.0.1 rather than localhost on purpose: the
-    # service container publishes on the host's IPv4 loopback, and naming it
-    # explicitly removes any IPv6-first resolution.
+    # connect to it as-is. 127.0.0.1 rather than localhost removes any
+    # IPv6-first resolution.
     env:
       POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
 
     steps:
+      # Ubuntu hosted runners already contain PostgreSQL. Starting that local
+      # service removes the workflow's only pre-checkout network dependency:
+      # public.ecr.aws repeatedly failed with "Data limit exceeded", and a
+      # service-container failure prevents every repository step from running.
+      # The runner is disposable, so this database is still isolated per job.
+      - name: Start runner PostgreSQL
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -v ON_ERROR_STOP=1 \
+            -c "ALTER USER postgres WITH PASSWORD 'postgres';"
+
+          for attempt in {1..10}; do
+            if pg_isready -h 127.0.0.1 -p 5432 -U postgres; then
+              psql "$POSTGRES_URL" -v ON_ERROR_STOP=1 \
+                -c "SELECT current_setting('server_version');"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "PostgreSQL did not become ready"
+          sudo systemctl status postgresql.service --no-pager
+          exit 1
+
       - uses: actions/checkout@v7
 
       # Runs before anything expensive: this is cheap, needs no node_modules,
@@ -130,9 +120,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      # The container starts empty, so there is nothing to reset -- it is
-      # created with the runner and destroyed with it. What it does need is two
-      # things stock Postgres has no reason to provide.
+      # The runner database is discarded with the job, so there is nothing to
+      # reset. What it does need is two things stock Postgres has no reason to
+      # provide.
       - name: Bootstrap database
         run: |
           psql "$POSTGRES_URL" -v ON_ERROR_STOP=1 <<'SQL'
@@ -159,7 +149,7 @@ jobs:
 
       # Apply hand-written migrations in order via psql rather than drizzle-kit
       # migrate. Prod still uses drizzle-kit migrate (which tracks applied
-      # migrations in drizzle.__drizzle_migrations); CI gets a fresh container
+      # migrations in drizzle.__drizzle_migrations); CI gets a fresh runner
       # every run, so tracking is unnecessary.
       #
       # Order comes from _journal.json, not a filesystem glob, so CI applies
@@ -208,7 +198,7 @@ jobs:
       # count scales with the number of test files. That used to collide with a
       # hard ceiling -- the shared Supabase session pooler capped us at 15, and
       # simply adding a tenth file crossed it, failing every test in that file
-      # with EMAXCONNSESSION. The container has no such ceiling
+      # with EMAXCONNSESSION. The runner-local server has no such ceiling
       # (max_connections 100 against a measured peak of 10), so the flag is kept
       # for its other effect: it removes cross-file interference between
       # fixtures that share one database. Relaxing it is now possible, but it is
@@ -243,7 +233,7 @@ jobs:
       # wrangler dev reads .dev.vars and injects ALL entries as env bindings (env.KEY)
       # into the Worker. This is how POSTGRES_URL and auth secrets reach the workerd runtime.
       #
-      # POSTGRES_URL comes from the job-level env (the service container) rather
+      # POSTGRES_URL comes from the job-level runner database rather
       # than a secret, so the Worker and the data-layer tests above address the
       # same database. lib/db.ts prefers env.POSTGRES_URL over the HYPERDRIVE
       # binding, and wrangler.jsonc's localConnectionString is a placeholder, so
