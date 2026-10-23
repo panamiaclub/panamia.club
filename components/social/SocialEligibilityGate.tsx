@@ -129,7 +129,7 @@ export function SocialEligibilityGate({
               <strong className="text-foreground">cannot be changed</strong>{' '}
               once enabled. To use a different handle,{' '}
               <Link
-                href="/account/profile/edit"
+                href="/account/user/edit#identity"
                 className="hover:text-foreground underline"
               >
                 update your screenname
@@ -179,7 +179,7 @@ export function SocialEligibilityGate({
           to complete your profile setup.
         </p>
         <Button variant="outline" asChild className="w-full">
-          <Link href="/account/profile/edit">Complete Your Profile</Link>
+          <Link href="/account/user/edit#profile">Complete Your Profile</Link>
         </Button>
       </CardContent>
     </Card>

@@ -8,12 +8,19 @@ import {
   Megaphone,
   Scale,
   Share2,
+  UserRound,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { SettingScope } from './settings-primitives';
 
 export type SectionId =
-  'identity' | 'signin' | 'referrals' | 'publishing' | 'messages' | 'data';
+  | 'identity'
+  | 'profile'
+  | 'signin'
+  | 'referrals'
+  | 'publishing'
+  | 'messages'
+  | 'data';
 
 export interface SettingsSection {
   id: SectionId;
@@ -43,6 +50,14 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     lede: 'Your name and screenname travel with every post, article, and listing you touch. Your handle is built from your screenname, so the two can never drift apart.',
     scope: 'everywhere',
     icon: AtSign,
+  },
+  {
+    id: 'profile',
+    label: 'Public profile',
+    heading: 'What people see',
+    lede: 'Your bio, links, categories, location, offers, and profile images now live here instead of the retired profile dashboard.',
+    scope: 'everywhere',
+    icon: UserRound,
   },
   {
     id: 'signin',
