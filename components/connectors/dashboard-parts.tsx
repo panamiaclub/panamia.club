@@ -5,6 +5,7 @@ import {
   type HouseId,
   getHouse,
   getTier,
+  parseHouseFocus,
 } from '@/lib/connectors/model';
 import type { Cadence, ConnectorEvent } from '@/lib/connectors/events-model';
 import { CONNECTORS_CHROME } from '@/lib/connectors/theme';
@@ -218,18 +219,49 @@ export function TallyBars({ rows }: { rows: readonly Tally[] }) {
   );
 }
 
-export function HousePill({ houseId }: { houseId: HouseId }) {
+export function HousePill({
+  houseId,
+  label,
+}: {
+  houseId: HouseId;
+  label?: 'Major house' | 'Minor house';
+}) {
   const house = getHouse(houseId);
   return (
     <span
-      className="inline-block rounded-full px-2.5 py-0.5 text-xs font-bold whitespace-nowrap"
+      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold ${label ? 'max-w-full whitespace-normal' : 'whitespace-nowrap'}`}
       style={{
         backgroundColor: `var(--color-${house.color})`,
         color: `var(--color-${house.onColor})`,
       }}
     >
+      {label ? `${label}: ` : null}
       {house.name}
     </span>
+  );
+}
+
+export function ConnectorHousePills({
+  houses,
+  majorHouse,
+  minorHouse,
+}: {
+  houses: readonly HouseId[];
+  majorHouse: HouseId | null;
+  minorHouse: HouseId | null;
+}) {
+  const focus = parseHouseFocus({ majorHouse, minorHouse });
+  return focus ? (
+    <>
+      <HousePill houseId={focus.majorHouse} label="Major house" />
+      <HousePill houseId={focus.minorHouse} label="Minor house" />
+    </>
+  ) : (
+    <>
+      {houses.map((house) => (
+        <HousePill key={house} houseId={house} />
+      ))}
+    </>
   );
 }
 

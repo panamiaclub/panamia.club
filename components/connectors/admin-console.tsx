@@ -4,7 +4,15 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { ADMIN_CHROME } from '@/lib/admin/theme';
-import { HOUSES, PODS, TIERS, getPod } from '@/lib/connectors/model';
+import {
+  HOUSE_FOCUS_ERROR,
+  HOUSES,
+  PODS,
+  TIERS,
+  getHouse,
+  getPod,
+  parseHouseFocus,
+} from '@/lib/connectors/model';
 import type { HouseId, PodId, TierId } from '@/lib/connectors/model';
 import { CADENCES, CADENCE_LABEL } from '@/lib/connectors/events-model';
 import type { Cadence, ConnectorEvent } from '@/lib/connectors/events-model';
@@ -18,7 +26,12 @@ import {
   minutesToHoursInput,
   parseHours,
 } from '@/lib/connectors/hours';
-import { EventCard, formatDay } from '@/components/connectors/dashboard-parts';
+import {
+  ConnectorHousePills,
+  EventCard,
+  formatDay,
+} from '@/components/connectors/dashboard-parts';
+import { HouseFocusFields } from '@/components/connectors/house-focus-fields';
 import SurfaceLink from '@/components/panaverse/SurfaceLink';
 import { saveConnectorWork as post } from '@/lib/connectors/client';
 
@@ -75,16 +88,18 @@ export interface RosterRow {
   displayName: string;
   pod: PodId;
   houses: HouseId[];
+  majorHouse: HouseId | null;
+  minorHouse: HouseId | null;
   tier: TierId;
 }
 
-type RosterDraft = Pick<RosterRow, 'houses' | 'tier'>;
+type RosterDraft = Pick<RosterRow, 'majorHouse' | 'minorHouse' | 'tier'>;
 
 function sameRosterChoices(left: RosterDraft, right: RosterDraft): boolean {
   return (
     left.tier === right.tier &&
-    left.houses.length === right.houses.length &&
-    left.houses.every((house) => right.houses.includes(house))
+    left.majorHouse === right.majorHouse &&
+    left.minorHouse === right.minorHouse
   );
 }
 
@@ -130,32 +145,20 @@ export function RosterEditor({ rows }: { rows: RosterRow[] }) {
     );
   }
 
-  function toggleHouse(original: RosterRow, house: HouseId) {
-    setDraft((current) => {
-      const row = current[original.profileId] ?? original;
-      const has = row.houses.includes(house);
-      return {
-        ...current,
-        [original.profileId]: {
-          tier: row.tier,
-          houses: has
-            ? row.houses.filter((h) => h !== house)
-            : [...row.houses, house],
-        },
-      };
-    });
-    setSaved(null);
-  }
-
   async function save(row: RosterRow) {
     const { profileId } = row;
-    setBusy(profileId);
     setError(null);
     setSaved(null);
+    const focus = parseHouseFocus(row);
+    if ((row.majorHouse !== null || row.minorHouse !== null) && !focus) {
+      setError(HOUSE_FOCUS_ERROR);
+      return;
+    }
+    setBusy(profileId);
 
     const failure = await post('/api/admin/connectors/roster', 'PATCH', {
       profileId,
-      houses: row.houses,
+      ...(focus ?? {}),
       tier: row.tier,
     });
 
@@ -195,8 +198,9 @@ export function RosterEditor({ rows }: { rows: RosterRow[] }) {
   return (
     <>
       <p className="text-pana-ink/70 mb-4 text-sm leading-relaxed">
-        A house is not an assignment to hand down — have the conversation first,
-        then record what they picked. Somebody can be in more than one.
+        Have the conversation first, then record their major house and a
+        different minor house. These describe their focus, not which work they
+        are allowed to help with.
       </p>
 
       <div className="flex flex-col gap-3">
@@ -218,44 +222,55 @@ export function RosterEditor({ rows }: { rows: RosterRow[] }) {
                 </p>
               </div>
 
-              <fieldset className="flex flex-wrap gap-1.5">
+              <fieldset className="w-full min-w-0 md:w-auto md:flex-[2_1_24rem]">
                 <legend className="sr-only">
                   Houses for {row.displayName}
                 </legend>
-                {HOUSES.map((house) => {
-                  const on = row.houses.includes(house.id);
-                  return (
-                    <label
-                      key={house.id}
-                      className={`cursor-pointer rounded-full border-2 px-2.5 py-1 text-xs font-extrabold transition ${
-                        on
-                          ? 'border-pana-ink bg-pana-ink text-pana-cream'
-                          : 'border-pana-ink/30 text-pana-ink/60'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        className="sr-only"
-                        checked={on}
-                        onChange={() => toggleHouse(row, house.id)}
-                      />
-                      {house.name}
-                    </label>
-                  );
-                })}
+                <HouseFocusFields
+                  value={{
+                    majorHouse: row.majorHouse,
+                    minorHouse: row.minorHouse,
+                  }}
+                  required={
+                    original.majorHouse !== null || original.minorHouse !== null
+                  }
+                  disabled={busy === row.profileId}
+                  onChange={(focus) => {
+                    setDraft((current) => ({
+                      ...current,
+                      [row.profileId]: {
+                        tier: (current[row.profileId] ?? row).tier,
+                        ...focus,
+                      },
+                    }));
+                    setSaved(null);
+                  }}
+                />
+                {original.majorHouse === null &&
+                  original.minorHouse === null && (
+                    <p className="text-pana-ink/60 text-xs leading-relaxed">
+                      Major/minor not confirmed. Current interests:{' '}
+                      {original.houses
+                        .map((id) => getHouse(id).name)
+                        .join(', ')}
+                      . Leave both blank to keep these interests when changing
+                      the tier.
+                    </p>
+                  )}
               </fieldset>
 
-              <label className="flex items-center gap-2 text-xs">
+              <label className="flex max-w-full min-w-0 items-center gap-2 text-xs">
                 <span className="sr-only">Tier for {row.displayName}</span>
                 <select
-                  className={`${FIELD} w-auto py-1.5`}
+                  className={`${FIELD} w-auto max-w-full min-w-0 py-1.5`}
                   value={row.tier}
                   onChange={(e) => {
                     const tier = Number(e.target.value) as TierId;
                     setDraft((c) => ({
                       ...c,
                       [row.profileId]: {
-                        houses: (c[row.profileId] ?? row).houses,
+                        majorHouse: (c[row.profileId] ?? row).majorHouse,
+                        minorHouse: (c[row.profileId] ?? row).minorHouse,
                         tier,
                       },
                     }));
@@ -421,6 +436,13 @@ export function InactiveRoster({ rows }: { rows: InactiveRosterRow[] }) {
                 Reactivate
               </button>
             </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <ConnectorHousePills
+                houses={row.houses}
+                majorHouse={row.majorHouse}
+                minorHouse={row.minorHouse}
+              />
+            </div>
             {row.offboardReason ? (
               <p className="text-pana-ink/65 mt-2 text-sm [overflow-wrap:anywhere] whitespace-pre-wrap">
                 Internal offboarding reason: {row.offboardReason}
@@ -473,10 +495,7 @@ export function InactiveRoster({ rows }: { rows: InactiveRosterRow[] }) {
 export interface TaskTarget {
   profileId: string;
   displayName: string;
-  /* Loose on purpose: houses comes off a JSON column, so a value nobody
-   * recognises has to survive the trip rather than fail a narrowing. The
-   * dropdown below filters against the known houses anyway, so an unknown
-   * one simply offers nothing — which is the right outcome. */
+  /** Focus preferences, not restrictions on which work they can support. */
   houses: readonly string[];
 }
 
@@ -488,12 +507,8 @@ export interface TaskTarget {
  * more useful route of seeing what they are carrying first. Asking again in a
  * dropdown would be asking a question that has just been answered.
  *
- * The house dropdown narrows to the houses this connector is actually in. A
- * task filed under a house somebody does not belong to would show up on their
- * board under a heading that does not apply to them, and would be counted in
- * that house's workload by anybody reading the tallies. Because the person is
- * fixed, that list is known on first render — there is no disabled state
- * waiting on a selection.
+ * All houses stay available: major/minor focus is not an assignment gate.
+ * The task's house describes the work rather than changing their preferences.
  *
  * `onDone` fires only after a save succeeds, so the caller can close the row.
  * A failed submit leaves everything where it is, with the typing intact.
@@ -516,8 +531,6 @@ export function SetTaskForm({
   const [event, setEvent] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const houseChoices = HOUSES.filter((h) => connector.houses.includes(h.id));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -597,7 +610,7 @@ export function SetTaskForm({
             onChange={(e) => setHouse(e.target.value)}
           >
             <option value="">Pick a house</option>
-            {houseChoices.map((h) => (
+            {HOUSES.map((h) => (
               <option key={h.id} value={h.id}>
                 {h.name}
               </option>

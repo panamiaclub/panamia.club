@@ -397,10 +397,10 @@
     },
     "steps": {
       "title": "Cómo <em>funciona</em>",
-      "lede": "Elige una casa, únete a una célula y empieza en el primer nivel. Todo el mundo empieza en el primer nivel.",
+      "lede": "Elige una casa principal y otra secundaria, únete a una célula y empieza en el primer nivel. Todo el mundo empieza en el primer nivel.",
       "one": {
-        "title": "Elige una casa",
-        "body": "Son cuatro, agrupadas por lo que ya te gusta hacer y no por lo que hace falta cubrir. Quien conversa y quien investiga no trabajan igual, y el programa deja de fingir que sí."
+        "title": "Elige tus dos casas",
+        "body": "Elige dos casas distintas entre las cuatro: una principal (major) y otra secundaria (minor). Ambas son obligatorias y reflejan lo que te gusta hacer, no asignaciones ni límites sobre dónde puedes ayudar."
       },
       "two": {
         "title": "Únete a tu célula",

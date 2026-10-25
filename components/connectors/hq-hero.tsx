@@ -1,6 +1,6 @@
 import { MapPin } from 'lucide-react';
 import SurfaceLink from '@/components/panaverse/SurfaceLink';
-import { HousePill } from '@/components/connectors/dashboard-parts';
+import { ConnectorHousePills } from '@/components/connectors/dashboard-parts';
 import { getPod } from '@/lib/connectors/model';
 import type { ProfileConnector } from '@/lib/connectors/membership';
 
@@ -63,15 +63,17 @@ export function HqHero({
               / {podSize} {podSize === 1 ? 'connector' : 'connectors'}
             </span>
           </p>
-          {membership.houses.map((house) => (
-            <HousePill key={house} houseId={house} />
-          ))}
+          <ConnectorHousePills
+            houses={membership.houses}
+            majorHouse={membership.majorHouse}
+            minorHouse={membership.minorHouse}
+          />
         </div>
         <SurfaceLink
           href="/connectors/join"
           className="text-pana-indigo mt-2 inline-block min-h-8 py-1 text-xs font-bold underline underline-offset-4"
         >
-          Change your houses or pod
+          Change your major, minor or pod
         </SurfaceLink>
       </div>
       <dl className="border-pana-ink/15 hidden shrink-0 gap-7 border-l pl-7 md:flex">

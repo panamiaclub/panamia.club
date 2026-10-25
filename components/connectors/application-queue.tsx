@@ -4,8 +4,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { ADMIN_CHROME } from '@/lib/admin/theme';
-import { getHouse, getPod } from '@/lib/connectors/model';
+import { getPod } from '@/lib/connectors/model';
 import type { HouseId, PodId } from '@/lib/connectors/model';
+import { ConnectorHousePills } from '@/components/connectors/dashboard-parts';
 
 /**
  * The queue of people waiting to be let into the Connectors programme.
@@ -41,6 +42,8 @@ export interface PendingApplication {
   email: string;
   pod: PodId;
   houses: HouseId[];
+  majorHouse: HouseId | null;
+  minorHouse: HouseId | null;
   bring: string;
   appliedAt: string;
 }
@@ -123,11 +126,14 @@ export function ApplicationQueue({
               </p>
               <p className="mt-2 text-sm">
                 <span className="font-bold">{getPod(row.pod).name}</span>
-                <span className="text-pana-ink/60">
-                  {' · '}
-                  {row.houses.map((h) => getHouse(h).name).join(', ')}
-                </span>
               </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <ConnectorHousePills
+                  houses={row.houses}
+                  majorHouse={row.majorHouse}
+                  minorHouse={row.minorHouse}
+                />
+              </div>
               {row.bring && (
                 <p className="text-pana-ink/80 mt-2 max-w-prose text-sm leading-snug">
                   &ldquo;{row.bring}&rdquo;

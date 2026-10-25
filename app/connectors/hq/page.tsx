@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import SurfaceLink from '@/components/panaverse/SurfaceLink';
 import { HqHero } from '@/components/connectors/hq-hero';
 import { HqDashboard } from '@/components/connectors/hq-dashboard';
+import { ConnectorHousePills } from '@/components/connectors/dashboard-parts';
 import {
   countConnectorsInPod,
   getMyConnector,
@@ -12,7 +13,7 @@ import {
 import { listCommitments } from '@/lib/connectors/commitments';
 import { listUpcomingForPod } from '@/lib/connectors/events';
 import { listOpportunities } from '@/lib/connectors/opportunities';
-import { getHouse, getPod } from '@/lib/connectors/model';
+import { getPod } from '@/lib/connectors/model';
 import { CONNECTORS_CHROME } from '@/lib/connectors/theme';
 
 /**
@@ -138,6 +139,8 @@ export default async function ConnectorHqPage() {
         commitments={commitments}
         opportunities={opportunities}
         houses={membership.houses}
+        majorHouse={membership.majorHouse}
+        minorHouse={membership.minorHouse}
         pod={membership.pod}
         tier={membership.tier}
         bring={membership.bring}
@@ -261,7 +264,6 @@ function NotAConnectorYet({ signedIn }: { signedIn: boolean }) {
  */
 function ApplicationPending({ membership }: { membership: ProfileConnector }) {
   const pod = getPod(membership.pod);
-  const houses = membership.houses.map(getHouse);
 
   return (
     <HqMessage
@@ -291,10 +293,14 @@ function ApplicationPending({ membership }: { membership: ProfileConnector }) {
         </div>
         <div>
           <dt className="text-pana-ink/60 text-xs font-bold tracking-wide uppercase">
-            {houses.length === 1 ? 'House' : 'Houses'}
+            {membership.houses.length === 1 ? 'House' : 'Houses'}
           </dt>
-          <dd className="mt-0.5 font-bold">
-            {houses.map((h) => h.name).join(' · ')}
+          <dd className="mt-1 flex flex-wrap gap-2">
+            <ConnectorHousePills
+              houses={membership.houses}
+              majorHouse={membership.majorHouse}
+              minorHouse={membership.minorHouse}
+            />
           </dd>
         </div>
       </dl>

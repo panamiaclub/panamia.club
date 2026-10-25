@@ -60,7 +60,9 @@ Connect with community members for peer-to-peer mentoring sessions. Features inc
 
 ### Connector HQ and coordination (`connectors`)
 
-The signup form at `/connectors/join` keeps the existing pod, house interests, optional introduction, and optional SMS consent. Programme membership still requires coordinator review; accepted members then choose real commitments in HQ without a second approval step. House choices personalize discovery without restricting where someone can help or reserving work. Editing preferences shows the member's actual granted tier and does not change membership, tier, or existing commitments.
+The signup form at `/connectors/join` requires one **Major house** (primary focus) and one different **Minor house** (secondary focus), alongside the existing pod, optional introduction, and optional SMS consent. Both roles are explicitly stored and labeled in HQ, the application queue, and admin coordination. Programme membership still requires coordinator review; accepted members then choose real commitments in HQ without a second approval step. House choices personalize discovery without restricting where someone can help or reserving work. Editing preferences shows the member's actual granted tier and does not change membership, tier, or existing commitments.
+
+Older memberships keep their unranked house interests and HQ access until the member confirms both roles through the same signup/preferences form; array order is never interpreted as a major/minor ranking. Staff can record both confirmed roles in the roster, or change only the tier while leaving legacy interests untouched. The compatibility `houses` array is derived from explicit major/minor choices for confirmed memberships. No migration or automatic reassignment of work is needed.
 
 Accepted connectors use `/connectors/hq` to see **My commitments**, discover **Find a way to help**, and revisit **Completed** work. Opportunity signup is immediate, without a second approval step. Self-directed work supports an optional estimate. Programme gatherings and canonical house-action inspiration remain available; inspiration is distinct from a staff-published request.
 

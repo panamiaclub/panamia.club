@@ -15,6 +15,8 @@ const returning: RosterRow = {
   displayName: 'Returning Connector',
   pod: 'broward',
   houses: ['education', 'culturalWorkers'],
+  majorHouse: 'education',
+  minorHouse: 'culturalWorkers',
   tier: 3,
 };
 
@@ -54,6 +56,38 @@ test('a roster row uses authoritative values before any local draft exists', () 
   const html = render(createElement(RosterEditor, { rows: [returning] }));
   assert.match(html, /Returning Connector/);
   assert.match(html, /<option\b(?=[^>]*value="3")(?=[^>]*selected="")[^>]*>/);
-  assert.equal((html.match(/checked=""/g) ?? []).length, 2);
+  assert.equal((html.match(/selected=""/g) ?? []).length, 3);
+  assert.match(html, /Major house/);
+  assert.match(html, /Minor house/);
+  assert.match(
+    html,
+    /<option\b(?=[^>]*value="education")(?=[^>]*selected="")[^>]*>/
+  );
+  assert.match(
+    html,
+    /<option\b(?=[^>]*value="culturalWorkers")(?=[^>]*selected="")[^>]*>/
+  );
   assert.match(html, /disabled=""[^>]*>Save<\/button>/);
+});
+
+test('legacy roster rows show unranked interests without selecting house roles', () => {
+  const html = render(
+    createElement(RosterEditor, {
+      rows: [{ ...returning, majorHouse: null, minorHouse: null }],
+    })
+  );
+  assert.match(html, /Major\/minor not confirmed/);
+  assert.match(html, /Current interests: Education, Cultural Workers/);
+  assert.match(html, /Leave both blank/);
+  for (const name of ['majorHouse', 'minorHouse']) {
+    const select = html.match(
+      new RegExp(`<select\\b[^>]*name="${name}"[^>]*>([\\s\\S]*?)</select>`)
+    );
+    assert.ok(select);
+    assert.match(
+      select[1],
+      /<option\b(?=[^>]*value="")(?=[^>]*selected="")[^>]*>/
+    );
+    assert.doesNotMatch(select[0], /required=""/);
+  }
 });
