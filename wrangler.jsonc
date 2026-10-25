@@ -149,6 +149,8 @@
   ],
 
   // Cloudflare Email Sending (public beta)
+  // Requires Workers Paid and an onboarded sending domain in this account.
+  // The binding alone does not enable delivery. See docs/SIGNIN.md.
   // https://developers.cloudflare.com/email-service/
   "send_email": [{ "name": "EMAIL" }],
 
@@ -191,8 +193,8 @@
   "vars": {
     "BETTER_AUTH_URL": "https://panamia.club",
     "EMAIL_ENV": "PROD",
-    "EMAIL_SENDER_ADDRESS": "hola@pana.social",
-    "EMAIL_SENDER_NAME": "Pana MIA Testing Environment",
+    "EMAIL_SENDER_ADDRESS": "hola@panamia.club",
+    "EMAIL_SENDER_NAME": "Pana MIA",
     // Temporary preview catalog. Remove or set to "0" after live Stripe
     // products, photography, inventory, and shipping rates are ready.
     "SHOP_USE_MOCK_PRODUCTS": "0",

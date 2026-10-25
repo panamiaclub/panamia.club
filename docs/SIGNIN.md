@@ -164,6 +164,54 @@ This is a **feature** of better-auth called "account linking" and it's secure be
 
 ## Implementation Details
 
+### Email sign-in delivery
+
+Signup and email sign-in both use `sendEmail()` in `lib/email.ts`, backed by
+the Worker's native `EMAIL` binding. Production sends from
+`Pana MIA <hola@panamia.club>`; `EMAIL_SENDER_ADDRESS`, `EMAIL_SENDER_NAME`,
+and `EMAIL_ENV=PROD` are runtime variables pinned in `wrangler.jsonc`.
+
+The binding alone does not enable delivery. In the **same Cloudflare account
+that hosts `panamia-next`**:
+
+1. Enable **Workers Paid**. Sending to arbitrary signup addresses is not
+   available on Workers Free. The current plan starts at $5/month and includes
+   3,000 outbound emails/month, then $0.35 per 1,000 emails. See
+   [Email Service pricing](https://developers.cloudflare.com/email-service/platform/pricing/).
+2. Onboard **`panamia.club`** under **Email Service > Email Sending**, not
+   Email Routing. Alternatively, run
+   `wrangler email sending enable panamia.club` with access to that account.
+3. Confirm sending DNS is configured using
+   `wrangler email sending dns get panamia.club`. Sending uses `cf-bounce`
+   records and its own DKIM selector; keep the existing Google Workspace MX
+   records at the root domain.
+4. Deploy the sender configuration, request a real sign-in link, and confirm
+   it arrives. A working sign-in page or anonymous session endpoint does not
+   prove email delivery.
+
+Cloudflare's `could not find account config of sending domain` error means
+the configured sender cannot be used by the deployment's account. Check the
+paid-plan prerequisite and sender-domain onboarding before changing auth
+routes. Moving a Worker to another account does not carry over those settings.
+Provider failures propagate to the sign-in request, and a missing `EMAIL`
+binding is an error rather than a successful no-op. Local development keeps
+logging instead of sending unless `EMAIL_ENV=PROD`.
+
+Delivery and inbox placement are separate. If Gmail puts a delivered message
+in spam, check **Show original** for the SPF, DKIM, and DMARC results. Share
+only that summary when troubleshooting: the full message contains a sign-in
+token. Passing authentication does not guarantee inbox placement; sender/IP
+reputation, message content, and recipient filtering can still affect it. See
+[Google's sender guidelines](https://support.google.com/mail/answer/81126).
+Recipients can use **Report not spam** to help their own mailbox recognize
+the sender, but this does not guarantee delivery to other users' inboxes.
+The sign-in confirmation reminds users to check their spam or junk folder.
+Do not weaken DMARC or replace the Google Workspace MX records to address a
+spam classification when authentication already passes.
+
+The email sender is independent of `FEDERATION_DOMAIN=pana.social`. Do not
+rewrite ActivityPub identities when changing the sending address.
+
 ### Turning on Google sign-in
 
 Google sign-in is implemented end to end — provider config in `auth.ts`, the
@@ -208,7 +256,7 @@ switched off because it needs credentials. To enable it:
    - **Every URL on the consent screen must be `panamia.club`.** Publishing asks
      for homepage, privacy policy and terms links, and the instinct is to use
      the identity domain. Do not: `pana.social` is retained for ActivityPub
-     identities and email, but it does not currently serve the website. See
+     identities, but it does not currently serve the website. See
      [DOMAINS.md](./DOMAINS.md).
    - **User type must be External.** _Internal_ would admit only
      `@panamia.club` Workspace members, whereas members sign in with their own
@@ -222,7 +270,7 @@ switched off because it needs credentials. To enable it:
      `jose@panamia.club` works; a Workspace group such as `hola@panamia.club` is
      nicer. `hola@pana.social` will not be listed. The separate _Developer
      contact information_ field is free text and not shown to users, so
-     `hola@pana.social` belongs there.
+     `hola@panamia.club` belongs there.
 
 3. **Register the redirect URI.** better-auth serves every provider from one
    mount, so the authorised redirect URI is:

@@ -325,15 +325,15 @@ export const envConfig: Record<string, EnvVarConfig> = {
     description:
       'Sender email address (From: header). ' +
       'Non-secret — visible in every outbound email. ' +
-      'Baked into the bundle by Vite at build time. Must be in CF Build variables.',
+      'Runtime variable. Its domain must be enabled for Email Sending in the Worker account.',
     location: 'VAR',
     required: false,
-    example: 'hola@pana.social',
+    example: 'hola@panamia.club',
   },
   EMAIL_SENDER_NAME: {
     description:
       'Sender display name. ' +
-      'Baked into the bundle by Vite at build time. Must be in CF Build variables.',
+      'Runtime variable configured alongside EMAIL_SENDER_ADDRESS.',
     location: 'VAR',
     required: false,
     defaultValue: 'Pana MIA',
