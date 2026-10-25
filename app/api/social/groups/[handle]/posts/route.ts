@@ -117,6 +117,13 @@ export async function POST(
     );
   }
 
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json(
+      { success: false, error: 'Invalid post body' },
+      { status: 400 }
+    );
+  }
+
   const {
     content,
     contentWarning,
@@ -127,7 +134,12 @@ export async function POST(
     ccLicense,
   } = body;
 
-  if (!content || typeof content !== 'string') {
+  const text = typeof content === 'string' ? content : '';
+  const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+  if (
+    (!text.trim() && !hasAttachments) ||
+    (content != null && typeof content !== 'string')
+  ) {
     return NextResponse.json(
       { success: false, error: 'Content is required' },
       { status: 400 }
@@ -138,20 +150,26 @@ export async function POST(
   // group post has no coherent audience, and silently rewriting what the
   // caller asked for is how a surprise disclosure happens.
   const validVisibilities = ['public', 'unlisted', 'private'] as const;
+  if (visibility !== undefined && !validVisibilities.includes(visibility)) {
+    return NextResponse.json(
+      { success: false, error: 'Invalid group visibility' },
+      { status: 400 }
+    );
+  }
   const resolvedVisibility = validVisibilities.includes(visibility)
     ? visibility
     : 'unlisted';
 
   const result = await createStatus(
     profile.socialActor.id,
-    content,
+    text,
     contentWarning,
     inReplyTo,
     resolvedVisibility,
     Array.isArray(attachments) ? attachments : undefined,
     undefined,
     parseStatusLocation(location),
-    parseCcLicense(ccLicense),
+    parseCcLicense(ccLicense ?? profile.defaultCcLicense),
     { groupId: found.group.id }
   );
 

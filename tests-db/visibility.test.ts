@@ -5,9 +5,23 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { PgDialect, getTableConfig } from 'drizzle-orm/pg-core';
 import { and, eq, type SQL } from 'drizzle-orm';
 import * as schema from '@/lib/schema';
+import {
+  STATUS_TYPE_PANAS,
+  getVisibilityFromRecipients,
+} from '@/lib/utils/getVisibility';
 
 const pg = new PGlite();
 const db = drizzle(pg, { schema });
+// Postgres.js returns rows directly; PGlite wraps raw execute results.
+const appDb = new Proxy(db, {
+  get(target, key, receiver) {
+    if (key === 'execute') {
+      return async (query: SQL) => (await target.execute(query)).rows;
+    }
+    const value = Reflect.get(target, key, receiver);
+    return typeof value === 'function' ? value.bind(target) : value;
+  },
+});
 const dialect = new PgDialect();
 const uri = (actor: string) => `https://visibility.invalid/p/${actor}`;
 const followers = (actor: string) => `${uri(actor)}/followers`;
@@ -15,11 +29,12 @@ let viewer: string | undefined;
 let signedIn = false;
 let timeline: typeof import('@/lib/federation/wrappers/timeline');
 let status: typeof import('@/lib/federation/wrappers/status');
+let group: typeof import('@/lib/federation/wrappers/group');
 
 // Replace DB/auth/navigation boundaries and forward the federation barrel to
 // real wrappers. Group authorization, relational SQL, and GET handlers execute.
 mock.module(import.meta.resolve('../lib/db.ts'), {
-  namedExports: { db },
+  namedExports: { db: appDb },
 });
 mock.module(import.meta.resolve('../auth.ts'), {
   namedExports: {
@@ -29,7 +44,7 @@ mock.module(import.meta.resolve('../auth.ts'), {
 mock.module(import.meta.resolve('../lib/server/active-profile.ts'), {
   namedExports: {
     getActiveProfileWithActor: async () =>
-      viewer ? { socialActor: { id: viewer } } : null,
+      viewer ? { socialActor: { id: viewer }, defaultCcLicense: 'cc-0' } : null,
   },
 });
 mock.module(import.meta.resolve('next/navigation'), {
@@ -45,6 +60,10 @@ mock.module(import.meta.resolve('next/navigation'), {
 mock.module(import.meta.resolve('../lib/federation/index.ts'), {
   namedExports: {
     socialConfig: { domain: 'visibility.invalid' },
+    getActorUrl: uri,
+    getInboxUrl: (actor: string) => `${uri(actor)}/inbox`,
+    getOutboxUrl: (actor: string) => `${uri(actor)}/outbox`,
+    getFollowingUrl: (actor: string) => `${uri(actor)}/following`,
     getFollowersUrl: followers,
     getActorByScreenname: async (username: string) =>
       db.query.socialActors.findFirst({
@@ -59,6 +78,17 @@ mock.module(import.meta.resolve('../lib/federation/index.ts'), {
       status.getStatusReplies(...args),
     deleteStatus: (...args: Parameters<typeof status.deleteStatus>) =>
       status.deleteStatus(...args),
+    createStatus: (...args: Parameters<typeof status.createStatus>) =>
+      status.createStatus(...args),
+    getPublicTimeline: (
+      ...args: Parameters<typeof timeline.getPublicTimeline>
+    ) => timeline.getPublicTimeline(...args),
+    getGroupTimeline: (...args: Parameters<typeof timeline.getGroupTimeline>) =>
+      timeline.getGroupTimeline(...args),
+    getGroupByHandle: (...args: Parameters<typeof group.getGroupByHandle>) =>
+      group.getGroupByHandle(...args),
+    getMembership: (...args: Parameters<typeof group.getMembership>) =>
+      group.getMembership(...args),
   },
 });
 
@@ -67,13 +97,17 @@ let statusRoute: typeof import('../app/api/social/statuses/[statusId]/route');
 let repliesRoute: typeof import('../app/api/social/statuses/[statusId]/replies/route');
 let NextRequest: typeof import('next/server').NextRequest;
 let redirectPage: typeof import('../app/status/[statusId]/page');
+let createRoute: typeof import('../app/api/social/statuses/route');
+let groupPostsRoute: typeof import('../app/api/social/groups/[handle]/posts/route');
+let outboxRoute: typeof import('../app/p/[user]/outbox/route');
 const { PUBLIC, notExpired, visibleTo } =
   await import('@/lib/federation/wrappers/visibility');
 
 before(async () => {
   // Generate the queried columns from the current schema, not a stale copy.
-  // Constraints/defaults unrelated to reads are unnecessary for these fixtures.
+  // Constraints/defaults unrelated to the exercised queries are unnecessary.
   for (const table of [
+    schema.profiles,
     schema.socialActors,
     schema.socialStatuses,
     schema.socialFollows,
@@ -92,7 +126,11 @@ before(async () => {
     );
     await pg.exec(`CREATE TABLE "${name}" (${definitions.join(', ')})`);
   }
-  await pg.exec('CREATE TABLE profiles (id text, counties jsonb)');
+  await pg.exec(`
+    ALTER TABLE social_statuses ALTER COLUMN likes_count SET DEFAULT 0;
+    ALTER TABLE social_statuses ALTER COLUMN replies_count SET DEFAULT 0;
+    ALTER TABLE social_actors ALTER COLUMN status_count SET DEFAULT 0;
+  `);
 
   for (const id of ['alice', 'bob', 'carol', 'dave', 'erin', 'banned']) {
     await db.insert(schema.socialActors).values({
@@ -198,11 +236,16 @@ before(async () => {
   ]);
   timeline = await import('@/lib/federation/wrappers/timeline');
   status = await import('@/lib/federation/wrappers/status');
+  group = await import('@/lib/federation/wrappers/group');
   postsRoute = await import('../app/api/social/actors/[username]/posts/route');
   statusRoute = await import('../app/api/social/statuses/[statusId]/route');
   repliesRoute =
     await import('../app/api/social/statuses/[statusId]/replies/route');
   redirectPage = await import('../app/status/[statusId]/page');
+  createRoute = await import('../app/api/social/statuses/route');
+  groupPostsRoute =
+    await import('../app/api/social/groups/[handle]/posts/route');
+  outboxRoute = await import('../app/p/[user]/outbox/route');
   ({ NextRequest } = await import('next/server'));
 });
 
@@ -576,5 +619,758 @@ describe('real route handlers with session/active-actor boundaries stubbed', () 
         { message: 'NOT_FOUND' }
       );
     }
+  });
+});
+
+describe('Panas feed uses mutual follows without narrowing joined groups', () => {
+  const viewerId = 'home_viewer';
+  const extraPanas = Array.from({ length: 25 }, (_, i) => `home_extra_${i}`);
+  const expected = [
+    'group_closed',
+    'group_named',
+    'group_open',
+    'group_public_address',
+    'home_beyond_cap',
+    'home_mutual',
+    'home_mutual_group',
+    'home_own',
+    'home_unlisted',
+  ];
+
+  before(async () => {
+    const actors = [
+      viewerId,
+      'home_pana',
+      'home_following',
+      'home_follower',
+      'home_pending_in',
+      'home_pending_out',
+      'home_rejected_in',
+      'home_rejected_out',
+      'home_muted',
+      'home_blocked',
+      'home_group',
+      ...extraPanas,
+    ];
+    await db.insert(schema.socialActors).values(
+      actors.map((id) => ({
+        id,
+        username: id,
+        type: id === 'home_group' ? 'Group' : 'Person',
+        domain: 'visibility.invalid',
+        uri: uri(id),
+        followersUrl: followers(id),
+        followingUrl: `${uri(id)}/following`,
+        inboxUrl: `${uri(id)}/inbox`,
+        outboxUrl: `${uri(id)}/outbox`,
+        publicKey: 'fixture',
+      }))
+    );
+
+    const edge = (
+      from: string,
+      to: string,
+      state: 'accepted' | 'pending' | 'rejected' = 'accepted'
+    ) => ({
+      actorId: from,
+      targetActorId: to,
+      status: state,
+      acceptedAt: state === 'accepted' ? new Date('2026-01-01') : null,
+    });
+    await db.insert(schema.socialFollows).values([
+      edge(viewerId, 'home_pana'),
+      edge('home_pana', viewerId),
+      edge(viewerId, 'home_following'),
+      edge('home_follower', viewerId),
+      edge(viewerId, 'home_pending_in'),
+      edge('home_pending_in', viewerId, 'pending'),
+      edge(viewerId, 'home_pending_out', 'pending'),
+      edge('home_pending_out', viewerId),
+      edge(viewerId, 'home_rejected_in'),
+      edge('home_rejected_in', viewerId, 'rejected'),
+      edge(viewerId, 'home_rejected_out', 'rejected'),
+      edge('home_rejected_out', viewerId),
+      edge(viewerId, 'home_muted'),
+      edge('home_muted', viewerId),
+      edge(viewerId, 'home_blocked'),
+      edge('home_blocked', viewerId),
+      ...extraPanas.flatMap((id, i) => [
+        {
+          ...edge(viewerId, id),
+          acceptedAt: new Date(i === 24 ? '2025-01-01' : '2026-01-01'),
+        },
+        edge(id, viewerId),
+      ]),
+    ]);
+    await db.insert(schema.socialGroupMembers).values([
+      { actorId: viewerId, groupId: 'open', status: 'active' },
+      { actorId: viewerId, groupId: 'closed', status: 'active' },
+      { actorId: 'home_pending_in', groupId: 'closed', status: 'pending' },
+      { actorId: 'home_rejected_in', groupId: 'closed', status: 'banned' },
+    ]);
+    await db.insert(schema.socialGroups).values({
+      id: 'home_unjoined',
+      actorId: 'home_group',
+      visibility: 'public',
+    });
+    await db.insert(schema.socialBlocks).values([
+      { actorId: viewerId, targetActorId: 'home_muted', kind: 'mute' },
+      { actorId: viewerId, targetActorId: 'home_blocked', kind: 'block' },
+    ]);
+
+    const post = (
+      id: string,
+      actorId: string,
+      overrides: Partial<typeof schema.socialStatuses.$inferInsert> = {}
+    ) => ({
+      id,
+      actorId,
+      uri: `https://visibility.invalid/status/${id}`,
+      type: 'Note',
+      published: new Date('2026-01-01'),
+      recipientTo: [PUBLIC],
+      recipientCc: [],
+      ...overrides,
+    });
+    await db.insert(schema.socialStatuses).values([
+      post('home_own', viewerId),
+      post('home_mutual', 'home_pana'),
+      post('home_unlisted', 'home_pana', {
+        recipientTo: [followers('home_pana')],
+        recipientCc: [PUBLIC],
+      }),
+      post('home_oneway_out', 'home_following'),
+      post('home_oneway_in', 'home_follower'),
+      post('home_pending_in', 'home_pending_in'),
+      post('home_pending_out', 'home_pending_out'),
+      post('home_rejected_in', 'home_rejected_in'),
+      post('home_rejected_out', 'home_rejected_out'),
+      post('home_muted', 'home_muted'),
+      post('home_blocked', 'home_blocked'),
+      post('home_beyond_cap', extraPanas[24]),
+      post('home_mutual_group', 'home_pana', { groupId: 'open' }),
+      post('home_unjoined_group', 'home_pana', { groupId: 'home_unjoined' }),
+      post('home_muted_group', 'home_muted', { groupId: 'open' }),
+      post('home_blocked_group', 'home_blocked', { groupId: 'closed' }),
+      post('home_dm', 'home_pana', { recipientTo: [uri(viewerId)] }),
+      post('home_story', 'home_pana', { type: schema.STATUS_TYPE_STORY }),
+      post('home_reply', 'home_pana', { inReplyToId: 'home_mutual' }),
+      post('home_expired', 'home_pana', { expiresAt: new Date('2000-01-01') }),
+      post('home_draft', 'home_pana', { published: null }),
+    ]);
+  });
+
+  it('returns exactly mutual posts, own posts, and active joined-group posts', async () => {
+    const result = await timeline.getHomeTimeline(viewerId, undefined, 50);
+    assert.deepEqual(ids(result.statuses), expected);
+    assert.equal(result.nextCursor, null);
+    assert.equal(
+      result.statuses.filter((row) => row.id === 'home_mutual_group').length,
+      1
+    );
+  });
+
+  it('does not cap connections at the profile list page size', async () => {
+    const { listMutualFollowIds } =
+      await import('@/lib/federation/wrappers/follow');
+    assert.deepEqual(
+      new Set(await listMutualFollowIds(viewerId)),
+      new Set(['home_pana', 'home_muted', 'home_blocked', ...extraPanas])
+    );
+    assert.ok(
+      ids(
+        (await timeline.getHomeTimeline(viewerId, undefined, 50)).statuses
+      ).includes('home_beyond_cap')
+    );
+  });
+
+  it('keeps own posts even when the viewer has no mutual follows', async () => {
+    assert.deepEqual(
+      ids((await timeline.getHomeTimeline('home_follower')).statuses),
+      ['home_oneway_in']
+    );
+  });
+
+  it('pending and banned memberships do not add private-group posts', async () => {
+    for (const actor of ['home_pending_in', 'home_rejected_in']) {
+      assert.deepEqual(ids((await timeline.getHomeTimeline(actor)).statuses), [
+        actor,
+      ]);
+    }
+  });
+
+  it('losing reciprocity removes personal posts but keeps joined-group posts', async () => {
+    const reverse = and(
+      eq(schema.socialFollows.actorId, 'home_pana'),
+      eq(schema.socialFollows.targetActorId, viewerId)
+    );
+    await db
+      .update(schema.socialFollows)
+      .set({ status: 'pending' })
+      .where(reverse);
+    try {
+      assert.deepEqual(
+        ids((await timeline.getHomeTimeline(viewerId, undefined, 50)).statuses),
+        expected.filter((id) => id !== 'home_mutual' && id !== 'home_unlisted')
+      );
+    } finally {
+      await db
+        .update(schema.socialFollows)
+        .set({ status: 'accepted' })
+        .where(reverse);
+    }
+  });
+
+  it('pagination preserves the same audience without duplicates', async () => {
+    const seen: string[] = [];
+    const cursors = new Set<string>();
+    let cursor: string | undefined;
+    do {
+      const page = await timeline.getHomeTimeline(viewerId, cursor, 2);
+      seen.push(...page.statuses.map((row) => row.id));
+      cursor = page.nextCursor ?? undefined;
+      if (cursor) {
+        assert.ok(!cursors.has(cursor), 'pagination must advance');
+        cursors.add(cursor);
+      }
+    } while (cursor);
+    assert.deepEqual(seen.sort(), expected);
+  });
+
+  it('Everyone still includes public posts from one-way connections', async () => {
+    const seen = ids(
+      (await timeline.getPublicTimeline(viewerId, undefined, 50)).statuses
+    );
+    assert.ok(seen.includes('home_oneway_out'));
+    assert.ok(seen.includes('home_oneway_in'));
+    for (const id of [
+      'home_unlisted',
+      'home_dm',
+      'home_muted',
+      'home_blocked',
+      'group_closed',
+    ]) {
+      assert.ok(!seen.includes(id), `${id} must not enter Everyone`);
+    }
+    assert.ok(seen.includes('home_unjoined_group'));
+    const outsider = ids(
+      (await timeline.getPublicTimeline('home_follower', undefined, 50))
+        .statuses
+    );
+    assert.ok(!outsider.includes('group_public_address'));
+  });
+});
+
+describe('new mutual-only posts preserve their circle without becoming messages', () => {
+  const owner = 'circle_owner';
+  const pana = 'circle_pana';
+  const media = {
+    type: 'image',
+    mediaType: 'image/png',
+    url: 'https://visibility.invalid/photo.png',
+    name: 'A little moment',
+  };
+  let rootId: string;
+  let replyId: string;
+  let legacyId: string;
+
+  const postPanas = (actorId: string, inReplyToId?: string) =>
+    status.createStatus(
+      actorId,
+      'For my mutual circle',
+      undefined,
+      inReplyToId,
+      'private',
+      undefined,
+      undefined,
+      undefined,
+      'cc-by-4',
+      { audience: 'panas' }
+    );
+
+  const apiPost = (body: unknown, actorId = owner) => {
+    signedIn = true;
+    viewer = actorId;
+    return createRoute.POST(
+      new NextRequest('https://visibility.invalid/api/social/statuses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    );
+  };
+
+  before(async () => {
+    const actors = [
+      owner,
+      pana,
+      'circle_outgoing',
+      'circle_follower',
+      'circle_pending_in',
+      'circle_pending_out',
+      'circle_stranger',
+      'circle_new',
+      'circle_empty',
+      'circle_large',
+      'circle_room',
+      ...Array.from({ length: 27 }, (_, i) => `circle_extra_${i}`),
+    ];
+    await db.insert(schema.socialActors).values(
+      actors.map((id) => ({
+        id,
+        username: id,
+        type: id === 'circle_room' ? 'Group' : 'Person',
+        domain: 'visibility.invalid',
+        uri: uri(id),
+        followersUrl: followers(id),
+        followingUrl: `${uri(id)}/following`,
+        inboxUrl: `${uri(id)}/inbox`,
+        outboxUrl: `${uri(id)}/outbox`,
+        publicKey: 'fixture',
+      }))
+    );
+    const edge = (
+      actorId: string,
+      targetActorId: string,
+      state: 'accepted' | 'pending' = 'accepted'
+    ) => ({
+      actorId,
+      targetActorId,
+      status: state,
+    });
+    await db
+      .insert(schema.socialFollows)
+      .values([
+        edge(owner, pana),
+        edge(pana, owner),
+        edge(owner, 'circle_outgoing'),
+        edge('circle_follower', owner),
+        edge(owner, 'circle_pending_in'),
+        edge('circle_pending_in', owner, 'pending'),
+        edge(owner, 'circle_pending_out', 'pending'),
+        edge('circle_pending_out', owner),
+        edge(pana, 'circle_stranger'),
+        edge('circle_stranger', pana),
+        ...Array.from({ length: 27 }, (_, i) => `circle_extra_${i}`).flatMap(
+          (id) => [edge('circle_large', id), edge(id, 'circle_large')]
+        ),
+      ]);
+    await db.insert(schema.socialGroups).values({
+      id: 'circle_room',
+      actorId: 'circle_room',
+      visibility: 'private',
+    });
+    await db.insert(schema.socialGroupMembers).values({
+      groupId: 'circle_room',
+      actorId: owner,
+      status: 'active',
+    });
+
+    const root = await postPanas(owner);
+    assert.ok(root.success);
+    rootId = root.status.id;
+    const reply = await status.createStatus(
+      pana,
+      'A reply',
+      undefined,
+      rootId,
+      'private'
+    );
+    assert.ok(reply.success);
+    replyId = reply.status.id;
+    const legacy = await status.createStatus(
+      owner,
+      'Legacy followers post',
+      undefined,
+      undefined,
+      'private'
+    );
+    assert.ok(legacy.success);
+    legacyId = legacy.status.id;
+  });
+
+  it('records only complete accepted mutual recipients, with no public or follower broadcast', async () => {
+    const row = await db.query.socialStatuses.findFirst({
+      where: eq(schema.socialStatuses.id, rootId),
+    });
+    assert.ok(row);
+    assert.equal(row.type, STATUS_TYPE_PANAS);
+    assert.deepEqual(row.recipientTo, [uri(pana)]);
+    assert.deepEqual(row.recipientCc, [uri(owner)]);
+    assert.equal(row.expiresAt, null);
+    assert.equal(row.groupId, null);
+    assert.equal(
+      getVisibilityFromRecipients(row.recipientTo, row.recipientCc, row.type),
+      'private'
+    );
+    assert.equal(
+      (
+        await db.query.socialDmRequests.findMany({
+          where: eq(schema.socialDmRequests.senderActorId, owner),
+        })
+      ).length,
+      0
+    );
+  });
+
+  it('authorizes mutuals and the author, not one-way, pending, or anonymous readers', async () => {
+    for (const actorId of [owner, pana]) {
+      assert.equal((await status.getStatus(rootId, actorId))?.id, rootId);
+      assert.equal(
+        (await timeline.getStatusWithLikeStatus(rootId, actorId))?.id,
+        rootId
+      );
+    }
+    for (const actorId of [
+      undefined,
+      'circle_outgoing',
+      'circle_follower',
+      'circle_pending_in',
+      'circle_pending_out',
+      'circle_stranger',
+    ]) {
+      assert.equal(await status.getStatus(rootId, actorId), null);
+      assert.equal(
+        await timeline.getStatusWithLikeStatus(rootId, actorId),
+        null
+      );
+    }
+  });
+
+  it('keeps legacy private posts followers-only rather than reinterpreting old rows', async () => {
+    const legacy = await status.getStatus(legacyId, 'circle_follower');
+    assert.equal(legacy?.type, 'Note');
+    assert.deepEqual(legacy?.recipientTo, [followers(owner)]);
+    assert.equal(await status.getStatus(legacyId, 'circle_outgoing'), null);
+  });
+
+  it('includes authorized new Panas posts in Panas, never Everyone or anonymous profile posts', async () => {
+    for (const actorId of [owner, pana]) {
+      assert.ok(
+        ids((await timeline.getHomeTimeline(actorId)).statuses).includes(rootId)
+      );
+    }
+    assert.ok(
+      !ids(
+        (await timeline.getHomeTimeline('circle_follower')).statuses
+      ).includes(rootId)
+    );
+    assert.ok(
+      !ids(
+        (await timeline.getPublicTimeline(owner, undefined, 50)).statuses
+      ).includes(rootId)
+    );
+    assert.ok(
+      !ids(
+        (await timeline.getActorPosts(owner, undefined, undefined, 50)).statuses
+      ).includes(rootId)
+    );
+  });
+
+  it("inherits the original circle for replies, not the replier's different mutuals", async () => {
+    const reply = await status.getStatus(replyId, owner);
+    assert.equal(reply?.type, STATUS_TYPE_PANAS);
+    assert.deepEqual(reply?.recipientTo, [uri(pana)]);
+    assert.deepEqual(reply?.recipientCc, [uri(owner)]);
+    assert.equal(await status.getStatus(replyId, 'circle_stranger'), null);
+    assert.deepEqual(
+      ids(
+        (await status.getStatusReplies(rootId, undefined, 20, owner)).replies
+      ),
+      [replyId]
+    );
+    assert.deepEqual(
+      ids(
+        (
+          await status.getStatusReplies(
+            rootId,
+            undefined,
+            20,
+            'circle_stranger'
+          )
+        ).replies
+      ),
+      []
+    );
+  });
+
+  it('refuses widened and unauthorized replies before creating any orphan row', async () => {
+    const beforeRows = await db
+      .select({ id: schema.socialStatuses.id })
+      .from(schema.socialStatuses);
+    const widened = await status.createStatus(
+      pana,
+      'Not public',
+      undefined,
+      rootId,
+      'public'
+    );
+    assert.equal(widened.success, false);
+    for (const visibility of ['private', 'public'] as const) {
+      const denied = await status.createStatus(
+        'circle_stranger',
+        'Not authorized',
+        undefined,
+        rootId,
+        visibility
+      );
+      assert.deepEqual(denied, {
+        success: false,
+        error: 'Parent status not found',
+      });
+    }
+    const reinterpret = await postPanas(pana, legacyId);
+    assert.equal(reinterpret.success, false);
+    assert.deepEqual(
+      await db
+        .select({ id: schema.socialStatuses.id })
+        .from(schema.socialStatuses),
+      beforeRows
+    );
+  });
+
+  it('revokes other recipients when reciprocity ends, including access to thread replies', async () => {
+    const reverse = and(
+      eq(schema.socialFollows.actorId, pana),
+      eq(schema.socialFollows.targetActorId, owner)
+    );
+    await db
+      .update(schema.socialFollows)
+      .set({ status: 'pending' })
+      .where(reverse);
+    try {
+      assert.equal(await status.getStatus(rootId, pana), null);
+      assert.ok(
+        !ids((await timeline.getHomeTimeline(pana)).statuses).includes(rootId)
+      );
+      assert.deepEqual(
+        ids(
+          (await status.getStatusReplies(rootId, undefined, 20, pana)).replies
+        ),
+        []
+      );
+    } finally {
+      await db
+        .update(schema.socialFollows)
+        .set({ status: 'accepted' })
+        .where(reverse);
+    }
+  });
+
+  it('does not retroactively disclose old circle posts to newly mutual people', async () => {
+    await db.insert(schema.socialFollows).values([
+      { actorId: owner, targetActorId: 'circle_new', status: 'accepted' },
+      { actorId: 'circle_new', targetActorId: owner, status: 'accepted' },
+    ]);
+    assert.equal(await status.getStatus(rootId, 'circle_new'), null);
+    assert.equal(await status.getStatus(replyId, 'circle_new'), null);
+  });
+
+  it('does not cap the publishing audience at the 24-person profile page', async () => {
+    const created = await postPanas('circle_large');
+    assert.ok(created.success);
+    assert.ok(Array.isArray(created.status.recipientTo));
+    assert.equal(created.status.recipientTo.length, 27);
+    assert.ok(created.status.recipientTo.includes(uri('circle_extra_26')));
+    assert.equal(
+      (await status.getStatus(created.status.id, 'circle_extra_26'))?.id,
+      created.status.id
+    );
+  });
+
+  it('allows an empty mutual circle without falling back to public or DM delivery', async () => {
+    const created = await postPanas('circle_empty');
+    assert.ok(created.success);
+    assert.deepEqual(created.status.recipientTo, []);
+    assert.deepEqual(created.status.recipientCc, [uri('circle_empty')]);
+    assert.equal(await status.getStatus(created.status.id), null);
+    assert.equal(
+      (await status.getStatus(created.status.id, 'circle_empty'))?.id,
+      created.status.id
+    );
+    assert.ok(
+      !ids(
+        (await timeline.getSentDirectMessages('circle_empty')).statuses
+      ).includes(created.status.id)
+    );
+  });
+
+  it('never treats circle notes as inbox, sent, held mail, or one-to-one conversations', async () => {
+    for (const actorId of [owner, pana]) {
+      for (const result of [
+        await timeline.getReceivedDirectMessages(actorId),
+        await timeline.getSentDirectMessages(actorId),
+      ]) {
+        assert.ok(!ids(result.statuses).includes(rootId));
+        assert.ok(!ids(result.statuses).includes(replyId));
+      }
+      assert.ok(
+        !(await timeline.getDirectConversations(actorId)).some(
+          (row) => row.lastMessage.id === rootId
+        )
+      );
+    }
+    assert.deepEqual(await timeline.getDirectConversation(owner, pana), []);
+    assert.ok(
+      !ids((await timeline.getAtMeTimeline(pana)).statuses).includes(rootId)
+    );
+  });
+
+  it('preserves real mentions during a held DM request, without moving circle posts into Requests', async () => {
+    await db.insert(schema.socialDmRequests).values({
+      senderActorId: owner,
+      recipientActorId: pana,
+      state: 'pending',
+    });
+    await db.insert(schema.socialTags).values({
+      statusId: rootId,
+      type: 'Mention',
+      name: `@${pana}`,
+      href: uri(pana),
+    });
+    assert.ok(
+      !ids(await timeline.getHeldRequestStatuses(pana)).includes(rootId)
+    );
+    assert.ok(
+      ids((await timeline.getAtMeTimeline(pana)).statuses).includes(rootId)
+    );
+  });
+
+  it('declining mail cannot strip a recipient from a social circle post', async () => {
+    const { deleteDirectThreadRequest } =
+      await import('@/lib/federation/wrappers/dm-gate');
+    assert.equal(await deleteDirectThreadRequest(pana, owner), true);
+    const row = await db.query.socialStatuses.findFirst({
+      where: eq(schema.socialStatuses.id, rootId),
+    });
+    assert.deepEqual(row?.recipientTo, [uri(pana)]);
+    assert.equal((await status.getStatus(rootId, pana))?.id, rootId);
+  });
+
+  it('defends public readers and the federation outbox even against malformed public addressing', async () => {
+    const id = 'circle_malformed_public';
+    await db.insert(schema.socialStatuses).values({
+      id,
+      actorId: owner,
+      type: STATUS_TYPE_PANAS,
+      content: 'Still private',
+      uri: `${uri(owner)}/statuses/${id}`,
+      published: new Date(),
+      recipientTo: [PUBLIC],
+      recipientCc: [uri(owner)],
+    });
+    assert.equal(await status.getStatus(id), null);
+    assert.ok(
+      !ids(
+        (await timeline.getPublicTimeline(undefined, undefined, 50)).statuses
+      ).includes(id)
+    );
+    const response = await outboxRoute.GET(
+      new NextRequest(`https://visibility.invalid/p/${owner}/outbox?page=true`),
+      { params: Promise.resolve({ user: owner }) }
+    );
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).orderedItems, []);
+  });
+
+  it('accepts media-only posts through the real route and inherits the saved account license', async () => {
+    const response = await apiPost({
+      attachments: [media],
+      visibility: 'public',
+    });
+    assert.equal(response.status, 200);
+    const created = (await response.json()).data.status;
+    assert.equal(created.content, '');
+    assert.equal(created.ccLicense, 'cc-0');
+    assert.deepEqual(created.recipientTo, [PUBLIC]);
+    const attachments = await db.query.socialAttachments.findMany({
+      where: eq(schema.socialAttachments.statusId, created.id),
+    });
+    assert.equal(attachments.length, 1);
+    assert.equal(attachments[0].url, media.url);
+  });
+
+  it('retains explicit API license overrides and supports media-only Panas posts', async () => {
+    const response = await apiPost({
+      attachments: [media],
+      visibility: 'private',
+      audience: 'panas',
+      ccLicense: 'cc-by-sa-4',
+    });
+    assert.equal(response.status, 200);
+    const created = (await response.json()).data.status;
+    assert.equal(created.type, STATUS_TYPE_PANAS);
+    assert.equal(created.ccLicense, 'cc-by-sa-4');
+    assert.equal(await status.getStatus(created.id, 'circle_follower'), null);
+  });
+
+  it('rejects empty posts, invalid bodies, and invalid Panas audience combinations', async () => {
+    const beforeRows = await db
+      .select({ id: schema.socialStatuses.id })
+      .from(schema.socialStatuses);
+    for (const body of [
+      null,
+      [],
+      { content: ' ' },
+      { content: 7, attachments: [media] },
+      { content: 'No widening', audience: 'panas', visibility: 'public' },
+      {
+        content: 'No unknown audience',
+        audience: 'friends',
+        visibility: 'private',
+      },
+    ]) {
+      assert.equal((await apiPost(body)).status, 400);
+    }
+    assert.deepEqual(
+      await db
+        .select({ id: schema.socialStatuses.id })
+        .from(schema.socialStatuses),
+      beforeRows
+    );
+    assert.equal((await status.createStatus(owner, '')).success, false);
+  });
+
+  it('guards Panas likes and unlike counts with the same audience as reading', async () => {
+    for (const actorId of ['circle_follower', 'circle_stranger']) {
+      for (const method of [status.likeStatus, status.unlikeStatus]) {
+        assert.deepEqual(await method(actorId, rootId), {
+          success: false,
+          liked: false,
+          likesCount: 0,
+          error: 'Status not found',
+        });
+      }
+    }
+    assert.equal((await status.likeStatus(pana, rootId)).liked, true);
+    assert.equal((await status.unlikeStatus(pana, rootId)).liked, false);
+  });
+
+  it('keeps group media-only posts on the group route with member-only addressing and saved licensing', async () => {
+    signedIn = true;
+    viewer = owner;
+    const request = () =>
+      new NextRequest(
+        'https://visibility.invalid/api/social/groups/circle_room/posts',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            attachments: [media],
+            visibility: 'unlisted',
+          }),
+        }
+      );
+    const params = { params: Promise.resolve({ handle: 'circle_room' }) };
+    const response = await groupPostsRoute.POST(request(), params);
+    assert.equal(response.status, 201);
+    const created = (await response.json()).data.status;
+    assert.equal(created.groupId, 'circle_room');
+    assert.equal(created.ccLicense, 'cc-0');
+    assert.deepEqual(created.recipientTo, [followers('circle_room')]);
+    assert.deepEqual(created.recipientCc, []);
+    assert.equal(await status.getStatus(created.id, pana), null);
+    viewer = pana;
+    assert.equal((await groupPostsRoute.POST(request(), params)).status, 403);
   });
 });

@@ -69,7 +69,8 @@ export function FeedPostCard({ status }: { status: SocialStatusDisplay }) {
 
   const visibility = getVisibilityFromRecipients(
     status.recipientTo,
-    status.recipientCc
+    status.recipientCc,
+    status.type
   );
   const showLicense = Boolean(status.ccLicense) && visibility !== 'private';
 

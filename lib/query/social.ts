@@ -1666,6 +1666,8 @@ export const useCreatePost = () => {
       contentWarning?: string;
       inReplyTo?: string;
       visibility?: 'public' | 'unlisted' | 'private' | 'direct';
+      /** Mutual-only personal sharing; legacy private API posts stay followers-only. */
+      audience?: 'panas';
       attachments?: Array<{
         type: string;
         mediaType: string;
@@ -1682,7 +1684,7 @@ export const useCreatePost = () => {
         name?: string;
         precision?: 'precise' | 'general';
       };
-      /** CC license selection (default: cc-by-4) */
+      /** Optional override; otherwise the active profile's saved license applies. */
       ccLicense?: 'cc-by-4' | 'cc-by-sa-4' | 'cc-0';
     }) => {
       return axios.post('/api/social/statuses', data);

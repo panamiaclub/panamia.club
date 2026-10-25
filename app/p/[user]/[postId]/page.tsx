@@ -89,7 +89,8 @@ export default function StatusDetailPage({
                 inReplyTo={status.id}
                 replyVisibility={getVisibilityFromRecipients(
                   status.recipientTo,
-                  status.recipientCc
+                  status.recipientCc,
+                  status.type
                 )}
                 placeholder={`Reply to @${status.actor.username}...`}
               />
