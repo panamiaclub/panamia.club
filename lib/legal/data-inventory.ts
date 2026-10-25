@@ -197,6 +197,7 @@ export const inventory: Record<TableExport, Classification> = {
   // account — the same shape as the other small member datasets, so it sits
   // under that category rather than inventing one for a single table.
   connectorCommitments: ['other_member_data'],
+  connectorOpportunities: ['other_member_data'],
   // Programme logistics: a title, a time, a place, and a pod. No member is
   // named as an attendee — attendance is not recorded — but `lead` holds the
   // name of whoever is running the gathering, which is organiser data in the

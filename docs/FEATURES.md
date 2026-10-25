@@ -56,6 +56,25 @@ Connect with community members for peer-to-peer mentoring sessions. Features inc
 
 ---
 
+## Community Connectors
+
+### Connector HQ and coordination (`connectors`)
+
+Accepted connectors use `/connectors/hq` to see **My commitments**, discover **Find a way to help**, and revisit **Completed** work. Opportunity signup is immediate, without a second approval step. Self-directed work supports an optional estimate. Programme gatherings and canonical house-action inspiration remain available; inspiration is distinct from a staff-published request.
+
+Staff tools stay in **Admin / Connectors**: the dashboard manages membership and the programme calendar, Applications handles acceptance, and **Coordination** at `/admin/connectors/scheduling` publishes opportunities, shows their crew, follows commitments, and assigns work from observed load. Access uses the existing general admin role. There is no member/admin perspective switch.
+
+- Signups are ordinary commitments with an `opportunity_id`, not a second task list. Connector-owned progress, staff assignments, load, and crew views read those same records. Views refresh after writes; they are not live subscriptions.
+- A connector can release self-chosen work after confirming, but cannot remove a staff assignment. Staff can remove work, not set someone else's progress.
+- Capacity is checked under a transaction lock. A retry does not create a duplicate signup. Completing a commitment keeps its crew place; releasing it reopens the place. An invitation with no target is uncapped, not zero.
+- Closing an opportunity stops new signups without deleting existing commitments. Edits apply to future signups, preserving what an existing crew agreed to. The target cannot shrink below its crew, and an event link cannot change after signup.
+- Linked events must still be upcoming, uncancelled programme gatherings or published Panamia-hosted public events. Cancellation, unpublishing, host changes, and elapsed dates block new signups. Outstanding event staffing counts open work; it is not the opportunity's reservation count.
+- Estimates are optional integer minutes. Unknown effort remains visibly counted, never presented as zero capacity. Timing is free text, not an overdue date or weekly-hours claim.
+
+**Release requirement:** apply `drizzle/0071_connector_opportunities.sql` through the normal migration sequence before running this application version (`yarn deploy:vinext` already migrates first). The migration imports no prototype people, events, or commitments.
+
+---
+
 ## Community Content
 
 ### Articles (`articles`)

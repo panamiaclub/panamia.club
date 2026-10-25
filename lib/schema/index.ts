@@ -2864,6 +2864,10 @@ export const connectorCommitments = pgTable(
       () => connectorEvents.id,
       { onDelete: 'set null' }
     ),
+    opportunityId: text('opportunity_id').references(
+      () => connectorOpportunities.id,
+      { onDelete: 'set null' }
+    ),
     /** NULL for self-authored. Set when staff assigned it. */
     assignedBy: text('assigned_by').references(() => users.id, {
       onDelete: 'set null',
@@ -2875,6 +2879,9 @@ export const connectorCommitments = pgTable(
       table.profileId,
       table.createdAt
     ),
+    opportunityProfileIdx: uniqueIndex(
+      'connector_commitments_opportunity_profile_idx'
+    ).on(table.opportunityId, table.profileId),
   })
 );
 
@@ -2930,6 +2937,49 @@ export const connectorEvents = pgTable(
   },
   (table) => ({
     startsAtIdx: index('connector_events_starts_at_idx').on(table.startsAt),
+  })
+);
+
+/** Published calls for help. Joining creates a normal connector commitment. */
+export const connectorOpportunities = pgTable(
+  'connector_opportunities',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdateFn(() => new Date()),
+    title: text('title').notNull(),
+    details: text('details').notNull(),
+    house: text('house').notNull(),
+    pod: text('pod'),
+    when: text('when_text'),
+    location: text('location'),
+    estimatedMinutes: integer('estimated_minutes'),
+    /** NULL is an open invitation, not a crew of zero. */
+    spots: integer('spots'),
+    eventId: text('event_id').references(() => events.id, {
+      onDelete: 'cascade',
+    }),
+    connectorEventId: text('connector_event_id').references(
+      () => connectorEvents.id,
+      { onDelete: 'cascade' }
+    ),
+    createdBy: text('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+  },
+  (table) => ({
+    openIdx: index('connector_opportunities_open_idx').on(
+      table.closedAt,
+      table.createdAt
+    ),
   })
 );
 

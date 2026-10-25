@@ -106,7 +106,10 @@ export async function POST(request: NextRequest) {
      * 400 it is. Absent and null both mean "not estimated", which is a
      * legitimate answer and not a failure. */
     let estimatedMinutes: number | null = null;
-    if (payload.estimatedMinutes !== null && payload.estimatedMinutes !== undefined) {
+    if (
+      payload.estimatedMinutes !== null &&
+      payload.estimatedMinutes !== undefined
+    ) {
       const raw = payload.estimatedMinutes;
       if (
         typeof raw !== 'number' ||
@@ -166,7 +169,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'That board is full. Close some things out first.',
+          error:
+            'That board has reached its storage limit. Remove an old commitment before assigning more.',
         },
         { status: 409 }
       );
@@ -175,7 +179,10 @@ export async function POST(request: NextRequest) {
     /* Checked here so a dropdown rendered before somebody cancelled the event
      * fails with a sentence instead of a foreign key violation. The FK is
      * still what guarantees the reference; this only decides the message. */
-    if (eventChoice && !(await assignableEventExists(eventChoice.kind, eventChoice.id))) {
+    if (
+      eventChoice &&
+      !(await assignableEventExists(eventChoice.kind, eventChoice.id))
+    ) {
       return NextResponse.json(
         {
           success: false,

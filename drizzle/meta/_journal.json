@@ -505,6 +505,13 @@
       "when": 1792713600000,
       "tag": "0070_directory_referrals",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1792886400000,
+      "tag": "0071_connector_opportunities",
+      "breakpoints": true
     }
   ]
 }

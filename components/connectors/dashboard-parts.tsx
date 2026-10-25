@@ -119,13 +119,13 @@ export function Panel({
 }) {
   return (
     <section
-      className={`overflow-hidden rounded-xl border-2 border-pana-ink ${CONNECTORS_CHROME.SURFACE} ${className}`}
+      className={`border-pana-ink overflow-hidden rounded-xl border-2 ${CONNECTORS_CHROME.SURFACE} ${className}`}
     >
       <header
         className={`flex items-center justify-between gap-4 ${CONNECTORS_CHROME.FILL} px-5 py-3`}
       >
         <h2
-          className={`text-sm font-extrabold uppercase tracking-wide ${CONNECTORS_CHROME.ON_FILL}`}
+          className={`text-sm font-extrabold tracking-wide uppercase ${CONNECTORS_CHROME.ON_FILL}`}
         >
           {title}
         </h2>
@@ -145,7 +145,7 @@ export function Panel({
 export function StatBand({ stats }: { stats: readonly HeadlineStat[] }) {
   return (
     <div
-      className={`overflow-hidden rounded-xl border-2 border-pana-ink ${CONNECTORS_CHROME.FILL}`}
+      className={`border-pana-ink overflow-hidden rounded-xl border-2 ${CONNECTORS_CHROME.FILL}`}
     >
       <dl
         className={`grid ${CONNECTORS_CHROME.DIVIDE} divide-y-2 sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-5`}
@@ -158,7 +158,7 @@ export function StatBand({ stats }: { stats: readonly HeadlineStat[] }) {
             }`}
           >
             <dd
-              className={`text-4xl font-extrabold leading-none ${CONNECTORS_CHROME.ACCENT}`}
+              className={`text-4xl leading-none font-extrabold ${CONNECTORS_CHROME.ACCENT}`}
             >
               {stat.value}
             </dd>
@@ -167,7 +167,7 @@ export function StatBand({ stats }: { stats: readonly HeadlineStat[] }) {
             >
               {stat.label}
             </dt>
-            <p className="text-xs text-pana-cream/60">{stat.detail}</p>
+            <p className="text-pana-cream/60 text-xs">{stat.detail}</p>
           </div>
         ))}
       </dl>
@@ -192,12 +192,12 @@ export function TallyBars({ rows }: { rows: readonly Tally[] }) {
       {rows.map((row) => (
         <li key={row.id}>
           <div className="flex items-baseline justify-between gap-3 text-sm">
-            <span className="font-bold text-pana-ink">{row.label}</span>
-            <span className="font-extrabold tabular-nums text-pana-ink">
+            <span className="text-pana-ink font-bold">{row.label}</span>
+            <span className="text-pana-ink font-extrabold tabular-nums">
               {row.count}
             </span>
           </div>
-          <div className="mt-1.5 h-3 overflow-hidden rounded-full border-2 border-pana-ink bg-pana-cream">
+          <div className="border-pana-ink bg-pana-cream mt-1.5 h-3 overflow-hidden rounded-full border-2">
             <div
               className="h-full"
               style={{
@@ -222,7 +222,7 @@ export function HousePill({ houseId }: { houseId: HouseId }) {
   const house = getHouse(houseId);
   return (
     <span
-      className="inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-bold"
+      className="inline-block rounded-full px-2.5 py-0.5 text-xs font-bold whitespace-nowrap"
       style={{
         backgroundColor: `var(--color-${house.color})`,
         color: `var(--color-${house.onColor})`,
@@ -234,21 +234,21 @@ export function HousePill({ houseId }: { houseId: HouseId }) {
 }
 
 const PROGRESS_LABEL: Record<CommitmentProgress, string> = {
-  notSet: 'Not set',
+  notSet: 'Not started',
   inProgress: 'In progress',
   done: 'Done',
 };
 
 const PROGRESS_CLASS: Record<CommitmentProgress, string> = {
   notSet: 'border-pana-ink bg-pana-cream text-pana-ink',
-  inProgress: 'border-pana-orange bg-pana-orange text-pana-ink',
+  inProgress: 'border-pana-ink/20 bg-pana-butter-2 text-pana-ink',
   done: 'border-pana-indigo bg-pana-indigo text-pana-cream',
 };
 
 export function ProgressPill({ progress }: { progress: CommitmentProgress }) {
   return (
     <span
-      className={`inline-block whitespace-nowrap rounded-full border-2 px-2.5 py-0.5 text-xs font-bold ${PROGRESS_CLASS[progress]}`}
+      className={`inline-block rounded-full border-2 px-2.5 py-0.5 text-xs font-bold whitespace-nowrap ${PROGRESS_CLASS[progress]}`}
     >
       {PROGRESS_LABEL[progress]}
     </span>
@@ -286,7 +286,7 @@ export function EventCard({
 
   return (
     <article
-      className={`flex flex-col gap-3 rounded-xl border-2 border-pana-ink bg-pana-cream p-5 ${
+      className={`border-pana-ink bg-pana-cream flex flex-col gap-3 rounded-xl border-2 p-5 ${
         cancelled ? 'opacity-70' : ''
       }`}
     >
@@ -297,16 +297,16 @@ export function EventCard({
             park. So the badge replaces the countdown — "in 2 days" next to
             "cancelled" is two answers to the same question. */}
         {cancelled ? (
-          <span className="rounded-full bg-pana-red px-2.5 py-0.5 text-[0.65rem] font-extrabold uppercase tracking-wider text-pana-cream">
+          <span className="bg-pana-red text-pana-cream rounded-full px-2.5 py-0.5 text-[0.65rem] font-extrabold tracking-wider uppercase">
             Cancelled
           </span>
         ) : (
           <>
-            <span className="rounded-full border-2 border-pana-ink px-2.5 py-0.5 text-[0.65rem] font-extrabold uppercase tracking-wider text-pana-ink">
+            <span className="border-pana-ink text-pana-ink rounded-full border-2 px-2.5 py-0.5 text-[0.65rem] font-extrabold tracking-wider uppercase">
               {CADENCE_BADGE[event.cadence]}
             </span>
             {countdown >= 0 && countdown <= 7 && (
-              <span className="rounded-full bg-pana-orange px-2.5 py-0.5 text-[0.65rem] font-extrabold uppercase tracking-wider text-pana-ink">
+              <span className="bg-pana-orange text-pana-ink rounded-full px-2.5 py-0.5 text-[0.65rem] font-extrabold tracking-wider uppercase">
                 {formatCountdown(countdown)}
               </span>
             )}
@@ -314,11 +314,11 @@ export function EventCard({
         )}
       </div>
 
-      <h3 className="text-lg font-extrabold leading-tight text-pana-ink">
+      <h3 className="text-pana-ink text-lg leading-tight font-extrabold">
         {event.title}
       </h3>
 
-      <dl className="grid gap-x-4 gap-y-1.5 text-sm text-pana-ink sm:grid-cols-[auto_1fr]">
+      <dl className="text-pana-ink grid gap-x-4 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
         <dt className="font-bold">When</dt>
         <dd>
           {formatDay(startsAt)}
@@ -354,7 +354,7 @@ export function EventCard({
           {event.volunteersNeeded === null ? (
             <span className="font-bold">No cap — bring whoever</span>
           ) : (
-            <span className="inline-block rounded-full bg-pana-burnt px-2.5 py-0.5 text-xs font-extrabold text-pana-ink">
+            <span className="bg-pana-burnt text-pana-ink inline-block rounded-full px-2.5 py-0.5 text-xs font-extrabold">
               {event.volunteersNeeded} volunteer
               {event.volunteersNeeded === 1 ? '' : 's'} wanted
             </span>
@@ -370,7 +370,7 @@ export function EventCard({
       </dl>
 
       {action && (
-        <div className="mt-auto border-t-2 border-dashed border-pana-ink/25 pt-3">
+        <div className="border-pana-ink/25 mt-auto border-t-2 border-dashed pt-3">
           {action}
         </div>
       )}
@@ -426,9 +426,7 @@ export function CommitmentsTable({
 }) {
   if (rows.length === 0) {
     return (
-      <p className="text-sm text-pana-ink/70">
-        Nothing on the board yet.
-      </p>
+      <p className="text-pana-ink/70 text-sm">Nothing on the board yet.</p>
     );
   }
 
@@ -457,7 +455,7 @@ export function CommitmentsTable({
           {rows.map((row) => (
             <tr
               key={row.id}
-              className="border-b-2 border-pana-ink/15 align-top last:border-b-0"
+              className="border-pana-ink/15 border-b-2 align-top last:border-b-0"
             >
               {showWho && (
                 <Td className="font-bold whitespace-nowrap">
@@ -471,7 +469,7 @@ export function CommitmentsTable({
                     the same work — but which it is changes what you can do
                     with it, so the row has to say. */}
                 {row.assignedBy && (
-                  <span className="ml-2 inline-block whitespace-nowrap rounded-full border-2 border-pana-indigo px-2 py-0.5 text-[0.65rem] font-extrabold uppercase tracking-wider text-pana-indigo">
+                  <span className="border-pana-indigo text-pana-indigo ml-2 inline-block rounded-full border-2 px-2 py-0.5 text-[0.65rem] font-extrabold tracking-wider whitespace-nowrap uppercase">
                     Assigned
                   </span>
                 )}
@@ -480,12 +478,12 @@ export function CommitmentsTable({
                     every table another 8rem of min-width — which is what
                     pushed Progress off-screen on HQ once already. */}
                 {row.eventTitle && (
-                  <p className="mt-0.5 text-xs font-bold text-pana-ink/55">
+                  <p className="text-pana-ink/55 mt-0.5 text-xs font-bold">
                     for {row.eventTitle}
                   </p>
                 )}
               </Td>
-              <Td className="whitespace-nowrap text-pana-ink/70">
+              <Td className="text-pana-ink/70 whitespace-nowrap">
                 {row.when ?? '—'}
               </Td>
               <Td>
@@ -504,7 +502,10 @@ export function CommitmentsTable({
 
 function Th({ children }: { children: ReactNode }) {
   return (
-    <th scope="col" className="px-3 py-2.5 text-xs font-extrabold uppercase tracking-wide">
+    <th
+      scope="col"
+      className="px-3 py-2.5 text-xs font-extrabold tracking-wide uppercase"
+    >
       {children}
     </th>
   );
@@ -517,7 +518,7 @@ function Td({
   children: ReactNode;
   className?: string;
 }) {
-  return <td className={`px-3 py-3 text-pana-ink ${className}`}>{children}</td>;
+  return <td className={`text-pana-ink px-3 py-3 ${className}`}>{children}</td>;
 }
 
 /* `BirthdayList` was here. It is gone rather than empty: there is no date of

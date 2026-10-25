@@ -1,7 +1,7 @@
 import { and, asc, eq, gte, inArray, isNull, ne, desc, sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 
-import { db } from '@/lib/db';
+import { db, type DbInstance } from '@/lib/db';
 import {
   connectorCommitments,
   connectorEvents,
@@ -28,15 +28,15 @@ import { officialHostGroupId } from '@/lib/server/official-host';
  * itself — "if a second writer ever appears, this needs to move to its own
  * table rather than grow a lock" — and this is that move.
  *
- * ## One row type, two origins
+ * ## One row type, three origins
  *
  * A task staff put on your board and a commitment you made yourself are the
  * same thing to everyone downstream: something you are going to do, in a
  * house, by roughly when, at some stage of done. They differ only in who
  * asked, which is one nullable column rather than a second table.
  *
- * `assignedBy === null` means you wrote it. That is the common case, so it is
- * the cheap one to store.
+ * `assignedBy` identifies staff assignments. `opportunityId` identifies an
+ * opportunity the connector chose; neither set means self-authored work.
  *
  * ## Who may do what
  *
@@ -85,6 +85,7 @@ export interface ConnectorCommitment {
    */
   eventId: string | null;
   connectorEventId: string | null;
+  opportunityId: string | null;
   /**
    * The event's name, when the row came from a query that joined for it.
    * Absent — not null — when it was never looked up. See `toCommitment`.
@@ -139,6 +140,7 @@ type Row = {
   estimatedMinutes: number | null;
   eventId: string | null;
   connectorEventId: string | null;
+  opportunityId: string | null;
   assignedBy: string | null;
   assignedAt: Date | null;
   /** Joined in by the list queries only; absent on the insert's own return. */
@@ -159,6 +161,7 @@ function toCommitment(row: Row): ConnectorCommitment | null {
     estimatedMinutes: row.estimatedMinutes,
     eventId: row.eventId,
     connectorEventId: row.connectorEventId,
+    opportunityId: row.opportunityId,
     /* Spread rather than set to null when missing. `createCommitment` does not
      * join, and reporting "no event" on a row that was just given one would be
      * wrong in a way the caller cannot detect. Absent says "not looked up". */
@@ -189,6 +192,7 @@ export async function listCommitments(
       estimatedMinutes: connectorCommitments.estimatedMinutes,
       eventId: connectorCommitments.eventId,
       connectorEventId: connectorCommitments.connectorEventId,
+      opportunityId: connectorCommitments.opportunityId,
       eventTitle: EVENT_TITLE,
       assignedBy: connectorCommitments.assignedBy,
       assignedAt: connectorCommitments.assignedAt,
@@ -259,6 +263,7 @@ export async function createCommitment(
     estimatedMinutes,
     eventId,
     connectorEventId,
+    opportunityId: null,
     assignedBy,
     assignedAt: assignedBy ? now : null,
     createdAt: now,
@@ -277,6 +282,7 @@ export async function createCommitment(
     estimatedMinutes,
     eventId,
     connectorEventId,
+    opportunityId: null,
     assignedBy,
     assignedAt: assignedBy ? now.toISOString() : null,
   };
@@ -380,18 +386,14 @@ export async function findCommitment(
 }
 
 /**
- * Everything the programme is carrying that is not finished, newest first.
- *
- * Newest first here, unlike a personal board: staff are looking for what has
- * just been taken on and what is piling up, not reading one person's history.
- * Capped because this is a dashboard panel rather than a report — if the
- * programme ever has more open commitments than fit, the answer is a filter,
- * not a longer page.
+ * Programme work, newest first. Dashboard previews remain capped; the
+ * filterable coordination view passes null to include the whole programme.
  */
 export async function listOpenCommitments(
-  limit = 50
+  limit: number | null = 50,
+  includeCompleted = false
 ): Promise<ConnectorCommitmentWithOwner[]> {
-  const rows = await db
+  const query = db
     .select({
       id: connectorCommitments.id,
       what: connectorCommitments.what,
@@ -402,6 +404,7 @@ export async function listOpenCommitments(
       estimatedMinutes: connectorCommitments.estimatedMinutes,
       eventId: connectorCommitments.eventId,
       connectorEventId: connectorCommitments.connectorEventId,
+      opportunityId: connectorCommitments.opportunityId,
       eventTitle: EVENT_TITLE,
       assignedBy: connectorCommitments.assignedBy,
       assignedAt: connectorCommitments.assignedAt,
@@ -417,9 +420,11 @@ export async function listOpenCommitments(
       connectorEvents,
       eq(connectorEvents.id, connectorCommitments.connectorEventId)
     )
-    .where(ne(connectorCommitments.progress, 'done'))
-    .orderBy(desc(connectorCommitments.createdAt))
-    .limit(limit);
+    .where(
+      includeCompleted ? undefined : ne(connectorCommitments.progress, 'done')
+    )
+    .orderBy(desc(connectorCommitments.createdAt));
+  const rows = await (limit === null ? query : query.limit(limit));
 
   return rows.flatMap((row) => {
     const base = toCommitment(row);
@@ -503,10 +508,7 @@ export async function eventStaffing(
     })
     .from(connectorCommitments)
     .where(
-      and(
-        inArray(column, eventIds),
-        ne(connectorCommitments.progress, 'done')
-      )
+      and(inArray(column, eventIds), ne(connectorCommitments.progress, 'done'))
     )
     .groupBy(column);
 
@@ -604,27 +606,23 @@ export async function listAssignableEvents(): Promise<AssignableEvent[]> {
   ]);
 
   return [
-    ...programme.map(
-      (row): AssignableEvent => ({
-        kind: 'programme',
-        id: row.id,
-        title: row.title,
-        startsAt: row.startsAt.toISOString(),
-        where: row.location,
-        volunteersNeeded: row.volunteersNeeded,
-      })
-    ),
-    ...publicRows.map(
-      (row): AssignableEvent => ({
-        kind: 'public',
-        id: row.id,
-        title: row.title,
-        startsAt: row.startsAt.toISOString(),
-        where: row.venueName,
-        // Public events have no crew target. See AssignableEvent.
-        volunteersNeeded: null,
-      })
-    ),
+    ...programme.map((row): AssignableEvent => ({
+      kind: 'programme',
+      id: row.id,
+      title: row.title,
+      startsAt: row.startsAt.toISOString(),
+      where: row.location,
+      volunteersNeeded: row.volunteersNeeded,
+    })),
+    ...publicRows.map((row): AssignableEvent => ({
+      kind: 'public',
+      id: row.id,
+      title: row.title,
+      startsAt: row.startsAt.toISOString(),
+      where: row.venueName,
+      // Public events have no crew target. See AssignableEvent.
+      volunteersNeeded: null,
+    })),
   ].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 }
 
@@ -644,12 +642,18 @@ export async function listAssignableEvents(): Promise<AssignableEvent[]> {
  */
 export async function assignableEventExists(
   kind: EventKind,
-  id: string
+  id: string,
+  options?: {
+    database: Pick<DbInstance, 'select'>;
+    hostGroupId: string | null;
+    lock?: boolean;
+  }
 ): Promise<boolean> {
   const now = new Date();
+  const database = options?.database ?? db;
 
   if (kind === 'programme') {
-    const [row] = await db
+    const query = database
       .select({ id: connectorEvents.id })
       .from(connectorEvents)
       .where(
@@ -660,16 +664,19 @@ export async function assignableEventExists(
         )
       )
       .limit(1);
+    const [row] = await (options?.lock ? query.for('share') : query);
     return Boolean(row);
   }
 
-  const hostGroupId = await officialHostGroupId();
+  const hostGroupId = options
+    ? options.hostGroupId
+    : await officialHostGroupId();
   // No Panamia, no Panamia-hosted event. Returning false here keeps the write
   // path shut rather than falling back to "any published event", which is the
   // state this scoping removed.
   if (!hostGroupId) return false;
 
-  const [row] = await db
+  const query = database
     .select({ id: events.id })
     .from(events)
     .where(
@@ -681,6 +688,7 @@ export async function assignableEventExists(
       )
     )
     .limit(1);
+  const [row] = await (options?.lock ? query.for('share') : query);
   return Boolean(row);
 }
 
