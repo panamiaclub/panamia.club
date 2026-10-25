@@ -22,7 +22,7 @@ import {
  * Route prefixes that render standalone. A prefix matches the path itself and
  * anything beneath it, so `/signin` also covers a future `/signin/verify`.
  */
-export const STANDALONE_ROUTES: readonly string[] = ['/signin'];
+export const STANDALONE_ROUTES: readonly string[] = ['/signin', '/info'];
 
 /**
  * Request header carrying the path being served.
@@ -64,11 +64,16 @@ function normalisePath(pathname: string): string {
  * keeps an unknown route looking like the site it is part of rather than
  * stripping it bare.
  */
-export function wearsOwnChrome(pathname: string | null | undefined): boolean {
+export function wearsOwnChrome(
+  pathname: string | null | undefined,
+  surface?: PanaverseSurface
+): boolean {
   if (!pathname) return false;
   const path = normalisePath(pathname);
+  // A surface serves its rootPath at "/" without rewriting the request.
+  const route = path === '/' && surface ? surface.rootPath : path;
   return STANDALONE_ROUTES.some(
-    (prefix) => path === prefix || path.startsWith(`${prefix}/`)
+    (prefix) => route === prefix || route.startsWith(`${prefix}/`)
   );
 }
 
@@ -113,7 +118,7 @@ export function wearsGuestChrome(
 ): boolean {
   if (!pathname) return false;
   if (surface.id === DEFAULT_SURFACE.id) return false;
-  if (wearsOwnChrome(pathname)) return false;
+  if (wearsOwnChrome(pathname, surface)) return false;
   const path = normalisePath(pathname);
   if (path === '/') return false;
   return surfaceForPath(path).id !== surface.id;
@@ -150,7 +155,7 @@ export function wearsSurfaceChrome(
 ): boolean {
   if (!pathname) return false;
   if (surface.id === DEFAULT_SURFACE.id) return false;
-  if (wearsOwnChrome(pathname)) return false;
+  if (wearsOwnChrome(pathname, surface)) return false;
   return !wearsGuestChrome(surface, pathname);
 }
 
@@ -253,7 +258,7 @@ export function resolveInstallSurface(
   if (!pathname) return surface;
 
   const path = normalisePath(pathname);
-  if (!wearsOwnChrome(path)) return surface;
+  if (!wearsOwnChrome(path, surface)) return surface;
   const intended = intendedPath(search);
   return intended ? surfaceForPath(intended) : surface;
 }

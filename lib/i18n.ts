@@ -13,6 +13,8 @@ import enAbout from '@/locales/en/about.json';
 import esAbout from '@/locales/es/about.json';
 import enLinks from '@/locales/en/links.json';
 import esLinks from '@/locales/es/links.json';
+import enInfo from '@/locales/en/info.json';
+import esInfo from '@/locales/es/info.json';
 import enPodcasts from '@/locales/en/podcasts.json';
 import esPodcasts from '@/locales/es/podcasts.json';
 import enContact from '@/locales/en/contact.json';
@@ -45,6 +47,7 @@ i18n
         offerings: enOfferings,
         about: enAbout,
         links: enLinks,
+        info: enInfo,
         podcasts: enPodcasts,
         contact: enContact,
         jointeam: enJointeam,
@@ -61,6 +64,7 @@ i18n
         offerings: esOfferings,
         about: esAbout,
         links: esLinks,
+        info: esInfo,
         podcasts: esPodcasts,
         contact: esContact,
         jointeam: esJointeam,

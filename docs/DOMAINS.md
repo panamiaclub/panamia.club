@@ -8,17 +8,18 @@ Read this before repointing any domain constant. Two separate sessions independe
 
 Measured 2026-10-19 unless noted. Verify before acting on it; deployments move.
 
-| Host                     | Status               | What it serves                                                                                                 |
-| ------------------------ | -------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `pana.social`            | **No web address**   | Reserved for federated identities; it currently has no A or AAAA record.                                       |
-| `social.pana.social`     | **Does not resolve** | No current web deployment.                                                                                     |
-| `connectors.pana.social` | **200**              | Pana Connectors. Bound as a Worker Custom Domain 2026-10-07.                                                   |
-| `admin.pana.social`      | **200** at `/admin`  | The admin console. Bound as a Worker Custom Domain 2026-10-07.                                                 |
-| `events.pana.social`     | **Not planned**      | Nothing. Pana Events is served from `pana.social/e` instead — see [Events is path-only](#events-is-path-only). |
-| `relay.pana.social`      | Resolves             | The **separate** `panamia-nosflare` Worker, not this one.                                                      |
-| `www.panamia.club`       | **200**              | Alias serving this app. Auth must trust both this origin and the apex.                                         |
-| `panamia.club` (apex)    | **200** (Cloudflare) | **This app.** The live production deployment.                                                                  |
-| `social.panamia.club`    | **522**              | DNS exists, but the origin is not healthy; `PANAVERSE_SUBDOMAINS` remains off.                                 |
+| Host                     | Status                | What it serves                                                                                                 |
+| ------------------------ | --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `pana.social`            | **No web address**    | Reserved for federated identities; it currently has no A or AAAA record.                                       |
+| `social.pana.social`     | **Does not resolve**  | No current web deployment.                                                                                     |
+| `connectors.pana.social` | **200**               | Pana Connectors. Bound as a Worker Custom Domain 2026-10-07.                                                   |
+| `admin.pana.social`      | **200** at `/admin`   | The admin console. Bound as a Worker Custom Domain 2026-10-07.                                                 |
+| `events.pana.social`     | **Not planned**       | Nothing. Pana Events is served from `pana.social/e` instead — see [Events is path-only](#events-is-path-only). |
+| `relay.pana.social`      | Resolves              | The **separate** `panamia-nosflare` Worker, not this one.                                                      |
+| `www.panamia.club`       | **200**               | Alias serving this app. Auth must trust both this origin and the apex.                                         |
+| `panamia.club` (apex)    | **200** (Cloudflare)  | **This app.** The live production deployment.                                                                  |
+| `social.panamia.club`    | **522**               | DNS exists, but the origin is not healthy; `PANAVERSE_SUBDOMAINS` remains off.                                 |
+| `info.panamia.club`      | **200 (GoHighLevel)** | Legacy info landing page; the replacement in this app is staged at `/info` pending the cutover below.          |
 
 Every app surface that is getting a subdomain has one; `events.pana.social` is deliberately not among them. The bound ones still answer on the apex as well, at `pana.social/connectors` and `pana.social/admin` — binding a subdomain adds a front door, it does not move a route. Events only ever uses that apex door, at `pana.social/e`.
 
@@ -32,6 +33,47 @@ email delivery begins.
 
 Measured 2026-10-22: `/signin` on both hosts returns the Vinext app and the same
 Google/email controls.
+
+### Replacing the GoHighLevel info site
+
+Measured 2026-10-25: `info.panamia.club` still serves a separate GoHighLevel
+landing page. Its Pana Social link points to `panamiaclub.ap.social`, its
+donation link points to the former shop funnel, and the newsletter form's
+privacy and terms links point to `example.com`.
+
+The replacement lives at **`https://panamia.club/info`** in this app. The
+`info` surface serves that same page at `/` when reached through
+`info.panamia.club` (or `info.localhost:<port>` in development). The apex
+homepage is unchanged. The info page carries its own compact header/footer,
+English and Spanish copy, current app destinations, and an inline newsletter
+form using the existing `/api/createSignup` endpoint and Turnstile.
+
+**Deploying the code does not replace GoHighLevel's DNS binding.** Cut over in
+this order:
+
+1. Deploy the app and verify `/info`, its destination links, both languages,
+   and a real newsletter signup.
+2. Preserve any GoHighLevel contacts and workflows that are still needed.
+   The new form stores signups in the app's `newsletter_signups` table and
+   sends the existing admin notification; it does **not** import the old
+   contact list or enroll subscribers in a GoHighLevel campaign.
+3. Allow `info.panamia.club` in the existing Turnstile widget's hostname
+   configuration before sending visitors to the new form.
+4. In Cloudflare, open Workers & Pages -> `panamia-next` -> Settings ->
+   Domains & Routes and bind **`info.panamia.club`** as a Custom Domain,
+   replacing the legacy GoHighLevel DNS record as required by the dashboard.
+   Do not change the apex, `FEDERATION_DOMAIN`, or the global
+   `PANAVERSE_SUBDOMAINS` flag for this cutover.
+5. Confirm HTTPS on `https://info.panamia.club/`, that the apex still serves
+   its original homepage, and that the old
+   `/newsletter-sign-up-702983` URL permanently redirects to
+   `/info#newsletter-signup`. Check the newsletter security challenge and
+   legal links on the new hostname.
+6. Remove **only** `subdomainPending: true` from the `info` entry in
+   `lib/panaverse/surfaces.ts` and deploy again. Until then, the page and
+   sitemap deliberately use `https://panamia.club/info` as the canonical,
+   so crawlers and new cross-surface links are not sent to GoHighLevel.
+   Afterward, the canonical becomes `https://info.panamia.club/`.
 
 ### Transactional email uses `panamia.club`
 

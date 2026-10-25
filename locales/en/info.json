@@ -1,0 +1,76 @@
+{
+  "skipLink": "Skip to content",
+  "homeLabel": "Pana MIA Club info home",
+  "nav": {
+    "label": "Info navigation",
+    "about": "About Pana",
+    "changeLanguage": "Read in Spanish"
+  },
+  "hero": {
+    "eyebrow": "Rooted in South Florida",
+    "title": "The future is",
+    "titleAccent": "local.",
+    "description": "Meet the creatives, small businesses, and neighbors making South Florida feel like home. Pana MIA brings us together to build a more connected, regenerative local economy.",
+    "explore": "Explore the directory",
+    "newsletter": "Stay in the loop",
+    "region": "Miami-Dade, Broward, and Palm Beach",
+    "imageAlt": "Panas sharing a meal and conversation at a community dinner",
+    "caption": "Pana: a friend, a neighbor, someone you can count on."
+  },
+  "paths": {
+    "eyebrow": "Find your people",
+    "title": "Your next local connection starts here.",
+    "description": "Discover someone nearby, show up for your community, or share what you do. Pick a place to begin.",
+    "directory": {
+      "title": "Search the local directory",
+      "description": "Find South Florida creatives, independent businesses, and organizations."
+    },
+    "social": {
+      "title": "Join Pana Social",
+      "description": "Share what you are making and connect with other Panas on our community timeline."
+    },
+    "events": {
+      "title": "Find community events",
+      "description": "Explore local gatherings, markets, workshops, and shows on the calendar."
+    },
+    "connectors": {
+      "title": "Become a Community Connector",
+      "description": "Learn about the program and help turn local relationships into collective action."
+    },
+    "listing": {
+      "title": "Get your work listed",
+      "description": "Introduce your business, creative practice, or organization to the directory."
+    },
+    "support": {
+      "title": "Support the movement",
+      "description": "Help our nonprofit keep building tools and programs for a more local future."
+    }
+  },
+  "newsletter": {
+    "eyebrow": "The Pana MIA Post",
+    "title": "A little more local in your inbox.",
+    "description": "Sign up for community news, local stories, and updates from Pana MIA.",
+    "aside": "No account or phone number needed.",
+    "formLabel": "Pana MIA Post newsletter signup",
+    "name": "Name (optional)",
+    "email": "Email address",
+    "consent": "I would like to receive the Pana MIA Post by email.",
+    "privacyNote": "See how we handle your information in our",
+    "verification": "Complete the security check to subscribe.",
+    "unavailable": "The security check could not load. Please refresh the page or contact us for help.",
+    "submit": "Sign me up",
+    "submitting": "Signing you up...",
+    "success": "Thanks, Pana! Your newsletter signup has been received.",
+    "duplicate": "This email is already on the newsletter list.",
+    "failed": "We could not save your signup. Please try again."
+  },
+  "footer": {
+    "mission": "Pana MIA Club is a 501(c)(3) nonprofit supporting South Florida's local creatives, small businesses, and communities. The future is local.",
+    "socialLabel": "Follow Pana MIA",
+    "legalLabel": "Contact and policies",
+    "contact": "Contact us",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "copyright": "Copyright {{year}} Pana MIA Club. Built in South Florida."
+  }
+}

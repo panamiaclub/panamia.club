@@ -14,7 +14,8 @@
 
 import { getConfiguredFederationDomain } from '@/lib/federation/domain';
 
-export type SurfaceId = 'www' | 'social' | 'events' | 'connectors' | 'admin';
+export type SurfaceId =
+  'www' | 'info' | 'social' | 'events' | 'connectors' | 'admin';
 
 export interface PanaverseSurface {
   id: SurfaceId;
@@ -59,8 +60,9 @@ export interface PanaverseSurface {
    * hiding the launch state from the registry that claims to be the source of
    * truth for it. See docs/DOMAINS.md.
    *
-   * A surface may also never want one. Nothing sets this today: Events, which
-   * did, turned out to be path-only rather than pending, and a path-only
+   * Info sets this while GoHighLevel still owns its hostname. A surface may
+   * also never want one: Events turned out to be path-only rather than pending,
+   * and a path-only
    * surface wants `subdomain: null` instead — that resolves its links to the
    * root domain, where it actually lives, rather than freezing them on the
    * host in hand. This stays for the next surface launched subdomain-first.
@@ -110,6 +112,16 @@ export const SURFACES: readonly PanaverseSurface[] = [
     subdomain: null,
     rootPath: '/',
     paths: ['/directory', '/directorio', '/d', '/listings', '/venues', '/a'],
+  },
+  {
+    id: 'info',
+    name: 'Pana Mia Info',
+    tagline: 'Start here for local connections and ways to get involved.',
+    subdomain: 'info',
+    // The hostname still serves GoHighLevel until the cutover in docs/DOMAINS.md.
+    subdomainPending: true,
+    rootPath: '/info',
+    paths: ['/info'],
   },
   {
     id: 'social',
