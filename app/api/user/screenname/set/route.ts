@@ -34,14 +34,11 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { screenname, name } = body;
 
-  // Optional, and collected here because this is the only moment the platform
-  // is guaranteed to ask. A magic-link member arrives with no name from any
-  // provider, so without it every such profile is named after its own handle —
-  // the "Name quality" gap in docs/ACCOUNTS-ROADMAP.md. Capped rather than
-  // rejected: an over-long name is a paste accident, not an attack.
+  // Required for a first claim, optional for later handle-only changes.
+  // Preserve the existing cap for pasted display names.
   const displayName = typeof name === 'string' ? name.trim().slice(0, 80) : '';
 
-  if (!screenname) {
+  if (typeof screenname !== 'string' || !screenname.trim()) {
     return NextResponse.json(
       { success: false, error: 'Screenname is required' },
       { status: 400 }
@@ -61,6 +58,13 @@ export async function POST(request: NextRequest) {
       },
     },
   });
+
+  if (!currentUser?.screenname && !displayName) {
+    return NextResponse.json(
+      { success: false, error: 'Name is required' },
+      { status: 400 }
+    );
+  }
 
   // Check if screenname is actually changing
   if (
@@ -95,7 +99,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate format and availability (excluding current user)
-  const validation = await validateScreennameFull(screenname, email);
+  const validation = await validateScreennameFull(newScreenname, email);
   if (!validation.valid) {
     return NextResponse.json(
       { success: false, error: validation.error },
@@ -147,7 +151,8 @@ export async function POST(request: NextRequest) {
   //
   // Screenname assignment is the earliest point this is possible:
   // profiles.name is NOT NULL while users.name is nullable (magic-link signups
-  // often have no name), and the screenname supplies a guaranteed fallback.
+  // often have no name). A first claim now requires a display name; the fallback
+  // below remains for legacy accounts repairing a missing profile during a rename.
   //
   // This does NOT put anyone in the directory. Directory and sitemap listing is
   // filtered on users.accountType, which defaults to 'personal'; only
