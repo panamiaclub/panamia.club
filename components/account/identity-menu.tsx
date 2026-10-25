@@ -1,20 +1,23 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import {
   Check,
+  Copy,
   LogOut,
   Plus,
   RefreshCw,
   Settings,
-  Share2,
   UserPlus,
   Users,
 } from 'lucide-react';
 
+import { toast } from '@/hooks/use-toast';
 import { signOut } from '@/lib/auth-client';
 import { useMyGroups } from '@/lib/query/social';
+import { copyReferralLink } from '@/lib/referrals-client';
 import { useIdentity, type Identity } from './identity-provider';
 import { MenuSurface } from './menu-surface';
 import { PanaSites } from './pana-sites';
@@ -177,8 +180,9 @@ function MenuGroups({ onNavigate }: { onNavigate: () => void }) {
  * meets before they have an account is the one they keep afterwards.
  */
 export function IdentityMenu() {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'toast']);
   const identity = useIdentity();
+  const [copyingReferral, setCopyingReferral] = useState(false);
 
   const active = identity?.active ?? null;
 
@@ -266,6 +270,26 @@ export function IdentityMenu() {
         async function onPick(profileId: string) {
           close(false);
           if (profileId !== activeId) await switchTo(profileId);
+        }
+
+        async function onCopyReferral() {
+          setCopyingReferral(true);
+          try {
+            await copyReferralLink();
+            close();
+            toast({
+              title: t('toast:linkCopied'),
+              description: t('identity.referralLinkCopied'),
+            });
+          } catch {
+            toast({
+              title: t('toast:error'),
+              description: t('identity.referralLinkCopyFailed'),
+              variant: 'destructive',
+            });
+          } finally {
+            setCopyingReferral(false);
+          }
         }
 
         return (
@@ -435,25 +459,33 @@ export function IdentityMenu() {
 
             <div className={styles.separator} />
 
-            <Link
-              href="/account/user/edit#referrals"
+            <button
+              type="button"
               role="menuitem"
               data-menu-row
-              onClick={() => close(false)}
+              disabled={copyingReferral}
+              aria-busy={copyingReferral}
+              onClick={() => void onCopyReferral()}
               className={styles.row}
             >
               <span className={styles.addIcon} aria-hidden="true">
-                <Share2 className="h-4 w-4" />
+                {copyingReferral ? (
+                  <span className={styles.spinner} />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
               </span>
               <span className={styles.rowMeta}>
                 <span className={styles.rowName}>
-                  {t('identity.referralLink')}
+                  {copyingReferral
+                    ? t('identity.referralLinkCopying')
+                    : t('identity.referralLink')}
                 </span>
                 <span className={styles.rowHandle}>
                   {t('identity.referralLinkHint')}
                 </span>
               </span>
-            </Link>
+            </button>
 
             <Link
               href="/form/get-listed"
