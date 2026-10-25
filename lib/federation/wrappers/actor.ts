@@ -10,9 +10,10 @@
 import { db } from '@/lib/db';
 import { socialActors, profiles, toPublicActor } from '@/lib/schema';
 import type { Profile, SocialActor, PublicSocialActor } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { generateActorKeyPair } from '../crypto/keys';
 import { canCreateSocialActor, GateResult } from '../gates';
+import { localActorFilter } from '../local-actor';
 import {
   socialConfig,
   getActorUrl,
@@ -136,8 +137,10 @@ export async function getActorByScreenname(
 ): Promise<SocialActor | null> {
   return (
     (await db.query.socialActors.findFirst({
-      where: (a, { and, eq }) =>
-        and(eq(a.username, screenname), eq(a.domain, socialConfig.domain)),
+      where: and(
+        sql`lower(${socialActors.username}) = lower(${screenname})`,
+        localActorFilter(socialConfig.domain)
+      ),
     })) ?? null
   );
 }
