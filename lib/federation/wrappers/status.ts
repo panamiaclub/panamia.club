@@ -727,24 +727,50 @@ export async function getStatusReplies(
   cursor?: string,
   limit: number = 20,
   viewerActorId?: string
-): Promise<{ replies: StatusWithActor[]; nextCursor: string | null }> {
+): Promise<{
+  replies: Array<StatusWithActor & { liked: boolean }>;
+  nextCursor: string | null;
+}> {
   // Authorize the parent too: public addressing on a reply does not open a
   // private thread, including legacy replies missing their parent's group.
   if (!(await getStatus(statusId, viewerActorId))) {
     return { replies: [], nextCursor: null };
   }
   const viewerGroupIds = await getViewerGroupIds(viewerActorId);
+  const cursorRow = cursor
+    ? db
+        .select({
+          published: socialStatuses.published,
+          id: socialStatuses.id,
+        })
+        .from(socialStatuses)
+        .where(
+          and(
+            eq(socialStatuses.id, cursor),
+            eq(socialStatuses.inReplyToId, statusId)
+          )
+        )
+    : undefined;
 
   const replies = await db.query.socialStatuses.findMany({
-    where: (s, { and, eq, isNotNull, gt }) =>
+    where: (s, { and, eq, isNotNull }) =>
       and(
         eq(s.inReplyToId, statusId),
         isNotNull(s.published),
         readableStatus(viewerActorId, viewerGroupIds),
-        cursor ? gt(s.id, cursor) : undefined,
+        cursorRow ? sql`(${s.published}, ${s.id}) > (${cursorRow})` : undefined,
         notExpired()
       ),
-    with: { actor: { columns: PUBLIC_ACTOR_COLUMNS }, attachments: true },
+    with: {
+      actor: { columns: PUBLIC_ACTOR_COLUMNS },
+      attachments: true,
+      likes: {
+        where: viewerActorId
+          ? eq(socialLikes.actorId, viewerActorId)
+          : sql`false`,
+        columns: { id: true },
+      },
+    },
     orderBy: (s, { asc }) => [asc(s.published), asc(s.id)],
     limit: limit + 1,
   });
@@ -753,7 +779,13 @@ export async function getStatusReplies(
   const items = hasMore ? replies.slice(0, limit) : replies;
   const nextCursor = hasMore ? items[items.length - 1].id : null;
 
-  return { replies: items as StatusWithActor[], nextCursor };
+  return {
+    replies: items.map(({ likes, ...reply }) => ({
+      ...reply,
+      liked: likes.length > 0,
+    })),
+    nextCursor,
+  };
 }
 
 /**

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { ChevronDown, ChevronUp, Eye, Lock, MapPin, Users } from 'lucide-react';
@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AttachmentGrid } from '@/components/social/AttachmentGrid';
 import { SafeHtml } from '@/components/safe-html';
 import { PostActions } from '@/components/social/PostActions';
+import { PostReplies } from '@/components/social/PostReplies';
 import {
   CCBadge,
   type CCLicenseValue,
@@ -48,6 +49,7 @@ export function FeedPostCard({ status }: { status: SocialStatusDisplay }) {
   const [cwOpen, setCwOpen] = useState(false);
   const [replyOpen, setReplyOpen] = useState(false);
   const canReply = useCanReplyToGroup(status.group);
+  const repliesId = useId();
 
   const hasCW = Boolean(status.contentWarning?.trim());
 
@@ -131,14 +133,12 @@ export function FeedPostCard({ status }: { status: SocialStatusDisplay }) {
                 <span aria-hidden="true" className="text-pana-ink/30">
                   ·
                 </span>
-                <Link
-                  href={`/p/${status.actor.username}/${status.id}`}
-                  className="text-pana-ink/45 flex-none font-bold hover:underline"
+                <time
+                  dateTime={published.toISOString()}
+                  className="text-pana-ink/45 flex-none font-bold"
                 >
-                  <time dateTime={published.toISOString()}>
-                    {formatDistanceToNow(published, { addSuffix: true })}
-                  </time>
-                </Link>
+                  {formatDistanceToNow(published, { addSuffix: true })}
+                </time>
               </>
             )}
             {/* A pin, not a check: the member ticked this county on their own
@@ -239,22 +239,26 @@ export function FeedPostCard({ status }: { status: SocialStatusDisplay }) {
               likesCount={status.likesCount}
               repliesCount={status.repliesCount}
               onReply={() => setReplyOpen((open) => !open)}
-              showReplyButton={canReply}
+              repliesExpanded={replyOpen}
+              repliesId={repliesId}
             />
           </div>
-
-          {canReply && replyOpen && (
-            <div className="border-pana-ink/10 mt-3.5 border-l-2 pl-3">
+        </div>
+      </div>
+      <section id={repliesId} hidden={!replyOpen} aria-label="Comments">
+        {replyOpen && (
+          <div className="border-pana-ink/10 mt-3.5 space-y-4 border-l-2 pl-3">
+            <PostReplies statusId={status.id} group={status.group} />
+            {canReply && (
               <PostComposer
                 inReplyTo={status.id}
                 replyVisibility={visibility}
-                onSuccess={() => setReplyOpen(false)}
                 placeholder={`Reply to @${status.actor.username}...`}
               />
-            </div>
-          )}
-        </div>
-      </div>
+            )}
+          </div>
+        )}
+      </section>
     </article>
   );
 }

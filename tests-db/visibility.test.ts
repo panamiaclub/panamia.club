@@ -1553,3 +1553,78 @@ describe('local public timeline', () => {
     }
   });
 });
+
+describe('readable comment threads', () => {
+  const rootId = 'comments_root';
+  const otherRootId = 'comments_other_thread';
+  const orderedIds = ['comments_z', 'comments_a', 'comments_b', 'comments_m'];
+
+  before(async () => {
+    const post = (id: string) => ({
+      id,
+      actorId: 'alice',
+      uri: `https://visibility.invalid/status/${id}`,
+      type: 'Note',
+      recipientTo: [PUBLIC],
+      recipientCc: [],
+      published: new Date('2026-02-01'),
+    });
+    await db.insert(schema.socialStatuses).values([
+      post(rootId),
+      post(otherRootId),
+      ...orderedIds.map((id, i) => ({
+        ...post(id),
+        inReplyToId: rootId,
+        published: new Date(`2026-03-0${Math.min(i + 1, 3)}`),
+      })),
+    ]);
+  });
+
+  it('paginates chronologically without skipping random IDs or duplicating timestamp ties', async () => {
+    let cursor: string | undefined;
+    const seen: string[] = [];
+    for (const expectedId of orderedIds) {
+      const page = await status.getStatusReplies(rootId, cursor, 1);
+      assert.deepEqual(
+        page.replies.map((reply) => reply.id),
+        [expectedId]
+      );
+      seen.push(page.replies[0].id);
+      if (expectedId === orderedIds[orderedIds.length - 1]) {
+        assert.equal(page.nextCursor, null);
+      } else {
+        assert.ok(page.nextCursor);
+      }
+      cursor = page.nextCursor ?? undefined;
+    }
+    assert.deepEqual(seen, orderedIds);
+  });
+
+  it('does not accept a cursor from another thread as a comment-page boundary', async () => {
+    assert.deepEqual(await status.getStatusReplies(rootId, otherRootId, 1), {
+      replies: [],
+      nextCursor: null,
+    });
+  });
+
+  it('returns the current viewer like state without exposing the joined like rows', async () => {
+    assert.equal((await status.likeStatus('bob', orderedIds[0])).liked, true);
+    for (const actorId of ['bob', 'carol', undefined]) {
+      signedIn = Boolean(actorId);
+      viewer = actorId;
+      const response = await repliesRoute.GET(
+        new NextRequest(
+          `https://visibility.invalid/api/social/statuses/${rootId}/replies?limit=1`
+        ),
+        { params: Promise.resolve({ statusId: rootId }) }
+      );
+      assert.equal(response.status, 200);
+      const reply = (await response.json()).data.replies[0];
+      assert.equal(reply.id, orderedIds[0]);
+      assert.equal(reply.liked, actorId === 'bob');
+      assert.equal(reply.likesCount, 1);
+      assert.ok(!('likes' in reply));
+      assert.ok(!('privateKey' in reply.actor));
+    }
+  });
+});
