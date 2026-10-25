@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { HOUSES, TIERS } from '@/lib/connectors/model';
 import type { House, HouseId, TierId } from '@/lib/connectors/model';
 import { CONNECTORS_CHROME } from '@/lib/connectors/theme';
+import { saveConnectorWork } from '@/lib/connectors/client';
 
 /**
  * The action library — "what should I actually do?", answered.
@@ -56,12 +57,14 @@ export function ActionLibrary({
   houses,
   tier,
   committed,
+  onCommitted,
 }: {
   /** The member's own houses. Empty is tolerated — everything becomes "other". */
   houses: readonly HouseId[];
   tier: TierId;
   /** The `what` of every commitment already on the board. */
   committed: readonly string[];
+  onCommitted?: (action: string) => void;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -76,23 +79,18 @@ export function ActionLibrary({
   async function commit(action: string, house: HouseId) {
     setError(null);
     setBusy(action);
-    try {
-      const res = await fetch('/api/connectors/commitments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ what: action, house }),
-      });
-      const data = (await res.json()) as { success: boolean; error?: string };
-      if (!res.ok || !data.success) {
-        setError(data.error ?? 'Could not add that. Try again.');
-        return;
-      }
-      router.refresh();
-    } catch {
-      setError('Could not reach the server. Try again.');
-    } finally {
-      setBusy(null);
+    const failure = await saveConnectorWork(
+      '/api/connectors/commitments',
+      'POST',
+      { what: action, house }
+    );
+    setBusy(null);
+    if (failure) {
+      setError(failure);
+      return;
     }
+    router.refresh();
+    onCommitted?.(action);
   }
 
   return (

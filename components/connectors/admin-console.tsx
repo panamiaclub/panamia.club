@@ -20,6 +20,7 @@ import {
 } from '@/lib/connectors/hours';
 import { EventCard, formatDay } from '@/components/connectors/dashboard-parts';
 import SurfaceLink from '@/components/panaverse/SurfaceLink';
+import { saveConnectorWork as post } from '@/lib/connectors/client';
 
 /**
  * Programme gatherings above public events in the picker.
@@ -65,29 +66,6 @@ function Err({ message }: { message: string | null }) {
       {message}
     </p>
   );
-}
-
-async function post(
-  url: string,
-  method: 'POST' | 'PATCH' | 'DELETE',
-  body?: unknown
-): Promise<string | null> {
-  try {
-    const res = await fetch(url, {
-      method,
-      ...(body === undefined
-        ? {}
-        : {
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          }),
-    });
-    const data = (await res.json()) as { success: boolean; error?: string };
-    if (!res.ok || !data.success) return data.error ?? 'That did not save.';
-    return null;
-  } catch {
-    return 'Could not reach the server. Try again.';
-  }
 }
 
 /* ------------------------------------------------------------------ roster */

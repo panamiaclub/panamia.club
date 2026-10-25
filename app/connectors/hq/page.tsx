@@ -2,14 +2,8 @@ import type { ReactNode } from 'react';
 
 import { auth } from '@/auth';
 import SurfaceLink from '@/components/panaverse/SurfaceLink';
-import { Panel } from '@/components/connectors/dashboard-parts';
-import { MyCommitments } from '@/components/connectors/my-commitments';
 import { HqHero } from '@/components/connectors/hq-hero';
-import {
-  ActionLibrary,
-  TierLadder,
-} from '@/components/connectors/action-library';
-import { EventCard } from '@/components/connectors/dashboard-parts';
+import { HqDashboard } from '@/components/connectors/hq-dashboard';
 import {
   countConnectorsInPod,
   getMyConnector,
@@ -17,6 +11,7 @@ import {
 } from '@/lib/connectors/membership';
 import { listCommitments } from '@/lib/connectors/commitments';
 import { listUpcomingForPod } from '@/lib/connectors/events';
+import { listOpportunities } from '@/lib/connectors/opportunities';
 import { getHouse, getPod } from '@/lib/connectors/model';
 import { CONNECTORS_CHROME } from '@/lib/connectors/theme';
 
@@ -44,10 +39,10 @@ import { CONNECTORS_CHROME } from '@/lib/connectors/theme';
  * member's pod plus anything programme-wide — real rows or an empty state,
  * never a placeholder.
  *
- * Open asks and birthdays are still gone, and for different reasons. Asks
- * have no table yet. Birthdays have no field: there is no date of birth
- * anywhere on a profile, so collecting one is a product decision with a
- * privacy answer attached rather than a gap to quietly fill.
+ * Open asks now live in connector_opportunities, with signups recorded as
+ * ordinary commitments shared with the existing admin coordination desk.
+ * Birthdays still have no field: collecting dates of birth is a separate
+ * product and privacy decision, not a gap to quietly fill.
  *
  * What stays is what is true: your own commitments, which you write; your
  * pod's real size, counted; and the tier ladder for your houses, which is
@@ -118,13 +113,11 @@ export default async function ConnectorHqPage() {
 
   const { displayName, imageUrl, membership } = me;
 
-  /* Three independent reads, so they go together. The page cannot render
-     without all three and running them in series would make HQ as slow as
-     their sum for no reason. */
-  const [podSize, commitments, upcoming] = await Promise.all([
+  const [podSize, commitments, upcoming, opportunities] = await Promise.all([
     countConnectorsInPod(membership.pod),
     listCommitments(me.profileId),
     listUpcomingForPod(membership.pod),
+    listOpportunities(),
   ]);
 
   return (
@@ -134,62 +127,22 @@ export default async function ConnectorHqPage() {
         imageUrl={imageUrl}
         membership={membership}
         podSize={podSize}
+        activeCount={
+          commitments.filter((row) => row.progress !== 'done').length
+        }
+        completedCount={
+          commitments.filter((row) => row.progress === 'done').length
+        }
       />
-
-      <div className="container mx-auto grid gap-6 px-4 py-10 lg:grid-cols-3">
-        {/* `min-w-0` is load-bearing. A grid item defaults to
-            `min-width: auto`, which means it refuses to shrink below its
-            content's intrinsic width — so the commitments table's min-width
-            pushed this whole column wider than the viewport on a phone, and
-            the `overflow-x-auto` wrapper around the table never got the
-            chance to scroll because it was never the thing being squeezed.
-            The page scrolled sideways instead of the table. */}
-        <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
-          <Panel title="My commitments">
-            <MyCommitments
-              commitments={commitments}
-              houses={membership.houses}
-            />
-          </Panel>
-
-          <Panel title="Pick something to do">
-            <ActionLibrary
-              houses={membership.houses}
-              tier={membership.tier}
-              committed={commitments.map((c) => c.what)}
-            />
-          </Panel>
-        </div>
-
-        <aside className="flex flex-col gap-6">
-          <Panel title="Coming up">
-            {upcoming.length === 0 ? (
-              <p className="text-pana-ink/70 text-sm">
-                Nothing on the calendar for {getPod(membership.pod).name} yet.
-                Organizers post gatherings here.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {upcoming.map((event) => (
-                  <EventCard key={event.id} event={event} />
-                ))}
-              </div>
-            )}
-          </Panel>
-
-          <Panel title="How tiers work">
-            <TierLadder tier={membership.tier} />
-          </Panel>
-
-          {membership.bring && (
-            <Panel title="What you said you can bring">
-              <p className="text-pana-ink/80 text-sm leading-relaxed">
-                {membership.bring}
-              </p>
-            </Panel>
-          )}
-        </aside>
-      </div>
+      <HqDashboard
+        commitments={commitments}
+        opportunities={opportunities}
+        houses={membership.houses}
+        pod={membership.pod}
+        tier={membership.tier}
+        bring={membership.bring}
+        upcoming={upcoming}
+      />
     </main>
   );
 }

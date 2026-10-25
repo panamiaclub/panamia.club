@@ -1,324 +1,491 @@
 'use client';
 
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-
-import { HOUSES, getHouse } from '@/lib/connectors/model';
+import { CalendarDays, Check, Clock3, Plus } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  HousePill,
+  ProgressPill,
+  formatDay,
+} from '@/components/connectors/dashboard-parts';
+import {
+  WORK_BUTTON,
+  WORK_CARD,
+  WORK_DIALOG,
+  WORK_FIELD,
+  WORK_SECONDARY,
+  OpportunityFacts,
+  focusWorkNavigation,
+  useWorkDialogFocus,
+  WorkError,
+} from '@/components/connectors/workflow-parts';
+import { HOUSES } from '@/lib/connectors/model';
 import type { CommitmentProgress, HouseId } from '@/lib/connectors/model';
 import type { ConnectorCommitment } from '@/lib/connectors/commitments';
-import { CONNECTORS_CHROME } from '@/lib/connectors/theme';
-
-/**
- * A connector's own commitments, and the form for adding one.
- *
- * ## Why this is not `CommitmentsTable`
- *
- * `components/connectors/dashboard-parts.tsx` has a commitments table already,
- * and it stays where it is. That one renders the fixture `Commitment` shape —
- * `connectorId`, a list of houses, a tier — and resolves names through
- * `connectorById`, the fixture roster. The admin console still runs on those
- * fixtures and is out of scope here.
- *
- * Reshaping it to serve both would mean a component that takes two row types
- * and a flag, for the sake of a table of five columns. This renders the real
- * stored shape instead and leaves the admin console untouched.
- *
- * ## Why the progress control is a `<select>`
- *
- * Progress is one of three values and changing it is the most common thing
- * done on this page, so it wants to be one interaction rather than two. A
- * select is also the control that announces its current value to a screen
- * reader without needing a label repeated per row.
- *
- * Each change round-trips immediately. There is no save button because there
- * is nothing to batch: one field, one row, one write.
- */
-
-const PROGRESS_LABEL: Record<CommitmentProgress, string> = {
-  notSet: 'Not set',
-  inProgress: 'In progress',
-  done: 'Done',
-};
-
-const PROGRESS_ORDER: readonly CommitmentProgress[] = [
-  'notSet',
-  'inProgress',
-  'done',
-];
+import type { ConnectorOpportunity } from '@/lib/connectors/opportunities-model';
+import { opportunityStatus } from '@/lib/connectors/opportunities-model';
+import { formatMinutes, MAX_HOURS, parseHours } from '@/lib/connectors/hours';
+import { saveConnectorWork } from '@/lib/connectors/client';
 
 export function MyCommitments({
   commitments,
   houses,
+  opportunities,
+  completed = false,
+  onBrowse,
 }: {
   commitments: readonly ConnectorCommitment[];
-  /** The member's own houses, offered first in the add form. */
   houses: readonly HouseId[];
+  opportunities: readonly ConnectorOpportunity[];
+  completed?: boolean;
+  onBrowse: () => void;
 }) {
   const router = useRouter();
-  const [what, setWhat] = useState('');
-  const [when, setWhen] = useState('');
-  const [house, setHouse] = useState<HouseId>(houses[0] ?? HOUSES[0].id);
-  const [busy, setBusy] = useState(false);
+  const dialogFocus = useWorkDialogFocus();
+  const [pending, startTransition] = useTransition();
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const busy = saving || pending;
+  const selected = commitments.find((row) => row.id === selectedId);
+  const selectedOpportunity = opportunities.find(
+    (item) => item.id === selected?.opportunityId
+  );
+  const rows = commitments.filter(
+    (row) => (row.progress === 'done') === completed
+  );
 
   async function send(
-    method: 'POST' | 'PATCH',
-    body: Record<string, unknown>
-  ): Promise<boolean> {
+    body: Record<string, unknown>,
+    success: string,
+    method: 'POST' | 'PATCH' = 'PATCH'
+  ) {
+    setSaving(true);
     setError(null);
-    setBusy(true);
-    try {
-      const res = await fetch('/api/connectors/commitments', {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = (await res.json()) as { success: boolean; error?: string };
-      if (!res.ok || !data.success) {
-        setError(data.error ?? 'Could not save that. Try again.');
-        return false;
-      }
-      router.refresh();
-      return true;
-    } catch {
-      setError('Could not reach the server. Try again.');
-      return false;
-    } finally {
-      setBusy(false);
+    const failure = await saveConnectorWork(
+      '/api/connectors/commitments',
+      method,
+      body
+    );
+    setSaving(false);
+    if (failure) {
+      setError(failure);
+      return;
     }
+    if (
+      body.remove === true ||
+      (typeof body.progress === 'string' &&
+        (body.progress === 'done') !== completed)
+    ) {
+      dialogFocus.opener.current = null;
+      focusWorkNavigation();
+    }
+    setMessage(success);
+    setAdding(false);
+    setSelectedId(null);
+    setConfirmRemove(false);
+    startTransition(() => router.refresh());
   }
 
-  async function handleAdd(event: React.FormEvent<HTMLFormElement>) {
+  async function add(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!what.trim()) {
+    const data = new FormData(event.currentTarget);
+    const hours = data.get('hours');
+    const estimatedMinutes = parseHours(typeof hours === 'string' ? hours : '');
+    if (estimatedMinutes === 'invalid') {
+      setError(`Hours must be between 0 and ${MAX_HOURS}.`);
+      return;
+    }
+    const what = data.get('what');
+    if (typeof what !== 'string' || !what.trim()) {
       setError('Say what you will do.');
       return;
     }
-    const ok = await send('POST', { what, when, house });
-    if (ok) {
-      setWhat('');
-      setWhen('');
-    }
+    await send(
+      {
+        what,
+        when: data.get('when'),
+        house: data.get('house'),
+        estimatedMinutes,
+      },
+      'Your commitment is on the board and in the coordinator view.',
+      'POST'
+    );
   }
 
   return (
     <>
-      {commitments.length === 0 ? (
-        <p className="text-pana-ink/70 text-sm">
-          Nothing on the board yet. Say what you will do below — small is fine,
-          that is the whole point of the first tier.
-        </p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
-            <thead>
-              <tr
-                className={`${CONNECTORS_CHROME.FILL} ${CONNECTORS_CHROME.ON_FILL}`}
-              >
-                <Th>What</Th>
-                <Th>When</Th>
-                <Th>House</Th>
-                <Th>Progress</Th>
-                <Th>
-                  <span className="sr-only">Remove</span>
-                </Th>
-              </tr>
-            </thead>
-            <tbody>
-              {commitments.map((row) => {
-                const rowHouse = getHouse(row.house);
-                return (
-                  <tr
-                    key={row.id}
-                    className="border-pana-ink/15 border-b-2 align-top last:border-b-0"
-                  >
-                    <Td>
-                      {row.what}
-                      {/* Marked rather than listed separately. An assigned
-                        * task and one you took on yourself are the same work
-                        * and belong on the same board — but which it is
-                        * changes what you can do with it, so the row says. */}
-                      {row.assignedBy && (
-                        <span className="border-pana-indigo text-pana-indigo ml-2 inline-block rounded-full border-2 px-2 py-0.5 text-[0.65rem] font-extrabold tracking-wider uppercase whitespace-nowrap">
-                          Assigned
-                        </span>
-                      )}
-                    </Td>
-                    <Td className="text-pana-ink/70 whitespace-nowrap">
-                      {row.when ?? '—'}
-                    </Td>
-                    <Td>
-                      <span
-                        className="inline-block rounded-full px-2.5 py-0.5 text-xs font-bold whitespace-nowrap"
-                        style={{
-                          backgroundColor: `var(--color-${rowHouse.color})`,
-                          color: `var(--color-${rowHouse.onColor})`,
-                        }}
-                      >
-                        {rowHouse.name}
-                      </span>
-                    </Td>
-                    <Td>
-                      <label>
-                        <span className="sr-only">
-                          Progress on {row.what}
-                        </span>
-                        <select
-                          value={row.progress}
-                          disabled={busy}
-                          onChange={(e) =>
-                            send('PATCH', {
-                              id: row.id,
-                              progress: e.target.value,
-                            })
-                          }
-                          className="border-pana-ink bg-pana-cream text-pana-ink rounded-full border-2 px-2.5 py-0.5 text-xs font-bold"
-                        >
-                          {PROGRESS_ORDER.map((p) => (
-                            <option key={p} value={p}>
-                              {PROGRESS_LABEL[p]}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </Td>
-                    <Td>
-                      {/* You can drop what you took on. You cannot drop what
-                        * the programme asked of you — a task you can delete
-                        * is a task you were never given, and nobody could
-                        * tell "done" from "gone". The API enforces this; the
-                        * button is hidden so you do not find out by being
-                        * refused. Ask whoever set it to take it back. */}
-                      {row.assignedBy ? (
-                        <span className="text-pana-ink/40 text-xs font-bold">
-                          Set for you
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() =>
-                            send('PATCH', { id: row.id, remove: true })
-                          }
-                          className="text-pana-ink/60 hover:text-pana-ink text-xs font-bold underline underline-offset-4"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </Td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl font-extrabold tracking-tight">
+            {completed ? 'Small things add up.' : 'On your board'}
+          </h2>
+          <p className="text-pana-ink/65 mt-1 text-xs leading-relaxed">
+            {completed
+              ? "Here's what you've followed through on."
+              : 'Work you picked up and work your coordinators set for you.'}
+          </p>
         </div>
-      )}
-
-      <div className="border-pana-ink/25 mt-6 border-t-2 border-dashed pt-5">
-        <h3 className="text-sm font-extrabold tracking-wide uppercase">
-          Say you will do something
-        </h3>
-        {/* No "who" field, unlike the admin console's version of this form. A
-          * connector commits themselves; volunteering somebody else is the pod
-          * lead's job and it happens in conversation, not in a form. */}
-        <form className="mt-3" onSubmit={handleAdd}>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Field label="What">
+        {!completed && (
+          <button
+            type="button"
+            className={`${WORK_SECONDARY} shrink-0 whitespace-nowrap`}
+            onClick={(event) => {
+              dialogFocus.remember(event);
+              setError(null);
+              setAdding(true);
+            }}
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add my own
+          </button>
+        )}
+      </div>
+      <div className="mb-3 empty:hidden" role="status">
+        {message && (
+          <p className="text-pana-indigo text-sm font-bold">{message}</p>
+        )}
+      </div>
+      {!adding && !selected && <WorkError message={error} />}
+      <div className="flex flex-col gap-3">
+        {rows.length === 0 ? (
+          <div className={`${WORK_CARD} border-dashed py-10 text-center`}>
+            <h3 className="text-xl font-extrabold">
+              {completed
+                ? 'Your first follow-through is ahead.'
+                : "You're clear for now."}
+            </h3>
+            <p className="text-pana-ink/65 mx-auto mt-3 mb-5 max-w-sm text-sm">
+              {completed
+                ? 'Mark something done when you have followed through. It will live here, not disappear.'
+                : 'Pick up something that fits, or write down a small commitment of your own.'}
+            </p>
+            <button type="button" className={WORK_BUTTON} onClick={onBrowse}>
+              Find a way to help
+            </button>
+          </div>
+        ) : (
+          rows.map((row) => {
+            const opportunity = opportunities.find(
+              (item) => item.id === row.opportunityId
+            );
+            return (
+              <article key={row.id} className={WORK_CARD}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <HousePill houseId={row.house} />
+                  <span className="text-pana-ink/60 text-[0.65rem] font-bold">
+                    {row.assignedBy
+                      ? 'Assigned by a coordinator'
+                      : row.opportunityId
+                        ? 'You picked this up'
+                        : 'Your own commitment'}
+                  </span>
+                </div>
+                <h3 className="mt-3 mb-3 text-lg leading-snug font-extrabold tracking-tight">
+                  {row.what}
+                </h3>
+                <div className="text-pana-ink/65 flex flex-wrap gap-x-5 gap-y-2 text-xs">
+                  <p className="flex items-start gap-2">
+                    <CalendarDays
+                      className="h-4 w-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                    {row.when ??
+                      (opportunity?.eventStartsAt
+                        ? formatDay(new Date(opportunity.eventStartsAt))
+                        : 'Timing to be agreed')}
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <Clock3 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {row.estimatedMinutes === null
+                      ? 'Effort not estimated'
+                      : `${formatMinutes(row.estimatedMinutes)} estimated`}
+                  </p>
+                </div>
+                {row.eventTitle && (
+                  <p className="text-pana-indigo mt-2 text-xs font-bold">
+                    For {row.eventTitle}
+                    {opportunity?.eventStartsAt
+                      ? ` / ${formatDay(new Date(opportunity.eventStartsAt))}`
+                      : ''}
+                  </p>
+                )}
+                {opportunity &&
+                  ['closed', 'unavailable'].includes(
+                    opportunityStatus(opportunity)
+                  ) && (
+                    <p className="bg-pana-butter-2 mt-3 rounded-lg px-3 py-2 text-xs">
+                      This opportunity is no longer accepting signups. Check in
+                      with your coordinator about the work already on your
+                      board.
+                    </p>
+                  )}
+                <div className="border-pana-ink/10 mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+                  <ProgressPill progress={row.progress} />
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      aria-label={`Details for ${row.what}`}
+                      className="text-pana-ink/65 min-h-11 text-xs font-bold underline underline-offset-4"
+                      onClick={(event) => {
+                        dialogFocus.remember(event);
+                        setSelectedId(row.id);
+                        setConfirmRemove(false);
+                        setError(null);
+                      }}
+                    >
+                      Details
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className={
+                        row.progress === 'done' ? WORK_SECONDARY : WORK_BUTTON
+                      }
+                      onClick={() =>
+                        send(
+                          {
+                            id: row.id,
+                            progress:
+                              row.progress === 'inProgress'
+                                ? 'done'
+                                : 'inProgress',
+                          },
+                          row.progress === 'inProgress'
+                            ? 'Followed through. Moved to Completed, with coordinator progress updated.'
+                            : 'Progress updated on your board and the coordinator view.'
+                        )
+                      }
+                    >
+                      {row.progress === 'inProgress' && (
+                        <Check className="h-4 w-4" aria-hidden="true" />
+                      )}
+                      {row.progress === 'notSet'
+                        ? "I'm on it"
+                        : row.progress === 'inProgress'
+                          ? 'Mark done'
+                          : 'Reopen'}
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })
+        )}
+      </div>
+      <Dialog
+        open={adding}
+        onOpenChange={(open) => {
+          if (!busy) setAdding(open);
+        }}
+      >
+        <DialogContent
+          className={WORK_DIALOG}
+          onCloseAutoFocus={dialogFocus.restore}
+        >
+          <DialogTitle className="text-2xl font-extrabold">
+            Make it your own.
+          </DialogTitle>
+          <DialogDescription className="text-pana-ink/65">
+            Be specific enough that you know what showing up looks like. Small
+            is fine.
+          </DialogDescription>
+          <form onSubmit={add} className="grid min-w-0 gap-4 sm:grid-cols-2">
+            <label className="text-xs font-bold sm:col-span-2">
+              What will you do?
               <input
-                value={what}
-                onChange={(e) => setWhat(e.target.value)}
+                name="what"
+                required
                 maxLength={500}
-                placeholder="Table at the Little Haiti free market"
-                className="border-pana-ink bg-pana-cream text-pana-ink placeholder:text-pana-ink/40 w-full rounded-lg border-2 px-3 py-2 text-sm"
+                className={`${WORK_FIELD} mt-1.5`}
+                placeholder="A small, specific thing you can do"
               />
-            </Field>
-            <Field label="When">
-              <input
-                value={when}
-                onChange={(e) => setWhen(e.target.value)}
-                maxLength={120}
-                placeholder="Early November"
-                className="border-pana-ink bg-pana-cream text-pana-ink placeholder:text-pana-ink/40 w-full rounded-lg border-2 px-3 py-2 text-sm"
-              />
-            </Field>
-            <Field label="House">
+            </label>
+            <label className="text-xs font-bold">
+              House
               <select
-                value={house}
-                onChange={(e) => setHouse(e.target.value as HouseId)}
-                className="border-pana-ink bg-pana-cream text-pana-ink w-full rounded-lg border-2 px-3 py-2 text-sm"
+                name="house"
+                defaultValue={houses[0] ?? HOUSES[0].id}
+                className={`${WORK_FIELD} mt-1.5`}
               >
-                {/* Their own houses first, then the rest: a commitment usually
-                  * sits in a house you are in, but the programme does not stop
-                  * you helping another one out. */}
                 {[...HOUSES]
                   .sort(
                     (a, b) =>
                       Number(houses.includes(b.id)) -
                       Number(houses.includes(a.id))
                   )
-                  .map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.name}
-                      {houses.includes(h.id) ? '' : ' (not your house)'}
+                  .map((house) => (
+                    <option value={house.id} key={house.id}>
+                      {house.name}
+                      {houses.includes(house.id) ? '' : ' (another house)'}
                     </option>
                   ))}
               </select>
-            </Field>
-          </div>
-
-          {error && (
-            <p
-              role="alert"
-              className="border-pana-ink bg-pana-butter text-pana-ink mt-3 rounded-lg border-2 px-3 py-2 text-sm font-bold"
-            >
-              {error}
-            </p>
+            </label>
+            <label className="text-xs font-bold">
+              Estimated effort in hours
+              <input
+                name="hours"
+                inputMode="decimal"
+                placeholder="Not estimated yet"
+                className={`${WORK_FIELD} mt-1.5`}
+              />
+            </label>
+            <label className="text-xs font-bold sm:col-span-2">
+              When
+              <input
+                name="when"
+                maxLength={120}
+                className={`${WORK_FIELD} mt-1.5`}
+                placeholder="A date, before the next huddle, or flexible"
+              />
+            </label>
+            <div className="sm:col-span-2">
+              <WorkError message={error} />
+            </div>
+            <div className="flex justify-end gap-2 sm:col-span-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setAdding(false)}
+                className={WORK_SECONDARY}
+              >
+                Not now
+              </button>
+              <button disabled={busy} className={WORK_BUTTON}>
+                {busy ? 'Saving...' : 'Add my commitment'}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(selected)}
+        onOpenChange={(open) => {
+          if (!open && !busy) setSelectedId(null);
+        }}
+      >
+        <DialogContent
+          className={WORK_DIALOG}
+          onCloseAutoFocus={dialogFocus.restore}
+        >
+          <DialogTitle className="pr-5 text-xl font-extrabold">
+            {confirmRemove
+              ? selected?.opportunityId
+                ? 'Release your spot?'
+                : 'Remove this commitment?'
+              : selected?.what}
+          </DialogTitle>
+          <DialogDescription className="text-pana-ink/65">
+            {confirmRemove
+              ? selected?.opportunityId
+                ? 'Your commitment will leave the board and the coordinator crew count will update. If the opportunity is still open, someone else can take the spot.'
+                : 'This commitment will leave your board and the coordinator view.'
+              : selected?.assignedBy
+                ? 'Assigned work stays on your board. If plans change, check in with the coordinator.'
+                : selected?.opportunityId
+                  ? 'You picked this up. If plans change, you can release your spot.'
+                  : 'This is your own commitment.'}
+          </DialogDescription>
+          {selected && selectedOpportunity && !confirmRemove && (
+            <>
+              <p className="text-pana-ink/65 text-sm leading-relaxed whitespace-pre-wrap">
+                {selectedOpportunity.details}
+              </p>
+              <OpportunityFacts
+                opportunity={{
+                  ...selectedOpportunity,
+                  when: selected.when,
+                  estimatedMinutes: selected.estimatedMinutes,
+                }}
+              />
+            </>
           )}
-
-          <button
-            type="submit"
-            disabled={busy}
-            className={`mt-3 rounded-full border-2 ${CONNECTORS_CHROME.BORDER} ${CONNECTORS_CHROME.FILL} px-4 py-2 text-sm font-extrabold ${CONNECTORS_CHROME.ON_FILL} disabled:opacity-60`}
-          >
-            {busy ? 'Saving…' : 'Add to my commitments'}
-          </button>
-        </form>
-      </div>
+          {selected && !confirmRemove && (
+            <label className="text-xs font-bold">
+              Progress
+              <select
+                aria-label={`Progress on ${selected.what}`}
+                className={`${WORK_FIELD} mt-2`}
+                value={selected.progress}
+                disabled={busy}
+                onChange={(event) => {
+                  const progress = event.target.value;
+                  if (
+                    progress === 'notSet' ||
+                    progress === 'inProgress' ||
+                    progress === 'done'
+                  )
+                    send(
+                      {
+                        id: selected.id,
+                        progress: progress satisfies CommitmentProgress,
+                      },
+                      'Progress updated in both views.'
+                    );
+                }}
+              >
+                <option value="notSet">Not started</option>
+                <option value="inProgress">In progress</option>
+                <option value="done">Done</option>
+              </select>
+            </label>
+          )}
+          <WorkError message={error} />
+          <div className="flex flex-wrap justify-end gap-2">
+            {selected &&
+              !selected.assignedBy &&
+              (confirmRemove ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  className={WORK_BUTTON}
+                  onClick={() =>
+                    send(
+                      { id: selected.id, remove: true },
+                      selected.opportunityId
+                        ? 'Spot released. Your board and the coordinator crew count have been updated.'
+                        : 'Commitment removed from the shared view.'
+                    )
+                  }
+                >
+                  {busy
+                    ? 'Saving...'
+                    : selected.opportunityId
+                      ? 'Release my spot'
+                      : 'Remove commitment'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={WORK_SECONDARY}
+                  onClick={() => setConfirmRemove(true)}
+                >
+                  {selected.opportunityId
+                    ? 'Release my spot'
+                    : 'Remove commitment'}
+                </button>
+              ))}
+            <button
+              type="button"
+              disabled={busy}
+              className={WORK_SECONDARY}
+              onClick={() => setSelectedId(null)}
+            >
+              {confirmRemove ? 'Keep it' : 'Got it'}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-extrabold tracking-wide uppercase">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function Th({ children }: { children: React.ReactNode }) {
-  return (
-    <th scope="col" className="px-3 py-2 text-xs font-extrabold uppercase">
-      {children}
-    </th>
-  );
-}
-
-function Td({
-  children,
-  className = '',
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return <td className={`px-3 py-3 ${className}`}>{children}</td>;
 }

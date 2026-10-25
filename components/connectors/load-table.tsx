@@ -185,9 +185,11 @@ const SORT_LABEL: Record<SortMode, string> = {
 export function LoadTable({
   rows,
   events = [],
+  onViewWork,
 }: {
   rows: readonly LoadRow[];
   events?: readonly AssignableEvent[];
+  onViewWork?: (profileId: string) => void;
 }) {
   const [sort, setSort] = useState<SortMode>('room');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -310,32 +312,45 @@ export function LoadTable({
                  * its own: with the houses moved up to the name there is
                  * nothing else down here, and a control alone on a row reads
                  * as a section break between connectors. */}
-                <div className="flex items-center gap-2">
-                  <div className="border-pana-ink bg-pana-cream h-3 flex-1 overflow-hidden rounded-full border-2">
-                    <div
-                      className="bg-pana-indigo h-full"
-                      style={{ width: `${width}%` }}
-                    />
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex min-w-32 flex-1 items-center gap-2">
+                    <div className="border-pana-ink bg-pana-cream h-3 flex-1 overflow-hidden rounded-full border-2">
+                      <div
+                        className="bg-pana-indigo h-full"
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
+                    <span className="text-pana-ink/60 w-14 shrink-0 text-right text-xs font-bold tabular-nums">
+                      {row.load.estimatedMinutes > 0
+                        ? formatMinutes(row.load.estimatedMinutes)
+                        : '—'}
+                    </span>
                   </div>
-                  <span className="text-pana-ink/60 w-14 shrink-0 text-right text-xs font-bold tabular-nums">
-                    {row.load.estimatedMinutes > 0
-                      ? formatMinutes(row.load.estimatedMinutes)
-                      : '—'}
-                  </span>
-
-                  <button
-                    type="button"
-                    aria-expanded={open}
-                    onClick={() => setOpenId(open ? null : row.profileId)}
-                    className={[
-                      'shrink-0 rounded-full border-2 px-3 py-1 text-xs font-extrabold transition',
-                      open
-                        ? 'border-pana-ink text-pana-ink'
-                        : 'border-pana-ink/30 text-pana-ink/70 hover:border-pana-ink hover:text-pana-ink',
-                    ].join(' ')}
-                  >
-                    {open ? 'Close' : 'Give a task'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {onViewWork && (
+                      <button
+                        type="button"
+                        onClick={() => onViewWork(row.profileId)}
+                        className="text-pana-indigo min-h-11 text-xs font-bold underline underline-offset-4"
+                      >
+                        View work
+                        <span className="sr-only"> for {row.displayName}</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      aria-expanded={open}
+                      onClick={() => setOpenId(open ? null : row.profileId)}
+                      className={[
+                        'min-h-11 shrink-0 rounded-full border-2 px-3 py-1 text-xs font-extrabold transition',
+                        open
+                          ? 'border-pana-ink text-pana-ink'
+                          : 'border-pana-ink/30 text-pana-ink/70 hover:border-pana-ink hover:text-pana-ink',
+                      ].join(' ')}
+                    >
+                      {open ? 'Close' : 'Give a task'}
+                    </button>
+                  </div>
                 </div>
 
                 {open && (
@@ -360,7 +375,7 @@ export function LoadTable({
       </div>
 
       <p className="text-pana-ink/60 border-pana-ink/20 border-t-2 border-dashed pt-3 text-xs leading-relaxed">
-        Bars are scaled against the busiest connector
+        Bars are scaled against the busiest connector shown
         {busiest > 0 ? ` (${formatMinutes(busiest)})` : ''}, not against a
         capacity — the programme has never set one, and the tiers are explicitly
         not a ranking. A dash means nothing open has been sized, not that there

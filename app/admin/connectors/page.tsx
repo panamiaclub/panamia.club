@@ -63,19 +63,17 @@ import { PODS } from '@/lib/connectors/model';
  * holding tools that change what other people see. House colours stay as they
  * are: those identify data, not the tool showing it.
  *
- * ## What the mock had that this does not
+ * ## Real programme data, not mock content
  *
- * Three panels are gone rather than ported, and the reason is the same in each
- * case: nothing could have filled them.
+ * Nothing is imported from design fixtures. New features need real storage:
  *
  *   - **Birthdays.** There is no date of birth on a profile — not in the
  *     schema, not on the join form. Collecting one is a product decision with
  *     a privacy answer attached, not a gap to quietly fill.
- *   - **Open asks.** No table, and the fixture's "asked by" names were people
- *     who do not exist.
- *   - **Volunteer sign-up counts.** The mock read "3 more of 8". There is no
- *     sign-up table, so the 5 was invented. Events say how many are wanted
- *     and do not claim to know how many have come forward.
+ *   - **Open asks.** Published from the Coordination tab and stored in
+ *     connector_opportunities.
+ *   - **Sign-up counts.** Counted from linked commitments, including completed
+ *     work so finishing does not silently reopen a reserved spot.
  *
  * The sheet's "Sync with Google Sheets" banner and "Add to the sheet" picker
  * are not here either: if this page exists, the sheet is no longer the system
@@ -142,6 +140,14 @@ export default async function AdminConnectorsPage() {
       <AdminPageHeader
         eyebrow="Community"
         title="Connector dashboard"
+        action={
+          <SurfaceLink
+            href="/admin/connectors/scheduling"
+            className="bg-pana-blue text-pana-ink inline-flex min-h-11 items-center rounded-full px-5 py-2.5 text-sm font-extrabold"
+          >
+            Coordinate work
+          </SurfaceLink>
+        }
         description={
           <>
             <p>

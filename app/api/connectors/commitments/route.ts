@@ -7,6 +7,7 @@ import { profiles } from '@/lib/schema';
 import { HOUSES } from '@/lib/connectors/model';
 import type { HouseId } from '@/lib/connectors/model';
 import { parseConnector } from '@/lib/connectors/membership';
+import { MAX_MINUTES } from '@/lib/connectors/hours';
 import {
   countCommitments,
   createCommitment,
@@ -131,11 +132,29 @@ export async function POST(request: NextRequest) {
   const profileId = await loadConnectorProfileId(session.user.id);
   if (!profileId) return notAConnector();
 
+  const estimatedMinutes = payload.estimatedMinutes ?? null;
+  if (
+    estimatedMinutes !== null &&
+    (typeof estimatedMinutes !== 'number' ||
+      !Number.isInteger(estimatedMinutes) ||
+      estimatedMinutes <= 0 ||
+      estimatedMinutes > MAX_MINUTES)
+  ) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Estimated effort must be a whole number of minutes from 1 to ${MAX_MINUTES}.`,
+      },
+      { status: 400 }
+    );
+  }
+
   if ((await countCommitments(profileId)) >= MAX_COMMITMENTS) {
     return NextResponse.json(
       {
         success: false,
-        error: 'That is a lot of commitments. Close some out first.',
+        error:
+          'Your board has reached its storage limit. Remove an old self-directed commitment or ask a coordinator for help.',
       },
       { status: 409 }
     );
@@ -147,6 +166,7 @@ export async function POST(request: NextRequest) {
       what,
       when,
       house: house as HouseId,
+      estimatedMinutes,
       assignedBy: null,
     });
 
