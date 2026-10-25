@@ -230,6 +230,7 @@ Removes every row the seed scripts wrote, and nothing else.
 yarn db:unseed            # dry run — counts only, writes nothing
 yarn db:unseed --yes      # actually delete
 yarn db:unseed --inventory # read-only audit of current and older demo fixtures
+yarn db:unseed --yes --include-demo-groups # opt-in: remove wholly fixture-owned groups too
 ```
 
 This is the other half of `db:seed`. The seeders will write to a remote
@@ -282,6 +283,13 @@ migrations. Review the fixture counts, then select `delete` and enter
 second dry run and inventory. The inventory reports counts and hashes of the
 retained real account/profile IDs so preservation can be checked without
 logging their personal details.
+
+`include_demo_groups` is a separate, default-off workflow checkbox, equivalent
+to `--include-demo-groups`. It removes only groups created by fixture profiles,
+with fixture administrators and no real members (including pending or banned
+members), real posts, real replies, real likes, or non-fixture hosted events.
+Their group actors and posts are removed in the same transaction. Groups with
+real participation remain protected even when this option is enabled.
 
 The cleanup's isolated PGlite regression suite never connects to production:
 

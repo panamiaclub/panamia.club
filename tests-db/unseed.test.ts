@@ -58,7 +58,8 @@ before(async () => {
     CREATE TABLE social_groups (
       id text PRIMARY KEY,
       actor_id text REFERENCES social_actors(id) ON DELETE CASCADE,
-      member_count integer NOT NULL DEFAULT 0
+      member_count integer NOT NULL DEFAULT 0,
+      created_by_profile_id text REFERENCES profiles(id) ON DELETE SET NULL
     );
     CREATE TABLE social_group_members (
       id text PRIMARY KEY,
@@ -69,7 +70,9 @@ before(async () => {
     );
     CREATE TABLE social_statuses (
       id text PRIMARY KEY,
-      actor_id text REFERENCES social_actors(id) ON DELETE CASCADE
+      actor_id text REFERENCES social_actors(id) ON DELETE CASCADE,
+      group_id text REFERENCES social_groups(id) ON DELETE CASCADE,
+      in_reply_to_id text REFERENCES social_statuses(id) ON DELETE SET NULL
     );
     CREATE TABLE social_follows (
       id text PRIMARY KEY,
@@ -136,7 +139,7 @@ beforeEach(async () => {
       ('real_actor', 'member_profile'),
       ('literal_actor', 'seedXprofile');
     INSERT INTO social_groups (id, actor_id) VALUES ('seed_g_club', 'seed_a_club');
-    INSERT INTO social_statuses VALUES
+    INSERT INTO social_statuses (id, actor_id) VALUES
       ('test_post', 'generated_test_actor'),
       ('legacy_post', 'generated_legacy_actor'),
       ('real_post', 'real_actor');
@@ -330,7 +333,8 @@ test('rolls back earlier deletes when a real event references a seeded host', as
 async function addRetainedGroup() {
   await pg.exec(`
     INSERT INTO social_actors VALUES ('real_group_actor', NULL);
-    INSERT INTO social_groups VALUES ('real_group', 'real_group_actor', 3);
+    INSERT INTO social_groups (id, actor_id, member_count, created_by_profile_id)
+      VALUES ('real_group', 'real_group_actor', 3, 'member_profile');
     INSERT INTO social_group_members VALUES
       ('real_admin', 'real_group', 'real_actor', 'admin', 'active'),
       ('test_member', 'real_group', 'generated_test_actor', 'member', 'active'),
@@ -396,6 +400,120 @@ for (const [label, insert] of [
     await pg.exec(insert);
     const before = await snapshot();
     await assert.rejects(unseed(true), /Reconcile those counters/);
+    assert.deepEqual(await snapshot(), before);
+  });
+}
+
+async function addDemoGroup() {
+  await pg.exec(`
+    INSERT INTO social_actors VALUES ('demo_group_actor', NULL);
+    INSERT INTO social_groups (id, actor_id, member_count, created_by_profile_id)
+      VALUES ('demo_group', 'demo_group_actor', 2, 'unprefixed_person');
+    INSERT INTO social_group_members VALUES
+      ('demo_admin', 'demo_group', 'generated_test_actor', 'admin', 'active'),
+      ('demo_member', 'demo_group', 'generated_legacy_actor', 'member', 'active');
+    INSERT INTO social_statuses (id, actor_id, group_id)
+      VALUES ('demo_post', 'generated_test_actor', 'demo_group');
+  `);
+}
+
+test('demo-only group deletion requires explicit opt-in', async () => {
+  await addDemoGroup();
+  const before = await snapshot();
+  await assert.rejects(unseed(true), /last active administrator/);
+  assert.deepEqual(await snapshot(), before);
+});
+
+test('opt-in removes demo-only groups, their posts and their unprefixed actors', async () => {
+  await addDemoGroup();
+  const report = await unseed(true, { includeDemoGroups: true });
+  assert.equal(report.find(({ label }) => label === 'demo groups')?.count, 1);
+  const remaining = await snapshot();
+  assert.deepEqual(remaining.social_groups, []);
+  assert.deepEqual(remaining.social_group_members, []);
+  assert.ok(
+    !remaining.social_actors.some(
+      (row) =>
+        typeof row === 'object' &&
+        row !== null &&
+        'id' in row &&
+        row.id === 'demo_group_actor'
+    )
+  );
+  assert.deepEqual(remaining.social_statuses, [
+    {
+      id: 'real_post',
+      actor_id: 'real_actor',
+      group_id: null,
+      in_reply_to_id: null,
+    },
+  ]);
+  assert.ok(
+    (await unseed(true, { includeDemoGroups: true })).every(
+      ({ count }) => count === 0
+    )
+  );
+});
+
+test('demo-group dry run reports groups without writing', async () => {
+  await addDemoGroup();
+  const before = await snapshot();
+  const report = await unseed(false, { includeDemoGroups: true });
+  assert.equal(report.find(({ label }) => label === 'demo groups')?.count, 1);
+  assert.deepEqual(await snapshot(), before);
+});
+
+test('opt-in preserves fixture-created groups that have real members', async () => {
+  await addRetainedGroup();
+  await pg.exec(`
+    UPDATE social_groups SET created_by_profile_id = 'unprefixed_person'
+    WHERE id = 'real_group';
+  `);
+  await unseed(true, { includeDemoGroups: true });
+  assert.deepEqual(
+    (
+      await pg.query(
+        "SELECT member_count FROM social_groups WHERE id = 'real_group'"
+      )
+    ).rows,
+    [{ member_count: 1 }]
+  );
+});
+
+for (const [label, insert] of [
+  [
+    'a real creator',
+    "UPDATE social_groups SET created_by_profile_id = 'member_profile' WHERE id = 'demo_group'",
+  ],
+  [
+    'a pending real member',
+    "INSERT INTO social_group_members VALUES ('real_pending', 'demo_group', 'real_actor', 'member', 'pending')",
+  ],
+  [
+    'a real post',
+    "INSERT INTO social_statuses (id, actor_id, group_id) VALUES ('real_group_post', 'real_actor', 'demo_group')",
+  ],
+  [
+    'a real reply outside the group',
+    "INSERT INTO social_statuses (id, actor_id, in_reply_to_id) VALUES ('real_reply', 'real_actor', 'demo_post')",
+  ],
+  [
+    'a real like',
+    "INSERT INTO social_likes VALUES ('real_group_like', 'real_actor', 'demo_post')",
+  ],
+  [
+    'a real event',
+    "UPDATE events SET host_profile_id = NULL, host_group_id = 'demo_group' WHERE id = 'real_event'",
+  ],
+] as const) {
+  test(`opt-in refuses to remove a group with ${label}`, async () => {
+    await addDemoGroup();
+    await pg.exec(insert);
+    const before = await snapshot();
+    await assert.rejects(
+      unseed(true, { includeDemoGroups: true }),
+      /last active administrator/
+    );
     assert.deepEqual(await snapshot(), before);
   });
 }

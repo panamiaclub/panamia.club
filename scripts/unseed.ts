@@ -62,6 +62,8 @@
  *   npx tsx scripts/unseed.ts              # dry run — counts only, no writes
  *   npx tsx scripts/unseed.ts --yes        # actually delete
  *   npx tsx scripts/unseed.ts --inventory  # inspect possible older fixtures
+ *   npx tsx scripts/unseed.ts --yes --include-demo-groups
+ *                                         # also remove wholly fixture-owned groups
  *
  * Dry run is the default because the useful thing to do against an unfamiliar
  * database is to look first.
@@ -124,7 +126,10 @@ function reportBlocked(error: unknown): void {
   console.error('\nUnseed failed:', error);
 }
 
-export async function unseed(apply = false): Promise<UnseedStepResult[]> {
+export async function unseed(
+  apply = false,
+  options: { includeDemoGroups?: boolean } = {}
+): Promise<UnseedStepResult[]> {
   const [{ db }, schema] = await Promise.all([
     import('../lib/db'),
     import('../lib/schema'),
@@ -137,51 +142,128 @@ export async function unseed(apply = false): Promise<UnseedStepResult[]> {
     .select({ id: schema.profiles.id })
     .from(schema.profiles)
     .where(profileWhere);
-  const actorWhere = or(
+  const fixtureActorWhere = or(
     seeded(schema.socialActors.id),
     inArray(schema.socialActors.profileId, profileIds)
   );
-  const actorIds = db
+  const fixtureActorIds = db
     .select({ id: schema.socialActors.id })
     .from(schema.socialActors)
-    .where(actorWhere);
-
-  const steps = [
-    {
-      label: 'events',
-      table: schema.events,
-      where: seeded(schema.events.id),
-      note: 'cascades event_attendees, event_dismissals',
-    },
-    {
-      label: 'venues',
-      table: schema.venues,
-      where: seeded(schema.venues.id),
-      note: 'before profiles — operator_profile_id is RESTRICT',
-    },
-    {
-      label: 'social actors',
-      table: schema.socialActors,
-      where: actorWhere,
-      note: 'cascades social_follows, social_groups, social_group_members',
-    },
-    {
-      label: 'profiles',
-      table: schema.profiles,
-      where: profileWhere,
-      note: 'current and legacy fixtures; cascades profile_owners',
-    },
-    {
-      label: 'users',
-      table: schema.users,
-      where: seededUser(schema.users.id),
-      note: 'current and legacy fixtures; cascades accounts, sessions',
-    },
-  ] as const;
+    .where(fixtureActorWhere);
 
   // Buffer results until commit, so a rollback never prints successful deletes.
   return db.transaction(
     async (tx) => {
+      const demoGroups = options.includeDemoGroups
+        ? await tx
+            .select({
+              id: schema.socialGroups.id,
+              actorId: schema.socialGroups.actorId,
+            })
+            .from(schema.socialGroups).where(sql`
+              ${schema.socialGroups.createdByProfileId} IN (${profileIds})
+              AND ${schema.socialGroups.actorId} NOT IN (${fixtureActorIds})
+              AND EXISTS (
+                SELECT 1 FROM social_actors a
+                WHERE a.id = ${schema.socialGroups.actorId}
+                  AND a.profile_id IS NULL
+              )
+              AND EXISTS (
+                SELECT 1 FROM social_group_members m
+                WHERE m.group_id = ${schema.socialGroups.id}
+                  AND m.actor_id IN (${fixtureActorIds})
+                  AND m.role = 'admin' AND m.status = 'active'
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM social_group_members m
+                WHERE m.group_id = ${schema.socialGroups.id}
+                  AND m.actor_id NOT IN (${fixtureActorIds})
+                  AND m.actor_id <> ${schema.socialGroups.actorId}
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM social_statuses s
+                WHERE s.group_id = ${schema.socialGroups.id}
+                  AND s.actor_id NOT IN (${fixtureActorIds})
+                  AND s.actor_id <> ${schema.socialGroups.actorId}
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM social_statuses reply
+                JOIN social_statuses parent ON parent.id = reply.in_reply_to_id
+                WHERE parent.group_id = ${schema.socialGroups.id}
+                  AND reply.actor_id NOT IN (${fixtureActorIds})
+                  AND reply.actor_id <> ${schema.socialGroups.actorId}
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM social_likes l
+                JOIN social_statuses s ON s.id = l.status_id
+                WHERE s.group_id = ${schema.socialGroups.id}
+                  AND l.actor_id NOT IN (${fixtureActorIds})
+                  AND l.actor_id <> ${schema.socialGroups.actorId}
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM events e
+                WHERE e.host_group_id = ${schema.socialGroups.id}
+                  AND NOT ${seeded(sql`e.id`)}
+              )
+            `)
+        : [];
+      const actorWhere = or(
+        fixtureActorWhere,
+        inArray(
+          schema.socialActors.id,
+          demoGroups.map(({ actorId }) => actorId)
+        )
+      );
+      const actorIds = tx
+        .select({ id: schema.socialActors.id })
+        .from(schema.socialActors)
+        .where(actorWhere);
+      const steps = [
+        {
+          label: 'events',
+          table: schema.events,
+          where: seeded(schema.events.id),
+          note: 'cascades event_attendees, event_dismissals',
+        },
+        {
+          label: 'venues',
+          table: schema.venues,
+          where: seeded(schema.venues.id),
+          note: 'before profiles — operator_profile_id is RESTRICT',
+        },
+        ...(options.includeDemoGroups
+          ? [
+              {
+                label: 'demo groups',
+                table: schema.socialGroups,
+                where: inArray(
+                  schema.socialGroups.id,
+                  demoGroups.map(({ id }) => id)
+                ),
+                note: 'fixture creator, members and content only',
+              },
+            ]
+          : []),
+        {
+          label: 'social actors',
+          table: schema.socialActors,
+          where: actorWhere,
+          note: 'cascades social_follows, social_groups, social_group_members',
+        },
+        {
+          label: 'profiles',
+          table: schema.profiles,
+          where: profileWhere,
+          note: 'current and legacy fixtures; cascades profile_owners',
+        },
+        {
+          label: 'users',
+          table: schema.users,
+          where: seededUser(schema.users.id),
+          note: 'current and legacy fixtures; cascades accounts, sessions',
+        },
+      ] as const;
+
       const protectedProfiles = await tx
         .select({ id: schema.profiles.id })
         .from(schema.profiles).where(sql`
@@ -225,7 +307,7 @@ export async function unseed(apply = false): Promise<UnseedStepResult[]> {
           schema.profiles,
           eq(schema.profiles.id, schema.socialActors.profileId)
         )
-        .where(sql`${seeded(schema.socialActors.id)} AND NOT ${profileWhere}`);
+        .where(sql`${actorWhere} AND NOT ${profileWhere}`);
       if (realActorProfiles.length > 0) {
         throw new Error(
           'Stopped: a seeded actor is attached to a real profile. Nothing was deleted.'
@@ -459,7 +541,9 @@ async function main(): Promise<void> {
 
   let report: UnseedStepResult[];
   try {
-    report = await unseed(apply);
+    report = await unseed(apply, {
+      includeDemoGroups: process.argv.includes('--include-demo-groups'),
+    });
   } catch (error) {
     reportBlocked(error);
     process.exit(1);

@@ -50,6 +50,8 @@ fixture namespaces, dry-run immutability, authentication and actor cleanup,
 real-ownership blockers, atomic rollback, and idempotency. It never connects to
 the database named by `POSTGRES_URL`. Retained groups keep accurate active
 member counts and cannot lose their last active administrator.
+Opt-in demo-group deletion is also covered, including preservation of real
+creators, members, posts, replies, likes and hosted events.
 
 ### Existing database-backed suites
 

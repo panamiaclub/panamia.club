@@ -40,6 +40,10 @@ on:
         description: Enter DELETE TEST DATA to confirm permanent fixture deletion
         type: string
         default: ''
+      include_demo_groups:
+        description: Also remove groups with only fixture creators, members and content
+        type: boolean
+        default: false
 
 # Never cancel a run that may be mid-migration: an interrupted drizzle-kit
 # migrate leaves the ledger and the schema in an indeterminate state. Queue
@@ -120,13 +124,18 @@ jobs:
         env:
           TEST_DATA_ACTION: ${{ inputs.test_data_action }}
           CONFIRMATION: ${{ inputs.confirmation }}
+          INCLUDE_DEMO_GROUPS: ${{ inputs.include_demo_groups }}
           SEED_ALLOW_REMOTE: '1'
         run: |
+          flags=()
+          if [ "$INCLUDE_DEMO_GROUPS" = "true" ]; then
+            flags+=(--include-demo-groups)
+          fi
           case "$TEST_DATA_ACTION" in
             inventory) yarn db:unseed --inventory ;;
             dry-run)
               yarn db:unseed --inventory
-              yarn db:unseed
+              yarn db:unseed "${flags[@]}"
               ;;
             delete)
               if [ "$CONFIRMATION" != "DELETE TEST DATA" ]; then
@@ -134,8 +143,8 @@ jobs:
                 exit 1
               fi
               yarn db:unseed --inventory
-              yarn db:unseed --yes
-              yarn db:unseed
+              yarn db:unseed --yes "${flags[@]}"
+              yarn db:unseed "${flags[@]}"
               yarn db:unseed --inventory
               ;;
             *) echo "Unknown test data action"; exit 1 ;;
