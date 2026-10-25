@@ -59,6 +59,7 @@
  * Usage:
  *   npx tsx scripts/unseed.ts              # dry run — counts only, no writes
  *   npx tsx scripts/unseed.ts --yes        # actually delete
+ *   npx tsx scripts/unseed.ts --inventory  # inspect possible older fixtures
  *
  * Dry run is the default because the useful thing to do against an unfamiliar
  * database is to look first.
@@ -117,7 +118,8 @@ async function main(): Promise<void> {
   }
   process.env.POSTGRES_URL = connectionString;
 
-  const target = connectionString.replace(/\/\/[^@]*@/, '//***@').split('?')[0];
+  const url = new URL(connectionString);
+  const target = `${url.hostname}:${url.port || '5432'}${url.pathname}`;
   const isLocal = /localhost|127\.0\.0\.1/.test(connectionString);
   const allowRemote = process.env.SEED_ALLOW_REMOTE === '1';
 
@@ -146,6 +148,60 @@ async function main(): Promise<void> {
     import('../lib/schema'),
   ]);
   const { sql, or, count } = await import('drizzle-orm');
+
+  if (process.argv.includes('--inventory')) {
+    const reservedEmail = (column: SQLWrapper) =>
+      sql`${column} ~* '@([^@]*\\.)?(example\\.(com|org|net)|test|invalid)$'`;
+    const fixtureUser = sql`(
+      starts_with(u.id, 'seed_')
+      OR u.id ~ '^(test|demo)[_-]'
+      OR ${reservedEmail(sql`u.email`)}
+    )`;
+
+    console.log('UNSEED:inventory');
+    console.log('Database:', target);
+    console.log(
+      'Read-only inventory. Emails and real account details are not logged.'
+    );
+    const totals = await db.execute(sql`
+      SELECT
+        (SELECT count(*)::int FROM users) AS users,
+        (SELECT count(*)::int FROM profiles) AS profiles,
+        (SELECT count(*)::int FROM profiles WHERE active) AS active_profiles
+    `);
+    console.log('Totals:', JSON.stringify(totals));
+
+    const candidateUsers = await db.execute(sql`
+      SELECT u.id, u.screenname, u.account_type,
+             ${reservedEmail(sql`u.email`)} AS reserved_email,
+             starts_with(u.id, 'seed_') AS seeded_id
+      FROM users u
+      WHERE ${fixtureUser}
+      ORDER BY u.id
+    `);
+    console.log('Candidate users:', JSON.stringify(candidateUsers));
+
+    const candidateProfiles = await db.execute(sql`
+      SELECT p.id, p.screenname, p.user_id, p.active,
+             ${reservedEmail(sql`p.email`)} AS reserved_email,
+             starts_with(p.id, 'seed_') AS seeded_id,
+             p.status->>'source' AS source,
+             (SELECT count(*)::int
+              FROM profile_owners po JOIN users u ON u.id = po.user_id
+              WHERE po.profile_id = p.id AND NOT ${fixtureUser})
+               AS non_fixture_owners
+      FROM profiles p
+      WHERE starts_with(p.id, 'seed_')
+         OR p.id ~ '^(test|demo)[_-]'
+         OR ${reservedEmail(sql`p.email`)}
+         OR p.screenname ~ '^pana[0-9]+$'
+         OR p.gallery_images::text LIKE '%/img/directory/%'
+      ORDER BY p.id
+    `);
+    console.log('Candidate profiles:', JSON.stringify(candidateProfiles));
+    console.log('UNSEED:inventory:done');
+    process.exit(0);
+  }
 
   console.log(apply ? 'UNSEED:start' : 'UNSEED:dry-run');
   console.log('Database:', target, '\n');

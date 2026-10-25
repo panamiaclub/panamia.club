@@ -26,6 +26,20 @@ on:
   schedule:
     - cron: '0 13 * * *'
   workflow_dispatch:
+    inputs:
+      test_data_action:
+        description: Inspect or remove demo fixtures instead of applying migrations
+        type: choice
+        default: none
+        options:
+          - none
+          - inventory
+          - dry-run
+          - delete
+      confirmation:
+        description: Enter DELETE TEST DATA to confirm permanent fixture deletion
+        type: string
+        default: ''
 
 # Never cancel a run that may be mid-migration: an interrupted drizzle-kit
 # migrate leaves the ledger and the schema in an indeterminate state. Queue
@@ -94,8 +108,28 @@ jobs:
       # Skipped on the scheduled run: that one detects drift and must never
       # mutate production on its own.
       - name: Apply migrations
-        if: github.event_name != 'schedule'
+        if: github.event_name != 'schedule' && (inputs.test_data_action == '' || inputs.test_data_action == 'none')
         run: npx drizzle-kit migrate
+
+      - name: Inspect or remove test data
+        if: inputs.test_data_action != '' && inputs.test_data_action != 'none'
+        env:
+          TEST_DATA_ACTION: ${{ inputs.test_data_action }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          SEED_ALLOW_REMOTE: '1'
+        run: |
+          case "$TEST_DATA_ACTION" in
+            inventory) yarn db:unseed --inventory ;;
+            dry-run) yarn db:unseed ;;
+            delete)
+              if [ "$CONFIRMATION" != "DELETE TEST DATA" ]; then
+                echo "Permanent deletion requires confirmation: DELETE TEST DATA"
+                exit 1
+              fi
+              yarn db:unseed --yes
+              ;;
+            *) echo "Unknown test data action"; exit 1 ;;
+          esac
 
       # Proof the step above did something, and the whole job on a schedule.
       # Prints the target host so a run that passes against the wrong database
