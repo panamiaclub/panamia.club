@@ -286,6 +286,15 @@
   opacity: 0.85;
 }
 
+.rowAdmin {
+  background-color: color-mix(in srgb, var(--surface-tone) 12%, transparent);
+}
+
+.rowAdmin:hover,
+.rowAdmin:focus-visible {
+  background-color: color-mix(in srgb, var(--surface-tone) 20%, transparent);
+}
+
 /* Sits in the avatar's column so a row lines its label up with the account
    rows above it, rather than starting 34px to their left. */
 .siteIcon {
@@ -303,7 +312,7 @@
    was most of the sheet's height on a phone. Three across fits the 320px
    dropdown and shortens the whole menu by roughly half.
 
-   Six of the nine discs carry a tone. This reverses the note that used to sit
+   The destination discs carry a tone. This reverses the note that used to sit
    here, which read that the tiles were "monochrome on purpose" because the
    panas do not use colour to tell their offerings apart. That note was not
    wrong when it was written — it was written before the thing it now has to
@@ -322,7 +331,7 @@
    as answering "where am I going". The precedent is already in that file: the
    Events room in SHARED_ROOMS took pink so "the same noun reads one colour
    whether it is reached through the scope bar or through here". This is that
-   argument for the remaining five nouns rather than a new one.
+   argument for the other destinations rather than a new one.
 
    Every tone is read from SCOPE_TONE or SURFACE_TONE via `site.tone` — see
    PanaSite in lib/panaverse/sites.ts. No tone name is written in this file,
@@ -438,9 +447,9 @@
 }
 
 /* The only row in this menu that cannot be undone by clicking it again, and it
-   sits directly beneath Account settings. The tint is a speed bump, not an
-   alarm — loud enough to catch a mis-aimed cursor, quiet enough that it does
-   not read as an error state every time the menu opens. */
+   sits beneath the staff-only Admin row when present. The tint is a speed bump,
+   not an alarm — loud enough to catch a mis-aimed cursor, quiet enough that it
+   does not read as an error state every time the menu opens. */
 .rowSignOut .rowName {
   color: rgb(158 42 42);
 }

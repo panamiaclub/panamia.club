@@ -15,6 +15,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 
 import { useSession } from '@/lib/auth-client';
+import { visiblePanaSites } from '@/lib/panaverse/sites';
 import { usePanaSites } from '@/components/panaverse/PanaSitesProvider';
 import SurfaceLink from '@/components/panaverse/SurfaceLink';
 import styles from './identity.module.css';
@@ -44,18 +45,14 @@ const SITE_ICONS: Record<string, LucideIcon> = {
      them would read as a mismatch rather than as branding. The Connectors
      mark is itself a star, so the borrowed glyph says the same thing. */
   connectors: Star,
-  /* A shield rather than a cog. A cog says "settings", which is what a member
-     would reasonably expect their own preferences to live behind; this is
-     somebody else's business being administered. */
-  admin: ShieldCheck,
 };
 
 /**
  * The destinations block inside the account menu.
  *
  * Sits below the accounts because it answers a later question: you pick who
- * you are speaking as first, then where you are going. An unbuilt site is
- * shown but not linked — see PANA_SITES for why it is named at all.
+ * you are speaking as first, then where you are going. Hidden offerings stay
+ * out of the grid, and the staff-only back office has a separate footer row.
  *
  * A grid rather than a list, because these are siblings you pick between
  * rather than a sequence you read down — and because six stacked rows were
@@ -79,16 +76,7 @@ export function PanaSites({
   /* Resolved on the server against the host being served, so a site on
      another surface links to that surface's origin. See PanaSitesProvider. */
   const resolved = usePanaSites();
-  const { data: session } = useSession();
-
-  /* Staff-only tiles are dropped here rather than in the registry because the
-     registry is resolved in the root layout, which has no session. While the
-     session is still loading `session` is null, so an admin sees the tile
-     appear a beat late — the right way round, since the alternative is every
-     member seeing it flash and disappear. */
-  const sites = resolved.filter(
-    (site) => !site.adminOnly || session?.user?.isAdmin
-  );
+  const sites = visiblePanaSites(resolved, false);
 
   return (
     <>
@@ -146,5 +134,35 @@ export function PanaSites({
         })}
       </div>
     </>
+  );
+}
+
+export function AdminMenuLink({ onNavigate }: { onNavigate: () => void }) {
+  const { t } = useTranslation('common');
+  const resolved = usePanaSites();
+  const { data: session } = useSession();
+  const admin = visiblePanaSites(
+    resolved,
+    session?.user?.isAdmin === true
+  ).find((site) => site.id === 'admin');
+
+  if (!admin?.href) return null;
+
+  return (
+    <SurfaceLink
+      href={admin.href}
+      role="menuitem"
+      data-menu-row
+      data-tone={admin.tone}
+      onClick={onNavigate}
+      className={cn(styles.row, styles.rowQuiet, styles.rowAdmin)}
+    >
+      <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+      <span className={styles.rowMeta}>
+        <span className={styles.rowName}>
+          {t(`identity.sites.${admin.labelKey}`)}
+        </span>
+      </span>
+    </SurfaceLink>
   );
 }
