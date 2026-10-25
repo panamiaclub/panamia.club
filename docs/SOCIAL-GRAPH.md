@@ -207,6 +207,10 @@ mutual connections, their own posts, and joined-group posts. Voice notes filters
 timeline to audio posts. The public default avoids making a new member's first impression depend
 on having mutual connections already.
 
+Local profile-linked accounts remain included even when their saved federation identity uses an
+older domain. Local-author filtering happens before pagination, so remote posts cannot consume
+the page limit or hide the next page.
+
 ### Posting audiences and the friendly composer
 
 New personal composers start with **Everyone (public)**. Members can choose **Panas** beside their

@@ -1374,3 +1374,182 @@ describe('new mutual-only posts preserve their circle without becoming messages'
     assert.equal((await groupPostsRoute.POST(request(), params)).status, 403);
   });
 });
+
+describe('local public timeline', () => {
+  const localActorId = 'everyone_legacy';
+  const remoteActorId = 'everyone_remote';
+  const profileId = 'everyone_legacy_profile';
+
+  const post = async (body: {
+    visibility: 'public' | 'unlisted' | 'private';
+    audience?: 'panas';
+  }) => {
+    signedIn = true;
+    viewer = localActorId;
+    const response = await createRoute.POST(
+      new NextRequest('https://visibility.invalid/api/social/statuses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: 'A legacy local account', ...body }),
+      })
+    );
+    assert.equal(response.status, 200);
+    return (await response.json()).data.status;
+  };
+
+  before(async () => {
+    await db.insert(schema.profiles).values({
+      id: profileId,
+      email: 'legacy@visibility.invalid',
+      name: 'Legacy local member',
+      socialEligible: true,
+    });
+    await db.insert(schema.socialActors).values(
+      [
+        { id: localActorId, domain: 'legacy.invalid', profileId },
+        { id: remoteActorId, domain: 'remote.invalid' },
+      ].map(({ id, domain, profileId }) => {
+        const actorUri = `https://${domain}/p/${id}`;
+        return {
+          id,
+          username: id,
+          domain,
+          profileId,
+          uri: actorUri,
+          followersUrl: `${actorUri}/followers`,
+          followingUrl: `${actorUri}/following`,
+          inboxUrl: `${actorUri}/inbox`,
+          outboxUrl: `${actorUri}/outbox`,
+          publicKey: 'fixture',
+        };
+      })
+    );
+  });
+
+  it('shows a real public API write in Everyone and the author Panas feed despite a legacy domain', async () => {
+    const created = await post({ visibility: 'public' });
+    assert.deepEqual(created.recipientTo, [PUBLIC]);
+    assert.ok(
+      ids((await timeline.getHomeTimeline(localActorId)).statuses).includes(
+        created.id
+      )
+    );
+
+    for (const authenticated of [false, true]) {
+      signedIn = authenticated;
+      viewer = authenticated ? localActorId : undefined;
+      const response = await createRoute.GET(
+        new NextRequest(
+          'https://visibility.invalid/api/social/statuses?limit=50'
+        )
+      );
+      assert.equal(response.status, 200);
+      const posts = (await response.json()).data.statuses;
+      assert.ok(ids(posts).includes(created.id));
+    }
+    const actor = await db.query.socialActors.findFirst({
+      where: eq(schema.socialActors.id, localActorId),
+    });
+    assert.equal(actor?.domain, 'legacy.invalid');
+    assert.equal(actor?.uri, `https://legacy.invalid/p/${localActorId}`);
+  });
+
+  it('does not widen unlisted, followers-only, or Panas posts from legacy-domain local accounts', async () => {
+    const hiddenIds: string[] = [];
+    for (const body of [
+      { visibility: 'unlisted' },
+      { visibility: 'private' },
+      { visibility: 'private', audience: 'panas' },
+    ] as const) {
+      hiddenIds.push((await post(body)).id);
+    }
+    for (const actorId of [undefined, localActorId]) {
+      const seen = ids(
+        (await timeline.getPublicTimeline(actorId, undefined, 50)).statuses
+      );
+      for (const id of hiddenIds) {
+        assert.ok(!seen.includes(id), `${id} must not enter Everyone`);
+      }
+    }
+  });
+
+  it('filters remote authors before limiting pages and retains canonical-domain actors without profiles', async () => {
+    const localIds = [
+      'zz_everyone_06',
+      'zz_everyone_05',
+      'zz_everyone_03',
+      'zz_everyone_02',
+    ];
+    const authors = [
+      remoteActorId,
+      remoteActorId,
+      remoteActorId,
+      localActorId,
+      'alice',
+      remoteActorId,
+      localActorId,
+      'alice',
+      remoteActorId,
+    ];
+    await db.insert(schema.socialStatuses).values(
+      authors.map((actorId, i) => {
+        const id = `zz_everyone_0${9 - i}`;
+        return {
+          id,
+          actorId,
+          uri: `https://visibility.invalid/status/${id}`,
+          type: 'Note',
+          published: new Date('2100-01-01'),
+          recipientTo: [PUBLIC],
+          recipientCc: [],
+        };
+      })
+    );
+
+    const first = await timeline.getPublicTimeline(undefined, undefined, 2);
+    assert.deepEqual(
+      first.statuses.map((row) => row.id),
+      localIds.slice(0, 2)
+    );
+    assert.equal(first.nextCursor, localIds[1]);
+    assert.ok(first.nextCursor);
+    const second = await timeline.getPublicTimeline(
+      undefined,
+      first.nextCursor,
+      2
+    );
+    assert.deepEqual(
+      second.statuses.map((row) => row.id),
+      localIds.slice(2)
+    );
+    assert.ok(
+      [...first.statuses, ...second.statuses].every(
+        (row) => row.actorId !== remoteActorId
+      )
+    );
+  });
+
+  it('still excludes blocked and muted legacy-domain local authors', async () => {
+    for (const kind of ['block', 'mute'] as const) {
+      await db.insert(schema.socialBlocks).values({
+        actorId: 'bob',
+        targetActorId: localActorId,
+        kind,
+      });
+      try {
+        const page = await timeline.getPublicTimeline('bob', undefined, 50);
+        assert.ok(page.statuses.some((row) => row.actorId === 'alice'));
+        assert.ok(page.statuses.every((row) => row.actorId !== localActorId));
+      } finally {
+        await db
+          .delete(schema.socialBlocks)
+          .where(
+            and(
+              eq(schema.socialBlocks.actorId, 'bob'),
+              eq(schema.socialBlocks.targetActorId, localActorId)
+            )
+          );
+      }
+    }
+  });
+});
