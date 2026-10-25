@@ -3,6 +3,7 @@ import { articles, profiles, users } from '@/lib/schema';
 import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
 import { PANA_OFFERINGS } from '@/lib/panaverse/offerings';
+import { getInfoCanonicalUrl } from '@/lib/info-site';
 
 type SitemapEntry = {
   url: string;
@@ -33,6 +34,7 @@ const OFFERING_ROUTES: SitemapEntry[] = PANA_OFFERINGS.map((offering) => ({
 
 const STATIC_ROUTES: SitemapEntry[] = [
   { url: SITE_URL, priority: 1.0, changeFrequency: 'weekly' },
+  { url: getInfoCanonicalUrl(), changeFrequency: 'monthly' },
   { url: `${SITE_URL}/about-us`, changeFrequency: 'monthly' },
   { url: `${SITE_URL}/a`, changeFrequency: 'daily' },
   // `/directorio` was here, and it is a `redirect('/d')` — a sitemap entry

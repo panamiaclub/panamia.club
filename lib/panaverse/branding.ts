@@ -36,6 +36,12 @@ export const SURFACE_MARK: Record<SurfaceId, SurfaceMark> = {
     height: 135,
     alt: 'Pana Mia Club',
   },
+  info: {
+    src: '/logos/pana_logo_long_orange.png',
+    width: 800,
+    height: 135,
+    alt: 'Pana Mia Club',
+  },
   social: {
     src: '/logos/pana_social_long_orange.png',
     width: 800,
@@ -137,6 +143,7 @@ export const SURFACE_MARK: Record<SurfaceId, SurfaceMark> = {
  *  surface depending on which platform did the installing. */
 export const SURFACE_ICON: Record<SurfaceId, string> = {
   www: 'pana_mia_icon',
+  info: 'pana_mia_icon',
   social: 'pana_social_icon',
   /* Borrows the Pana Mia tile, and unlike admin below that is a gap rather
    * than a decision. The sibling tiles are drawn illustrations, not set type —
@@ -160,6 +167,7 @@ export const SURFACE_ICON: Record<SurfaceId, string> = {
  *  deciding where to click, not a developer reading the registry. */
 export const SURFACE_BLURB: Record<SurfaceId, string> = {
   www: 'Find Panas, browse the directory, and see what the org is up to.',
+  info: 'Meet Pana Mia and find your next local connection.',
   social: 'Post, reply, and read what your Panas are making this week.',
   events: 'What is on, who is going, and why you would want to be there.',
   connectors:
@@ -182,6 +190,7 @@ export const SURFACE_BLURB: Record<SurfaceId, string> = {
  */
 export const SURFACE_DESCRIPTION: Record<SurfaceId, string> = {
   www: 'Community platform for Pana Mia',
+  info: 'Connect with South Florida creatives, small businesses, and neighbors through Pana MIA Club. Explore the directory, events, Pana Social, and ways to get involved.',
   social:
     'The Pana Mia community timeline — post, reply, and follow Panas across the fediverse.',
   events:
@@ -236,6 +245,7 @@ export interface SurfaceNavItem {
  */
 export const SURFACE_NAV: Record<SurfaceId, SurfaceNavItem[]> = {
   www: [],
+  info: [],
   social: [{ label: 'Home', href: '/s' }],
   /* Just the front door, like social. `/e/new` is deliberately not here: it is
    * the one own-surface route a signed-out visitor gets bounced off, and the
@@ -324,6 +334,7 @@ export const SHARED_ROOMS: readonly PanaverseRoom[] = [
  */
 export const SURFACE_TONE: Record<SurfaceId, SurfaceTone> = {
   www: 'indigo',
+  info: 'indigo',
   social: 'flame',
   /* Red, which is the last unclaimed accent and happens to be the right one:
    * it is the colour a date gets ringed in. The two warm oranges were already
