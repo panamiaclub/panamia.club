@@ -27,7 +27,7 @@ import { config } from 'dotenv';
 config({ path: '.env.local' });
 
 const { db } = await import('@/lib/db');
-const { and, eq, isNotNull } = await import('drizzle-orm');
+const { and, eq, isNotNull, or } = await import('drizzle-orm');
 const { profiles, socialActors, socialFollows, socialStatuses, socialTags } =
   await import('@/lib/schema');
 const { createGroup, joinGroup } =
@@ -54,11 +54,11 @@ const suffix = Math.random().toString(36).slice(2, 8);
 const createdActorIds: string[] = [];
 let profileId: string;
 
-/** In both groups, and followed by nobody. */
+/** In both groups, and a mutual Pana of both viewers. */
 let authorId: string;
-/** In both groups, and follows the author. Used for the duplicate guard. */
+/** In both groups, and a mutual Pana of the author. */
 let memberId: string;
-/** In neither group. Follows the author, so the follow arm is exercised. */
+/** In neither group. A mutual Pana of the author, exercising the Pana arm. */
 let strangerId: string;
 
 let publicGroupId: string;
@@ -150,20 +150,27 @@ before(async () => {
   assert.equal((await joinGroup(publicGroupId, memberId)).success, true);
   assert.equal((await joinGroup(privateGroupId, memberId)).success, true);
 
-  // Both followers follow the author. This is what makes the leak tests
-  // meaningful: the stranger is already entitled to the author's ordinary
+  // Both viewers and the author follow each other. This makes the leak tests
+  // meaningful: the stranger already receives the author's ordinary
   // posts, so anything extra they receive came from the group.
   await createFollow(memberId, authorId);
+  await createFollow(authorId, memberId);
   await createFollow(strangerId, authorId);
+  await createFollow(authorId, strangerId);
 
   // createFollow only auto-accepts when the target is on the local domain,
   // and these fixtures are deliberately remote-looking. Accept them by hand
-  // so the follow arm of the home timeline is actually exercised -- with
+  // so the Pana arm of the home timeline is actually exercised -- with
   // pending follows the leak tests would pass for the wrong reason.
   await db
     .update(socialFollows)
     .set({ status: 'accepted', acceptedAt: new Date() })
-    .where(eq(socialFollows.targetActorId, authorId));
+    .where(
+      or(
+        eq(socialFollows.actorId, authorId),
+        eq(socialFollows.targetActorId, authorId)
+      )
+    );
 
   const personal = await createStatus(
     authorId,
@@ -274,15 +281,14 @@ test('home timeline: a non-member never receives a private group post', async ()
   const seen = ids(await getHomeTimeline(strangerId));
   assert.ok(
     seen.includes(personalStatusId),
-    'the stranger follows the author, so the control post must be present'
+    'the stranger is a mutual Pana of the author, so the control post must be present'
   );
   assert.ok(!seen.includes(privateGroupStatusId));
 });
 
 test('home timeline: a member receives a private group post exactly once', async () => {
-  // The member is both in the group and following the author, so this post
-  // matches the group arm and would also match the follow arm. Without
-  // isNull(groupId) on the follow arm it renders twice.
+  // The member is both in the group and a mutual Pana of the author, so this
+  // exercises both membership and the Pana relationship.
   const seen = ids(await getHomeTimeline(memberId));
   const hits = seen.filter((id) => id === privateGroupStatusId).length;
   assert.equal(hits, 1, `expected exactly one copy, got ${hits}`);

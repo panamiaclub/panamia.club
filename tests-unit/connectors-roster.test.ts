@@ -23,6 +23,8 @@ function member(
       status: 'active',
       pod,
       houses,
+      majorHouse: null,
+      minorHouse: null,
       tier,
       bring: '',
       appliedAt: '2026-01-01T00:00:00.000Z',

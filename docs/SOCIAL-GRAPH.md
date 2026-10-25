@@ -4,8 +4,8 @@
 >
 > - **[The Model](#the-model)** — **shipped and now ratified.** Pana = mutual follow. This section
 >   documents a decision to _keep_ existing behaviour, not to change it.
-> - **[Naming](#the-word-does-three-jobs)** — **copy fixes pending.** The word currently carries
->   three different meanings in shipped UI.
+> - **[Naming](#naming-panas)** — **partially aligned.** The feed and Panas posting use mutual follows;
+>   broad community copy fixes remain pending.
 > - **[Follows You badge](#decision-1--the-follows-you-badge)** and
 >   **[owner-only Pana count](#decision-2--the-pana-count-is-owner-only)** — **approved, not built.**
 > - **[Discovery](#a--discovery-through-shared-activity)** and **[Block & mute](#b--block--mute)** —
@@ -19,7 +19,7 @@
 - [Why This Document Exists](#why-this-document-exists)
 - [What Already Exists](#what-already-exists)
 - [The Model](#the-model)
-- [The Word Does Three Jobs](#the-word-does-three-jobs)
+- [Naming Panas](#naming-panas)
 - [Decision 1 — The "Follows You" Badge](#decision-1--the-follows-you-badge)
 - [Decision 2 — The Pana Count Is Owner-Only](#decision-2--the-pana-count-is-owner-only)
 - [Decision 3 — Mutual Panas](#decision-3--mutual-panas)
@@ -172,45 +172,74 @@ carries globally.** That lesson is what [section A](#a--discovery-through-shared
 
 ---
 
-## The Word Does Three Jobs
+## Naming Panas
 
-This is already shipped and already inconsistent.
+The feed now uses the mutual-follow model. Broad community copy still uses the same word for any
+member.
 
-| Where                                                                              | Meaning           | Kind       |
-| ---------------------------------------------------------------------------------- | ----------------- | ---------- |
-| Rail stat, suggestions copy, `/panas` endpoint                                     | Mutual follow     | Bilateral  |
-| **Feed tab "Panas"** (`feed-page.tsx` L47)                                         | People you follow | Unilateral |
-| "Ask the Panas", "hosted by Panas", "N Panas going", "Find Panas in the directory" | Any member        | Everyone   |
+| Where                                               | Meaning                                       | Kind                           |
+| --------------------------------------------------- | --------------------------------------------- | ------------------------------ |
+| Rail stat, suggestions copy, `/panas` endpoint      | Mutual follow                                 | Bilateral                      |
+| **Feed tab "Panas"** (`feed-page.tsx`)              | Mutual follows, self, joined groups           | Bilateral + membership         |
+| **Post audience "Panas"** (`PostComposer.tsx`)      | The author's accepted mutuals at posting time | Bilateral + recipient snapshot |
+| "Ask the Panas", "hosted by Panas", "N Panas going" | Any member                                    | Everyone                       |
 
-The codebase already knows. `feed-page.tsx` carries a comment flagging it as a live hazard:
-
-> _"'Panas' in particular means mutual follows elsewhere in this product (the rail counts them that
-> way), while `/api/social/timeline` documents itself as 'posts from followed accounts + own'. The
-> label is the one the design approved; the hint is what the endpoint actually returns, and the two
-> must not be allowed to drift apart silently."_
-
-A full-sentence hint was used to paper over the conflict rather than resolve it.
+The Panas feed uses the same accepted-in-both-directions join as the Pana count and profile list.
+One-way, pending, and rejected follows do not add personal posts. Own posts and posts from groups
+the viewer has joined remain in this feed, with group membership independent of mutual follows.
 
 ### Resolution
 
 **"Pana" is reserved for the mutual relationship.** The loose "any member" usages become
 _members_ / _the community_ / _Pana Mia members_.
 
-Strings to change (roughly six, all cheap):
+Remaining strings to change:
 
 | File                    | Current                                            |
 | ----------------------- | -------------------------------------------------- |
 | `feed-modules.tsx` L94  | "Markets, workshops, and dinners hosted by Panas." |
 | `feed-modules.tsx` L149 | "N Panas going"                                    |
-| `feed-page.tsx` L160    | "Ask the Panas something…"                         |
-| `feed-page.tsx` L306    | "go and find Panas"                                |
-| `feed-page.tsx` L316    | "Find Panas in the directory…"                     |
 | `stories-rail.tsx` L9   | "the panas they follow"                            |
 
-**The feed tab is renamed `Following`, not made mutual-only.** On a network this young a
-mutuals-only timeline would be close to empty, and an empty feed is the worst available first
-impression. The label changes to match the endpoint; the endpoint does not change to match the
-label.
+**Everyone is the default view; Panas remains an optional mutual-follow view.** Everyone shows
+public posts from local accounts without requiring a connection. Members can switch to Panas for
+mutual connections, their own posts, and joined-group posts. Voice notes filters that same Panas
+timeline to audio posts. The public default avoids making a new member's first impression depend
+on having mutual connections already.
+
+Local profile-linked accounts remain included even when their saved federation identity uses an
+older domain. Local-author filtering happens before pagination, so remote posts cannot consume
+the page limit or hide the next page.
+
+### Posting audiences and the friendly composer
+
+New personal composers start with **Everyone (public)**. Members can choose **Panas** beside their
+identity; no local-only or group destinations are offered there. Group posting starts on the group's
+page, and replies keep their parent's audience instead of offering another destination.
+
+The media-forward card supports photos, video and audio, file drop, and image paste, with up to four
+attachments and a 500-character caption. Media-only posts are valid. Posting and removal are disabled
+during uploads, and upload/publishing failures remain visible without discarding the draft. Content
+warnings and the optional Markdown formatting preview live under **More**; the preview hides text and
+media together when a warning is set. The account's saved Creative Commons license is applied on the
+server, without a per-post CC button. Explicit API license overrides remain supported.
+
+**Panas posting is not a rename of followers-only visibility.** New posts carry the internal `Panas`
+status type, `visibility: private`, and an explicit `audience: panas` request. The complete accepted
+mutual set is snapshotted into `recipientTo`, with the original circle owner in `recipientCc`. There
+is no PUBLIC address or followers-collection broadcast. Readers must both be in that snapshot and
+still be mutual with its owner; the owner and a post's own author retain access. Becoming mutual
+later does not disclose older posts.
+
+Replies retain the original circle owner, recipients, and status type, never the replier's separate
+circle. Unauthorized or audience-widening replies are refused before inserting a row. Panas notes
+are excluded from Everyone, the federation outbox, inbox/sent mail, requests, and DM conversations.
+Real mention tags still work for authorized readers. Declining a DM request cannot mutate a Panas
+post's recipients.
+
+Legacy `Note` rows with private visibility remain followers-only. Existing unlisted posts remain
+publicly readable, not geographically restricted; neither legacy visibility is reinterpreted or
+migrated. Stories, DMs, and group membership retain their separate rules.
 
 ---
 
@@ -643,8 +672,8 @@ than after it.
 
 ### Phase 1 — Naming and legibility
 
-- [ ] Rename feed tab `Panas` → `Following`; keep the explanatory hint
-- [ ] Fix the six "Pana = any member" strings
+- [x] Default to Everyone; keep Panas for mutual follows, own posts, and joined groups
+- [ ] Fix the remaining "Pana = any member" strings
 - [x] Add `Follows you` / `Pana` badges to the personal profile, suggestion cards and directory results
 - [ ] Add the same badges to follower and following lists — blocked on the line below
 - [ ] Ensure list endpoints return both follow directions
@@ -748,5 +777,6 @@ probably acceptable; anything finer is not.
 because the directory half of the product needs businesses to be followable without limit. Worth
 remembering that the cap option exists if the graph later turns into an audience race.
 
-**Mutual-only feed remains untried.** If the network gets dense enough that a Panas-only timeline
-would be full, it becomes worth revisiting as an option — not as a replacement for Following.
+**The Panas feed can be quiet for new members.** Everyone remains the default so discovery does
+not depend on having mutual connections. Panas is the optional view for mutual follows, own posts,
+and joined-group posts.

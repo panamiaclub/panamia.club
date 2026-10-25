@@ -11,7 +11,6 @@
 import { db } from '@/lib/db';
 import {
   socialStatuses,
-  socialFollows,
   socialActors,
   socialLikes,
   socialGroupMembers,
@@ -32,11 +31,15 @@ import {
   personalStatusesOnly,
 } from './group-visibility';
 import { getHiddenActorIds } from './block-filter';
+import { listMutualFollowIds } from './follow';
+import { STATUS_TYPE_PANAS } from '@/lib/utils/getVisibility';
 import {
   PUBLIC,
   jsonbArrayContains,
   notExpired,
+  notPanasStatus,
   readableStatus,
+  visibleTo,
 } from './visibility';
 
 /**
@@ -111,6 +114,8 @@ function notHidden(hiddenActorIds: string[]) {
  */
 function heldRequest(viewerActorId: string, viewerUri: string) {
   return sql`(
+    ${notPanasStatus()}
+    AND
     ${jsonbArrayContains(socialStatuses.recipientTo, viewerUri)}
     AND EXISTS (
       SELECT 1 FROM social_dm_requests r
@@ -239,7 +244,7 @@ export type TimelineResult = {
 };
 
 /**
- * Get home timeline for an actor.
+ * Get home timeline: mutual Panas, own posts, and joined groups.
  *
  * DESIGN NOTE: This is a deliberate fan-out-on-READ implementation. We do
  * NOT maintain per-user `timeline_entries` rows that get written on every
@@ -260,19 +265,8 @@ export async function getHomeTimeline(
   cursor?: string,
   limit: number = 20
 ): Promise<TimelineResult> {
-  // Get list of actors this user follows
-  const follows = await db
-    .select({ targetActorId: socialFollows.targetActorId })
-    .from(socialFollows)
-    .where(
-      and(
-        eq(socialFollows.actorId, actorId),
-        eq(socialFollows.status, 'accepted')
-      )
-    );
-
-  const followedActorIds = follows.map((f) => f.targetActorId);
-  const timelineActorIds = [...followedActorIds, actorId];
+  const mutualActorIds = await listMutualFollowIds(actorId);
+  const timelineActorIds = [...mutualActorIds, actorId];
 
   // Groups this person is actually in. Their posts reach the feed on
   // membership alone, with no follow and no public addressing involved.
@@ -293,19 +287,16 @@ export async function getHomeTimeline(
     /**
      * Two arms, not one filter with an extra clause.
      *
-     * The follow arm requires public addressing, as it always has. A private
-     * group's posts are not PUBLIC-addressed — that is the entire point of
-     * them — so folding `group_id` into that arm would silently drop every
-     * private group post and present as "groups just don't work", with no
-     * error anywhere to explain it.
+     * The personal arm includes public/unlisted posts and authorized Panas
+     * notes. Group membership is a separate right, never inferred from a
+     * friendship with the author.
      *
      * The group arm therefore carries no addressing requirement at all.
      * Membership is the authorization, which is why `memberGroupIds` is read
      * from `status = 'active'` rows and nowhere else.
      *
-     * `isNull(groupId)` on the follow arm is not redundant: without it, a post
-     * to a group you are in, written by someone you also follow, matches both
-     * arms and renders twice.
+     * Group posts never use the Pana arm: being a mutual Pana of the author
+     * must not substitute for joining the group.
      */
     where: (s, { and: andOp, inArray, isNotNull, isNull }) =>
       andOp(
@@ -318,8 +309,10 @@ export async function getHomeTimeline(
             isNull(s.groupId),
             or(
               jsonbArrayContains(socialStatuses.recipientTo, PUBLIC),
-              jsonbArrayContains(socialStatuses.recipientCc, PUBLIC)
-            )
+              jsonbArrayContains(socialStatuses.recipientCc, PUBLIC),
+              eq(socialStatuses.type, STATUS_TYPE_PANAS)
+            ),
+            visibleTo(actorId)
           ),
           memberGroupIds.length > 0
             ? inArray(s.groupId, memberGroupIds)
@@ -473,7 +466,22 @@ export async function getPublicTimeline(
       and(
         isNotNull(s.published),
         isNull(s.inReplyToId),
+        // Profile ownership keeps legacy-domain members local; canonical
+        // actors may not have a profile (for example, group identities).
+        inArray(
+          s.actorId,
+          db
+            .select({ id: socialActors.id })
+            .from(socialActors)
+            .where(
+              or(
+                isNotNull(socialActors.profileId),
+                eq(socialActors.domain, socialConfig.domain)
+              )
+            )
+        ),
         jsonbArrayContains(socialStatuses.recipientTo, PUBLIC),
+        notPanasStatus(),
         // Public addressing already excludes private group posts, so this is
         // belt and braces — but the two conditions are independent, and the
         // day someone posts a PUBLIC-addressed note into a private group this
@@ -497,17 +505,10 @@ export async function getPublicTimeline(
     },
     orderBy: (s, { desc }) => [desc(s.published), desc(s.id)],
     limit: limit + 1,
-    // Filter to local actors only (domain = socialConfig.domain)
-    extras: {
-      domainFilter: sql<string>`1`.as('_'),
-    },
   });
 
-  // Post-filter to local actors only (Drizzle doesn't support nested where on relations in findMany)
-  const localRows = rows.filter((r) => r.actor.domain === socialConfig.domain);
-
-  const hasMore = localRows.length > limit;
-  const items = hasMore ? localRows.slice(0, limit) : localRows;
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
   const nextCursor = hasMore ? items[items.length - 1].id : null;
 
   return { statuses: items.map(toStatus), nextCursor };
@@ -545,6 +546,7 @@ export async function getReceivedDirectMessages(
         // "Not publicly addressed" is how this view finds DMs, and it is also
         // true of every private group post. Membership content is not mail.
         personalStatusesOnly(),
+        notPanasStatus(),
         notExpired(),
         excludeStories(),
         notHidden(hiddenActorIds),
@@ -587,6 +589,7 @@ export async function getSentDirectMessages(
         // it, every private group post you write turns up in your own Sent
         // messages, because it is by definition not publicly addressed.
         personalStatusesOnly(),
+        notPanasStatus(),
         notExpired(),
         // Load-bearing, not defensive. A story is addressed followers-only, so
         // it satisfies this query's "not public" test and would otherwise be
@@ -641,7 +644,10 @@ export async function getAtMeTimeline(
         isNotNull(s.published),
         ne(s.actorId, actorId),
         or(
-          jsonbArrayContains(socialStatuses.recipientTo, actor.uri),
+          and(
+            notPanasStatus(),
+            jsonbArrayContains(socialStatuses.recipientTo, actor.uri)
+          ),
           sql`EXISTS (
             SELECT 1 FROM social_tags st
             WHERE st.status_id = ${socialStatuses.id}
@@ -815,7 +821,10 @@ export async function getStatusWithLikeStatus(
  * whoever is left, because nobody is left.
  */
 function oneToOneDirect() {
-  return sql`jsonb_array_length(${socialStatuses.recipientTo}) = 1`;
+  return and(
+    notPanasStatus(),
+    sql`jsonb_array_length(${socialStatuses.recipientTo}) = 1`
+  )!;
 }
 
 export type DirectConversation = {

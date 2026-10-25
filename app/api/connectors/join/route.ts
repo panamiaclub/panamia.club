@@ -4,7 +4,11 @@ import { eq } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { profiles } from '@/lib/schema';
-import { HOUSES, PODS } from '@/lib/connectors/model';
+import {
+  HOUSE_FOCUS_ERROR,
+  PODS,
+  parseHouseFocus,
+} from '@/lib/connectors/model';
 import {
   parseConnector,
   type ProfileConnector,
@@ -41,7 +45,6 @@ import {
  */
 
 const POD_IDS = new Set<string>(PODS.map((p) => p.id));
-const HOUSE_IDS = new Set<string>(HOUSES.map((h) => h.id));
 
 /** Long enough for a real answer, short enough not to be a storage endpoint. */
 const BRING_MAX = 2000;
@@ -76,18 +79,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const houses = Array.isArray(payload.houses)
-    ? [
-        ...new Set(
-          payload.houses.filter(
-            (h): h is string => typeof h === 'string' && HOUSE_IDS.has(h)
-          )
-        ),
-      ]
-    : [];
-  if (houses.length === 0) {
+  const focus = parseHouseFocus(payload);
+  if (!focus) {
     return NextResponse.json(
-      { success: false, error: 'Pick at least one house.' },
+      { success: false, error: HOUSE_FOCUS_ERROR },
       { status: 400 }
     );
   }
@@ -124,7 +119,8 @@ export async function POST(request: NextRequest) {
       const membership: ProfileConnector = {
         status: current?.status ?? 'pending',
         pod: pod as ProfileConnector['pod'],
-        houses: houses as ProfileConnector['houses'],
+        houses: [focus.majorHouse, focus.minorHouse],
+        ...focus,
         tier: current?.tier ?? 1,
         bring,
         appliedAt: current?.appliedAt ?? new Date().toISOString(),
@@ -181,6 +177,8 @@ export async function POST(request: NextRequest) {
           status: membership.status,
           pod: membership.pod,
           houses: membership.houses,
+          majorHouse: membership.majorHouse,
+          minorHouse: membership.minorHouse,
           tier: membership.tier,
           bring: membership.bring,
         },

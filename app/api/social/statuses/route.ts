@@ -64,6 +64,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json(
+      { success: false, error: 'Invalid post body' },
+      { status: 400 }
+    );
+  }
+
   const {
     content,
     contentWarning,
@@ -73,10 +80,11 @@ export async function POST(request: NextRequest) {
     recipientActorIds,
     location,
     ccLicense,
+    audience,
   } = body;
 
   // Validate ccLicense if provided
-  const resolvedLicense = parseCcLicense(ccLicense);
+  const resolvedLicense = parseCcLicense(ccLicense ?? profile.defaultCcLicense);
 
   /* A status needs *something* in it, and an attachment is something.
      Requiring text meant a GIF with no caption -- or a photo posted without
@@ -112,6 +120,16 @@ export async function POST(request: NextRequest) {
       ? visibility
       : 'unlisted';
 
+  if (
+    audience !== undefined &&
+    (audience !== 'panas' || resolvedVisibility !== 'private')
+  ) {
+    return NextResponse.json(
+      { success: false, error: 'Panas requires a private audience' },
+      { status: 400 }
+    );
+  }
+
   // Direct messages require recipientActorIds
   if (resolvedVisibility === 'direct') {
     if (!Array.isArray(recipientActorIds) || recipientActorIds.length === 0) {
@@ -140,7 +158,8 @@ export async function POST(request: NextRequest) {
     Array.isArray(attachments) ? attachments : undefined,
     resolvedVisibility === 'direct' ? recipientActorIds : undefined,
     validatedLocation,
-    resolvedLicense
+    resolvedLicense,
+    audience === 'panas' ? { audience: 'panas' } : undefined
   );
 
   if (!result.success) {

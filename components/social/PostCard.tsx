@@ -189,7 +189,8 @@ export function PostCard({
               {status.ccLicense &&
                 getVisibilityFromRecipients(
                   status.recipientTo,
-                  status.recipientCc
+                  status.recipientCc,
+                  status.type
                 ) !== 'private' && (
                   <CCBadge license={status.ccLicense as CCLicenseValue} />
                 )}
@@ -203,7 +204,8 @@ export function PostCard({
                   inReplyTo={status.id}
                   replyVisibility={getVisibilityFromRecipients(
                     status.recipientTo,
-                    status.recipientCc
+                    status.recipientCc,
+                    status.type
                   )}
                   onSuccess={() => setShowReplyBox(false)}
                   placeholder={`Reply to @${status.actor.username}...`}

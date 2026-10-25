@@ -397,10 +397,10 @@
     },
     "steps": {
       "title": "How It <em>Works</em>",
-      "lede": "Pick a house, join a pod, start at the first tier. Everybody starts at the first tier.",
+      "lede": "Choose a major and a minor house, join a pod, start at the first tier. Everybody starts at the first tier.",
       "one": {
-        "title": "Choose a house",
-        "body": "Four of them, grouped by what you already like doing rather than by what needs covering. The yappers and the researchers do not belong in the same room, and the programme stops pretending they do."
+        "title": "Choose your two houses",
+        "body": "Choose two different houses from the four: a major for your primary focus and a minor for your secondary focus. Both are required and reflect what you already like doing, not assignments or limits on where you can help."
       },
       "two": {
         "title": "Join your pod",

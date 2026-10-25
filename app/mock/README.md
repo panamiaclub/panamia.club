@@ -15,6 +15,7 @@ layout only works with invented spacing or colours that are not in
 | `/mock/profile`           | Personal profile page (pana page) redesign                        |
 | `/mock/profile-next`      | Pana page, second pass: identity rail left, tabbed content right  |
 | `/mock/feed`              | Pana Social feed redesign, including the empty feed               |
+| `/mock/composer`          | Friendly social card: inline local media, Everyone/Panas audience |
 | `/mock/panaverse`         | Panaverse chrome: masthead, surface switcher, identity            |
 | `/mock/settings`          | Account settings — one page, either masthead                      |
 | `/mock/directory`         | Directory search results, pre-map                                 |
@@ -41,6 +42,12 @@ Use the second one when reviewing the feed. Browsers route `*.localhost` to
 the loopback address with no hosts-file entry, and `resolveSurface` maps
 `social.localhost` exactly the way it maps `social.panamia.club`, so this
 exercises the real production rule rather than a preview-only shortcut.
+
+`/mock/composer` uses the same Pana Social hostname. Its photo/video and audio
+pickers, file drop target, and image paste handling create browser-local previews
+only. No files are uploaded and no posts are published. Removing an attachment
+or leaving the page releases its local preview; the sample-photo button needs
+no personal files.
 
 ## Conventions
 

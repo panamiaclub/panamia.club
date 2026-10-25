@@ -22,7 +22,7 @@ import type {
   PublicSocialActor,
   SocialGroupVisibility,
 } from '@/lib/schema';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { renderStatusMarkdown } from '@/lib/federation/markdown';
 import { canPost, GateResult } from '../gates';
@@ -33,10 +33,20 @@ import {
   recordDirectThreadRequests,
 } from './dm-gate';
 import { getViewerGroupIds, canViewStatusGroup } from './group-visibility';
-import { PUBLIC, notExpired, readableStatus } from './visibility';
+import {
+  PUBLIC,
+  notExpired,
+  notPanasStatus,
+  readableStatus,
+  visibleTo,
+} from './visibility';
+import { listMutualFollowIds } from './follow';
 import { notifyDirectMessage } from '@/lib/dm-stream';
 import { notifyGroupPosted } from './group-notify';
-import type { PostVisibility } from '@/lib/utils/getVisibility';
+import {
+  STATUS_TYPE_PANAS,
+  type PostVisibility,
+} from '@/lib/utils/getVisibility';
 import type { JsonValue } from '@/lib/types';
 
 // Markdown rendering, including the hooks that stop raw HTML and
@@ -127,7 +137,7 @@ export async function createStatus(
    * and `undefined, undefined, groupId` is how the wrong value lands in the
    * wrong slot.
    */
-  options?: { groupId?: string }
+  options?: { groupId?: string; audience?: 'panas' }
 ): Promise<CreateStatusResult> {
   const requestedGroupId = options?.groupId;
   let groupRow: {
@@ -164,7 +174,10 @@ export async function createStatus(
   let parentStatus: typeof socialStatuses.$inferSelect | undefined;
   if (inReplyToId) {
     parentStatus = await db.query.socialStatuses.findFirst({
-      where: eq(socialStatuses.id, inReplyToId),
+      where: and(
+        eq(socialStatuses.id, inReplyToId),
+        or(notPanasStatus(), and(visibleTo(actorId), notExpired()))
+      ),
     });
     if (!parentStatus) {
       return { success: false, error: 'Parent status not found' };
@@ -193,6 +206,26 @@ export async function createStatus(
     groupId = parentGroupId;
   } else {
     groupId = requestedGroupId;
+  }
+
+  const isPanasPost =
+    options?.audience === 'panas' || parentStatus?.type === STATUS_TYPE_PANAS;
+  if (
+    options?.audience === 'panas' &&
+    parentStatus &&
+    parentStatus.type !== STATUS_TYPE_PANAS
+  ) {
+    return {
+      success: false,
+      error: 'A reply keeps the original post audience',
+    };
+  }
+  if (isPanasPost && (visibility !== 'private' || groupId)) {
+    return {
+      success: false,
+      error:
+        'Panas posts and their replies must keep a private personal audience',
+    };
   }
 
   /**
@@ -249,7 +282,10 @@ export async function createStatus(
   }
 
   // Validate content
-  if (!content || content.trim().length === 0) {
+  if (
+    typeof content !== 'string' ||
+    (!content.trim() && !attachments?.length)
+  ) {
     return { success: false, error: 'Content cannot be empty' };
   }
 
@@ -326,6 +362,36 @@ export async function createStatus(
       .map((g) => g.recipientActorId);
   }
 
+  let panasRecipientUris: string[] = [];
+  let panasOwnerUris: string[] = [actor.uri];
+  if (isPanasPost) {
+    if (parentStatus?.type === STATUS_TYPE_PANAS) {
+      if (
+        !Array.isArray(parentStatus.recipientTo) ||
+        !parentStatus.recipientTo.every((value) => typeof value === 'string') ||
+        !Array.isArray(parentStatus.recipientCc) ||
+        parentStatus.recipientCc.length !== 1 ||
+        !parentStatus.recipientCc.every((value) => typeof value === 'string')
+      ) {
+        return {
+          success: false,
+          error: 'The parent audience could not be resolved',
+        };
+      }
+      panasRecipientUris = parentStatus.recipientTo;
+      panasOwnerUris = parentStatus.recipientCc;
+    } else {
+      const mutualIds = await listMutualFollowIds(actorId);
+      if (mutualIds.length) {
+        const recipients = await db
+          .select({ uri: socialActors.uri })
+          .from(socialActors)
+          .where(inArray(socialActors.id, mutualIds));
+        panasRecipientUris = recipients.map((recipient) => recipient.uri);
+      }
+    }
+  }
+
   /**
    * Generate the id before inserting so the row is never written with a
    * placeholder uri.
@@ -350,7 +416,7 @@ export async function createStatus(
       actorId,
       content: htmlContent,
       contentWarning: contentWarning || null,
-      type: 'Note',
+      type: isPanasPost ? STATUS_TYPE_PANAS : 'Note',
       published: new Date(),
       isDraft: false,
       inReplyToId: inReplyToId || null,
@@ -375,8 +441,8 @@ export async function createStatus(
       recipientCc = [followersUrl];
       break;
     case 'private':
-      recipientTo = [followersUrl];
-      recipientCc = [];
+      recipientTo = isPanasPost ? panasRecipientUris : [followersUrl];
+      recipientCc = isPanasPost ? panasOwnerUris : [];
       break;
     case 'direct': {
       recipientTo = directRecipientUris;
@@ -420,6 +486,9 @@ export async function createStatus(
     .returning();
 
   // DEFERRED (Phase 7): Outbound federation delivery.
+  //
+  // Panas notes must remain excluded from delivery, even though their
+  // recipient arrays contain individual actor URIs rather than a collection.
   //
   // recipientTo / recipientCc are persisted above but never fan-ed out to
   // remote inboxes. We don't do it inline because a single popular post can
@@ -700,7 +769,10 @@ export async function likeStatus(
   error?: string;
 }> {
   const status = await db.query.socialStatuses.findFirst({
-    where: eq(socialStatuses.id, statusId),
+    where: and(
+      eq(socialStatuses.id, statusId),
+      or(notPanasStatus(), and(visibleTo(actorId), notExpired()))
+    ),
   });
 
   if (!status) {
@@ -782,7 +854,10 @@ export async function unlikeStatus(
   error?: string;
 }> {
   const status = await db.query.socialStatuses.findFirst({
-    where: eq(socialStatuses.id, statusId),
+    where: and(
+      eq(socialStatuses.id, statusId),
+      or(notPanasStatus(), and(visibleTo(actorId), notExpired()))
+    ),
   });
 
   if (!status) {

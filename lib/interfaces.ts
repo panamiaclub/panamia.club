@@ -363,6 +363,7 @@ export interface ArticleInterface {
 export interface SocialStatusDisplay {
   id: string;
   uri: string;
+  type?: string;
   content: string;
   contentWarning?: string | null;
   published: string | Date | null;

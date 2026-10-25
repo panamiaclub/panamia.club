@@ -19,6 +19,7 @@ import { socialActors, socialDmRequests, socialFollows } from '@/lib/schema';
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import { isBlockedEitherWay, filterHiddenActorIds } from './block-filter';
 import { socialConfig } from '../index';
+import { STATUS_TYPE_PANAS } from '@/lib/utils/getVisibility';
 
 /**
  * What the gate decided for one recipient.
@@ -307,15 +308,14 @@ export async function deleteDirectThreadRequest(
 
     if (deleted.length === 0) return false;
 
-    // `jsonb - text` removes a matching element from an array. Only a direct
-    // message addresses an individual actor URI in `to` — every other
-    // visibility addresses the public collection or a followers URL — so this
-    // cannot reach the sender's ordinary posts.
+    // Panas notes also address individual actors, but declining mail must
+    // never change a social post's audience.
     await tx.execute(sql`
       UPDATE social_statuses
       SET recipient_to = recipient_to - ${recipient.uri}
       WHERE actor_id = ${senderActorId}
         AND recipient_to @> to_jsonb(${recipient.uri}::text)
+        AND type IS DISTINCT FROM ${STATUS_TYPE_PANAS}
     `);
 
     return true;

@@ -375,6 +375,17 @@ export async function countMutualFollows(actorId: string): Promise<number> {
   return Number(row?.total ?? 0);
 }
 
+/** All mutual-follow actor IDs, without the profile list's page limit. */
+export async function listMutualFollowIds(actorId: string): Promise<string[]> {
+  const rows = await db
+    .select({ id: socialFollows.targetActorId })
+    .from(socialFollows)
+    .innerJoin(reciprocal, mutualFollowJoin())
+    .where(outgoingAccepted(actorId));
+
+  return rows.map((row) => row.id);
+}
+
 /**
  * The Panas themselves. Owner-only, like the count above — callers gate this on
  * the viewer being the actor, not merely on being signed in.

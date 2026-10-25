@@ -1,6 +1,7 @@
 import { socialStatuses } from '@/lib/schema';
 import { and, eq, isNotNull, or, sql, type SQL } from 'drizzle-orm';
 import { visibleGroupStatuses } from './group-visibility';
+import { STATUS_TYPE_PANAS } from '@/lib/utils/getVisibility';
 
 export const PUBLIC = 'https://www.w3.org/ns/activitystreams#Public';
 
@@ -16,10 +17,17 @@ export function notExpired() {
 }
 
 export function isPublicStatus(): SQL {
-  return or(
-    jsonbArrayContains(socialStatuses.recipientTo, PUBLIC),
-    jsonbArrayContains(socialStatuses.recipientCc, PUBLIC)
+  return and(
+    notPanasStatus(),
+    or(
+      jsonbArrayContains(socialStatuses.recipientTo, PUBLIC),
+      jsonbArrayContains(socialStatuses.recipientCc, PUBLIC)
+    )
   )!;
+}
+
+export function notPanasStatus(): SQL {
+  return sql`${socialStatuses.type} IS DISTINCT FROM ${STATUS_TYPE_PANAS}`;
 }
 
 /** Personal-post addressing only; group reads must use readableStatus below. */
@@ -45,11 +53,37 @@ export function visibleTo(viewerActorId?: string): SQL {
         OR ${socialStatuses.recipientCc} @> to_jsonb(author.followers_url))
   )`;
 
+  // The cc actor owns the original circle; replies retain that same owner and
+  // recipient snapshot instead of sharing the thread with the replier's circle.
+  const mutualRecipients = sql`EXISTS (
+    SELECT 1 FROM social_actors viewer, social_actors owner
+    WHERE viewer.id = ${viewerActorId}
+      AND owner.uri = ${socialStatuses.recipientCc}->>0
+      AND (
+        owner.id = viewer.id
+        OR (
+          ${socialStatuses.recipientTo} @> to_jsonb(viewer.uri)
+          AND EXISTS (
+            SELECT 1 FROM social_follows outgoing
+            JOIN social_follows incoming
+              ON incoming.actor_id = outgoing.target_actor_id
+             AND incoming.target_actor_id = outgoing.actor_id
+             AND incoming.status = 'accepted'
+            WHERE outgoing.actor_id = owner.id
+              AND outgoing.target_actor_id = viewer.id
+              AND outgoing.status = 'accepted'
+          )
+        )
+      )
+  )`;
+
   return or(
-    isPublicStatus(),
     eq(socialStatuses.actorId, viewerActorId),
-    addressedToViewer,
-    followersOnly
+    and(
+      notPanasStatus(),
+      or(isPublicStatus(), addressedToViewer, followersOnly)
+    ),
+    and(eq(socialStatuses.type, STATUS_TYPE_PANAS), mutualRecipients)
   )!;
 }
 

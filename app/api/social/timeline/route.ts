@@ -1,5 +1,5 @@
 /**
- * GET /api/social/timeline - Get home timeline (posts from followed accounts + own)
+ * GET /api/social/timeline - Get Panas timeline (mutual follows + own + joined groups)
  */
 
 import { NextRequest, NextResponse } from 'next/server';

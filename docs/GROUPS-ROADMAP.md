@@ -268,16 +268,21 @@ CREATE INDEX social_statuses_group_published_idx
 
 ## Feed Integration
 
-`getHomeTimeline` (`lib/federation/wrappers/timeline.ts:112`) builds `timelineActorIds` from
-accepted `social_follows` plus self, then filters statuses on `isNotNull(published)`,
-`isNull(inReplyToId)`, and **public addressing**:
+`getHomeTimeline` (`lib/federation/wrappers/timeline.ts`) builds `timelineActorIds` from
+mutual follows (both directions `accepted`) plus self, then filters statuses on `isNotNull(published)`,
+`isNull(inReplyToId)`, and **authorized personal addressing**:
 
 ```ts
 or(
   jsonbArrayContains(recipientTo, PUBLIC),
-  jsonbArrayContains(recipientCc, PUBLIC)
+  jsonbArrayContains(recipientCc, PUBLIC),
+  eq(type, STATUS_TYPE_PANAS)
 );
 ```
+
+The personal arm also requires `visibleTo(actorId)`: the internal Panas type is not itself a
+permission grant. New mutual-only posts must pass the recipient-snapshot and current-mutual checks;
+legacy followers-only private posts remain excluded from this feed.
 
 > ### The trap
 >
@@ -287,15 +292,20 @@ or(
 
 The group branch must be a **separate `or()` arm that does not require public addressing**:
 
+This remains part of the optional **Panas** feed even when a group's author is not a mutual
+Pana. **Everyone**, the default feed, continues to show public posts from local accounts.
+
 ```ts
 where: or(
   and(
     inArray(socialStatuses.actorId, timelineActorIds),
-    isNull(socialStatuses.groupId), // don't double-render group posts
+    isNull(socialStatuses.groupId), // group posts require membership in this feed
     or(
       jsonbArrayContains(socialStatuses.recipientTo, PUBLIC),
-      jsonbArrayContains(socialStatuses.recipientCc, PUBLIC)
-    )
+      jsonbArrayContains(socialStatuses.recipientCc, PUBLIC),
+      eq(socialStatuses.type, STATUS_TYPE_PANAS)
+    ),
+    visibleTo(actorId)
   ),
   and(
     inArray(socialStatuses.groupId, memberGroupIds)
@@ -304,8 +314,14 @@ where: or(
 );
 ```
 
-The `isNull(groupId)` on the follow arm is not redundant. Without it, a post to a group you are in,
-written by someone you also follow, matches both arms and renders twice.
+The `isNull(groupId)` on the Pana arm is not redundant. Without it, a mutual Pana's public group
+posts would enter the home feed even when the viewer has not joined that group. Membership,
+not the relationship with the author, is what adds group posts here.
+
+The friendly composer is pinned to the group on `/g/[handle]`, not offered as a destination in
+personal posting. Media-only posts use the same membership-checked group route, inherit the active
+profile's saved license, and keep private-group addressing. The composer owns its card framing;
+the group page does not wrap a second padded card around it.
 
 ---
 
