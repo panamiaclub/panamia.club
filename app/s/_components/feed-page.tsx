@@ -30,33 +30,21 @@ const PostComposer = dynamic(
 
 type FeedFilter = 'panas' | 'everyone' | 'voice';
 
-/* The mock at /mock/feed has a fourth tab, Groups. It is not here because
- * nothing can fill it: there is no group timeline endpoint and a status
- * carries no group, so the tab could only ever have rendered empty. It comes
- * back when the endpoint does.
- *
- * The hints are deliberately full sentences. Three tabs that each need a
- * mental model cannot carry it in a one-word label — and "Panas" in particular
- * means mutual follows elsewhere in this product (the rail counts them that
- * way), while /api/social/timeline documents itself as "posts from followed
- * accounts + own". The label is the one the design approved; the hint is what
- * the endpoint actually returns, and the two must not be allowed to drift
- * apart silently. */
 const FEED_FILTERS: { id: FeedFilter; label: string; hint: string }[] = [
-  {
-    id: 'panas',
-    label: 'Panas',
-    hint: 'Posts from the people you follow, plus your own.',
-  },
   {
     id: 'everyone',
     label: 'Everyone',
     hint: 'Every public post from Pana Mia members, newest first.',
   },
   {
+    id: 'panas',
+    label: 'Panas',
+    hint: 'Posts from your mutual Panas, your groups, and you.',
+  },
+  {
     id: 'voice',
     label: 'Voice notes',
-    hint: 'Audio posts from the people you follow. Headphones encouraged.',
+    hint: 'Audio posts from your mutual Panas, your groups, and you.',
   },
 ];
 
@@ -122,7 +110,7 @@ export function FeedPage() {
 }
 
 function FeedContent() {
-  const [filter, setFilter] = useState<FeedFilter>('panas');
+  const [filter, setFilter] = useState<FeedFilter>('everyone');
   /* Latched, not a timer: once a member has posted in this visit the ask stays
      available until they act on it or wave it away. Resetting it on the next
      render would take the card away mid-reach. */
@@ -150,15 +138,15 @@ function FeedContent() {
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start">
       <div className="min-w-0">
         <StoriesRail actor={actor} />
-        <div className="feed-composer">
+        <div>
           <PostComposer
             avatarUrl={actor?.iconUrl}
             avatarName={actor?.name || actor?.username}
             onSuccess={() => setHasPosted(true)}
             placeholder={
               firstName
-                ? `¿Qué tal, ${firstName}? Ask the Panas something, or show what you're working on.`
-                : "Ask the Panas something, or show what you're working on."
+                ? `What's on your mind, ${firstName}?`
+                : "What's on your mind?"
             }
           />
         </div>
@@ -248,10 +236,9 @@ function FeedContent() {
  * The short-list rule is the important one. A feed with one or two posts is a
  * new or quiet account, which is precisely the case that used to dead-end in
  * a grey box. Those get a module appended so the column ends on somewhere to
- * go — Suggestions rather than Directory, because a thin feed means too few
- * people followed, and that is the module that fixes the cause. The
- * positional injections cannot fire on a list that short, so nothing is ever
- * shown twice. */
+ * go — Suggestions rather than Directory, so even a quiet feed ends on a way
+ * to build mutual connections. Positional injections cannot fire on a list
+ * that short, so nothing is ever shown twice. */
 function withModules(cards: ReactNode[]): ReactNode[] {
   if (cards.length <= 2) {
     return [...cards, <SuggestionsModule key="module-panas-tail" />];
@@ -299,21 +286,14 @@ function FeedError({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-/* A new account, not a narrow filter. Nothing is broken and the answer is to
-   go and find people, so it points at the directory rather than apologising.
-
-   Suggestions sit directly underneath because this is the one screen where
-   "go and find Panas" can be answered on the spot instead of delegated to a
-   search box. It renders nothing when it has no rows, so the empty state never
-   degrades into a heading above an empty strip. */
 function FeedEmpty() {
   return (
     <div className="space-y-5">
       <div className="reserved-slot items-start p-6">
-        <p className="reserved-slot-title">Your feed starts here</p>
+        <p className="reserved-slot-title">Your Panas feed starts here</p>
         <p className="text-pana-ink/65 text-[13px] leading-snug font-medium">
-          You&apos;re not following anyone yet, so there is nothing to show.
-          Find Panas in the directory, or post something and let them find you.
+          When you and someone follow each other, you become Panas. Their posts,
+          your own posts, and posts from groups you join will appear here.
         </p>
         <SurfaceLink
           href="/directory/search"
@@ -338,7 +318,7 @@ function FilterEmpty({ filter }: { filter: FeedFilter }) {
       <p className="text-pana-ink/65 text-[13px] leading-snug font-medium">
         {filter === 'voice'
           ? 'No voice memos in the posts loaded so far. Older ones further down the timeline will not show up here yet.'
-          : 'This filter is narrower than your whole feed, so it empties out first. Everyone always has something in it.'}
+          : 'No public posts yet. Share a post with Everyone to start the conversation.'}
       </p>
     </div>
   );

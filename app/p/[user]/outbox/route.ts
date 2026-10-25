@@ -18,6 +18,7 @@ import { and, eq, gt, isNull, ne, or, sql } from 'drizzle-orm';
 import { socialConfig } from '@/lib/federation';
 import { personalStatusesOnly } from '@/lib/federation/wrappers/group-visibility';
 import { corsHeaders } from '@/lib/federation/cors';
+import { notPanasStatus } from '@/lib/federation/wrappers/visibility';
 
 const PUBLIC = 'https://www.w3.org/ns/activitystreams#Public';
 
@@ -86,6 +87,7 @@ export async function GET(
       // no expiry, so the 24-hour promise made to the author quietly does not
       // apply to the copy, and we cannot recall it.
       ne(socialStatuses.type, STATUS_TYPE_STORY),
+      notPanasStatus(),
       or(
         isNull(socialStatuses.expiresAt),
         gt(socialStatuses.expiresAt, new Date())

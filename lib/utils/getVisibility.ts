@@ -12,10 +12,16 @@ const PUBLIC = 'https://www.w3.org/ns/activitystreams#Public';
 
 export type PostVisibility = 'public' | 'unlisted' | 'private' | 'direct';
 
+/** Local mutual-audience notes, distinct from legacy followers-only posts and DMs. */
+export const STATUS_TYPE_PANAS = 'Panas';
+
 export function getVisibilityFromRecipients(
   recipientTo: unknown,
-  recipientCc: unknown
+  recipientCc: unknown,
+  statusType?: string
 ): PostVisibility {
+  if (statusType === STATUS_TYPE_PANAS) return 'private';
+
   const to = Array.isArray(recipientTo) ? (recipientTo as string[]) : [];
   const cc = Array.isArray(recipientCc) ? (recipientCc as string[]) : [];
 

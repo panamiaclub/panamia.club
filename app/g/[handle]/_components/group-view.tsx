@@ -336,12 +336,7 @@ function GroupPosts({ handle, canPost }: { handle: string; canPost: boolean }) {
   return (
     <div className="space-y-4">
       {canPost && (
-        <section className="border-pana-ink/10 rounded-2xl border bg-white p-4">
-          {/* The same composer as the feed, pinned to this group. It used to
-              be a bare textarea, which quietly meant a member could not add a
-              content warning, a photo or a licence to anything they wrote
-              here -- the group write endpoint accepted all three the whole
-              time. */}
+        <section aria-label="Post to this group">
           <PostComposer
             lockedGroupHandle={handle}
             placeholder="Share something with the group"

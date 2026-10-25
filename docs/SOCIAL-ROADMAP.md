@@ -300,10 +300,13 @@ feature sets. SocialFollow is now the sole follow mechanism.
 
 **Status**: Complete
 
-**Goal**: Users can post and see posts from followed accounts
+**Goal**: Users can post, discover the public community feed, and switch to their mutual Panas
 
-- [x] Create post composer UI (`PostComposer` with 500 char limit, CW support)
-- [x] Timeline page showing posts from followed accounts (`/timeline`)
+- [x] Friendly social-card composer with public Everyone default and mutual-only Panas sharing
+- [x] Prominent photo/video and audio actions, inline playable media, file drop and image paste
+- [x] Media-only posts, four-attachment limit, upload-busy protection, and visible draft-preserving errors
+- [x] Optional content warning and formatting preview under More; saved account license applied server-side
+- [x] Everyone opens by default; Panas shows mutual follows, own posts, and joined groups (`/s`)
 - [x] Post detail page (`/status/[statusId]`)
 - [x] Reply to posts (inline composer on post detail)
 - [x] Like posts (optimistic UI with `useLikePost`/`useUnlikePost`)
@@ -317,10 +320,12 @@ feature sets. SocialFollow is now the sole follow mechanism.
 - API routes: `app/api/social/{timeline,statuses,actors,follows}/`
 - React Query hooks: `lib/query/social.ts`
 - UI components: `components/social/`
-- Pages: `app/{timeline,p/[user],status/[statusId]}/`
+- Pages: `app/{s,p/[user],status/[statusId]}/`
 
 **Hybrid Layout**: Actor profile page uses tabs (Posts | Followers | Following)
-instead of separate pages. Timeline page has Home/Public tabs.
+instead of separate pages. The feed opens on Everyone, with optional Panas and Voice notes tabs.
+Panas requires accepted follows in both directions; group membership still adds joined-group posts
+independently of follows.
 
 ### Phase 4B: Markdown Editor & Media Attachments
 
@@ -542,9 +547,10 @@ Search the codebase for `DEFERRED (Phase 7)` for the concrete hook points.
 
 **Visibility & Federation**:
 
-- **Public**: Federated via outbox and delivered to followers' inboxes
-- **Visible to Local Panas** (unlisted): Local-only. Excluded from federation outbox.
-- **Followers only**: Addressed to the actor's followers collection, which **includes remote followers**. Once delivery is implemented, these posts will be pushed to remote followers' inboxes via signed POST.
+- **Everyone (public)**: Included in the public outbox; outbound inbox delivery is the deferred work above.
+- **Panas**: Explicit mutual-recipient snapshots with current mutual-read checks. Internal `Panas` status type, private visibility, no PUBLIC/followers broadcast, and no federation outbox or future delivery fan-out. Replies inherit the original circle.
+- **Unlisted (legacy/API)**: Publicly readable, but absent from Everyone and the federation outbox. Not a local or county restriction.
+- **Followers only (legacy/API)**: Ordinary private `Note` rows keep their original followers-collection addressing, which **includes remote followers**. These are not reinterpreted as mutual-only Panas posts.
 - **Direct**: Sent to specific recipients only
 
 ### Phase 8: Federation - Inbound
@@ -704,7 +710,7 @@ SOCIAL_ADMIN_EMAIL=admin@pana.social
 1. Enable social features in account settings
 2. Choose a handle (@screenname@pana.social)
 3. Post updates, follow others, engage with content
-4. See posts from followed accounts in timeline
+4. Browse Everyone by default, or switch to Panas for mutual follows, own posts, and joined groups
 5. Follow accounts from other servers (@user@mastodon.social)
 
 ### For Article Readers
