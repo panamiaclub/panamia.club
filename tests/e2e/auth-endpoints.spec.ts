@@ -16,9 +16,9 @@ import { test, expect } from '@playwright/test';
  * router.mjs processRequest), so "not 404" is the meaningful signal that an
  * endpoint is mounted, and a literal 404 is the signal that one is gone.
  *
- * None of these need a signed-in user or reach the database: with no session
- * cookie there is no session to look up, and a callback with no state parameter
- * fails validation before any query.
+ * None of these need a signed-in user. The invalid magic-link checks use the
+ * runner's verification table; the other probes fail validation or return an
+ * anonymous session before needing a database query.
  */
 
 test.describe('better-auth API mount', () => {
@@ -84,6 +84,50 @@ test.describe('better-auth API mount', () => {
     // Both production sign-in methods were rejected here before reaching
     // their provider because www was absent from trustedOrigins.
     expect(res.status()).not.toBe(403);
+  });
+});
+
+test.describe('magic-link recovery', () => {
+  const callbackURL = '/m/schedule/book?mentor=taylor&mode=video';
+  const path = `/api/auth/magic-link/verify?${new URLSearchParams({
+    token: 'invalid-magic-link-for-recovery-test',
+    callbackURL,
+  })}`;
+
+  test('invalid links redirect to sign-in without caching the response', async ({
+    request,
+  }) => {
+    const response = await request.get(path, { maxRedirects: 0 });
+    expect(response.status()).toBe(302);
+    const location = new URL(response.headers().location);
+    expect(location.pathname).toBe('/signin');
+    expect(location.searchParams.get('error')).toBe('INVALID_TOKEN');
+    expect(location.searchParams.get('callbackUrl')).toBe(callbackURL);
+    expect(response.headers()['cache-control']).toContain('private');
+    expect(response.headers()['cache-control']).toContain('no-store');
+  });
+
+  test('the recovery page explains the error and opens the email form', async ({
+    page,
+  }) => {
+    const response = await page.request.get(path, { maxRedirects: 0 });
+    expect(response.status()).toBe(302);
+    const recovery = new URL(response.headers().location);
+    // Auth can have a production base URL; exercise the recovery UI on this runner.
+    await page.goto(`${recovery.pathname}${recovery.search}`);
+    const location = new URL(page.url());
+    expect(location.pathname).toBe('/signin');
+    expect(location.searchParams.get('callbackUrl')).toBe(callbackURL);
+    await expect(
+      page.getByRole('alert').filter({
+        hasText:
+          'That sign-in link has expired or has already been used. Request a new one below.',
+      })
+    ).toBeVisible();
+    await expect(page.getByPlaceholder('your@email.com')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Send sign-in link', exact: true })
+    ).toBeVisible();
   });
 });
 

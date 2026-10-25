@@ -197,4 +197,31 @@ describe('parseConnector — status is the gate', () => {
     assert.equal(parsed?.decidedAt, '2025-03-01T00:00:00.000Z');
     assert.equal(parsed?.decidedBy, 'admin-1');
   });
+
+  test('keeps reactivation provenance without dropping the offboarding record', () => {
+    const parsed = parseConnector({
+      ...VALID,
+      offboardedAt: '2026-10-21T21:45:00.000Z',
+      offboardedBy: 'admin-2',
+      offboardReason: '  Demo offboarding  ',
+      reactivatedAt: '2026-10-25T19:30:00.000Z',
+      reactivatedBy: 'admin-3',
+    });
+    assert.equal(parsed?.offboardedBy, 'admin-2');
+    assert.equal(parsed?.offboardReason, 'Demo offboarding');
+    assert.equal(parsed?.reactivatedAt, '2026-10-25T19:30:00.000Z');
+    assert.equal(parsed?.reactivatedBy, 'admin-3');
+  });
+
+  test('legacy or malformed reactivation metadata is nullable', () => {
+    for (const value of [undefined, null, 42, {}]) {
+      const parsed = parseConnector({
+        ...VALID,
+        reactivatedAt: value,
+        reactivatedBy: value,
+      });
+      assert.equal(parsed?.reactivatedAt, null);
+      assert.equal(parsed?.reactivatedBy, null);
+    }
+  });
 });

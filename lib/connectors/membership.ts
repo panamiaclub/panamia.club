@@ -82,6 +82,9 @@ export interface ProfileConnector {
   offboardedBy: string | null;
   /** Internal staff note. Never rendered to the member. */
   offboardReason: string | null;
+  /** Most recent reactivation; the offboarding record remains intact. */
+  reactivatedAt: string | null;
+  reactivatedBy: string | null;
 }
 
 const POD_IDS = new Set<string>(PODS.map((p) => p.id));
@@ -156,6 +159,10 @@ export function parseConnector(value: unknown): ProfileConnector | null {
       typeof value.offboardReason === 'string'
         ? value.offboardReason.trim()
         : null,
+    reactivatedAt:
+      typeof value.reactivatedAt === 'string' ? value.reactivatedAt : null,
+    reactivatedBy:
+      typeof value.reactivatedBy === 'string' ? value.reactivatedBy : null,
   };
 }
 
@@ -354,7 +361,8 @@ export async function decideConnectorApplication(
       })
       .from(profiles)
       .where(eq(profiles.id, profileId))
-      .limit(1);
+      .limit(1)
+      .for('update');
     if (!profile) return null;
 
     const membership = parseConnector(profile.connector);

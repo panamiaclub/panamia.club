@@ -26,6 +26,9 @@ import {
   originForFrom,
 } from '@/lib/panaverse/surfaces';
 import { envConfig } from '@/lib/env.config';
+import { signInPath } from '@/lib/signin-redirect';
+
+const MAGIC_LINK_EXPIRY_MINUTES = 30;
 
 // Custom email templates for magic link authentication
 function html(params: { url: string; host: string; email: string }) {
@@ -46,7 +49,7 @@ function html(params: { url: string; host: string; email: string }) {
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
   <!-- Preheader: visible in inbox preview, hidden in body -->
-  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">Your sign-in link for Pana MIA &mdash; expires in 24 hours.</div>
+  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">Your sign-in link for Pana MIA &mdash; expires in ${MAGIC_LINK_EXPIRY_MINUTES} minutes.</div>
   <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #f3f4f6; padding: 40px 0;">
     <tr>
       <td align="center">
@@ -67,7 +70,7 @@ function html(params: { url: string; host: string; email: string }) {
               </p>
 
               <p style="margin: 0 0 16px 0; color: #374151; font-size: 15px; line-height: 1.6;">
-                This is a one-time link — it can only be used once and will expire automatically after <strong>24 hours</strong>. If you need a new link after it expires, you can request one at any time from the sign-in page.
+                This is a one-time link — it can only be used once and will expire automatically after <strong>${MAGIC_LINK_EXPIRY_MINUTES} minutes</strong>. If you need a new link after it expires, you can request one at any time from the sign-in page.
               </p>
 
               <p style="margin: 0 0 30px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
@@ -129,7 +132,7 @@ function text(params: { url: string; host: string }) {
     '',
     url,
     '',
-    'This link expires in 24 hours and works only once. After it expires you can request a new link from the sign-in page.',
+    `This link expires in ${MAGIC_LINK_EXPIRY_MINUTES} minutes and works only once. After it expires you can request a new link from the sign-in page.`,
     '',
     'For your security, do not forward this email to anyone. Pana MIA staff will never ask you for this link.',
     '',
@@ -1123,6 +1126,7 @@ function getBetterAuth(): BetterAuthInstance {
     },
     plugins: [
       magicLink({
+        expiresIn: MAGIC_LINK_EXPIRY_MINUTES * 60,
         sendMagicLink: async ({ email, url }) => {
           const { host } = new URL(url);
           await sendEmail(
@@ -1346,7 +1350,22 @@ export async function auth(): Promise<AppSession | null> {
   }
 }
 
-export const handler = (request: Request) => getBetterAuth().handler(request);
+export const handler = (request: Request) => {
+  const url = new URL(request.url);
+  if (
+    request.method === 'GET' &&
+    url.pathname.replace(/\/+$/, '') === '/api/auth/magic-link/verify' &&
+    !url.searchParams.get('errorCallbackURL')
+  ) {
+    // Apply this at verification time so links already in inboxes also recover.
+    url.searchParams.set(
+      'errorCallbackURL',
+      signInPath(url.searchParams.get('callbackURL') || '/')
+    );
+    return getBetterAuth().handler(new Request(url, request));
+  }
+  return getBetterAuth().handler(request);
+};
 
 /**
  * Resolve a session from headers supplied explicitly, rather than from the
