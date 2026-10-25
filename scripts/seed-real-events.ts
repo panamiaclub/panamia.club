@@ -32,6 +32,8 @@
  *    and these are `demo_` for the same reason seed-demo.ts's rows are —
  *    they attach to real data rather than to a fake world, so the blunt
  *    teardown must not be able to reach them. `--undo` is the teardown.
+ *    For a combined transactional launch cleanup, unseed now also supports
+ *    an explicit `--include-demo-events` opt-in; its default is unchanged.
  * 3. **Remote writes need SEED_ALLOW_REMOTE=1**, consistent with every other
  *    seeder here.
  * 4. **A pre-flight count names how many real businesses** are about to have

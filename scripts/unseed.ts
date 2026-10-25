@@ -130,6 +130,7 @@ export async function unseed(
   apply = false,
   options: {
     includeDemoGroups?: boolean;
+    includeDemoEvents?: boolean;
     approvedGroupFingerprint?: string;
   } = {}
 ): Promise<UnseedStepResult[]> {
@@ -146,6 +147,10 @@ export async function unseed(
       'An approved group fingerprint requires --include-demo-groups.'
     );
   }
+  const fixtureEvent = (column: SQLWrapper) =>
+    options.includeDemoEvents
+      ? sql`(${seeded(column)} OR starts_with(${column}, 'demo_ev_'))`
+      : seeded(column);
 
   const [{ db }, schema] = await Promise.all([
     import('../lib/db'),
@@ -223,7 +228,7 @@ export async function unseed(
               AND NOT EXISTS (
                 SELECT 1 FROM events e
                 WHERE e.host_group_id = ${schema.socialGroups.id}
-                  AND NOT ${seeded(sql`e.id`)}
+                  AND NOT ${fixtureEvent(sql`e.id`)}
               )
             `)
         : [];
@@ -242,7 +247,7 @@ export async function unseed(
         {
           label: 'events',
           table: schema.events,
-          where: seeded(schema.events.id),
+          where: fixtureEvent(schema.events.id),
           note: 'cascades event_attendees, event_dismissals',
         },
         {
@@ -387,7 +392,7 @@ export async function unseed(
         .where(
           sql`
           ${schema.eventAttendees.profileId} IN (${profileIds})
-          AND NOT ${seeded(schema.eventAttendees.eventId)}
+          AND NOT ${fixtureEvent(schema.eventAttendees.eventId)}
           AND ${schema.eventAttendees.status} = 'going'
           AND ${schema.eventAttendees.emailVerifiedAt} IS NOT NULL
         `
@@ -522,6 +527,35 @@ async function main(): Promise<void> {
       SELECT id FROM social_actors
       WHERE ${seeded(sql`id`)} OR profile_id IN (${profileIds})
     `;
+    const candidateEvents = await db.execute(sql`
+      SELECT e.id, e.host_profile_id, e.host_group_id, e.venue_id,
+             ${seeded(sql`e.id`)} AS seeded_id,
+             starts_with(e.id, 'demo_ev_') AS demo_id,
+             COALESCE(strpos(e.description, 'Sample event added for the ') > 0, false)
+               AS sample_notice,
+             (SELECT count(*)::int FROM event_attendees a
+              WHERE a.event_id = e.id
+                AND (a.profile_id IS NULL OR a.profile_id NOT IN (${profileIds})))
+               AS non_fixture_attendees
+      FROM events e
+      WHERE ${seeded(sql`e.id`)} OR starts_with(e.id, 'demo_ev_')
+         OR e.host_profile_id IN (${profileIds})
+         OR EXISTS (
+           SELECT 1 FROM social_groups g
+           WHERE g.id = e.host_group_id AND g.created_by_profile_id IN (${profileIds})
+         )
+      ORDER BY e.id
+    `);
+    console.log('Candidate events:', JSON.stringify(candidateEvents));
+    const candidateVenues = await db.execute(sql`
+      SELECT v.id, v.operator_profile_id,
+             ${seeded(sql`v.id`)} AS seeded_id,
+             (SELECT count(*)::int FROM events e WHERE e.venue_id = v.id) AS events
+      FROM venues v
+      WHERE ${seeded(sql`v.id`)} OR v.operator_profile_id IN (${profileIds})
+      ORDER BY v.id
+    `);
+    console.log('Candidate venues:', JSON.stringify(candidateVenues));
     const externalReferences = await db.execute(sql`
       SELECT
         (SELECT count(*)::int FROM social_follows f
@@ -587,7 +621,9 @@ async function main(): Promise<void> {
              ) AS real_likes,
              EXISTS (
                SELECT 1 FROM events e
-               WHERE e.host_group_id = g.id AND NOT ${seeded(sql`e.id`)}
+               WHERE e.host_group_id = g.id AND NOT (
+                 ${seeded(sql`e.id`)} OR starts_with(e.id, 'demo_ev_')
+               )
              ) AS real_events
       FROM social_groups g
       WHERE EXISTS (
@@ -619,6 +655,7 @@ async function main(): Promise<void> {
     }
     report = await unseed(apply, {
       includeDemoGroups: process.argv.includes('--include-demo-groups'),
+      includeDemoEvents: process.argv.includes('--include-demo-events'),
       approvedGroupFingerprint:
         approvedGroupIndex >= 0
           ? process.argv[approvedGroupIndex + 1]

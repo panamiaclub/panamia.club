@@ -405,6 +405,57 @@ for (const [label, insert] of [
   });
 }
 
+test('sample events attached to fixture hosts remain protected by default', async () => {
+  await pg.exec(`
+    INSERT INTO events VALUES
+      ('demo_ev_preview', 'seedprof_old-cafe', NULL, NULL);
+  `);
+  const before = await snapshot();
+  await assert.rejects(
+    unseed(true),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.cause instanceof Error &&
+      /foreign key constraint/.test(error.cause.message)
+  );
+  assert.deepEqual(await snapshot(), before);
+});
+
+test('sample-event opt-in removes marked events and RSVPs, not genuine events or attendees', async () => {
+  await pg.exec(`
+    INSERT INTO events VALUES
+      ('demo_ev_preview', 'seedprof_old-cafe', NULL, NULL);
+    INSERT INTO event_attendees VALUES
+      ('preview_rsvp', 'demo_ev_preview', 'member_profile', 'going', now());
+  `);
+  await unseed(true, { includeDemoEvents: true });
+  const remaining = await snapshot();
+  assert.deepEqual(remaining.events, [
+    {
+      id: 'real_event',
+      host_profile_id: 'member_profile',
+      host_group_id: null,
+      venue_id: 'real_venue',
+    },
+  ]);
+  assert.deepEqual(remaining.event_attendees, []);
+  assert.ok(
+    (await pg.query("SELECT id FROM users WHERE id = 'member'")).rows.length ===
+      1
+  );
+});
+
+test('combined opt-in removes sample events before their demo-only group hosts', async () => {
+  await addDemoGroup();
+  await pg.exec(`
+    INSERT INTO events VALUES ('demo_ev_group', NULL, 'demo_group', NULL);
+  `);
+  await unseed(true, { includeDemoEvents: true, includeDemoGroups: true });
+  const remaining = await snapshot();
+  assert.deepEqual(remaining.social_groups, []);
+  assert.equal(remaining.events.length, 1);
+});
+
 const demoGroupFingerprint = createHash('md5')
   .update('demo_group')
   .digest('hex');

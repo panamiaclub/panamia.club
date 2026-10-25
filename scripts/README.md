@@ -291,6 +291,12 @@ members), real posts, real replies, real likes, or non-fixture hosted events.
 Their group actors and posts are removed in the same transaction. Groups with
 real participation remain protected even when this option is enabled.
 
+`include_demo_events` / `--include-demo-events` also removes the exact
+`demo_ev_` namespace written by `seed-real-events.ts`. These explicitly marked
+sample events can reference fixture listings or otherwise real hosts. They
+are removed before hosts/groups in the same transaction; genuine events
+remain protected. This option is off by default.
+
 If an operator explicitly approves deleting a specific demo group despite its
 real memberships, pass its `group_fingerprint` from the inventory using
 `--approved-group-fingerprint <hash>` (workflow input

@@ -44,6 +44,10 @@ on:
         description: Also remove groups with only fixture creators, members and content
         type: boolean
         default: false
+      include_demo_events:
+        description: Also remove the explicitly marked demo_ev_ sample events
+        type: boolean
+        default: false
       approved_group_fingerprint:
         description: Approve removing real memberships from one demo group (MD5 ID hash)
         type: string
@@ -129,12 +133,16 @@ jobs:
           TEST_DATA_ACTION: ${{ inputs.test_data_action }}
           CONFIRMATION: ${{ inputs.confirmation }}
           INCLUDE_DEMO_GROUPS: ${{ inputs.include_demo_groups }}
+          INCLUDE_DEMO_EVENTS: ${{ inputs.include_demo_events }}
           APPROVED_GROUP_FINGERPRINT: ${{ inputs.approved_group_fingerprint }}
           SEED_ALLOW_REMOTE: '1'
         run: |
           flags=()
           if [ "$INCLUDE_DEMO_GROUPS" = "true" ]; then
             flags+=(--include-demo-groups)
+          fi
+          if [ "$INCLUDE_DEMO_EVENTS" = "true" ]; then
+            flags+=(--include-demo-events)
           fi
           if [ -n "$APPROVED_GROUP_FINGERPRINT" ]; then
             flags+=(--approved-group-fingerprint "$APPROVED_GROUP_FINGERPRINT")
