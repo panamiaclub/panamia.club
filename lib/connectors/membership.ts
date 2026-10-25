@@ -3,8 +3,9 @@ import { and, eq, isNotNull, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { profiles, referralAttributions, referralEvents } from '@/lib/schema';
 import {
-  HOUSES,
   PODS,
+  isHouseId,
+  parseHouseFocus,
   type HouseId,
   type PodId,
   type TierId,
@@ -64,7 +65,11 @@ export type ConnectorStatus = 'pending' | 'active' | 'declined' | 'inactive';
 export interface ProfileConnector {
   status: ConnectorStatus;
   pod: PodId;
+  /** Both focus houses, or the original unranked interests on legacy records. */
   houses: HouseId[];
+  /** Null together until the member's two distinct house roles are confirmed. */
+  majorHouse: HouseId | null;
+  minorHouse: HouseId | null;
   /**
    * Always 1 on join. Stored rather than derived because tiers move over time
    * and staff can change one from the console — see `setHousesAndTier`.
@@ -88,7 +93,6 @@ export interface ProfileConnector {
 }
 
 const POD_IDS = new Set<string>(PODS.map((p) => p.id));
-const HOUSE_IDS = new Set<string>(HOUSES.map((h) => h.id));
 const STATUSES: ReadonlySet<string> = new Set([
   'pending',
   'active',
@@ -121,11 +125,12 @@ export function parseConnector(value: unknown): ProfileConnector | null {
   const pod = value.pod;
   if (typeof pod !== 'string' || !POD_IDS.has(pod)) return null;
 
-  const houses = Array.isArray(value.houses)
-    ? value.houses.filter(
-        (h): h is HouseId => typeof h === 'string' && HOUSE_IDS.has(h)
-      )
-    : [];
+  const focus = parseHouseFocus(value);
+  const houses = focus
+    ? [focus.majorHouse, focus.minorHouse]
+    : Array.isArray(value.houses)
+      ? value.houses.filter(isHouseId)
+      : [];
   if (houses.length === 0) return null;
 
   const tier = value.tier;
@@ -146,6 +151,8 @@ export function parseConnector(value: unknown): ProfileConnector | null {
         : 'pending',
     pod: pod as PodId,
     houses: [...new Set(houses)],
+    majorHouse: focus?.majorHouse ?? null,
+    minorHouse: focus?.minorHouse ?? null,
     tier: tier === 1 || tier === 2 || tier === 3 ? (tier as TierId) : 1,
     bring: typeof value.bring === 'string' ? value.bring.trim() : '',
     appliedAt,

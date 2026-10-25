@@ -110,6 +110,8 @@ export default async function AdminConnectorsPage() {
     displayName: member.displayName,
     pod: member.membership.pod,
     houses: member.membership.houses,
+    majorHouse: member.membership.majorHouse,
+    minorHouse: member.membership.minorHouse,
     tier: member.membership.tier,
   }));
 
@@ -191,9 +193,8 @@ export default async function AdminConnectorsPage() {
           <Panel title="Connectors by house">
             <TallyBars rows={tallies.houses} />
             <p className="text-pana-ink/60 mt-4 text-xs leading-relaxed">
-              Houses describe the kind of work, not where somebody lives. Counts
-              add up to more than {tallies.total} because a connector can be in
-              more than one.
+              Counts include major and minor houses, with older house interests
+              kept until their roles are confirmed.
             </p>
           </Panel>
         </div>
@@ -209,6 +210,8 @@ export default async function AdminConnectorsPage() {
               displayName: member.displayName,
               pod: member.membership.pod,
               houses: member.membership.houses,
+              majorHouse: member.membership.majorHouse,
+              minorHouse: member.membership.minorHouse,
               tier: member.membership.tier,
               offboardReason: member.membership.offboardReason,
             }))}

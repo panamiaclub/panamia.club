@@ -50,6 +50,8 @@ export default async function AdminConnectorApplicationsPage() {
     email: row.email,
     pod: row.membership.pod,
     houses: row.membership.houses,
+    majorHouse: row.membership.majorHouse,
+    minorHouse: row.membership.minorHouse,
     bring: row.membership.bring,
     appliedAt: row.membership.appliedAt,
   }));

@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 
-import { HOUSES } from '@/lib/connectors/model';
+import { HOUSES, parseHouseFocus, type HouseId } from '@/lib/connectors/model';
 import { ADMIN_CHROME } from '@/lib/admin/theme';
 import { SetTaskForm } from '@/components/connectors/admin-console';
+import { ConnectorHousePills } from '@/components/connectors/dashboard-parts';
 import type { AssignableEvent } from '@/lib/connectors/event-link';
 import {
   describeLoad,
@@ -73,9 +74,8 @@ import {
  * They used to sit on a line of their own under the bar. Moved up beside the
  * name they cost no height at all, and they belong there: which houses
  * somebody is in is part of who they are, not a footnote to their workload.
- * It matters while choosing, too — a narrative task wants somebody in
- * Narrative Shifters, and the house list in the form is narrowed to whatever
- * the chips here already showed.
+ * Explicit major/minor labels help staff find somebody's focus without
+ * restricting assignments to those houses.
  *
  * Folding them up, and putting the button on the bar's line, took the row
  * from three lines to two. The same cap that showed five connectors now
@@ -111,7 +111,22 @@ const HOUSE_BY_ID = new Map<string, (typeof HOUSES)[number]>(
  * filed without a house, so an unplaced connector is not merely undecorated —
  * they cannot be given anything until it is sorted.
  */
-function HousePills({ houses }: { houses: readonly string[] }) {
+function HousePills({
+  houses,
+  majorHouse,
+  minorHouse,
+}: Pick<LoadRow, 'houses' | 'majorHouse' | 'minorHouse'>) {
+  const focus = parseHouseFocus({ majorHouse, minorHouse });
+  if (focus) {
+    return (
+      <ConnectorHousePills
+        houses={[focus.majorHouse, focus.minorHouse]}
+        majorHouse={focus.majorHouse}
+        minorHouse={focus.minorHouse}
+      />
+    );
+  }
+
   if (houses.length === 0) {
     return (
       <span className="border-pana-ink/25 text-pana-ink/50 rounded-full border-2 border-dotted px-2 py-0.5 text-[0.6875rem] font-extrabold">
@@ -156,6 +171,8 @@ export interface LoadRow {
   profileId: string;
   displayName: string;
   houses: string[];
+  majorHouse: HouseId | null;
+  minorHouse: HouseId | null;
   load: ConnectorLoad;
 }
 
@@ -294,7 +311,11 @@ export function LoadTable({
                     <span className="text-pana-ink text-sm font-extrabold">
                       {row.displayName}
                     </span>
-                    <HousePills houses={row.houses} />
+                    <HousePills
+                      houses={row.houses}
+                      majorHouse={row.majorHouse}
+                      minorHouse={row.minorHouse}
+                    />
                   </span>
                   <span className="flex items-center gap-2">
                     <span className="text-pana-ink/70 text-xs tabular-nums">

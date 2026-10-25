@@ -29,8 +29,9 @@ export function HouseBoard() {
           </h2>
           <p className="section-lede mt-4 max-w-2xl">
             Houses group connectors by what they already like doing, not by what
-            needs covering. You pick yours — and you can sit in more than one if
-            that is honestly where you are.
+            needs covering. Choose a major house for your primary focus and a
+            different minor house for your secondary focus. Both are required;
+            you can still help across all four.
           </p>
         </div>
 
@@ -42,7 +43,7 @@ export function HouseBoard() {
           {HOUSES.map((house) => (
             <li
               key={house.id}
-              className="flex flex-col overflow-hidden rounded-2xl border-2 border-pana-ink bg-pana-cream"
+              className="border-pana-ink bg-pana-cream flex flex-col overflow-hidden rounded-2xl border-2"
             >
               <div
                 className="px-6 py-4"
@@ -51,13 +52,13 @@ export function HouseBoard() {
                   color: `var(--color-${house.onColor})`,
                 }}
               >
-                <h3 className="text-xl font-extrabold leading-tight">
+                <h3 className="text-xl leading-tight font-extrabold">
                   {house.name}
                 </h3>
               </div>
 
-              <div className="flex flex-1 flex-col gap-3 px-6 py-5 text-pana-ink">
-                <p className="text-base font-bold leading-snug">
+              <div className="text-pana-ink flex flex-1 flex-col gap-3 px-6 py-5">
+                <p className="text-base leading-snug font-bold">
                   {house.calling}
                 </p>
                 <p className="text-sm leading-relaxed opacity-80">

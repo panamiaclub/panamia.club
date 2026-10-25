@@ -58,6 +58,8 @@ export default async function AdminConnectorSchedulingPage() {
     profileId: member.profileId,
     displayName: member.displayName,
     houses: member.membership.houses,
+    majorHouse: member.membership.majorHouse,
+    minorHouse: member.membership.minorHouse,
     pod: member.membership.pod,
     load: loads.get(member.profileId) ?? EMPTY_LOAD,
   }));
