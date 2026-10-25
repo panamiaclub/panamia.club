@@ -75,6 +75,13 @@ comment calls this "immediately accepted for POC."
 
 The effective model is Twitter-public / Mastodon-unlocked.
 
+Local identity is determined by a linked profile or the configured federation
+domain, not by the saved domain alone. Members whose actors were created under
+an older domain still resolve by handle, accept local follows immediately, and
+appear in both suggestion tiers. Handle lookups are case-insensitive, matching
+public profile URLs. These reads do not rewrite stored domains or ActivityPub
+URIs; remote actors without a local profile still require remote acceptance.
+
 ### A Pana is a mutual follow
 
 `countMutualFollows` and `listMutualFollows` (`follow.ts` L318, L336) self-join `social_follows`

@@ -27,6 +27,7 @@ import {
 import { alias } from 'drizzle-orm/pg-core';
 import { createId } from '@paralleldrive/cuid2';
 import { canFollow, GateResult } from '../gates';
+import { isLocalActor, localActorFilter } from '../local-actor';
 import { getHiddenActorIds, isBlockedEitherWay } from './block-filter';
 import { socialConfig } from '../index';
 
@@ -113,7 +114,7 @@ export async function createFollow(
   }
 
   // Create the follow (local = immediately accepted)
-  const isLocalTarget = targetActor.domain === socialConfig.domain;
+  const isLocalTarget = isLocalActor(targetActor, socialConfig.domain);
 
   /**
    * Generate the id before inserting so the row is never written with a
@@ -695,7 +696,7 @@ export async function listSuggestedActors(
         // could not label its own buttons truthfully -- "Following" would be a
         // lie for half the cards. Suggesting fediverse accounts is a separate
         // feature with its own copy.
-        eq(socialActors.domain, socialConfig.domain),
+        localActorFilter(socialConfig.domain),
         notInArray(fofOut.targetActorId, alreadyAsked),
         hiddenActorIds.length > 0
           ? notInArray(fofOut.targetActorId, hiddenActorIds)
@@ -728,7 +729,7 @@ export async function listSuggestedActors(
       and(
         // Local only. "Recently joined" is a claim about this instance, and a
         // remote actor's createdAt is just when we first cached them.
-        eq(socialActors.domain, socialConfig.domain),
+        localActorFilter(socialConfig.domain),
         notInArray(socialActors.id, [
           ...excludedIds,
           ...suggestions.map((s) => s.id),

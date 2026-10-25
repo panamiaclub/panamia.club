@@ -25,6 +25,7 @@ import type {
 import { and, eq, sql, or, asc, inArray } from 'drizzle-orm';
 import { countyShortLabel } from '@/lib/county';
 import { socialConfig } from '../index';
+import { localActorFilter } from '../local-actor';
 import {
   getViewerGroupIds,
   visibleGroupStatuses,
@@ -473,12 +474,7 @@ export async function getPublicTimeline(
           db
             .select({ id: socialActors.id })
             .from(socialActors)
-            .where(
-              or(
-                isNotNull(socialActors.profileId),
-                eq(socialActors.domain, socialConfig.domain)
-              )
-            )
+            .where(localActorFilter(socialConfig.domain))
         ),
         jsonbArrayContains(socialStatuses.recipientTo, PUBLIC),
         notPanasStatus(),

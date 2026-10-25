@@ -22,6 +22,13 @@ external database. Run with Node 24; the script enables Node's experimental
 module mocks to replace the database and session boundaries before importing
 production code.
 
+The same command includes `local-actors.test.ts`, also isolated in PGlite. It
+exercises the real actor, follow, and suggestions API handlers and wrappers:
+legacy-domain members resolve by handle, local follows are accepted, and both
+suggestion tiers include those members without admitting remote accounts.
+Case-insensitive handles, follow/unfollow counts, eligibility, block/mute
+filtering, and signing-key projection are covered without rewriting identities.
+
 The suite renders the production addressing predicate with `PgDialect`, then
 executes the actual actor-post, permalink, redirect lookup, reply, public-feed,
 and mention queries through Drizzle against PGlite. It also calls the real
