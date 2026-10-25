@@ -533,6 +533,56 @@ async function main(): Promise<void> {
       ORDER BY m.role, m.status
     `);
     console.log('Fixture group roles:', JSON.stringify(groupRoles));
+    const groupSafety = await db.execute(sql`
+      SELECT md5(g.id) AS group_fingerprint,
+             g.created_by_profile_id IS NULL AS creator_missing,
+             COALESCE(g.created_by_profile_id IN (${profileIds}), false)
+               AS fixture_creator,
+             EXISTS (
+               SELECT 1 FROM social_actors a
+               WHERE a.id = g.actor_id AND a.profile_id IS NOT NULL
+             ) AS actor_has_profile,
+             EXISTS (
+               SELECT 1 FROM social_group_members m
+               WHERE m.group_id = g.id AND m.actor_id NOT IN (${actorIds})
+                 AND m.actor_id <> g.actor_id
+             ) AS real_members,
+             EXISTS (
+               SELECT 1 FROM social_statuses s
+               WHERE s.group_id = g.id AND s.actor_id NOT IN (${actorIds})
+                 AND s.actor_id <> g.actor_id
+             ) AS real_posts,
+             EXISTS (
+               SELECT 1 FROM social_statuses reply
+               JOIN social_statuses parent ON parent.id = reply.in_reply_to_id
+               WHERE parent.group_id = g.id
+                 AND reply.actor_id NOT IN (${actorIds})
+                 AND reply.actor_id <> g.actor_id
+             ) AS real_replies,
+             EXISTS (
+               SELECT 1 FROM social_likes l
+               JOIN social_statuses s ON s.id = l.status_id
+               WHERE s.group_id = g.id AND l.actor_id NOT IN (${actorIds})
+                 AND l.actor_id <> g.actor_id
+             ) AS real_likes,
+             EXISTS (
+               SELECT 1 FROM events e
+               WHERE e.host_group_id = g.id AND NOT ${seeded(sql`e.id`)}
+             ) AS real_events
+      FROM social_groups g
+      WHERE EXISTS (
+        SELECT 1 FROM social_group_members m
+        WHERE m.group_id = g.id AND m.role = 'admin' AND m.status = 'active'
+          AND m.actor_id IN (${actorIds})
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM social_group_members m
+        WHERE m.group_id = g.id AND m.role = 'admin' AND m.status = 'active'
+          AND m.actor_id NOT IN (${actorIds})
+      )
+      ORDER BY g.id
+    `);
+    console.log('Fixture group safety:', JSON.stringify(groupSafety));
     console.log('UNSEED:inventory:done');
     return;
   }
