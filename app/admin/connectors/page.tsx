@@ -2,13 +2,18 @@ import SurfaceLink from '@/components/panaverse/SurfaceLink';
 import { TallyBars } from '@/components/connectors/dashboard-parts';
 import {
   EventBoard,
+  InactiveRoster,
   RosterEditor,
 } from '@/components/connectors/admin-console';
 import { AdminPageHeader, Panel, StatBand } from '@/components/Admin/parts';
 import { ConnectorAdminTabs } from '@/components/Admin/connectors-tabs';
 import { requireConnectorsAdmin } from '@/lib/connectors/admin-gate';
 import { countConnectorApplications } from '@/lib/connectors/membership';
-import { listRoster, rosterTallies } from '@/lib/connectors/roster';
+import {
+  listInactiveRoster,
+  listRoster,
+  rosterTallies,
+} from '@/lib/connectors/roster';
 import { commitmentTotals } from '@/lib/connectors/commitments';
 import { listEventsForAdmin } from '@/lib/connectors/events';
 import { ADMIN_CHROME } from '@/lib/admin/theme';
@@ -90,11 +95,10 @@ export const metadata = {
 export default async function AdminConnectorsPage() {
   await requireConnectorsAdmin('/admin/connectors');
 
-  /* Four independent reads. None of them depends on another, so running them
-   * in series would make the page as slow as their sum for no reason. */
-  const [pendingCount, roster, totals, events] = await Promise.all([
+  const [pendingCount, roster, inactive, totals, events] = await Promise.all([
     countConnectorApplications(),
     listRoster(),
+    listInactiveRoster(),
     commitmentTotals(),
     listEventsForAdmin(),
   ]);
@@ -196,6 +200,19 @@ export default async function AdminConnectorsPage() {
 
         <Panel title="Roster">
           <RosterEditor rows={rosterRows} />
+        </Panel>
+
+        <Panel title={`Offboarded connectors (${inactive.length})`}>
+          <InactiveRoster
+            rows={inactive.map((member) => ({
+              profileId: member.profileId,
+              displayName: member.displayName,
+              pod: member.membership.pod,
+              houses: member.membership.houses,
+              tier: member.membership.tier,
+              offboardReason: member.membership.offboardReason,
+            }))}
+          />
         </Panel>
 
         {/* Inside a Panel, not loose on the page. The cards are cream and so

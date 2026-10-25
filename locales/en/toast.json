@@ -50,7 +50,7 @@
   "verificationFailed": "Verification Failed",
   "verificationFailedDesc": "Please try again or contact support.",
   "checkEmail": "Check Your Email",
-  "checkEmailDesc": "We sent you a sign-in link.",
+  "checkEmailDesc": "We sent you a sign-in link. If you don't see it, check your spam or junk folder.",
   "signInFailed": "Failed to send sign-in link. Please try again.",
   "oauthSignInFailed": "Google sign-in could not start. Please try again.",
   "verificationEmailSent": "Verification Email Sent",

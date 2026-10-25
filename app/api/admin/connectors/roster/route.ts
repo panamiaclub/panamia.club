@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { checkAdminAuth } from '@/lib/server/admin-auth';
-import { offboardConnector, setHousesAndTier } from '@/lib/connectors/roster';
+import {
+  offboardConnector,
+  reactivateConnector,
+  setHousesAndTier,
+} from '@/lib/connectors/roster';
 import { HOUSES, TIERS } from '@/lib/connectors/model';
 import type { HouseId, TierId } from '@/lib/connectors/model';
 
@@ -21,6 +25,63 @@ import type { HouseId, TierId } from '@/lib/connectors/model';
 
 const HOUSE_IDS = new Set<string>(HOUSES.map((h) => h.id));
 const TIER_IDS = new Set<number>(TIERS.map((t) => t.id));
+
+export async function POST(request: NextRequest) {
+  try {
+    const admin = await checkAdminAuth();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Could not read that request.' },
+        { status: 400 }
+      );
+    }
+
+    const profileId =
+      body &&
+      typeof body === 'object' &&
+      !Array.isArray(body) &&
+      'profileId' in body &&
+      typeof body.profileId === 'string'
+        ? body.profileId.trim()
+        : '';
+    if (!profileId) {
+      return NextResponse.json(
+        { success: false, error: 'Which connector?' },
+        { status: 400 }
+      );
+    }
+
+    const updated = await reactivateConnector(profileId, admin.id);
+    if (!updated) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'No offboarded connector with that profile. Refresh the roster.',
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Error reactivating connector:', error);
+    return NextResponse.json(
+      { success: false, error: 'Could not reactivate that connector.' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PATCH(request: NextRequest) {
   try {

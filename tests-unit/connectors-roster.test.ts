@@ -28,6 +28,11 @@ function member(
       appliedAt: '2026-01-01T00:00:00.000Z',
       decidedAt: '2026-01-02T00:00:00.000Z',
       decidedBy: null,
+      offboardedAt: null,
+      offboardedBy: null,
+      offboardReason: null,
+      reactivatedAt: null,
+      reactivatedBy: null,
     },
   };
 }

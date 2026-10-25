@@ -28,7 +28,7 @@ export function profilePublished(params: Record<string, unknown>) {
       'Welcome to the community!',
       '',
       '---',
-      'Pana MIA · pana.social · hola@pana.social',
+      'Pana MIA · panamia.club · hola@panamia.club',
     ].join('\n'),
   };
 }

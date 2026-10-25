@@ -10,7 +10,7 @@ Measured 2026-10-19 unless noted. Verify before acting on it; deployments move.
 
 | Host                     | Status               | What it serves                                                                                                 |
 | ------------------------ | -------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `pana.social`            | **No web address**   | Reserved for federated identities and email; it currently has no A or AAAA record.                             |
+| `pana.social`            | **No web address**   | Reserved for federated identities; it currently has no A or AAAA record.                                       |
 | `social.pana.social`     | **Does not resolve** | No current web deployment.                                                                                     |
 | `connectors.pana.social` | **200**              | Pana Connectors. Bound as a Worker Custom Domain 2026-10-07.                                                   |
 | `admin.pana.social`      | **200** at `/admin`  | The admin console. Bound as a Worker Custom Domain 2026-10-07.                                                 |
@@ -33,6 +33,17 @@ email delivery begins.
 Measured 2026-10-22: `/signin` on both hosts returns the Vinext app and the same
 Google/email controls.
 
+### Transactional email uses `panamia.club`
+
+As of 2026-10-25, the app's outgoing sender is `hola@panamia.club`, configured
+by `EMAIL_SENDER_ADDRESS` in `wrangler.jsonc`. Email Sending requires Workers
+Paid and onboarding `panamia.club` in the same Cloudflare account as the
+Worker; see [Sign-in delivery](./SIGNIN.md#email-sign-in-delivery).
+
+The sender and email footer links can move with the website. They are not
+federated identities, and this change does not alter `FEDERATION_DOMAIN` or
+any existing actor URI.
+
 ### The surface root is `pana.social`, not `panamia.club`
 
 `PANAVERSE_ROOT_DOMAIN` named `panamia.club` until this was corrected, so the root domain named a host this app does not serve. `originForFrom` builds every cross-surface link, `metadataBase` and `canonical` from it, and falls back to the configured root whenever the current host is not under it. Production runs on `pana.social`, which was not under `panamia.club`, so that fallback fired on every request:
@@ -50,10 +61,10 @@ Pana Social is therefore `social.pana.social`. Making the surface root equal the
 
 The same string does two unrelated jobs, and only one of them is a web address.
 
-| Role                   | Examples                                                                                                        | Safe to repoint? |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------- |
-| **Web origin**         | `og:url`, JSON-LD `url`, sitemap, RSS/JSON feeds, `policy.json` endpoints                                       | Yes, at cutover  |
-| **Federated identity** | `@user@pana.social`, actor/status/follow URIs, WebFinger, NIP-05, `wss://relay.pana.social`, `hola@pana.social` | **No. Ever.**    |
+| Role                   | Examples                                                                                    | Safe to repoint? |
+| ---------------------- | ------------------------------------------------------------------------------------------- | ---------------- |
+| **Web origin**         | `og:url`, JSON-LD `url`, sitemap, RSS/JSON feeds, `policy.json` endpoints                   | Yes, at cutover  |
+| **Federated identity** | `@user@pana.social`, actor/status/follow URIs, WebFinger, NIP-05, `wss://relay.pana.social` | **No. Ever.**    |
 
 Identity URIs are stored by remote servers as permanent primary keys. Once an actor has federated, changing the domain orphans it: the fediverse sees a brand-new account, and the ActivityPub `Move` activity that repairs it carries followers but **not** posts. `lib/federation/domain.ts` documents this in depth and is the authority on the identity side.
 
@@ -78,19 +89,19 @@ total 'pana.social'        114  in 66 files
 
 These have no environment variable to follow, so they must be edited directly at cutover.
 
-| File                                        | Lines                                 | Notes                                       |
-| ------------------------------------------- | ------------------------------------- | ------------------------------------------- |
-| `app/legal/terms/page.tsx`                  | 6                                     | `const SITE`                                |
-| `app/legal/privacy/page.tsx`                | 7                                     | `const SITE`                                |
-| `app/legal/dmca/page.tsx`                   | 5                                     | `const SITE`                                |
-| `app/legal/breach/page.tsx`                 | 4                                     | `const SITE`                                |
-| `app/legal/accessibility/page.tsx`          | 4                                     | `const SITE`                                |
-| `app/legal/page.tsx`                        | 8                                     | `const SITE`                                |
-| `app/legal/terms/policy.json`               | 8, 45, 51, 57, 63, 69, 75, 81, 87, 93 | **JSON — cannot carry a warning comment**   |
-| `app/legal/privacy/policy.json`             | 8                                     | **JSON — cannot carry a warning comment**   |
-| `components/legal/JsonLd.tsx`               | 36                                    | structured-data publisher URL               |
-| `lib/email-templates/layout.ts`             | 44                                    | email footer link                           |
-| `app/api/federation/events/[slug]/route.ts` | 42                                    | **Federation — correct as-is, do not move** |
+| File                                        | Lines                                 | Notes                                           |
+| ------------------------------------------- | ------------------------------------- | ----------------------------------------------- |
+| `app/legal/terms/page.tsx`                  | 6                                     | `const SITE`                                    |
+| `app/legal/privacy/page.tsx`                | 7                                     | `const SITE`                                    |
+| `app/legal/dmca/page.tsx`                   | 5                                     | `const SITE`                                    |
+| `app/legal/breach/page.tsx`                 | 4                                     | `const SITE`                                    |
+| `app/legal/accessibility/page.tsx`          | 4                                     | `const SITE`                                    |
+| `app/legal/page.tsx`                        | 8                                     | `const SITE`                                    |
+| `app/legal/terms/policy.json`               | 8, 45, 51, 57, 63, 69, 75, 81, 87, 93 | **JSON — cannot carry a warning comment**       |
+| `app/legal/privacy/policy.json`             | 8                                     | **JSON — cannot carry a warning comment**       |
+| `components/legal/JsonLd.tsx`               | 36                                    | structured-data publisher URL                   |
+| `lib/email-templates/layout.ts`             | 44                                    | email footer moved to `panamia.club` 2026-10-25 |
+| `app/api/federation/events/[slug]/route.ts` | 42                                    | **Federation — correct as-is, do not move**     |
 
 The two `policy.json` files are machine-readable policy documents and cannot hold an inline warning. `lib/email-templates/layout.ts` is likewise uncommentable at the line itself — the URL sits inside an HTML template literal, where a comment would render into the email. Those twelve occurrences are listed here precisely because the code cannot warn you in place.
 

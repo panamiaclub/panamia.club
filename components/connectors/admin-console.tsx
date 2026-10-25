@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ADMIN_CHROME } from '@/lib/admin/theme';
 import { HOUSES, PODS, TIERS, getPod } from '@/lib/connectors/model';
@@ -78,6 +78,16 @@ export interface RosterRow {
   tier: TierId;
 }
 
+type RosterDraft = Pick<RosterRow, 'houses' | 'tier'>;
+
+function sameRosterChoices(left: RosterDraft, right: RosterDraft): boolean {
+  return (
+    left.tier === right.tier &&
+    left.houses.length === right.houses.length &&
+    left.houses.every((house) => right.houses.includes(house))
+  );
+}
+
 /**
  * The roster, editable in place.
  *
@@ -89,32 +99,45 @@ export interface RosterRow {
  */
 export function RosterEditor({ rows }: { rows: RosterRow[] }) {
   const router = useRouter();
-  const [draft, setDraft] = useState<Record<string, RosterRow>>(() =>
-    Object.fromEntries(rows.map((r) => [r.profileId, r]))
-  );
+  const [draft, setDraft] = useState<Record<string, RosterDraft>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [offboarding, setOffboarding] = useState<string | null>(null);
   const [offboardReason, setOffboardReason] = useState('');
 
+  useEffect(() => {
+    setDraft((current) => {
+      const next: Record<string, RosterDraft> = {};
+      for (const row of rows) {
+        const edited = current[row.profileId];
+        if (edited && !sameRosterChoices(edited, row)) {
+          next[row.profileId] = edited;
+        }
+      }
+      return Object.keys(next).length === Object.keys(current).length
+        ? current
+        : next;
+    });
+  }, [rows]);
+
   if (rows.length === 0) {
     return (
       <p className="text-pana-ink/60 text-sm leading-relaxed">
-        Nobody has been accepted into the programme yet. Accepted applications
-        show up here.
+        There are no active connectors. Accepted applications and reactivated
+        connectors appear here.
       </p>
     );
   }
 
-  function toggleHouse(profileId: string, house: HouseId) {
+  function toggleHouse(original: RosterRow, house: HouseId) {
     setDraft((current) => {
-      const row = current[profileId];
+      const row = current[original.profileId] ?? original;
       const has = row.houses.includes(house);
       return {
         ...current,
-        [profileId]: {
-          ...row,
+        [original.profileId]: {
+          tier: row.tier,
           houses: has
             ? row.houses.filter((h) => h !== house)
             : [...row.houses, house],
@@ -124,8 +147,8 @@ export function RosterEditor({ rows }: { rows: RosterRow[] }) {
     setSaved(null);
   }
 
-  async function save(profileId: string) {
-    const row = draft[profileId];
+  async function save(row: RosterRow) {
+    const { profileId } = row;
     setBusy(profileId);
     setError(null);
     setSaved(null);
@@ -178,15 +201,14 @@ export function RosterEditor({ rows }: { rows: RosterRow[] }) {
 
       <div className="flex flex-col gap-3">
         {rows.map((original) => {
-          const row = draft[original.profileId];
-          const dirty =
-            row.tier !== original.tier ||
-            row.houses.length !== original.houses.length ||
-            row.houses.some((h) => !original.houses.includes(h));
+          const row = { ...original, ...draft[original.profileId] };
+          const dirty = !sameRosterChoices(row, original);
 
           return (
             <div
               key={row.profileId}
+              role="group"
+              aria-label={`Connector ${row.displayName}`}
               className="border-pana-ink/15 flex flex-wrap items-center gap-x-4 gap-y-3 border-b-2 pb-3 last:border-b-0"
             >
               <div className="min-w-[10rem] flex-1">
@@ -215,7 +237,7 @@ export function RosterEditor({ rows }: { rows: RosterRow[] }) {
                         type="checkbox"
                         className="sr-only"
                         checked={on}
-                        onChange={() => toggleHouse(row.profileId, house.id)}
+                        onChange={() => toggleHouse(row, house.id)}
                       />
                       {house.name}
                     </label>
@@ -232,7 +254,10 @@ export function RosterEditor({ rows }: { rows: RosterRow[] }) {
                     const tier = Number(e.target.value) as TierId;
                     setDraft((c) => ({
                       ...c,
-                      [row.profileId]: { ...c[row.profileId], tier },
+                      [row.profileId]: {
+                        houses: (c[row.profileId] ?? row).houses,
+                        tier,
+                      },
                     }));
                     setSaved(null);
                   }}
@@ -247,7 +272,7 @@ export function RosterEditor({ rows }: { rows: RosterRow[] }) {
 
               <button
                 type="button"
-                onClick={() => save(row.profileId)}
+                onClick={() => save(row)}
                 disabled={!dirty || busy === row.profileId}
                 className={`rounded-full px-4 py-1.5 text-xs font-extrabold transition disabled:opacity-40 ${ADMIN_CHROME.FILL} ${ADMIN_CHROME.ON_FILL}`}
               >
@@ -321,6 +346,123 @@ export function RosterEditor({ rows }: { rows: RosterRow[] }) {
         })}
       </div>
 
+      <Err message={error} />
+    </>
+  );
+}
+
+export interface InactiveRosterRow extends RosterRow {
+  offboardReason: string | null;
+}
+
+export function InactiveRoster({ rows }: { rows: InactiveRosterRow[] }) {
+  const router = useRouter();
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [restored, setRestored] = useState<string | null>(null);
+
+  async function reactivate(row: InactiveRosterRow) {
+    setBusy(row.profileId);
+    setError(null);
+    setRestored(null);
+    const failure = await post('/api/admin/connectors/roster', 'POST', {
+      profileId: row.profileId,
+    });
+    setBusy(null);
+    if (failure) {
+      setError(failure);
+      return;
+    }
+    setConfirming(null);
+    setRestored(`${row.displayName} is back on the active roster.`);
+    router.refresh();
+  }
+
+  return (
+    <>
+      <p className="text-pana-ink/70 text-sm leading-relaxed">
+        {rows.length === 0
+          ? 'No offboarded connectors.'
+          : 'Reactivate a connector to restore HQ access at their existing tier. Their preferences, commitments, and offboarding record stay intact. This does not reopen the signup form.'}
+      </p>
+      {restored ? (
+        <p role="status" className="mt-3 text-sm font-bold">
+          {restored}
+        </p>
+      ) : null}
+      <div className="mt-4 flex flex-col gap-4">
+        {rows.map((row) => (
+          <div
+            key={row.profileId}
+            role="group"
+            aria-label={`Offboarded connector ${row.displayName}`}
+            className="border-pana-ink/15 border-b-2 pb-4 last:border-b-0"
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="font-bold [overflow-wrap:anywhere]">
+                  {row.displayName}
+                </p>
+                <p className="text-pana-ink/60 text-xs">
+                  {getPod(row.pod).name} / Tier {row.tier}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={busy !== null}
+                onClick={() => {
+                  setConfirming(row.profileId);
+                  setError(null);
+                  setRestored(null);
+                }}
+                className={`min-h-11 rounded-full px-4 py-2 text-xs font-extrabold disabled:opacity-50 ${ADMIN_CHROME.FILL} ${ADMIN_CHROME.ON_FILL}`}
+              >
+                Reactivate
+              </button>
+            </div>
+            {row.offboardReason ? (
+              <p className="text-pana-ink/65 mt-2 text-sm [overflow-wrap:anywhere] whitespace-pre-wrap">
+                Internal offboarding reason: {row.offboardReason}
+              </p>
+            ) : null}
+            {confirming === row.profileId ? (
+              <div className="border-pana-blue/40 mt-3 rounded-xl border-2 p-4">
+                <p className="text-sm font-extrabold">
+                  Reactivate {row.displayName}?
+                </p>
+                <p className="text-pana-ink/65 mt-1 text-xs leading-relaxed">
+                  They will return to the active roster, scheduling, and
+                  Connector notification audience with their existing work.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => reactivate(row)}
+                    disabled={busy !== null}
+                    className={`min-h-11 rounded-full px-4 py-2 text-xs font-extrabold disabled:opacity-50 ${ADMIN_CHROME.FILL} ${ADMIN_CHROME.ON_FILL}`}
+                  >
+                    {busy === row.profileId
+                      ? 'Reactivating…'
+                      : 'Confirm reactivation'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfirming(null);
+                      setError(null);
+                    }}
+                    disabled={busy !== null}
+                    className="border-pana-ink/25 min-h-11 rounded-full border-2 px-4 py-2 text-xs font-extrabold"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
       <Err message={error} />
     </>
   );
