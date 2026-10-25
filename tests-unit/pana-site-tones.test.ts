@@ -1,7 +1,7 @@
 /**
- * Tests that the account menu's tile colours are still derived, not copied.
+ * Tests that the account menu's destination colours are derived, not copied.
  *
- * The account menu tints six of its nine destination discs so that a noun
+ * The account menu tints its destination discs and Admin row so that a noun
  * reads the same colour there as it does in the search scope bar. The colour
  * itself is not interesting; where it comes from is. Each one is read out of
  * `SCOPE_TONE` (lib/directory-scopes.ts) or `SURFACE_TONE`
@@ -63,8 +63,8 @@ describe('account tile tones are derived from the canonical maps', () => {
     /* SURFACE_TONE.admin documents blue as the one tone that is a warning
        rather than wayfinding — every member surface is warm, so a staff tool
        that looked like one invites somebody to forget which they are holding
-       a publish button on. A second blue disc in the same nine-tile grid
-       spends that signal. Note SCOPE_TONE.pana is also blue, which is why the
+       a publish button on. A second blue destination spends that signal.
+       Note SCOPE_TONE.pana is also blue, which is why the
        Account tile is deliberately untoned and is not in this registry. */
     const blue = PANA_SITES.filter((s) => s.tone === SURFACE_TONE.admin);
     assert.deepEqual(

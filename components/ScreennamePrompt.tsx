@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -27,8 +28,10 @@ export default function ScreennamePrompt({
   onOpenChange,
   onSuccess,
   title = 'Choose Your Screenname',
-  description = 'Your screenname will be displayed publicly on your contributions. Choose something unique that represents you.',
+  description = 'Enter your name and choose a unique screenname. Both will be displayed publicly on your contributions.',
 }: ScreennamePromptProps) {
+  const { t } = useTranslation('common');
+  const [displayName, setDisplayName] = useState('');
   const [screenname, setScreenname] = useState('');
   const [status, setStatus] = useState<
     'idle' | 'checking' | 'available' | 'taken' | 'invalid'
@@ -77,6 +80,7 @@ export default function ScreennamePrompt({
   // Reset state when dialog opens
   useEffect(() => {
     if (open) {
+      setDisplayName('');
       setScreenname('');
       setStatus('idle');
       setError('');
@@ -84,8 +88,13 @@ export default function ScreennamePrompt({
     }
   }, [open]);
 
-  const handleSubmit = async () => {
-    if (status !== 'available') {
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (status !== 'available' || isSubmitting) {
+      return;
+    }
+    if (!displayName.trim() || !screenname.trim()) {
+      setError(t('onboarding.requiredFields'));
       return;
     }
 
@@ -96,7 +105,10 @@ export default function ScreennamePrompt({
       const response = await fetch('/api/user/screenname/set', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ screenname }),
+        body: JSON.stringify({
+          screenname: screenname.trim(),
+          name: displayName.trim(),
+        }),
       });
 
       const data = await response.json();
@@ -123,76 +135,108 @@ export default function ScreennamePrompt({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="prompt-screenname">Screenname</Label>
-            <div className="relative">
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="prompt-name">{t('onboarding.nameLabel')}</Label>
               <Input
-                id="prompt-screenname"
+                id="prompt-name"
                 type="text"
-                value={screenname}
-                maxLength={24}
-                autoComplete="username"
-                onChange={(e) => setScreenname(e.target.value)}
-                className={
-                  status === 'available'
-                    ? 'border-green-500 pr-10'
-                    : status === 'taken' || status === 'invalid'
-                      ? 'border-red-500 pr-10'
-                      : 'pr-10'
-                }
-                placeholder="Enter screenname"
+                value={displayName}
+                maxLength={80}
+                autoComplete="name"
+                required
+                placeholder={t('onboarding.namePlaceholder')}
                 disabled={isSubmitting}
+                onChange={(e) => setDisplayName(e.target.value)}
               />
-              <div className="absolute top-1/2 right-3 -translate-y-1/2">
-                {status === 'checking' && (
-                  <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-                )}
-                {status === 'available' && (
-                  <Check className="h-4 w-4 text-green-500" />
-                )}
-                {(status === 'taken' || status === 'invalid') && (
-                  <X className="h-4 w-4 text-red-500" />
-                )}
-              </div>
+              <p className="text-muted-foreground text-sm">
+                {t('onboarding.nameHint')}
+              </p>
             </div>
-            {error && <p className="text-destructive text-sm">{error}</p>}
-            <p className="text-muted-foreground text-sm">
-              3-24 characters. Letters, numbers, underscores, and hyphens only.
-            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="prompt-screenname">
+                {t('onboarding.screennameLabel')}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="prompt-screenname"
+                  type="text"
+                  value={screenname}
+                  maxLength={24}
+                  autoComplete="username"
+                  required
+                  onChange={(e) => setScreenname(e.target.value)}
+                  className={
+                    status === 'available'
+                      ? 'border-green-500 pr-10'
+                      : status === 'taken' || status === 'invalid'
+                        ? 'border-red-500 pr-10'
+                        : 'pr-10'
+                  }
+                  placeholder={t('onboarding.screennamePlaceholder')}
+                  disabled={isSubmitting}
+                />
+                <div className="absolute top-1/2 right-3 -translate-y-1/2">
+                  {status === 'checking' && (
+                    <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                  )}
+                  {status === 'available' && (
+                    <Check className="h-4 w-4 text-green-500" />
+                  )}
+                  {(status === 'taken' || status === 'invalid') && (
+                    <X className="h-4 w-4 text-red-500" />
+                  )}
+                </div>
+              </div>
+              {error && (
+                <p role="alert" className="text-destructive text-sm">
+                  {error}
+                </p>
+              )}
+              <p className="text-muted-foreground text-sm">
+                {t('onboarding.screennameHint')}
+              </p>
+            </div>
+
+            <div className="bg-pana-butter/60 dark:bg-pana-indigo rounded-lg p-3">
+              <p className="text-pana-ink dark:text-pana-cream text-sm">
+                {t('onboarding.privacyNote')}
+              </p>
+            </div>
           </div>
 
-          <div className="bg-pana-butter/60 dark:bg-pana-indigo rounded-lg p-3">
-            <p className="text-pana-ink dark:text-pana-cream text-sm">
-              Your screenname and name (if set) will be publicly displayed. Your
-              email address remains private.
-            </p>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            className="bg-pana-flame text-pana-ink hover:bg-pana-burnt font-extrabold"
-            disabled={status !== 'available' || isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              'Save Screenname'
-            )}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="bg-pana-flame text-pana-ink hover:bg-pana-burnt font-extrabold"
+              disabled={
+                !displayName.trim() ||
+                !screenname.trim() ||
+                status !== 'available' ||
+                isSubmitting
+              }
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t('onboarding.saving')}
+                </>
+              ) : (
+                t('onboarding.continue')
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

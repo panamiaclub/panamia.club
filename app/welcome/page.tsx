@@ -12,10 +12,10 @@ import { WelcomeView } from './_components/welcome-view';
  * It exists because signing up and signing in are the same exchange here: a
  * magic link authenticates an email and nothing else, so a first-time member
  * arrives with a `users` row and no profile — able to read, silently unable to
- * post or follow. This page is where that half-state gets resolved, by asking
- * the one question that creates a profile.
+ * post or follow. This page resolves that half-state by collecting the name and
+ * screenname that create a profile.
  *
- * Deliberately an interstitial and not a wizard: one page, one required answer,
+ * Deliberately an interstitial and not a wizard: one page, two required answers,
  * and a skip that says what it costs. See docs/ONBOARDING-ROADMAP.md.
  */
 

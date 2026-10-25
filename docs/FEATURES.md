@@ -60,6 +60,8 @@ Connect with community members for peer-to-peer mentoring sessions. Features inc
 
 ### Connector HQ and coordination (`connectors`)
 
+The signup form at `/connectors/join` keeps the existing pod, house interests, optional introduction, and optional SMS consent. Programme membership still requires coordinator review; accepted members then choose real commitments in HQ without a second approval step. House choices personalize discovery without restricting where someone can help or reserving work. Editing preferences shows the member's actual granted tier and does not change membership, tier, or existing commitments.
+
 Accepted connectors use `/connectors/hq` to see **My commitments**, discover **Find a way to help**, and revisit **Completed** work. Opportunity signup is immediate, without a second approval step. Self-directed work supports an optional estimate. Programme gatherings and canonical house-action inspiration remain available; inspiration is distinct from a staff-published request.
 
 Staff tools stay in **Admin / Connectors**: the dashboard manages membership and the programme calendar, Applications handles acceptance, and **Coordination** at `/admin/connectors/scheduling` publishes opportunities, shows their crew, follows commitments, and assigns work from observed load. Access uses the existing general admin role. There is no member/admin perspective switch.
