@@ -21,6 +21,7 @@ import {
  * A site with `href: null` is announced rather than linked. Naming an
  * unbuilt offering is a promise, so it renders as a dimmed, unclickable row
  * with a "coming soon" badge: nothing here is ever a link to a 404.
+ * Hidden offerings stay registered without appearing in the account menu.
  *
  * Paths are stored relative, and resolved against the host being served by
  * `resolvePanaSites` — a server call, because `originForFrom` reads
@@ -50,23 +51,25 @@ export interface PanaSite {
    * anything that crosses a surface boundary.
    */
   href: string | null;
+  /** Temporarily omit this destination from the account menu. */
+  hidden?: boolean;
   /**
-   * Show this tile only to staff.
+   * Show this destination only to staff, in the account menu's footer.
    *
    * Filtered in `components/account/pana-sites.tsx` against the client
    * session's `isAdmin`, not here, because this registry is resolved in the
    * root layout and the root layout has no session — adding one would mean an
    * auth lookup on every page render of every surface to decide whether to
-   * draw one tile.
+   * draw one row.
    *
    * Hiding is a courtesy, not the control. `/admin` is refused server-side by
-   * `checkAdminAuth()` whether or not a tile pointed at it, and the path is
+   * `checkAdminAuth()` whether or not a menu entry pointed at it, and the path is
    * not a secret. What the flag buys is that the account menu does not offer
    * every member a door they cannot open.
    */
   adminOnly?: boolean;
   /**
-   * The colour the tile's icon disc carries, or absent for a neutral one.
+   * The destination's accent colour, or absent for a neutral one.
    *
    * Never written as a literal. Every value below is read out of `SCOPE_TONE`
    * (lib/directory-scopes.ts) or `SURFACE_TONE` (lib/panaverse/branding.ts),
@@ -113,8 +116,8 @@ export const PANA_SITES: readonly PanaSite[] = [
    * one for them would be inventing the brand language `branding.ts` says the
    * panas do not have. They render on the neutral disc, which is what says
    * "named offering, not one of the coloured destinations". */
-  { id: 'ink', labelKey: 'panaInk', href: null },
-  { id: 'vizion', labelKey: 'panaVizion', href: '/podcasts' },
+  { id: 'ink', labelKey: 'panaInk', href: null, hidden: true },
+  { id: 'vizion', labelKey: 'panaVizion', href: '/podcasts', hidden: true },
   // `/d` is the canonical directory URL — `/directory` and `/directorio`
   // redirect here, so linking it directly saves a hop.
   {
@@ -142,18 +145,9 @@ export const PANA_SITES: readonly PanaSite[] = [
     href: '/connectors',
     tone: SURFACE_TONE.connectors,
   },
-  /* Last, and only for staff. It is a different kind of thing from everything
-   * above it — those are places a member goes, this is the back office — so it
-   * sits at the end rather than being sorted in among them.
-   *
-   * Its blue comes from `SURFACE_TONE.admin`, where it is documented as the
-   * one tone that is a warning rather than wayfinding: every member surface
-   * is warm, so a staff tool that looked like one would invite somebody to
-   * forget which they were looking at while holding a button that publishes
-   * or refuses a business. Nothing else in this grid may be blue, and the
-   * Account tile stays neutral partly to keep it that way — `SCOPE_TONE.pana`
-   * is blue too, and a blue Account disc sitting four tiles from a blue Admin
-   * disc would spend exactly the signal this is protecting. */
+  /* The back office is a staff-only footer row, not a public destination tile.
+   * Keep it registered so its cross-surface URL and warning tone are resolved
+   * in the same place as the other destinations. */
   {
     id: 'admin',
     labelKey: 'admin',
@@ -162,6 +156,13 @@ export const PANA_SITES: readonly PanaSite[] = [
     tone: SURFACE_TONE.admin,
   },
 ];
+
+export function visiblePanaSites(
+  sites: readonly PanaSite[],
+  isAdmin: boolean
+): readonly PanaSite[] {
+  return sites.filter((site) => !site.hidden && (!site.adminOnly || isAdmin));
+}
 
 /**
  * `PANA_SITES` with every cross-surface path resolved against the host being

@@ -20,7 +20,7 @@ import { useMyGroups } from '@/lib/query/social';
 import { copyReferralLink } from '@/lib/referrals-client';
 import { useIdentity, type Identity } from './identity-provider';
 import { MenuSurface } from './menu-surface';
-import { PanaSites } from './pana-sites';
+import { AdminMenuLink, PanaSites } from './pana-sites';
 import styles from './identity.module.css';
 import { cn } from '@/lib/utils';
 
@@ -245,6 +245,8 @@ export function IdentityMenu() {
       footer={(close) => (
         <>
           <div className={styles.separator} />
+
+          <AdminMenuLink onNavigate={() => close(false)} />
 
           {/* The one row in this menu you cannot undo by clicking again, so it
               is tinted — a speed bump, not an alarm. */}
