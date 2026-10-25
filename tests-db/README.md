@@ -48,7 +48,8 @@ node --experimental-test-module-mocks --import tsx --test tests-db/unseed.test.t
 including cascade and restrictive foreign keys. It covers current and legacy
 fixture namespaces, dry-run immutability, authentication and actor cleanup,
 real-ownership blockers, atomic rollback, and idempotency. It never connects to
-the database named by `POSTGRES_URL`.
+the database named by `POSTGRES_URL`. Retained groups keep accurate active
+member counts and cannot lose their last active administrator.
 
 ### Existing database-backed suites
 

@@ -264,7 +264,11 @@ Three things are worth knowing before trusting it:
 - **Real ownership blocks deletion.** A seeded listing attached to or claimed
   by a real account is protected. A test account administering a real listing
   must transfer that ownership before it can be removed. A seeded actor ID
-  attached to a real profile also stops the cleanup.
+  attached to a real profile also stops the cleanup. Retained groups keep
+  accurate active member counts; removing their last active administrator is
+  blocked until administration is transferred. Cross-fixture follows, likes
+  and verified RSVPs block deletion until their counters are reconciled,
+  rather than silently leaving real account or event totals stale.
 
 Dry run is the default, so it is safe to point at an unfamiliar database just
 to see what it would touch. Counts shown exclude rows removed by cascade, so

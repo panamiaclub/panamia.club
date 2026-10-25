@@ -19,10 +19,13 @@ const tables = [
   'profile_owners',
   'social_actors',
   'social_groups',
+  'social_group_members',
   'social_statuses',
   'social_follows',
+  'social_likes',
   'venues',
   'events',
+  'event_attendees',
   'accounts',
   'sessions',
 ] as const;
@@ -54,7 +57,15 @@ before(async () => {
     );
     CREATE TABLE social_groups (
       id text PRIMARY KEY,
-      actor_id text REFERENCES social_actors(id) ON DELETE CASCADE
+      actor_id text REFERENCES social_actors(id) ON DELETE CASCADE,
+      member_count integer NOT NULL DEFAULT 0
+    );
+    CREATE TABLE social_group_members (
+      id text PRIMARY KEY,
+      group_id text REFERENCES social_groups(id) ON DELETE CASCADE,
+      actor_id text REFERENCES social_actors(id) ON DELETE CASCADE,
+      role text NOT NULL DEFAULT 'member',
+      status text NOT NULL DEFAULT 'active'
     );
     CREATE TABLE social_statuses (
       id text PRIMARY KEY,
@@ -65,6 +76,11 @@ before(async () => {
       actor_id text REFERENCES social_actors(id) ON DELETE CASCADE,
       target_actor_id text REFERENCES social_actors(id) ON DELETE CASCADE
     );
+    CREATE TABLE social_likes (
+      id text PRIMARY KEY,
+      actor_id text REFERENCES social_actors(id) ON DELETE CASCADE,
+      status_id text REFERENCES social_statuses(id) ON DELETE CASCADE
+    );
     CREATE TABLE venues (
       id text PRIMARY KEY,
       operator_profile_id text REFERENCES profiles(id) ON DELETE RESTRICT
@@ -74,6 +90,13 @@ before(async () => {
       host_profile_id text REFERENCES profiles(id) ON DELETE RESTRICT,
       host_group_id text REFERENCES social_groups(id) ON DELETE RESTRICT,
       venue_id text REFERENCES venues(id) ON DELETE RESTRICT
+    );
+    CREATE TABLE event_attendees (
+      id text PRIMARY KEY,
+      event_id text REFERENCES events(id) ON DELETE CASCADE,
+      profile_id text REFERENCES profiles(id) ON DELETE CASCADE,
+      status text NOT NULL,
+      email_verified_at timestamptz
     );
     CREATE TABLE accounts (
       id text PRIMARY KEY,
@@ -88,8 +111,9 @@ before(async () => {
 
 beforeEach(async () => {
   await pg.exec(`
-    TRUNCATE users, profiles, profile_owners, social_actors, social_groups,
-      social_statuses, social_follows, venues, events, accounts, sessions CASCADE;
+    TRUNCATE users, profiles, profile_owners, social_actors, social_groups, social_group_members,
+      social_statuses, social_follows, social_likes, venues, events, event_attendees,
+      accounts, sessions CASCADE;
     INSERT INTO users VALUES
       ('seed_u_1', 'pana1@example.test'),
       ('seeduser_old-cafe', 'old-cafe@business.invalid'),
@@ -111,7 +135,7 @@ beforeEach(async () => {
       ('seed_a_club', NULL),
       ('real_actor', 'member_profile'),
       ('literal_actor', 'seedXprofile');
-    INSERT INTO social_groups VALUES ('seed_g_club', 'seed_a_club');
+    INSERT INTO social_groups (id, actor_id) VALUES ('seed_g_club', 'seed_a_club');
     INSERT INTO social_statuses VALUES
       ('test_post', 'generated_test_actor'),
       ('legacy_post', 'generated_legacy_actor'),
@@ -273,6 +297,7 @@ test('protects real profiles attached to a seeded actor id', async () => {
 });
 
 test('rolls back earlier deletes when a real event references a seeded venue', async () => {
+  await addRetainedGroup();
   await pg.exec(`
     UPDATE events SET venue_id = 'seed_venue_cafe' WHERE id = 'real_event';
   `);
@@ -301,3 +326,76 @@ test('rolls back earlier deletes when a real event references a seeded host', as
   );
   assert.deepEqual(await snapshot(), before);
 });
+
+async function addRetainedGroup() {
+  await pg.exec(`
+    INSERT INTO social_actors VALUES ('real_group_actor', NULL);
+    INSERT INTO social_groups VALUES ('real_group', 'real_group_actor', 3);
+    INSERT INTO social_group_members VALUES
+      ('real_admin', 'real_group', 'real_actor', 'admin', 'active'),
+      ('test_member', 'real_group', 'generated_test_actor', 'member', 'active'),
+      ('legacy_member', 'real_group', 'generated_legacy_actor', 'member', 'active'),
+      ('pending_member', 'real_group', 'seed_a_club', 'member', 'pending');
+  `);
+}
+
+test('preserves real groups and corrects their active member counts', async () => {
+  await addRetainedGroup();
+  await unseed(true);
+  assert.deepEqual(
+    (
+      await pg.query(
+        "SELECT member_count FROM social_groups WHERE id = 'real_group'"
+      )
+    ).rows,
+    [{ member_count: 1 }]
+  );
+  assert.deepEqual(
+    (
+      await pg.query(
+        "SELECT id FROM social_group_members WHERE group_id = 'real_group'"
+      )
+    ).rows,
+    [{ id: 'real_admin' }]
+  );
+});
+
+test('dry run does not change retained group counts or membership', async () => {
+  await addRetainedGroup();
+  const before = await snapshot();
+  await unseed();
+  assert.deepEqual(await snapshot(), before);
+});
+
+test('protects the last active administrator of a retained group', async () => {
+  await addRetainedGroup();
+  await pg.exec(`
+    UPDATE social_group_members SET role = 'member' WHERE id = 'real_admin';
+    UPDATE social_group_members SET role = 'admin' WHERE id = 'test_member';
+  `);
+  const before = await snapshot();
+  await assert.rejects(unseed(true), /last active administrator/);
+  assert.deepEqual(await snapshot(), before);
+});
+
+for (const [label, insert] of [
+  [
+    'follow',
+    "INSERT INTO social_follows VALUES ('cross_follow', 'generated_test_actor', 'real_actor')",
+  ],
+  [
+    'like',
+    "INSERT INTO social_likes VALUES ('cross_like', 'generated_test_actor', 'real_post')",
+  ],
+  [
+    'RSVP',
+    "INSERT INTO event_attendees VALUES ('cross_rsvp', 'real_event', 'unprefixed_person', 'going', now())",
+  ],
+] as const) {
+  test(`blocks a cross-fixture ${label} rather than leaving real counters stale`, async () => {
+    await pg.exec(insert);
+    const before = await snapshot();
+    await assert.rejects(unseed(true), /Reconcile those counters/);
+    assert.deepEqual(await snapshot(), before);
+  });
+}

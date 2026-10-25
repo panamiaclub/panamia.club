@@ -137,6 +137,14 @@ export async function unseed(apply = false): Promise<UnseedStepResult[]> {
     .select({ id: schema.profiles.id })
     .from(schema.profiles)
     .where(profileWhere);
+  const actorWhere = or(
+    seeded(schema.socialActors.id),
+    inArray(schema.socialActors.profileId, profileIds)
+  );
+  const actorIds = db
+    .select({ id: schema.socialActors.id })
+    .from(schema.socialActors)
+    .where(actorWhere);
 
   const steps = [
     {
@@ -154,10 +162,7 @@ export async function unseed(apply = false): Promise<UnseedStepResult[]> {
     {
       label: 'social actors',
       table: schema.socialActors,
-      where: or(
-        seeded(schema.socialActors.id),
-        inArray(schema.socialActors.profileId, profileIds)
-      ),
+      where: actorWhere,
       note: 'cascades social_follows, social_groups, social_group_members',
     },
     {
@@ -225,6 +230,92 @@ export async function unseed(apply = false): Promise<UnseedStepResult[]> {
         throw new Error(
           'Stopped: a seeded actor is attached to a real profile. Nothing was deleted.'
         );
+      }
+
+      const orphanedGroups = await tx
+        .select({ id: schema.socialGroups.id })
+        .from(schema.socialGroups).where(sql`
+          ${schema.socialGroups.actorId} NOT IN (${actorIds})
+          AND EXISTS (
+            SELECT 1 FROM social_group_members m
+            WHERE m.group_id = ${schema.socialGroups.id}
+              AND m.status = 'active' AND m.role = 'admin'
+              AND m.actor_id IN (${actorIds})
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM social_group_members m
+            WHERE m.group_id = ${schema.socialGroups.id}
+              AND m.status = 'active' AND m.role = 'admin'
+              AND m.actor_id NOT IN (${actorIds})
+          )
+        `);
+      if (orphanedGroups.length > 0) {
+        throw new Error(
+          `Stopped: ${orphanedGroups.length} retained group(s) would lose their last active administrator. Transfer administration first. Nothing was deleted.`
+        );
+      }
+
+      const externalFollows = await tx
+        .select({ id: schema.socialFollows.id })
+        .from(schema.socialFollows)
+        .where(
+          sql`
+          (${schema.socialFollows.actorId} IN (${actorIds}))
+          <> (${schema.socialFollows.targetActorId} IN (${actorIds}))
+        `
+        )
+        .limit(1);
+      const externalLikes = await tx
+        .select({ id: schema.socialLikes.id })
+        .from(schema.socialLikes)
+        .innerJoin(
+          schema.socialStatuses,
+          eq(schema.socialStatuses.id, schema.socialLikes.statusId)
+        )
+        .where(
+          sql`
+          ${schema.socialLikes.actorId} IN (${actorIds})
+          AND ${schema.socialStatuses.actorId} NOT IN (${actorIds})
+        `
+        )
+        .limit(1);
+      const externalRsvps = await tx
+        .select({ id: schema.eventAttendees.id })
+        .from(schema.eventAttendees)
+        .where(
+          sql`
+          ${schema.eventAttendees.profileId} IN (${profileIds})
+          AND NOT ${seeded(schema.eventAttendees.eventId)}
+          AND ${schema.eventAttendees.status} = 'going'
+          AND ${schema.eventAttendees.emailVerifiedAt} IS NOT NULL
+        `
+        )
+        .limit(1);
+      if (
+        externalFollows.length ||
+        externalLikes.length ||
+        externalRsvps.length
+      ) {
+        throw new Error(
+          'Stopped: test accounts have follows, likes or verified RSVPs involving real data. Reconcile those counters before cleanup. Nothing was deleted.'
+        );
+      }
+
+      if (apply) {
+        await tx.execute(sql`
+          UPDATE social_groups g
+          SET member_count = GREATEST(g.member_count - (
+            SELECT count(*)::int FROM social_group_members m
+            WHERE m.group_id = g.id AND m.status = 'active'
+              AND m.actor_id IN (${actorIds})
+          ), 0)
+          WHERE g.actor_id NOT IN (${actorIds})
+            AND EXISTS (
+              SELECT 1 FROM social_group_members m
+              WHERE m.group_id = g.id AND m.status = 'active'
+                AND m.actor_id IN (${actorIds})
+            )
+        `);
       }
 
       const report: UnseedStepResult[] = [];
@@ -349,6 +440,17 @@ async function main(): Promise<void> {
            AND a.email_verified_at IS NOT NULL) AS verified_rsvps
     `);
     console.log('External references:', JSON.stringify(externalReferences));
+    const groupRoles = await db.execute(sql`
+      SELECT m.role, m.status, count(*)::int AS memberships,
+             count(DISTINCT m.group_id)::int AS groups
+      FROM social_group_members m
+      JOIN social_groups g ON g.id = m.group_id
+      WHERE m.actor_id IN (${actorIds})
+        AND g.actor_id NOT IN (${actorIds})
+      GROUP BY m.role, m.status
+      ORDER BY m.role, m.status
+    `);
+    console.log('Fixture group roles:', JSON.stringify(groupRoles));
     console.log('UNSEED:inventory:done');
     return;
   }
