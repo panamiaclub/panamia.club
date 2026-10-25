@@ -44,11 +44,17 @@ the bill at every tier above 50,000**. Everything else is close to noise.
 | R2                 | Media: profile images, post attachments, story photos/clips | $0.015/GB-mo, $4.50/M writes, $0.36/M reads, **egress free** |
 | Durable Objects    | WebRTC signalling for mentoring video                       | Per-request + per-GB-second, hibernating                     |
 | Workers Cache      | Regional tiered cache in front of the Worker                | Billed as requests (see below)                               |
-| Cloudflare Email   | Transactional mail                                          | Native, no per-message fee                                   |
+| Cloudflare Email   | Transactional mail                                          | Workers Paid required; 3,000/mo included, then $0.35/1,000   |
 | Supabase           | Postgres                                                    | $25/mo plan + compute tier                                   |
 
 Note there is no CDN line, no load balancer line, no object-storage-egress
 line, and no video-transcoding line. Their absence is most of the story.
+
+The Cloudflare estimates assume Workers Paid is active in the deployment's
+account. Email Sending also needs the sender domain onboarded there; neither
+the plan nor the email setup follows a Worker moved to another account.
+Email volume above the included quota is an additional usage cost. See
+[Email Service pricing](https://developers.cloudflare.com/email-service/platform/pricing/).
 
 ---
 

@@ -50,7 +50,7 @@
   "verificationFailed": "Verificacion Fallida",
   "verificationFailedDesc": "Por favor intenta de nuevo o contacta a soporte.",
   "checkEmail": "Revisa Tu Correo",
-  "checkEmailDesc": "Te enviamos un enlace para iniciar sesion.",
+  "checkEmailDesc": "Te enviamos un enlace para iniciar sesion. Si no lo ves, revisa la carpeta de spam o correo no deseado.",
   "signInFailed": "Error al enviar enlace de inicio de sesion. Por favor intenta de nuevo.",
   "oauthSignInFailed": "No se pudo iniciar sesion con Google. Por favor intenta de nuevo.",
   "verificationEmailSent": "Correo de Verificacion Enviado",

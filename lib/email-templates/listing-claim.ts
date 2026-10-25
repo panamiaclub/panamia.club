@@ -39,7 +39,7 @@ export function listingClaim(params: Record<string, unknown>) {
       'Whoever asked cannot get access without this link.',
       '',
       '---',
-      'Pana MIA · pana.social · hola@pana.social',
+      'Pana MIA · panamia.club · hola@panamia.club',
     ].join('\n'),
   };
 }

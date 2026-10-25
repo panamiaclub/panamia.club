@@ -38,14 +38,14 @@ export interface CloudflareEmailEnv {
 let cachedBinding: SendEmail | null = null;
 
 export function getEmail(env?: CloudflareEmailEnv): SendEmail | null {
-  if (env?.EMAIL) {
-    cachedBinding = env.EMAIL;
+  if (env) {
+    cachedBinding = env.EMAIL ?? null;
   }
   return cachedBinding;
 }
 
 function getSenderAddress(): string {
-  return process.env.EMAIL_SENDER_ADDRESS || 'hola@pana.social';
+  return process.env.EMAIL_SENDER_ADDRESS || 'hola@panamia.club';
 }
 
 function getSenderName(): string {
@@ -87,7 +87,7 @@ export async function sendEmail(
     console.error(
       '[email] binding not available — call getEmail(env) from worker entry'
     );
-    return;
+    throw new Error('Email binding is not available');
   }
 
   await binding.send({
