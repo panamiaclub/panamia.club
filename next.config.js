@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // The feed's browser sanitizer uses PostCSS. Keep it out of vinext's
+  // server-only external list so its CommonJS dependencies are prebundled.
+  transpilePackages: ['postcss'],
+
   // The auth instance serves the apex, www, and the Pana subdomain surfaces.
   // In dev, vinext rejects cross-origin requests before better-auth can apply
   // its own trustedOrigins list unless the host is repeated here. Production
