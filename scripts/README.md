@@ -229,6 +229,7 @@ Removes every row the seed scripts wrote, and nothing else.
 ```bash
 yarn db:unseed            # dry run — counts only, writes nothing
 yarn db:unseed --yes      # actually delete
+yarn db:unseed --inventory # read-only audit of current and older demo fixtures
 ```
 
 This is the other half of `db:seed`. The seeders will write to a remote
@@ -237,13 +238,16 @@ one-way door: the only teardown was `db:reset`, which truncates **everything**
 and whose guard (see above) a Supabase URL passes. So the safe-looking option
 was the one that destroyed the most.
 
-It matches on the `seed_` prefix every seeder mints, using Postgres
-`starts_with()` rather than `LIKE 'seed_%'` — in `LIKE`, `_` is a
+It matches current fixtures by the `seed_` prefix, and the older 100-business
+fixture by `seeduser_` (users) and `seedprof_` (profiles). Identity profiles
+attached to a seeded user are included even if their own IDs are unprefixed.
+Names, handles, stock photos and email addresses are **never** delete criteria.
+It uses Postgres `starts_with()` rather than `LIKE 'seed_%'` — in `LIKE`, `_` is a
 single-character wildcard, so the pattern would also match a real id beginning
 `seedX`. Nothing looks like that today, which is what would make it a quiet
 bug rather than a loud one.
 
-Two things are worth knowing before trusting it:
+Three things are worth knowing before trusting it:
 
 - **Actors are matched by profile, not by id.** `seed-dev-data.ts` builds them
   through `createActorForProfile` — the real production writer, deliberately —
@@ -254,13 +258,32 @@ Two things are worth knowing before trusting it:
   found.
 - **It stops rather than cascading into real data.** The `RESTRICT` foreign
   keys on `events` and `venues` exist so a seeded row cannot be pulled out
-  from under something real — a member who RSVP'd to a demo event, or hosted
-  at a seeded venue. When that happens the whole thing rolls back in one
+  from under something real, such as a real event held at a seeded venue.
+  When that happens the whole thing rolls back in one
   transaction and names the blocking row. Repoint or remove it and run again.
+- **Real ownership blocks deletion.** A seeded listing attached to or claimed
+  by a real account is protected. A test account administering a real listing
+  must transfer that ownership before it can be removed. A seeded actor ID
+  attached to a real profile also stops the cleanup.
 
 Dry run is the default, so it is safe to point at an unfamiliar database just
 to see what it would touch. Counts shown exclude rows removed by cascade, so
 the real total is higher than the number printed.
+
+For production, use **Actions → Database Migrations → Run workflow** with
+`test_data_action: dry-run` first. This uses the existing `POSTGRES_URL` Actions
+secret without copying credentials locally or into logs, and does not apply
+migrations. Review the fixture counts, then select `delete` and enter
+`DELETE TEST DATA` in `confirmation`. Deletion runs atomically, followed by a
+second dry run and inventory. The inventory reports counts and hashes of the
+retained real account/profile IDs so preservation can be checked without
+logging their personal details.
+
+The cleanup's isolated PGlite regression suite never connects to production:
+
+```bash
+node --experimental-test-module-mocks --import tsx --test tests-db/unseed.test.ts
+```
 
 ### `fetch-directory-photos.ts`
 

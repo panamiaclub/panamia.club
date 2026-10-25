@@ -38,6 +38,18 @@ even for the author or a named recipient.
 The separate `Status Visibility` workflow runs only this suite on fork PRs
 without secrets or the Playwright job's database setup.
 
+### Isolated fixture cleanup regression (no secrets)
+
+```
+node --experimental-test-module-mocks --import tsx --test tests-db/unseed.test.ts
+```
+
+`unseed.test.ts` runs the real cleanup executor against in-memory PGlite,
+including cascade and restrictive foreign keys. It covers current and legacy
+fixture namespaces, dry-run immutability, authentication and actor cleanup,
+real-ownership blockers, atomic rollback, and idempotency. It never connects to
+the database named by `POSTGRES_URL`.
+
 ### Existing database-backed suites
 
 ```

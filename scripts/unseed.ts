@@ -24,9 +24,10 @@
  *
  * HOW IT IDENTIFIES A SEEDED ROW
  *
- * Every id the seeders mint is prefixed `seed_` — seed_u_*, seed_p_*,
- * seed_biz_*, seed_venue_*, seed_ev_*, seed_att_*, seed_fol_*, seed_g_*,
- * seed_a_*. The match is `starts_with(id, 'seed_')` rather than
+ * Current fixtures use `seed_`. The older 100-business fixture uses
+ * `seeduser_` for users and `seedprof_` for profiles. Only those exact
+ * namespaces are removed; names and email addresses are never delete criteria.
+ * The match is `starts_with(id, 'seed_')` rather than
  * `id LIKE 'seed_%'` on purpose: in LIKE, `_` is a single-character wildcard,
  * so the pattern would also match a real id beginning "seedX". Nothing in the
  * database looks like that today, which is exactly why it would be a quiet
@@ -49,9 +50,10 @@
  *                    no prefix, which is to say unidentifiable. They have to
  *                    go first, while they can still be found. Cascades
  *                    social_follows, social_groups, social_group_members.
- *   4. users         cascades profiles, and profiles cascade profile_owners.
- *   5. profiles      the business rows (seed_biz_*) hang off no seeded user,
- *                    so step 4 does not reach them.
+ *   4. profiles      includes identity profiles attached to seeded users,
+ *                    even if the profile itself has an unprefixed id.
+ *                    Cascades profile_owners.
+ *   5. users         cascades authentication accounts and sessions.
  *
  * Safe to re-run: every step is a delete by predicate, so a second run finds
  * nothing and reports zeroes.
@@ -66,9 +68,24 @@
  */
 
 import { config } from 'dotenv';
-import type { SQLWrapper } from 'drizzle-orm';
+import { count, eq, inArray, or, sql, type SQLWrapper } from 'drizzle-orm';
+import { pathToFileURL } from 'node:url';
 
-config({ path: '.env.local' });
+config({ path: '.env.local', quiet: true });
+
+const seeded = (column: SQLWrapper) => sql`starts_with(${column}, 'seed_')`;
+const seededUser = (column: SQLWrapper) =>
+  sql`(${seeded(column)} OR starts_with(${column}, 'seeduser_'))`;
+const seededProfile = (column: SQLWrapper) =>
+  sql`(${seeded(column)} OR starts_with(${column}, 'seedprof_'))`;
+const fixtureProfile = (id: SQLWrapper, userId: SQLWrapper) =>
+  sql`COALESCE(${seededProfile(id)} OR ${seededUser(userId)}, false)`;
+
+export interface UnseedStepResult {
+  label: string;
+  count: number;
+  note: string;
+}
 
 function line(label: string, value: string | number): void {
   console.log(`  ${label.padEnd(30)} ${value}`);
@@ -79,7 +96,7 @@ function line(label: string, value: string | number): void {
  *
  * This is the expected failure, not an exotic one. Every RESTRICT in the
  * schema exists to stop a seeded row being pulled out from under something
- * real — a pana who RSVPed to a demo event, or hosted at a seeded venue.
+ * real — an event hosted by a seeded profile or held at a seeded venue.
  * When that happens the teardown SHOULD stop. The raw Postgres error says so,
  * but buries it under a stack trace, so decode it instead.
  */
@@ -107,109 +124,19 @@ function reportBlocked(error: unknown): void {
   console.error('\nUnseed failed:', error);
 }
 
-async function main(): Promise<void> {
-  const apply = process.argv.includes('--yes');
-
-  const connectionString =
-    process.env.POSTGRES_URL ?? process.env.POSTGRES_DIRECT_URL;
-  if (!connectionString) {
-    console.error('Error: POSTGRES_URL is required (check .env.local)');
-    process.exit(1);
-  }
-  process.env.POSTGRES_URL = connectionString;
-
-  const url = new URL(connectionString);
-  const target = `${url.hostname}:${url.port || '5432'}${url.pathname}`;
-  const isLocal = /localhost|127\.0\.0\.1/.test(connectionString);
-  const allowRemote = process.env.SEED_ALLOW_REMOTE === '1';
-
-  // Deleting is at least as consequential as seeding, so it takes the same
-  // override rather than a softer one.
-  if (!isLocal && !allowRemote) {
-    console.error('Refusing to run: this only targets a local database.');
-    console.error('Database:', target);
-    console.error(
-      'Set SEED_ALLOW_REMOTE=1 to override, but only for a database you own\n' +
-        'and have seeded. This deletes rows.'
-    );
-    process.exit(1);
-  }
-  if (!isLocal) {
-    console.warn('SEED_ALLOW_REMOTE=1 set — targeting a REMOTE database.');
-    console.warn('Database:', target);
-  }
-
-  // Deferred for the same reason the seeders defer: modules under
-  // lib/federation read NEXT_PUBLIC_HOST_URL and FEDERATION_DOMAIN at import
-  // time, so importing before config() resolves them against the wrong
-  // environment.
+export async function unseed(apply = false): Promise<UnseedStepResult[]> {
   const [{ db }, schema] = await Promise.all([
     import('../lib/db'),
     import('../lib/schema'),
   ]);
-  const { sql, or, count } = await import('drizzle-orm');
-
-  if (process.argv.includes('--inventory')) {
-    const reservedEmail = (column: SQLWrapper) =>
-      sql`${column} ~* '@([^@]*\\.)?(example\\.(com|org|net)|test|invalid)$'`;
-    const fixtureUser = sql`(
-      starts_with(u.id, 'seed_')
-      OR u.id ~ '^(test|demo)[_-]'
-      OR ${reservedEmail(sql`u.email`)}
-    )`;
-
-    console.log('UNSEED:inventory');
-    console.log('Database:', target);
-    console.log(
-      'Read-only inventory. Emails and real account details are not logged.'
-    );
-    const totals = await db.execute(sql`
-      SELECT
-        (SELECT count(*)::int FROM users) AS users,
-        (SELECT count(*)::int FROM profiles) AS profiles,
-        (SELECT count(*)::int FROM profiles WHERE active) AS active_profiles
-    `);
-    console.log('Totals:', JSON.stringify(totals));
-
-    const candidateUsers = await db.execute(sql`
-      SELECT u.id, u.screenname, u.account_type,
-             ${reservedEmail(sql`u.email`)} AS reserved_email,
-             starts_with(u.id, 'seed_') AS seeded_id
-      FROM users u
-      WHERE ${fixtureUser}
-      ORDER BY u.id
-    `);
-    console.log('Candidate users:', JSON.stringify(candidateUsers));
-
-    const candidateProfiles = await db.execute(sql`
-      SELECT p.id, p.screenname, p.user_id, p.active,
-             ${reservedEmail(sql`p.email`)} AS reserved_email,
-             starts_with(p.id, 'seed_') AS seeded_id,
-             p.status->>'source' AS source,
-             (SELECT count(*)::int
-              FROM profile_owners po JOIN users u ON u.id = po.user_id
-              WHERE po.profile_id = p.id AND NOT ${fixtureUser})
-               AS non_fixture_owners
-      FROM profiles p
-      WHERE starts_with(p.id, 'seed_')
-         OR p.id ~ '^(test|demo)[_-]'
-         OR ${reservedEmail(sql`p.email`)}
-         OR p.screenname ~ '^pana[0-9]+$'
-         OR p.gallery_images::text LIKE '%/img/directory/%'
-      ORDER BY p.id
-    `);
-    console.log('Candidate profiles:', JSON.stringify(candidateProfiles));
-    console.log('UNSEED:inventory:done');
-    process.exit(0);
-  }
-
-  console.log(apply ? 'UNSEED:start' : 'UNSEED:dry-run');
-  console.log('Database:', target, '\n');
-
-  // starts_with, not LIKE 'seed\_%' — see the note above on `_` being a
-  // single-character wildcard. Type-only import, so no runtime import escapes
-  // ahead of config() above.
-  const seeded = (column: SQLWrapper) => sql`starts_with(${column}, 'seed_')`;
+  const profileWhere = fixtureProfile(
+    schema.profiles.id,
+    schema.profiles.userId
+  );
+  const profileIds = db
+    .select({ id: schema.profiles.id })
+    .from(schema.profiles)
+    .where(profileWhere);
 
   const steps = [
     {
@@ -229,78 +156,223 @@ async function main(): Promise<void> {
       table: schema.socialActors,
       where: or(
         seeded(schema.socialActors.id),
-        seeded(schema.socialActors.profileId)
+        inArray(schema.socialActors.profileId, profileIds)
       ),
       note: 'cascades social_follows, social_groups, social_group_members',
     },
     {
-      label: 'users',
-      table: schema.users,
-      where: seeded(schema.users.id),
-      note: 'cascades profiles, profile_owners',
-    },
-    {
       label: 'profiles',
       table: schema.profiles,
-      where: seeded(schema.profiles.id),
-      note: 'business rows that hang off no seeded user',
+      where: profileWhere,
+      note: 'current and legacy fixtures; cascades profile_owners',
+    },
+    {
+      label: 'users',
+      table: schema.users,
+      where: seededUser(schema.users.id),
+      note: 'current and legacy fixtures; cascades accounts, sessions',
     },
   ] as const;
 
-  let total = 0;
-  // Step results are buffered rather than printed as they happen. Printing
-  // live reads as a lie when the transaction later rolls back: the first run
-  // of this said "events 28 deleted" and then "Nothing was deleted" four
-  // lines further down, both of which were true and which together told the
-  // operator nothing they could act on.
-  const report: Array<[string, string, string]> = [];
-
-  // One transaction for the whole teardown. The first run of this script was
-  // not transactional, and a RESTRICT violation on step 2 left step 1 already
-  // committed — seeded events gone, everything else still there. A teardown
-  // that can strand the database halfway is worse than no teardown, because
-  // the operator now has to work out what survived.
-  async function run(tx: typeof db): Promise<void> {
-    for (const step of steps) {
-      if (apply) {
-        const deleted = await tx
-          .delete(step.table)
-          .where(step.where)
-          .returning({ id: sql<string>`1` });
-        total += deleted.length;
-        report.push([step.label, `${deleted.length} deleted`, step.note]);
-      } else {
-        const [row] = await tx
-          .select({ n: count() })
-          .from(step.table)
-          .where(step.where);
-        const n = row?.n ?? 0;
-        total += n;
-        report.push([step.label, `${n} would be deleted`, step.note]);
+  // Buffer results until commit, so a rollback never prints successful deletes.
+  return db.transaction(
+    async (tx) => {
+      const protectedProfiles = await tx
+        .select({ id: schema.profiles.id })
+        .from(schema.profiles).where(sql`
+          ${profileWhere}
+          AND (
+            (${schema.profiles.userId} IS NOT NULL
+             AND NOT ${seededUser(schema.profiles.userId)})
+            OR EXISTS (
+              SELECT 1 FROM profile_owners po
+              WHERE po.profile_id = ${schema.profiles.id}
+                AND NOT ${seededUser(sql`po.user_id`)}
+            )
+          )
+        `);
+      if (protectedProfiles.length > 0) {
+        throw new Error(
+          `Stopped: ${protectedProfiles.length} fixture profile(s) belong to real accounts. Nothing was deleted.`
+        );
       }
-    }
+
+      const realListings = await tx
+        .select({ id: schema.profileOwners.id })
+        .from(schema.profileOwners)
+        .innerJoin(
+          schema.profiles,
+          eq(schema.profiles.id, schema.profileOwners.profileId)
+        )
+        .where(
+          sql`${seededUser(schema.profileOwners.userId)} AND NOT ${profileWhere}`
+        );
+      if (realListings.length > 0) {
+        throw new Error(
+          'Stopped: a test account administers a real listing. Transfer ownership first. Nothing was deleted.'
+        );
+      }
+
+      const realActorProfiles = await tx
+        .select({ id: schema.socialActors.id })
+        .from(schema.socialActors)
+        .innerJoin(
+          schema.profiles,
+          eq(schema.profiles.id, schema.socialActors.profileId)
+        )
+        .where(sql`${seeded(schema.socialActors.id)} AND NOT ${profileWhere}`);
+      if (realActorProfiles.length > 0) {
+        throw new Error(
+          'Stopped: a seeded actor is attached to a real profile. Nothing was deleted.'
+        );
+      }
+
+      const report: UnseedStepResult[] = [];
+      for (const step of steps) {
+        if (apply) {
+          const deleted = await tx
+            .delete(step.table)
+            .where(step.where)
+            .returning({ id: sql<string>`1` });
+          report.push({
+            label: step.label,
+            count: deleted.length,
+            note: step.note,
+          });
+        } else {
+          const [row] = await tx
+            .select({ n: count() })
+            .from(step.table)
+            .where(step.where);
+          report.push({ label: step.label, count: row.n, note: step.note });
+        }
+      }
+      return report;
+    },
+    { accessMode: apply ? 'read write' : 'read only' }
+  );
+}
+
+async function main(): Promise<void> {
+  const apply = process.argv.includes('--yes');
+  const connectionString =
+    process.env.POSTGRES_URL ?? process.env.POSTGRES_DIRECT_URL;
+  if (!connectionString) {
+    throw new Error('POSTGRES_URL is required (check .env.local)');
+  }
+  process.env.POSTGRES_URL = connectionString;
+
+  const url = new URL(connectionString);
+  const target = `${url.hostname}:${url.port || '5432'}${url.pathname}`;
+  const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  if (!isLocal && process.env.SEED_ALLOW_REMOTE !== '1') {
+    throw new Error(
+      'Refusing to run against a remote database. Set SEED_ALLOW_REMOTE=1 ' +
+        'only for a database you own and have seeded.'
+    );
+  }
+  if (!isLocal) {
+    console.warn('SEED_ALLOW_REMOTE=1 set — targeting a REMOTE database.');
+  }
+  console.log('Database:', target);
+
+  if (process.argv.includes('--inventory')) {
+    const { db } = await import('../lib/db');
+    const reservedEmail = (column: SQLWrapper) =>
+      sql`${column} ~* '@([^@]*\\.)?(example\\.(com|org|net)|test|invalid)$'`;
+    console.log('UNSEED:inventory');
+    console.log(
+      'Read-only inventory. Emails and real account details are not logged.'
+    );
+    const totals = await db.execute(sql`
+      SELECT
+        (SELECT count(*)::int FROM users) AS users,
+        (SELECT count(*)::int FROM profiles) AS profiles,
+        (SELECT count(*)::int FROM profiles WHERE active) AS active_profiles,
+        (SELECT md5(COALESCE(string_agg(id, ',' ORDER BY id), ''))
+         FROM users WHERE NOT ${seededUser(sql`id`)}) AS real_user_ids,
+        (SELECT md5(COALESCE(string_agg(id, ',' ORDER BY id), ''))
+         FROM profiles
+         WHERE NOT ${fixtureProfile(sql`id`, sql`user_id`)}) AS real_profile_ids
+    `);
+    console.log('Totals:', JSON.stringify(totals));
+
+    const candidateUsers = await db.execute(sql`
+      SELECT u.id, u.screenname, u.account_type,
+             ${reservedEmail(sql`u.email`)} AS reserved_email,
+             ${seededUser(sql`u.id`)} AS seeded_id
+      FROM users u
+      WHERE ${seededUser(sql`u.id`)} OR ${reservedEmail(sql`u.email`)}
+      ORDER BY u.id
+    `);
+    console.log('Candidate users:', JSON.stringify(candidateUsers));
+
+    const candidateProfiles = await db.execute(sql`
+      SELECT p.id, p.screenname, p.user_id, p.active,
+             ${reservedEmail(sql`p.email`)} AS reserved_email,
+             ${fixtureProfile(sql`p.id`, sql`p.user_id`)} AS seeded_id,
+             p.status->>'source' AS source,
+             (SELECT count(*)::int FROM profile_owners po
+              WHERE po.profile_id = p.id AND NOT ${seededUser(sql`po.user_id`)})
+               AS non_fixture_owners
+      FROM profiles p
+      WHERE ${fixtureProfile(sql`p.id`, sql`p.user_id`)}
+         OR ${reservedEmail(sql`p.email`)}
+         OR p.gallery_images::text LIKE '%/img/directory/%'
+      ORDER BY p.id
+    `);
+    console.log('Candidate profiles:', JSON.stringify(candidateProfiles));
+    const profileIds = sql`
+      SELECT id FROM profiles WHERE ${fixtureProfile(sql`id`, sql`user_id`)}
+    `;
+    const actorIds = sql`
+      SELECT id FROM social_actors
+      WHERE ${seeded(sql`id`)} OR profile_id IN (${profileIds})
+    `;
+    const externalReferences = await db.execute(sql`
+      SELECT
+        (SELECT count(*)::int FROM social_follows f
+         WHERE (f.actor_id IN (${actorIds}))
+            <> (f.target_actor_id IN (${actorIds}))) AS follows,
+        (SELECT count(*)::int FROM social_likes l
+         JOIN social_statuses s ON s.id = l.status_id
+         WHERE l.actor_id IN (${actorIds})
+           AND s.actor_id NOT IN (${actorIds})) AS likes,
+        (SELECT count(*)::int FROM social_group_members m
+         JOIN social_groups g ON g.id = m.group_id
+         WHERE m.actor_id IN (${actorIds})
+           AND g.actor_id NOT IN (${actorIds})) AS group_memberships,
+        (SELECT count(*)::int FROM event_attendees a
+         WHERE a.profile_id IN (${profileIds})
+           AND NOT ${seeded(sql`a.event_id`)}
+           AND a.status = 'going'
+           AND a.email_verified_at IS NOT NULL) AS verified_rsvps
+    `);
+    console.log('External references:', JSON.stringify(externalReferences));
+    console.log('UNSEED:inventory:done');
+    return;
   }
 
+  console.log(apply ? 'UNSEED:start' : 'UNSEED:dry-run');
+
+  let report: UnseedStepResult[];
   try {
-    if (apply) {
-      await db.transaction(async (tx) => {
-        await run(tx as unknown as typeof db);
-      });
-    } else {
-      await run(db);
-    }
+    report = await unseed(apply);
   } catch (error) {
     reportBlocked(error);
     process.exit(1);
   }
 
-  for (const [label, value, note] of report) {
-    line(label, value);
+  for (const { label, count, note } of report) {
+    line(label, `${count} ${apply ? 'deleted' : 'would be deleted'}`);
     console.log(`  ${''.padEnd(30)} ${note}`);
   }
 
   console.log('');
-  line('total rows', total);
+  line(
+    'total rows',
+    report.reduce((total, step) => total + step.count, 0)
+  );
 
   if (!apply) {
     console.log(
@@ -310,11 +382,17 @@ async function main(): Promise<void> {
   } else {
     console.log('\nUNSEED:done');
   }
-
-  process.exit(0);
 }
 
-main().catch((error) => {
-  console.error('Unseed failed:', error);
-  process.exit(1);
-});
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  main().then(
+    () => process.exit(0),
+    (error) => {
+      console.error('Unseed failed:', error);
+      process.exit(1);
+    }
+  );
+}

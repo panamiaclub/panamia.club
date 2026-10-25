@@ -95,6 +95,10 @@ jobs:
             exit 1
           fi
 
+      - name: Verify fixture cleanup safety
+        if: inputs.test_data_action != '' && inputs.test_data_action != 'none'
+        run: node --experimental-test-module-mocks --import tsx --test tests-db/unseed.test.ts
+
       # Runs before anything mutates, and deliberately never fails the job: its
       # only purpose is to put the target user@host, the applied count, and the
       # pending list into the log. drizzle-kit migrate exits 1 having printed
@@ -120,13 +124,19 @@ jobs:
         run: |
           case "$TEST_DATA_ACTION" in
             inventory) yarn db:unseed --inventory ;;
-            dry-run) yarn db:unseed ;;
+            dry-run)
+              yarn db:unseed --inventory
+              yarn db:unseed
+              ;;
             delete)
               if [ "$CONFIRMATION" != "DELETE TEST DATA" ]; then
                 echo "Permanent deletion requires confirmation: DELETE TEST DATA"
                 exit 1
               fi
+              yarn db:unseed --inventory
               yarn db:unseed --yes
+              yarn db:unseed
+              yarn db:unseed --inventory
               ;;
             *) echo "Unknown test data action"; exit 1 ;;
           esac
