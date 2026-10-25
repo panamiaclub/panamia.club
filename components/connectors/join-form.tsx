@@ -5,7 +5,7 @@ import { useState, type ReactNode } from 'react';
 
 import SurfaceLink from '@/components/panaverse/SurfaceLink';
 import { HOUSES, PODS, TIERS, getTier } from '@/lib/connectors/model';
-import type { HouseId, PodId } from '@/lib/connectors/model';
+import type { HouseId, PodId, TierId } from '@/lib/connectors/model';
 import { CONNECTORS_CHROME } from '@/lib/connectors/theme';
 
 /**
@@ -35,7 +35,8 @@ import { CONNECTORS_CHROME } from '@/lib/connectors/theme';
  * evidence, because the decision is a conversation about a person and not a
  * score computed from a textarea.
  *
- * Tier is shown and not asked, for the same reason. The API never reads a
+ * Tier is shown and not asked, for the same reason. New applicants start at
+ * Tier 1; returning members see their granted tier. The API never reads a
  * tier off the request.
  *
  * Name and email are not asked either, because you have to be signed in to
@@ -52,14 +53,13 @@ import { CONNECTORS_CHROME } from '@/lib/connectors/theme';
  * my houses" after being accepted.
  */
 
-const TIER_ONE = getTier(1);
-
 export function ConnectorJoinForm({
   initialPod = null,
   initialHouses = [],
   initialBring = '',
   initialSmsOptIn = false,
   initialSmsPhone = '',
+  currentTier = 1,
   isEditing = false,
   isPending = false,
 }: {
@@ -68,6 +68,7 @@ export function ConnectorJoinForm({
   initialBring?: string;
   initialSmsOptIn?: boolean;
   initialSmsPhone?: string;
+  currentTier?: TierId;
   isEditing?: boolean;
   /** Editing an application that has not been decided on yet. */
   isPending?: boolean;
@@ -80,6 +81,7 @@ export function ConnectorJoinForm({
   const [smsPhone, setSmsPhone] = useState(initialSmsPhone);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const displayTier = getTier(isEditing ? currentTier : 1);
 
   function toggleHouse(id: HouseId) {
     setHouses((current) =>
@@ -168,8 +170,10 @@ export function ConnectorJoinForm({
           <p className="text-pana-cream/70 mt-4 max-w-2xl text-base leading-relaxed">
             {isPending
               ? 'Your application has not been decided on yet, so you can still change any of this.'
-              : 'Three questions. Which county you are in, what you already like doing, and what you can bring. Nothing here is a test — read '}
-            {!isPending && (
+              : isEditing
+                ? 'Update your pod, interests or what you can bring. Your membership and existing commitments stay as they are.'
+                : 'Three questions. Which county you are in, what you already like doing, and what you can bring. Nothing here is a test — read '}
+            {!isEditing && !isPending && (
               <>
                 <SurfaceLink
                   href="/connectors"
@@ -223,7 +227,7 @@ export function ConnectorJoinForm({
           <Step
             number={2}
             title="Choose a house"
-            lede="Houses group people by what they already like doing, not by what needs covering. Pick the one you recognise yourself in — you can sit in more than one."
+            lede="Pick one or more houses that feel like you. These interests help you find opportunities in HQ; you can help across houses, and choosing one does not commit you to any work."
           >
             <div className="grid gap-3 sm:grid-cols-2">
               {HOUSES.map((house) => (
@@ -339,20 +343,22 @@ export function ConnectorJoinForm({
           <section className="border-pana-ink bg-pana-butter-2 rounded-xl border-2 p-5">
             <h2 className="text-base font-extrabold">
               {isEditing
-                ? `Tier ${TIER_ONE.id} — ${TIER_ONE.name}`
-                : `You would start at Tier ${TIER_ONE.id} — ${TIER_ONE.name}`}
+                ? `Tier ${displayTier.id} — ${displayTier.name}`
+                : `You would start at Tier ${displayTier.id} — ${displayTier.name}`}
             </h2>
             <p className="text-pana-ink/70 mt-2 text-sm leading-relaxed">
-              {TIER_ONE.blurb} Tiers are about how much you are carrying, not
-              how good you are at it, and nothing on this form changes where you
-              start.
+              {displayTier.blurb} Tiers are about how much you are carrying, not
+              how good you are at it.{' '}
+              {isEditing
+                ? 'Changing these answers does not change your tier.'
+                : 'Nothing on this form changes where you start.'}
             </p>
             <ol className="mt-4 flex flex-col gap-2 text-sm leading-snug">
               {TIERS.map((tier) => (
                 <li key={tier.id} className="flex gap-2.5">
                   <span
                     className={`h-fit shrink-0 rounded-full border-2 px-2 py-0.5 text-xs font-extrabold ${
-                      tier.id === TIER_ONE.id
+                      tier.id === displayTier.id
                         ? `${CONNECTORS_CHROME.BORDER} ${CONNECTORS_CHROME.FILL} ${CONNECTORS_CHROME.ON_FILL}`
                         : 'border-pana-ink/30 text-pana-ink/50'
                     }`}
@@ -361,7 +367,9 @@ export function ConnectorJoinForm({
                   </span>
                   <span
                     className={
-                      tier.id === TIER_ONE.id ? 'font-bold' : 'text-pana-ink/60'
+                      tier.id === displayTier.id
+                        ? 'font-bold'
+                        : 'text-pana-ink/60'
                     }
                   >
                     {tier.name}
@@ -392,10 +400,34 @@ export function ConnectorJoinForm({
                   ? 'Save changes'
                   : 'Send my application'}
             </button>
-            <p className="text-pana-ink/60 text-sm">
-              {isEditing
-                ? 'You can change any of this later.'
-                : 'Someone from the programme reviews applications by hand, so this is not instant. You will see where yours is up to in Connector HQ.'}
+            <p className="text-pana-ink/60 max-w-xl text-sm">
+              {isEditing && !isPending ? (
+                <>
+                  Your membership, tier and existing commitments stay the same.{' '}
+                  <SurfaceLink
+                    href="/connectors/hq"
+                    className="font-bold underline underline-offset-4"
+                  >
+                    Find opportunities in Connector HQ
+                  </SurfaceLink>
+                  .
+                </>
+              ) : (
+                <>
+                  {isPending
+                    ? 'Your application stays in review.'
+                    : 'The programme team reviews your application.'}{' '}
+                  Once accepted, choose your first opportunity in{' '}
+                  <SurfaceLink
+                    href="/connectors/hq"
+                    className="font-bold underline underline-offset-4"
+                  >
+                    Connector HQ
+                  </SurfaceLink>
+                  . You can claim an open place immediately, without another
+                  approval step.
+                </>
+              )}
             </p>
           </div>
         </form>

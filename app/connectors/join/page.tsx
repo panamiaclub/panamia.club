@@ -60,6 +60,7 @@ export default async function ConnectorJoinPage() {
       initialPod={me?.membership.pod ?? null}
       initialHouses={me?.membership.houses ?? []}
       initialBring={me?.membership.bring ?? ''}
+      currentTier={me?.membership.tier ?? 1}
       initialSmsOptIn={
         smsSubscription?.status === 'active' ||
         smsSubscription?.status === 'pending'
