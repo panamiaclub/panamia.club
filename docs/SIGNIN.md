@@ -171,6 +171,20 @@ the Worker's native `EMAIL` binding. Production sends from
 `Pana MIA <hola@panamia.club>`; `EMAIL_SENDER_ADDRESS`, `EMAIL_SENDER_NAME`,
 and `EMAIL_ENV=PROD` are runtime variables pinned in `wrangler.jsonc`.
 
+New sign-in links are single-use and expire after **30 minutes**. The plugin's
+`expiresIn` and the HTML/plain-text expiry copy share
+`MAGIC_LINK_EXPIRY_MINUTES` in `auth.ts`; do not rely on Better Auth's
+five-minute default. Changing this setting does not extend links that were
+already issued.
+
+Verification failures default to `/signin`, where an invalid or expired link
+shows a recovery message and opens the email form. The original success
+destination is preserved as `callbackUrl` for the replacement link. This
+default is applied in the auth request handler, so older emails without an
+`errorCallbackURL` also recover instead of sending users to a silent homepage
+error. Explicit error callbacks and Better Auth's origin validation remain
+in effect.
+
 The binding alone does not enable delivery. In the **same Cloudflare account
 that hosts `panamia-next`**:
 
