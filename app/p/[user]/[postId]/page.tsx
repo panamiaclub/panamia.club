@@ -5,7 +5,8 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PostCard, PostList } from '@/components/social';
+import { PostCard } from '@/components/social';
+import { PostReplies } from '@/components/social/PostReplies';
 
 const PostComposer = dynamic(
   () =>
@@ -14,7 +15,7 @@ const PostComposer = dynamic(
     })),
   { ssr: false }
 );
-import { useStatus, useStatusReplies, useMyActor } from '@/lib/query/social';
+import { useStatus, useMyActor, useCanReplyToGroup } from '@/lib/query/social';
 import { getVisibilityFromRecipients } from '@/lib/utils/getVisibility';
 import { Loader2, ArrowLeft } from 'lucide-react';
 
@@ -26,9 +27,8 @@ export default function StatusDetailPage({
   const { postId } = use(params);
 
   const { data: statusData, isLoading: statusLoading } = useStatus(postId);
-  const { data: repliesData, isLoading: repliesLoading } =
-    useStatusReplies(postId);
   const { data: myActor } = useMyActor();
+  const canReply = useCanReplyToGroup(statusData?.status?.group);
 
   if (statusLoading) {
     return (
@@ -60,7 +60,6 @@ export default function StatusDetailPage({
   }
 
   const status = statusData.status;
-  const replies = repliesData?.replies || [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -81,7 +80,7 @@ export default function StatusDetailPage({
         </Card>
 
         {/* Reply composer */}
-        {myActor?.actor && (
+        {myActor?.actor && canReply && (
           <Card>
             <CardContent className="pt-4">
               <h3 className="mb-3 text-sm font-medium">Reply to this post</h3>
@@ -98,18 +97,7 @@ export default function StatusDetailPage({
           </Card>
         )}
 
-        {/* Replies */}
-        <div>
-          <h2 className="mb-4 text-lg font-semibold">
-            Replies {replies.length > 0 && `(${replies.length})`}
-          </h2>
-          <PostList
-            statuses={replies}
-            isLoading={repliesLoading}
-            hasMore={!!repliesData?.nextCursor}
-            emptyMessage="No replies yet. Be the first to reply!"
-          />
-        </div>
+        <PostReplies statusId={status.id} group={status.group} />
       </div>
     </div>
   );

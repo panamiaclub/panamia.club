@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,6 +11,13 @@ import { PostActions } from './PostActions';
 const PostComposer = dynamic(
   () => import('./PostComposer').then((m) => ({ default: m.PostComposer })),
   { ssr: false }
+);
+const PostReplies = dynamic(
+  () => import('./PostReplies').then((m) => ({ default: m.PostReplies })),
+  {
+    ssr: false,
+    loading: () => <p role="status">Loading comments...</p>,
+  }
 );
 import { SafeHtml } from '@/components/safe-html';
 import { AttachmentGrid } from './AttachmentGrid';
@@ -30,16 +37,20 @@ interface PostCardProps {
   status: SocialStatusDisplay;
   showReplyComposer?: boolean;
   isDetail?: boolean;
+  compact?: boolean;
 }
 
 export function PostCard({
   status,
   showReplyComposer = false,
   isDetail = false,
+  compact = false,
 }: PostCardProps) {
   const [showCWContent, setShowCWContent] = useState(false);
   const [showReplyBox, setShowReplyBox] = useState(false);
   const canReply = useCanReplyToGroup(status.group);
+  const repliesId = useId();
+  const repliesOpen = showReplyBox || showReplyComposer;
 
   const publishedDate = status.published
     ? new Date(status.published)
@@ -60,8 +71,10 @@ export function PostCard({
     status.contentWarning && status.contentWarning.trim().length > 0;
 
   return (
-    <Card className={isDetail ? 'border-0 shadow-none' : ''}>
-      <CardContent className={isDetail ? 'px-0 pt-0' : 'pt-4'}>
+    <Card className={isDetail || compact ? 'border-0 shadow-none' : ''}>
+      <CardContent
+        className={compact ? 'p-0' : isDetail ? 'px-0 pt-0' : 'pt-4'}
+      >
         {/* Header */}
         <div className="flex items-start gap-3">
           <StoryRing
@@ -90,12 +103,12 @@ export function PostCard({
                 @{status.actor.username}
               </Link>
               <span className="text-muted-foreground text-sm">&middot;</span>
-              <Link
-                href={`/p/${status.actor.username}/${status.id}`}
-                className="text-muted-foreground text-sm hover:underline"
+              <time
+                dateTime={publishedDate.toISOString()}
+                className="text-muted-foreground text-sm"
               >
                 {timeAgo}
-              </Link>
+              </time>
             </div>
 
             {/* Reply indicator */}
@@ -117,12 +130,15 @@ export function PostCard({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-between"
+                  className="h-auto min-h-9 w-full items-start justify-between text-left whitespace-normal"
                   onClick={() => setShowCWContent(!showCWContent)}
+                  aria-expanded={showCWContent}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                    <span className="text-sm">{status.contentWarning}</span>
+                    <span className="text-sm break-words">
+                      {status.contentWarning}
+                    </span>
                   </span>
                   {showCWContent ? (
                     <ChevronUp className="h-4 w-4" />
@@ -150,9 +166,11 @@ export function PostCard({
               ))}
 
             {/* Attachments */}
-            {status.attachments && status.attachments.length > 0 && (
-              <AttachmentGrid attachments={status.attachments} />
-            )}
+            {(!hasCW || showCWContent) &&
+              status.attachments &&
+              status.attachments.length > 0 && (
+                <AttachmentGrid attachments={status.attachments} />
+              )}
 
             {/* Location */}
             {status.location && (
@@ -176,7 +194,7 @@ export function PostCard({
             )}
 
             {/* CC License + Actions */}
-            <div className="mt-3 flex items-center justify-between">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <PostActions
                 statusId={status.id}
                 actorUsername={status.actor.username}
@@ -184,7 +202,9 @@ export function PostCard({
                 likesCount={status.likesCount}
                 repliesCount={status.repliesCount}
                 onReply={() => setShowReplyBox(!showReplyBox)}
-                showReplyButton={!isDetail && canReply}
+                showReplyButton={!isDetail}
+                repliesExpanded={repliesOpen}
+                repliesId={repliesId}
               />
               {status.ccLicense &&
                 getVisibilityFromRecipients(
@@ -195,11 +215,13 @@ export function PostCard({
                   <CCBadge license={status.ccLicense as CCLicenseValue} />
                 )}
             </div>
-
-            {/* Reply composer. Withheld from a non-member on a group post:
-                the reply would inherit the group and be refused on submit. */}
-            {canReply && (showReplyBox || showReplyComposer) && (
-              <div className="border-muted mt-3 border-l-2 pl-2">
+          </div>
+        </div>
+        <section id={repliesId} hidden={!repliesOpen} aria-label="Comments">
+          {repliesOpen && (
+            <div className="border-muted mt-3 space-y-4 border-l-2 pl-2">
+              <PostReplies statusId={status.id} group={status.group} />
+              {canReply && (
                 <PostComposer
                   inReplyTo={status.id}
                   replyVisibility={getVisibilityFromRecipients(
@@ -207,13 +229,12 @@ export function PostCard({
                     status.recipientCc,
                     status.type
                   )}
-                  onSuccess={() => setShowReplyBox(false)}
                   placeholder={`Reply to @${status.actor.username}...`}
                 />
-              </div>
-            )}
-          </div>
-        </div>
+              )}
+            </div>
+          )}
+        </section>
       </CardContent>
     </Card>
   );
