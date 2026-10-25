@@ -121,6 +121,10 @@ function WelcomeForm({ rootPath }: { rootPath: string }) {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (status !== 'available' || isSubmitting) return;
+    if (!displayName.trim() || !screenname.trim()) {
+      setError(t('onboarding.requiredFields'));
+      return;
+    }
 
     setIsSubmitting(true);
     setError('');
@@ -129,7 +133,10 @@ function WelcomeForm({ rootPath }: { rootPath: string }) {
       const response = await fetch('/api/user/screenname/set', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ screenname, name: displayName.trim() }),
+        body: JSON.stringify({
+          screenname: screenname.trim(),
+          name: displayName.trim(),
+        }),
       });
       const data = await response.json();
 
@@ -187,6 +194,7 @@ function WelcomeForm({ rootPath }: { rootPath: string }) {
                   value={displayName}
                   maxLength={80}
                   autoComplete="name"
+                  required
                   placeholder={t('onboarding.namePlaceholder')}
                   disabled={isSubmitting}
                   onChange={(e) => setDisplayName(e.target.value)}
@@ -207,6 +215,7 @@ function WelcomeForm({ rootPath }: { rootPath: string }) {
                     value={screenname}
                     maxLength={24}
                     autoComplete="username"
+                    required
                     autoFocus
                     placeholder={t('onboarding.screennamePlaceholder')}
                     disabled={isSubmitting}
@@ -231,7 +240,11 @@ function WelcomeForm({ rootPath }: { rootPath: string }) {
                     )}
                   </div>
                 </div>
-                {error && <p className="text-destructive text-sm">{error}</p>}
+                {error && (
+                  <p role="alert" className="text-destructive text-sm">
+                    {error}
+                  </p>
+                )}
                 <p className="text-muted-foreground text-sm">
                   {t('onboarding.screennameHint')}
                 </p>
@@ -249,7 +262,12 @@ function WelcomeForm({ rootPath }: { rootPath: string }) {
               <Button
                 type="submit"
                 className="bg-pana-flame text-pana-ink hover:bg-pana-burnt w-full font-extrabold"
-                disabled={status !== 'available' || isSubmitting}
+                disabled={
+                  !displayName.trim() ||
+                  !screenname.trim() ||
+                  status !== 'available' ||
+                  isSubmitting
+                }
               >
                 {isSubmitting ? (
                   <>

@@ -100,8 +100,8 @@ never post, follow, or be followed. Nothing communicates this.
 ## Proposed Model
 
 A single interstitial, `/welcome`, shown once to accounts that have not yet
-claimed a screenname. It names the place, takes the one input that unlocks
-everything else, and then returns the member to wherever they were going.
+claimed a screenname. It names the place, collects the name and screenname that
+unlock participation, and then returns the member to wherever they were going.
 
 ```
 magic link / OAuth
@@ -112,7 +112,7 @@ magic link / OAuth
         ▼
   ScreennameGate ── has screenname? ──yes──▶ stay put
         │ no
-        ├── legacy account ──▶ skippable modal (unchanged)
+        ├── legacy account ──▶ skippable name + screenname modal
         └── new account ─────▶ /welcome?next=<where they landed>
                                    │
                                    ├── claim screenname + display name ──▶ next
@@ -129,9 +129,9 @@ magic link / OAuth
 
 ### 1. An interstitial, not a wizard
 
-One page, one required input. Multi-step onboarding is how you convert a
-first-time visitor into a bounce. Everything that is not load-bearing is asked
-for later, in context.
+One page, two required inputs: name and screenname. Multi-step onboarding is how
+you convert a first-time visitor into a bounce. Everything that is not
+load-bearing is asked for later, in context.
 
 ### 2. Intent is preserved with `?next=`
 
@@ -142,17 +142,22 @@ page the member deliberately chose. `/welcome` therefore carries the origin in
 `next` must be validated as a site-relative path — a value starting with `/` but
 not `//` or `/\` — or it is an open redirect.
 
-### 3. Display name is collected alongside the screenname
+### 3. Display name and screenname are both required to finish setup
 
-`ACCOUNTS-ROADMAP.md` lists this as a known gap:
+This closes the original name-quality gap recorded in `ACCOUNTS-ROADMAP.md`:
 
 > `users.name ?? screenname` guarantees a non-null `profiles.name`, but a
 > screenname-derived display name is a poor default. The screenname prompt
 > should ideally collect a display name at the same time.
 
 A magic-link member has no name from any provider, so without this every such
-profile is named after its handle. A full page has room for the second field
-that the dialog did not.
+profile is named after its handle. Both the welcome form and the legacy modal
+now collect a name and screenname and require non-whitespace values before
+submission. `POST /api/user/screenname/set` rejects a first claim with HTTP 400
+when either field is missing, blank, or not a string; an existing member can
+still change only their handle without resubmitting their name.
+
+Skipping still permits browsing; it does not complete setup or create a profile.
 
 ### 4. The skip stays, but states its cost
 
@@ -239,11 +244,12 @@ inherit someone else's answer.
 
 **Detecting an unset name** is subtler than detecting a missing avatar, and
 `describeBareIdentity` in `lib/onboarding.ts` owns the rule. `profiles.name` is
-`NOT NULL`, so it is never empty; a member who skips the name field during
-setup gets it filled from their screenname (`app/api/user/screenname/set` —
+`NOT NULL`, so it is never empty; a legacy member who skipped the name field
+during setup got it filled from their screenname (`app/api/user/screenname/set` —
 `displayName || session.user.name || newScreenname`), and that value is what
 `createActorForProfile` copies to `socialActors.name`. An actor whose name
-equals its username is therefore the fallback showing through, not a choice.
+equals its username may therefore be showing a legacy fallback. New claims
+require a name, but existing profiles can still need this nudge.
 The false positive — somebody whose real name genuinely is their handle — costs
 one dismissible card, which is the right side to err on.
 
