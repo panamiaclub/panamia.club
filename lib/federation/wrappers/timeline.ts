@@ -466,6 +466,20 @@ export async function getPublicTimeline(
       and(
         isNotNull(s.published),
         isNull(s.inReplyToId),
+        // Profile ownership keeps legacy-domain members local; canonical
+        // actors may not have a profile (for example, group identities).
+        inArray(
+          s.actorId,
+          db
+            .select({ id: socialActors.id })
+            .from(socialActors)
+            .where(
+              or(
+                isNotNull(socialActors.profileId),
+                eq(socialActors.domain, socialConfig.domain)
+              )
+            )
+        ),
         jsonbArrayContains(socialStatuses.recipientTo, PUBLIC),
         notPanasStatus(),
         // Public addressing already excludes private group posts, so this is
@@ -491,17 +505,10 @@ export async function getPublicTimeline(
     },
     orderBy: (s, { desc }) => [desc(s.published), desc(s.id)],
     limit: limit + 1,
-    // Filter to local actors only (domain = socialConfig.domain)
-    extras: {
-      domainFilter: sql<string>`1`.as('_'),
-    },
   });
 
-  // Post-filter to local actors only (Drizzle doesn't support nested where on relations in findMany)
-  const localRows = rows.filter((r) => r.actor.domain === socialConfig.domain);
-
-  const hasMore = localRows.length > limit;
-  const items = hasMore ? localRows.slice(0, limit) : localRows;
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
   const nextCursor = hasMore ? items[items.length - 1].id : null;
 
   return { statuses: items.map(toStatus), nextCursor };
