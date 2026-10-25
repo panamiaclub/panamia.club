@@ -234,13 +234,15 @@ creation point. `app/api/user/screenname/set/route.ts` already loads the user's
 profile in order to sync an existing actor, so this is an extension of an
 existing branch rather than a new hook.
 
-Source `profiles.name` as `users.name ?? screenname`.
+Source `profiles.name` from the name required during a first screenname claim.
+The `users.name ?? screenname` fallback remains for legacy accounts repairing a
+missing profile during a handle change.
 
 ### Changes
 
 | #   | Area       | File                                       | Change                                                                                          |
 | --- | ---------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| 1   | Onboarding | `app/api/user/screenname/set/route.ts`     | Create a profile when none exists: `active: true`, `name: users.name ?? screenname`, no address |
+| 1   | Onboarding | `app/api/user/screenname/set/route.ts`     | Create a profile when none exists: `active: true`, required submitted name on first claim, no address |
 | 2   | Directory  | `app/api/directory/suggest/route.ts`       | Add `inArray(users.accountType, ['directory', 'hybrid'])`                                       |
 | 3   | Directory  | `lib/server/directory.ts`                  | Same predicate on the `getSearch()` query                                                       |
 | 4   | Indexing   | `app/sitemap.ts`                           | Same predicate — see _Privacy_ below                                                            |
@@ -348,9 +350,10 @@ and through social activity only — not discoverable by search, on-site or off.
   left-joins rather than using `NOT IN`, since `profiles.userId` is nullable and
   `NOT IN` against a column containing NULLs matches nothing at all. Run it once
   after deploy.
-- **Name quality.** `users.name ?? screenname` guarantees a non-null
-  `profiles.name`, but a screenname-derived display name is a poor default. The
-  screenname prompt should ideally collect a display name at the same time.
+- **Legacy name quality.** First screenname claims now require a nonblank name
+  in both the welcome form and the legacy prompt, with server-side enforcement.
+  Older profiles may still carry a screenname-derived display name; the
+  contextual identity prompt lets those members replace it.
 - **Form branching.** `become-a-pana` now records the account type but still
   shows every field to every type. The rebuild notes at the top of
   `app/form/become-a-pana/page.tsx` describe the intended per-type branching.

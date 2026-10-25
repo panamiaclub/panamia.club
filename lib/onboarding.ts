@@ -82,11 +82,12 @@ export interface BareIdentity {
  *
  * A missing avatar is simply null. A missing *name* is subtler, because
  * `profiles.name` is `NOT NULL` and therefore never actually empty: when a
- * member skips the name field during setup it is filled from the screenname
- * (`app/api/user/screenname/set/route.ts` — `displayName || session.user.name
- * || newScreenname`), and that value is what `createActorForProfile` copies to
- * `socialActors.name`. So an actor whose name equals its username is not
- * someone who chose that name; it is the fallback showing through.
+ * legacy member skipped the name field during setup it was filled from the
+ * screenname in `app/api/user/screenname/set/route.ts`
+ * (`displayName || session.user.name || newScreenname`). That value is what
+ * `createActorForProfile` copies to `socialActors.name`. New claims require a
+ * name, but older actors whose names equal their usernames may still be showing
+ * that fallback.
  *
  * The false positive — somebody whose real name genuinely is their handle —
  * costs one dismissible card, which is the right side to err on.
