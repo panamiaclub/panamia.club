@@ -90,6 +90,29 @@ describe('info site routing', () => {
       canonical,
     });
   });
+
+  test('keeps info available while other surface subdomains are off', () => {
+    const enabled = process.env.PANAVERSE_SUBDOMAINS;
+    process.env.PANAVERSE_SUBDOMAINS = '0';
+    try {
+      const info = getSurface('info');
+      const canonical = info.subdomainPending
+        ? 'https://panamia.club/info'
+        : 'https://info.panamia.club/';
+      assert.equal(resolveSurface('info.panamia.club').id, 'info');
+      assert.equal(getInfoCanonicalUrl(), canonical);
+      assert.deepEqual(getInfoMetadata().alternates, { canonical });
+      for (const surface of [info, getSurface('social')]) {
+        assert.equal(
+          originForFrom(surface, 'panamia.club'),
+          'https://panamia.club'
+        );
+      }
+    } finally {
+      if (enabled === undefined) delete process.env.PANAVERSE_SUBDOMAINS;
+      else process.env.PANAVERSE_SUBDOMAINS = enabled;
+    }
+  });
 });
 
 describe('info site chrome', () => {

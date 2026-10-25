@@ -42,8 +42,8 @@ export interface PanaverseSurface {
   /**
    * Registered here, but the hostname is not bound yet.
    *
-   * PANAVERSE_SUBDOMAINS is a single global flag, and it is already on. So the
-   * moment a surface is added to this list its cross-surface links go absolute
+   * PANAVERSE_SUBDOMAINS is a single global flag. While it is on, adding a
+   * surface to this list makes its cross-surface links go absolute
    * — which for a host with no DNS record turns a working relative link into a
    * dead end. That is the exact state the flag exists to prevent, and the flag
    * cannot prevent it for one surface at a time.
@@ -60,12 +60,9 @@ export interface PanaverseSurface {
    * hiding the launch state from the registry that claims to be the source of
    * truth for it. See docs/DOMAINS.md.
    *
-   * Info sets this while GoHighLevel still owns its hostname. A surface may
-   * also never want one: Events turned out to be path-only rather than pending,
-   * and a path-only
-   * surface wants `subdomain: null` instead — that resolves its links to the
-   * root domain, where it actually lives, rather than freezing them on the
-   * host in hand. This stays for the next surface launched subdomain-first.
+   * A path-only surface is different: Events uses `subdomain: null`, so its
+   * links resolve to the root domain rather than staying on the host in hand.
+   * Reserve this flag for surfaces awaiting a hostname.
    */
   subdomainPending?: boolean;
 }
@@ -118,8 +115,6 @@ export const SURFACES: readonly PanaverseSurface[] = [
     name: 'Pana Mia Info',
     tagline: 'Start here for local connections and ways to get involved.',
     subdomain: 'info',
-    // The hostname still serves GoHighLevel until the cutover in docs/DOMAINS.md.
-    subdomainPending: true,
     rootPath: '/info',
     paths: ['/info'],
   },
