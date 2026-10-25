@@ -144,7 +144,9 @@ function SignInPageContent({
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [oauthProvider, setOAuthProvider] = useState<string | null>(null);
-  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(
+    signInError === 'INVALID_TOKEN'
+  );
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const {
     token: turnstileToken,
