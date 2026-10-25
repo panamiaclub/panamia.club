@@ -44,6 +44,10 @@ on:
         description: Also remove groups with only fixture creators, members and content
         type: boolean
         default: false
+      approved_group_fingerprint:
+        description: Approve removing real memberships from one demo group (MD5 ID hash)
+        type: string
+        default: ''
 
 # Never cancel a run that may be mid-migration: an interrupted drizzle-kit
 # migrate leaves the ledger and the schema in an indeterminate state. Queue
@@ -125,11 +129,15 @@ jobs:
           TEST_DATA_ACTION: ${{ inputs.test_data_action }}
           CONFIRMATION: ${{ inputs.confirmation }}
           INCLUDE_DEMO_GROUPS: ${{ inputs.include_demo_groups }}
+          APPROVED_GROUP_FINGERPRINT: ${{ inputs.approved_group_fingerprint }}
           SEED_ALLOW_REMOTE: '1'
         run: |
           flags=()
           if [ "$INCLUDE_DEMO_GROUPS" = "true" ]; then
             flags+=(--include-demo-groups)
+          fi
+          if [ -n "$APPROVED_GROUP_FINGERPRINT" ]; then
+            flags+=(--approved-group-fingerprint "$APPROVED_GROUP_FINGERPRINT")
           fi
           case "$TEST_DATA_ACTION" in
             inventory) yarn db:unseed --inventory ;;

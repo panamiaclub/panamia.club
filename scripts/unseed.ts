@@ -128,8 +128,25 @@ function reportBlocked(error: unknown): void {
 
 export async function unseed(
   apply = false,
-  options: { includeDemoGroups?: boolean } = {}
+  options: {
+    includeDemoGroups?: boolean;
+    approvedGroupFingerprint?: string;
+  } = {}
 ): Promise<UnseedStepResult[]> {
+  if (
+    options.approvedGroupFingerprint !== undefined &&
+    !/^[a-f0-9]{32}$/.test(options.approvedGroupFingerprint)
+  ) {
+    throw new Error(
+      'An approved group fingerprint must be a 32-character MD5 ID hash.'
+    );
+  }
+  if (options.approvedGroupFingerprint && !options.includeDemoGroups) {
+    throw new Error(
+      'An approved group fingerprint requires --include-demo-groups.'
+    );
+  }
+
   const [{ db }, schema] = await Promise.all([
     import('../lib/db'),
     import('../lib/schema'),
@@ -174,11 +191,14 @@ export async function unseed(
                   AND m.actor_id IN (${fixtureActorIds})
                   AND m.role = 'admin' AND m.status = 'active'
               )
-              AND NOT EXISTS (
-                SELECT 1 FROM social_group_members m
-                WHERE m.group_id = ${schema.socialGroups.id}
-                  AND m.actor_id NOT IN (${fixtureActorIds})
-                  AND m.actor_id <> ${schema.socialGroups.actorId}
+              AND (
+                NOT EXISTS (
+                  SELECT 1 FROM social_group_members m
+                  WHERE m.group_id = ${schema.socialGroups.id}
+                    AND m.actor_id NOT IN (${fixtureActorIds})
+                    AND m.actor_id <> ${schema.socialGroups.actorId}
+                )
+                OR md5(${schema.socialGroups.id}) = ${options.approvedGroupFingerprint ?? ''}
               )
               AND NOT EXISTS (
                 SELECT 1 FROM social_statuses s
@@ -240,7 +260,7 @@ export async function unseed(
                   schema.socialGroups.id,
                   demoGroups.map(({ id }) => id)
                 ),
-                note: 'fixture creator, members and content only',
+                note: 'fixture creator/content; real memberships require per-group approval',
               },
             ]
           : []),
@@ -591,8 +611,18 @@ async function main(): Promise<void> {
 
   let report: UnseedStepResult[];
   try {
+    const approvedGroupIndex = process.argv.indexOf(
+      '--approved-group-fingerprint'
+    );
+    if (approvedGroupIndex >= 0 && !process.argv[approvedGroupIndex + 1]) {
+      throw new Error('--approved-group-fingerprint requires an ID hash.');
+    }
     report = await unseed(apply, {
       includeDemoGroups: process.argv.includes('--include-demo-groups'),
+      approvedGroupFingerprint:
+        approvedGroupIndex >= 0
+          ? process.argv[approvedGroupIndex + 1]
+          : undefined,
     });
   } catch (error) {
     reportBlocked(error);

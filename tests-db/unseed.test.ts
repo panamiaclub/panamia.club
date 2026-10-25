@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { after, before, beforeEach, mock, test } from 'node:test';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
@@ -403,6 +404,89 @@ for (const [label, insert] of [
     assert.deepEqual(await snapshot(), before);
   });
 }
+
+const demoGroupFingerprint = createHash('md5')
+  .update('demo_group')
+  .digest('hex');
+
+test('per-group approval removes real memberships without deleting their accounts or profiles', async () => {
+  await addDemoGroup();
+  await pg.exec(`
+    INSERT INTO social_group_members VALUES
+      ('real_member', 'demo_group', 'real_actor', 'member', 'active');
+  `);
+  const before = await snapshot();
+  await unseed(true, {
+    includeDemoGroups: true,
+    approvedGroupFingerprint: demoGroupFingerprint,
+  });
+  const remaining = await snapshot();
+  assert.deepEqual(remaining.social_groups, []);
+  assert.deepEqual(remaining.social_group_members, []);
+  for (const table of ['users', 'profiles', 'social_actors'] as const) {
+    const id = {
+      users: 'member',
+      profiles: 'member_profile',
+      social_actors: 'real_actor',
+    }[table];
+    const realRow = (row: unknown) =>
+      typeof row === 'object' && row !== null && 'id' in row && row.id === id;
+    assert.deepEqual(
+      remaining[table].filter(realRow),
+      before[table].filter(realRow)
+    );
+  }
+});
+
+test('approval for a different group does not bypass real-membership protection', async () => {
+  await addDemoGroup();
+  await pg.exec(`
+    INSERT INTO social_group_members VALUES
+      ('real_member', 'demo_group', 'real_actor', 'member', 'active');
+  `);
+  const before = await snapshot();
+  await assert.rejects(
+    unseed(true, {
+      includeDemoGroups: true,
+      approvedGroupFingerprint: createHash('md5')
+        .update('other_group')
+        .digest('hex'),
+    }),
+    /last active administrator/
+  );
+  assert.deepEqual(await snapshot(), before);
+});
+
+test('membership approval never permits deleting real group content', async () => {
+  await addDemoGroup();
+  await pg.exec(`
+    INSERT INTO social_statuses (id, actor_id, group_id)
+      VALUES ('real_group_post', 'real_actor', 'demo_group');
+  `);
+  const before = await snapshot();
+  await assert.rejects(
+    unseed(true, {
+      includeDemoGroups: true,
+      approvedGroupFingerprint: demoGroupFingerprint,
+    }),
+    /last active administrator/
+  );
+  assert.deepEqual(await snapshot(), before);
+});
+
+test('group approval rejects malformed fingerprints and missing opt-in', async () => {
+  await assert.rejects(
+    unseed(true, {
+      includeDemoGroups: true,
+      approvedGroupFingerprint: 'not-a-hash',
+    }),
+    /32-character MD5/
+  );
+  await assert.rejects(
+    unseed(true, { approvedGroupFingerprint: demoGroupFingerprint }),
+    /requires --include-demo-groups/
+  );
+});
 
 async function addDemoGroup() {
   await pg.exec(`

@@ -291,6 +291,13 @@ members), real posts, real replies, real likes, or non-fixture hosted events.
 Their group actors and posts are removed in the same transaction. Groups with
 real participation remain protected even when this option is enabled.
 
+If an operator explicitly approves deleting a specific demo group despite its
+real memberships, pass its `group_fingerprint` from the inventory using
+`--approved-group-fingerprint <hash>` (workflow input
+`approved_group_fingerprint`). This exception affects only memberships in that
+one group: real member accounts/profiles remain intact, and real creators,
+posts, replies, likes and hosted events still block deletion.
+
 The cleanup's isolated PGlite regression suite never connects to production:
 
 ```bash

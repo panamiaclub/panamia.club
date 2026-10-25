@@ -52,6 +52,8 @@ the database named by `POSTGRES_URL`. Retained groups keep accurate active
 member counts and cannot lose their last active administrator.
 Opt-in demo-group deletion is also covered, including preservation of real
 creators, members, posts, replies, likes and hosted events.
+Per-group membership exceptions require an exact approved fingerprint, never
+delete real member accounts/profiles, and cannot override content protection.
 
 ### Existing database-backed suites
 
