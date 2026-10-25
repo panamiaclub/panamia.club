@@ -43,12 +43,6 @@ import type { HouseId, PodId, TierId } from '@/lib/connectors/model';
  * parser's rules move into the migration that builds it.
  */
 
-/** Only `active` memberships are in these numbers. Applying is not joining. */
-const IS_CONNECTOR = and(
-  isNotNull(profiles.connector),
-  sql`${profiles.connector} ->> 'status' = 'active'`
-);
-
 export interface RosterMember {
   profileId: string;
   displayName: string;
@@ -77,8 +71,21 @@ function displayNameOf(profile: {
  * and alphabetical is the only order you can search by eye.
  */
 export async function listRoster(): Promise<RosterMember[]> {
+  return listRosterByStatus('active');
+}
+
+export async function listInactiveRoster(): Promise<RosterMember[]> {
+  return listRosterByStatus('inactive');
+}
+
+async function listRosterByStatus(
+  status: 'active' | 'inactive'
+): Promise<RosterMember[]> {
   const rows = await db.query.profiles.findMany({
-    where: IS_CONNECTOR,
+    where: and(
+      isNotNull(profiles.connector),
+      sql`${profiles.connector} ->> 'status' = ${status}`
+    ),
     columns: {
       id: true,
       name: true,
@@ -188,26 +195,39 @@ export async function countPendingApplications(): Promise<number> {
   return row?.count ?? 0;
 }
 
-/**
- * Move somebody between houses, or change their tier.
- *
- * Read-modify-write on the membership blob, which deserves a word now that
- * staff can write it too. 0056 took commitments out of this column precisely
- * so that this write would be safe: what is left — status, pod, houses, tier,
- * bring — changes a handful of times in a membership's whole life, and the
- * two writers are the member editing their own join form and an admin editing
- * the roster. The window where those collide is seconds wide and reachable
- * only if both are typing about the same person at once.
- *
- * It is still a window. If the console grows a second staff-facing write on
- * this column, this needs the same treatment commitments got rather than a
- * comment explaining why it is probably fine.
- *
- * Refuses anything that is not an accepted member: a pending application is
- * decided through the queue, which is where the accept/decline reasoning
- * lives, and quietly editing an applicant's houses here would move them
- * without ever deciding on them.
- */
+/** All membership writers lock the profile before reading its current state. */
+async function updateRosterMembership(
+  profileId: string,
+  status: 'active' | 'inactive',
+  changes: Partial<ProfileConnector>
+): Promise<ProfileConnector | null> {
+  return db.transaction(async (tx) => {
+    const [profile] = await tx
+      .select({ connector: profiles.connector })
+      .from(profiles)
+      .where(eq(profiles.id, profileId))
+      .limit(1)
+      .for('update');
+    if (!profile) return null;
+
+    const membership = parseConnector(profile.connector);
+    if (!membership || membership.status !== status) return null;
+
+    const [updated] = await tx
+      .update(profiles)
+      .set({
+        connector: sql`${profiles.connector} || ${JSON.stringify(changes)}::jsonb`,
+      })
+      .where(eq(profiles.id, profileId))
+      .returning({ connector: profiles.connector });
+
+    const next = parseConnector(updated?.connector);
+    if (!next) throw new Error('Could not read the updated membership.');
+    return next;
+  });
+}
+
+/** Pending applications are decided in the queue, not edited into membership. */
 export async function setHousesAndTier(
   profileId: string,
   houses: readonly HouseId[],
@@ -215,27 +235,10 @@ export async function setHousesAndTier(
 ): Promise<ProfileConnector | null> {
   if (houses.length === 0) return null;
 
-  const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.id, profileId),
-    columns: { id: true, connector: true },
-  });
-  if (!profile) return null;
-
-  const membership = parseConnector(profile.connector);
-  if (!membership || membership.status !== 'active') return null;
-
-  const next: ProfileConnector = {
-    ...membership,
+  return updateRosterMembership(profileId, 'active', {
     houses: [...new Set(houses)],
     tier,
-  };
-
-  await db
-    .update(profiles)
-    .set({ connector: next })
-    .where(eq(profiles.id, profileId));
-
-  return next;
+  });
 }
 
 export async function offboardConnector(
@@ -243,28 +246,21 @@ export async function offboardConnector(
   adminUserId: string,
   reason: string
 ): Promise<ProfileConnector | null> {
-  const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.id, profileId),
-    columns: { id: true, connector: true },
-  });
-  if (!profile) return null;
-
-  const membership = parseConnector(profile.connector);
-  if (!membership || membership.status !== 'active') return null;
-
-  const now = new Date().toISOString();
-  const next: ProfileConnector = {
-    ...membership,
+  return updateRosterMembership(profileId, 'active', {
     status: 'inactive',
-    offboardedAt: now,
+    offboardedAt: new Date().toISOString(),
     offboardedBy: adminUserId,
     offboardReason: reason,
-  };
+  });
+}
 
-  await db
-    .update(profiles)
-    .set({ connector: next })
-    .where(eq(profiles.id, profileId));
-
-  return next;
+export async function reactivateConnector(
+  profileId: string,
+  adminUserId: string
+): Promise<ProfileConnector | null> {
+  return updateRosterMembership(profileId, 'inactive', {
+    status: 'active',
+    reactivatedAt: new Date().toISOString(),
+    reactivatedBy: adminUserId,
+  });
 }

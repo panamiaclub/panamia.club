@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       { status: 401 }
     );
   }
+  const userId = session.user.id;
 
   let body: unknown;
   try {
@@ -109,43 +110,46 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // The identity profile, not the one they may be acting as.
-  const existing = await db.query.profiles.findFirst({
-    where: eq(profiles.userId, session.user.id),
-    columns: { id: true, connector: true },
-  });
-
-  if (!existing) {
-    return NextResponse.json(
-      { success: false, error: 'Your account does not have a profile yet.' },
-      { status: 404 }
-    );
-  }
-
-  const current = parseConnector(existing.connector);
-
-  const membership: ProfileConnector = {
-    // Carried over, never taken from the request: a decision staff made is
-    // not something the applicant can edit their way out of.
-    status: current?.status ?? 'pending',
-    pod: pod as ProfileConnector['pod'],
-    houses: houses as ProfileConnector['houses'],
-    // Tier is never taken from the request. It is not a thing you ask for.
-    tier: current?.tier ?? 1,
-    bring,
-    appliedAt: current?.appliedAt ?? new Date().toISOString(),
-    decidedAt: current?.decidedAt ?? null,
-    decidedBy: current?.decidedBy ?? null,
-    offboardedAt: current?.offboardedAt ?? null,
-    offboardedBy: current?.offboardedBy ?? null,
-    offboardReason: current?.offboardReason ?? null,
-  };
-
   try {
-    await db
-      .update(profiles)
-      .set({ connector: membership })
-      .where(eq(profiles.id, existing.id));
+    const saved = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select({ id: profiles.id, connector: profiles.connector })
+        .from(profiles)
+        .where(eq(profiles.userId, userId))
+        .limit(1)
+        .for('update');
+      if (!existing) return null;
+
+      const current = parseConnector(existing.connector);
+      const membership: ProfileConnector = {
+        status: current?.status ?? 'pending',
+        pod: pod as ProfileConnector['pod'],
+        houses: houses as ProfileConnector['houses'],
+        tier: current?.tier ?? 1,
+        bring,
+        appliedAt: current?.appliedAt ?? new Date().toISOString(),
+        decidedAt: current?.decidedAt ?? null,
+        decidedBy: current?.decidedBy ?? null,
+        offboardedAt: current?.offboardedAt ?? null,
+        offboardedBy: current?.offboardedBy ?? null,
+        offboardReason: current?.offboardReason ?? null,
+        reactivatedAt: current?.reactivatedAt ?? null,
+        reactivatedBy: current?.reactivatedBy ?? null,
+      };
+
+      await tx
+        .update(profiles)
+        .set({ connector: membership })
+        .where(eq(profiles.id, existing.id));
+      return { profileId: existing.id, membership };
+    });
+
+    if (!saved) {
+      return NextResponse.json(
+        { success: false, error: 'Your account does not have a profile yet.' },
+        { status: 404 }
+      );
+    }
 
     let sms = null;
     let smsError: string | null = null;
@@ -153,13 +157,13 @@ export async function POST(request: NextRequest) {
       sms =
         smsOptIn === true
           ? await subscribeProfileToSms({
-              profileId: existing.id,
+              profileId: saved.profileId,
               phone: smsPhone,
               source: 'connectors_join',
               ip: requestIp(request),
             })
           : smsOptIn === false
-            ? await unsubscribeProfileFromSms(existing.id)
+            ? await unsubscribeProfileFromSms(saved.profileId)
             : null;
     } catch (error) {
       smsError =
@@ -169,8 +173,20 @@ export async function POST(request: NextRequest) {
       console.error('connectors/join SMS preference failed', error);
     }
 
+    const { membership } = saved;
     return NextResponse.json(
-      { success: true, data: membership, sms, smsError },
+      {
+        success: true,
+        data: {
+          status: membership.status,
+          pod: membership.pod,
+          houses: membership.houses,
+          tier: membership.tier,
+          bring: membership.bring,
+        },
+        sms,
+        smsError,
+      },
       { status: 200 }
     );
   } catch (e) {
