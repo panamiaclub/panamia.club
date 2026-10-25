@@ -6,8 +6,13 @@ import {
   parseConnector,
   type ProfileConnector,
 } from '@/lib/connectors/membership';
-import { HOUSES, PODS, TIERS } from '@/lib/connectors/model';
-import type { HouseId, PodId, TierId } from '@/lib/connectors/model';
+import { HOUSES, PODS, TIERS, parseHouseFocus } from '@/lib/connectors/model';
+import type {
+  HouseFocus,
+  HouseId,
+  PodId,
+  TierId,
+} from '@/lib/connectors/model';
 
 /**
  * The programme's view of itself: who is in it, and how they are spread.
@@ -24,10 +29,9 @@ import type { HouseId, PodId, TierId } from '@/lib/connectors/model';
  * membership is not a connector with a gap — it is not a connector at all,
  * and HQ already routes those people back to the join form.
  *
- * So assignment is not filling in a blank. It is *moving* somebody: adding a
- * second house when they start doing that work too, or correcting one picked
- * in haste at signup. The console reflects that — it edits the whole roster
- * rather than offering a queue of the unassigned that would always be empty.
+ * Staff record the major and minor houses somebody picked, rather than
+ * handing down an assignment. Older unranked interests stay intact until
+ * both roles are confirmed; a tier-only edit need not guess their roles.
  *
  * ## Why the tallies are counted in JavaScript
  *
@@ -143,8 +147,8 @@ export interface RosterTallies {
  * data"; an explicit nought reads as "nobody is doing this", which is the fact
  * worth seeing — an empty house is the thing somebody needs to act on.
  *
- * House counts sum to more than the headcount, because a connector can be in
- * several. That is a property of the programme, not a bug in the tally.
+ * House counts include both major and minor houses, or the unranked interests
+ * on an older membership that has not confirmed its roles.
  */
 export function rosterTallies(roster: readonly RosterMember[]): RosterTallies {
   const podCounts = new Map<PodId, number>(PODS.map((p) => [p.id, 0]));
@@ -230,14 +234,20 @@ async function updateRosterMembership(
 /** Pending applications are decided in the queue, not edited into membership. */
 export async function setHousesAndTier(
   profileId: string,
-  houses: readonly HouseId[],
+  focus: HouseFocus | null,
   tier: TierId
 ): Promise<ProfileConnector | null> {
-  if (houses.length === 0) return null;
+  const confirmed = parseHouseFocus(focus);
+  if (focus !== null && !confirmed) return null;
 
   return updateRosterMembership(profileId, 'active', {
-    houses: [...new Set(houses)],
     tier,
+    ...(confirmed
+      ? {
+          ...confirmed,
+          houses: [confirmed.majorHouse, confirmed.minorHouse],
+        }
+      : {}),
   });
 }
 

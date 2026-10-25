@@ -34,7 +34,7 @@ import { getSmsSubscriptionForUser } from '@/lib/sms-subscriptions';
 export const metadata = {
   title: 'Apply to be a Connector | Pana MIA Club',
   description:
-    'Join a neighborhood pod across Miami-Dade, Broward or Palm Beach, pick the house that matches what you already like doing, and tell your pod what you can bring.',
+    'Join a neighborhood pod across Miami-Dade, Broward or Palm Beach, choose a major and minor house, and tell your pod what you can bring.',
   robots: { index: false, follow: false },
 };
 
@@ -59,6 +59,8 @@ export default async function ConnectorJoinPage() {
     <ConnectorJoinForm
       initialPod={me?.membership.pod ?? null}
       initialHouses={me?.membership.houses ?? []}
+      initialMajorHouse={me?.membership.majorHouse ?? null}
+      initialMinorHouse={me?.membership.minorHouse ?? null}
       initialBring={me?.membership.bring ?? ''}
       currentTier={me?.membership.tier ?? 1}
       initialSmsOptIn={

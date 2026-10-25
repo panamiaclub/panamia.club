@@ -3,8 +3,20 @@
 import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 
+import {
+  HouseFocusFields,
+  type HouseFocusDraft,
+} from '@/components/connectors/house-focus-fields';
 import SurfaceLink from '@/components/panaverse/SurfaceLink';
-import { HOUSES, PODS, TIERS, getTier } from '@/lib/connectors/model';
+import {
+  HOUSE_FOCUS_ERROR,
+  HOUSES,
+  PODS,
+  TIERS,
+  getHouse,
+  getTier,
+  parseHouseFocus,
+} from '@/lib/connectors/model';
 import type { HouseId, PodId, TierId } from '@/lib/connectors/model';
 import { CONNECTORS_CHROME } from '@/lib/connectors/theme';
 
@@ -22,9 +34,8 @@ import { CONNECTORS_CHROME } from '@/lib/connectors/theme';
  *
  * ## Why these three questions
  *
- * The offering page already tells readers how it works: "Pick a house, join a
- * pod, start at the first tier." This form is that sentence, in order, and
- * nothing else. Every field a reviewer might reach for — how long have you
+ * Join a pod, choose a major and a different minor house, and say what you
+ * can bring. Every field a reviewer might reach for — how long have you
  * been organizing, what are your qualifications, how many hours a week — is
  * absent on purpose, because the programme is emphatic that the tiers do not
  * rank anybody and that everyone starts at Tier 1. A form that opens by
@@ -56,6 +67,8 @@ import { CONNECTORS_CHROME } from '@/lib/connectors/theme';
 export function ConnectorJoinForm({
   initialPod = null,
   initialHouses = [],
+  initialMajorHouse = null,
+  initialMinorHouse = null,
   initialBring = '',
   initialSmsOptIn = false,
   initialSmsPhone = '',
@@ -65,6 +78,8 @@ export function ConnectorJoinForm({
 }: {
   initialPod?: PodId | null;
   initialHouses?: HouseId[];
+  initialMajorHouse?: HouseId | null;
+  initialMinorHouse?: HouseId | null;
   initialBring?: string;
   initialSmsOptIn?: boolean;
   initialSmsPhone?: string;
@@ -75,19 +90,16 @@ export function ConnectorJoinForm({
 }) {
   const router = useRouter();
   const [pod, setPod] = useState<PodId | null>(initialPod);
-  const [houses, setHouses] = useState<HouseId[]>(initialHouses);
+  const [houseFocus, setHouseFocus] = useState<HouseFocusDraft>({
+    majorHouse: initialMajorHouse,
+    minorHouse: initialMinorHouse,
+  });
   const [bring, setBring] = useState(initialBring);
   const [smsOptIn, setSmsOptIn] = useState(initialSmsOptIn);
   const [smsPhone, setSmsPhone] = useState(initialSmsPhone);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const displayTier = getTier(isEditing ? currentTier : 1);
-
-  function toggleHouse(id: HouseId) {
-    setHouses((current) =>
-      current.includes(id) ? current.filter((h) => h !== id) : [...current, id]
-    );
-  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,8 +109,9 @@ export function ConnectorJoinForm({
       setError('Pick the pod you can actually get to.');
       return;
     }
-    if (houses.length === 0) {
-      setError('Pick at least one house.');
+    const focus = parseHouseFocus(houseFocus);
+    if (!focus) {
+      setError(HOUSE_FOCUS_ERROR);
       return;
     }
     if (smsOptIn && !smsPhone.trim()) {
@@ -113,7 +126,7 @@ export function ConnectorJoinForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pod,
-          houses,
+          ...focus,
           bring,
           smsOptIn,
           smsPhone,
@@ -171,7 +184,7 @@ export function ConnectorJoinForm({
             {isPending
               ? 'Your application has not been decided on yet, so you can still change any of this.'
               : isEditing
-                ? 'Update your pod, interests or what you can bring. Your membership and existing commitments stay as they are.'
+                ? 'Update your pod, major and minor houses, or what you can bring. Your membership and existing commitments stay as they are.'
                 : 'Three questions. Which county you are in, what you already like doing, and what you can bring. Nothing here is a test — read '}
             {!isEditing && !isPending && (
               <>
@@ -226,38 +239,46 @@ export function ConnectorJoinForm({
 
           <Step
             number={2}
-            title="Choose a house"
-            lede="Pick one or more houses that feel like you. These interests help you find opportunities in HQ; you can help across houses, and choosing one does not commit you to any work."
+            title="Choose your major and minor houses"
+            lede="Your major house is your primary focus; your minor house is your secondary focus. Both are required and must be different. You can help across houses, and these choices do not commit you to any work."
           >
-            <div className="grid gap-3 sm:grid-cols-2">
+            {isEditing &&
+              initialHouses.length > 0 &&
+              !parseHouseFocus({
+                majorHouse: initialMajorHouse,
+                minorHouse: initialMinorHouse,
+              }) && (
+                <p className="border-pana-ink/20 text-pana-ink/70 mb-4 rounded-lg border-2 border-dashed p-3 text-sm">
+                  Previously selected:{' '}
+                  {initialHouses.map((id) => getHouse(id).name).join(', ')}.
+                  Those interests were not ranked. Confirm your major and minor
+                  below.
+                </p>
+              )}
+            <HouseFocusFields
+              value={houseFocus}
+              onChange={setHouseFocus}
+              disabled={saving}
+            />
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {HOUSES.map((house) => (
-                <label
+                <div
                   key={house.id}
-                  className="border-pana-ink bg-pana-cream flex cursor-pointer flex-col overflow-hidden rounded-xl border-2"
+                  className="border-pana-ink bg-pana-cream flex flex-col overflow-hidden rounded-xl border-2"
                 >
-                  <span
-                    className="flex items-center gap-2.5 px-4 py-3"
+                  <h3
+                    className="px-4 py-3 text-base leading-tight font-extrabold"
                     style={{
                       backgroundColor: `var(--color-${house.color})`,
                       color: `var(--color-${house.onColor})`,
                     }}
                   >
-                    <input
-                      type="checkbox"
-                      name="house"
-                      value={house.id}
-                      checked={houses.includes(house.id)}
-                      onChange={() => toggleHouse(house.id)}
-                      className="border-pana-ink size-4 shrink-0 rounded border-2"
-                    />
-                    <span className="text-base leading-tight font-extrabold">
-                      {house.name}
-                    </span>
-                  </span>
+                    {house.name}
+                  </h3>
                   <span className="text-pana-ink/80 px-4 py-3 text-sm leading-snug">
                     {house.calling}
                   </span>
-                </label>
+                </div>
               ))}
             </div>
           </Step>

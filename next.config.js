@@ -19,6 +19,16 @@ const nextConfig = {
     '*.pana.social',
   ],
 
+  async redirects() {
+    return [
+      {
+        source: '/newsletter-sign-up-702983',
+        destination: '/info#newsletter-signup',
+        permanent: true,
+      },
+    ];
+  },
+
   // trailingSlash is off: it 308'd inbox POSTs, and remote servers don't follow
   // redirects on POST, so federation deliveries failed silently. The auth
   // conflict it also caused is handled by advanced.skipTrailingSlashes in auth.ts.

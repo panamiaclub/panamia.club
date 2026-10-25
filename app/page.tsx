@@ -1,10 +1,20 @@
 import { headers } from 'next/headers';
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { resolveSurface } from '@/lib/panaverse/surfaces';
+import { getInfoMetadata } from '@/lib/info-site';
 import { HomePage } from '@/components/home/home-page';
+import { InfoPage } from '@/components/info/info-page';
 import { ConnectorsFrontDoor } from '@/components/connectors/front-door';
 import { FeedPage } from './s/_components/feed-page';
 import { EventsFrontDoor } from './e/_components/events-front-door';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const requestHeaders = await headers();
+  return resolveSurface(requestHeaders.get('host')).id === 'info'
+    ? getInfoMetadata()
+    : {};
+}
 
 /**
  * The root of the shared route tree, which is a different front door on each
@@ -44,6 +54,8 @@ export default async function RootPage() {
   const surface = resolveSurface(requestHeaders.get('host') ?? '');
 
   switch (surface.id) {
+    case 'info':
+      return <InfoPage />;
     case 'social':
       return <FeedPage />;
     case 'events':

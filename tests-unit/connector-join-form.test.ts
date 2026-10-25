@@ -51,18 +51,92 @@ test('new Connector applications explain review before immediate opportunity sig
   assertHighlightedTier(html, 1);
 });
 
-test('house choices remain interests rather than signup for work', () => {
+test('both distinct house roles are required without signing up for work', () => {
   const html = renderForm();
-  assert.ok(html.includes('you can help across houses'));
-  assert.ok(html.includes('choosing one does not commit you to any work'));
+  assert.ok(html.includes('You can help across houses'));
+  assert.ok(html.includes('these choices do not commit you to any work'));
+  assert.ok(html.includes('Both are required and must be different.'));
+  assert.match(
+    html,
+    /<select\b(?=[^>]*name="majorHouse")(?=[^>]*required="")[^>]*>/
+  );
+  assert.match(
+    html,
+    /<select\b(?=[^>]*name="minorHouse")(?=[^>]*required="")[^>]*>/
+  );
+  assert.ok(html.includes('Primary focus (required)'));
+  assert.ok(html.includes('Secondary focus (required)'));
   assert.doesNotMatch(
     html,
     /<(?:input|select|textarea)\b[^>]*name="(?:tier|availability|commitment|opportunity)[^"]*"/
   );
   assert.ok(html.includes('name="pod"'));
-  assert.ok(html.includes('name="house"'));
+  assert.doesNotMatch(html, /name="house"/);
   assert.ok(html.includes('name="bring"'));
   assert.ok(html.includes('Choose whether we can text you'));
+});
+
+test('editing restores explicit house roles rather than array order', () => {
+  const html = renderForm({
+    isEditing: true,
+    initialHouses: ['education', 'culturalWorkers'],
+    initialMajorHouse: 'culturalWorkers',
+    initialMinorHouse: 'education',
+  });
+  const major = html.match(
+    /<select\b[^>]*name="majorHouse"[^>]*>([\s\S]*?)<\/select>/
+  )?.[1];
+  const minor = html.match(
+    /<select\b[^>]*name="minorHouse"[^>]*>([\s\S]*?)<\/select>/
+  )?.[1];
+  assert.ok(major);
+  assert.ok(minor);
+  assert.match(
+    major,
+    /<option\b(?=[^>]*value="culturalWorkers")(?=[^>]*selected="")[^>]*>/
+  );
+  assert.match(
+    minor,
+    /<option\b(?=[^>]*value="education")(?=[^>]*selected="")[^>]*>/
+  );
+  assert.match(
+    major,
+    /<option\b(?=[^>]*value="education")(?=[^>]*disabled="")[^>]*>/
+  );
+  assert.match(
+    minor,
+    /<option\b(?=[^>]*value="culturalWorkers")(?=[^>]*disabled="")[^>]*>/
+  );
+  assert.doesNotMatch(html, /Those interests were not ranked/);
+});
+
+test('legacy selections stay visible but never become inferred house roles', () => {
+  const html = renderForm({
+    isEditing: true,
+    initialHouses: [
+      'narrativeShifters',
+      'education',
+      'culturalWorkers',
+      'relationshipBuilding',
+    ],
+  });
+  assert.match(html, /Those interests were not ranked/);
+  assert.match(
+    html,
+    /Narrative Shifters, Education, Cultural Workers, Relationship Building/
+  );
+  const selects = html.match(/<select\b[^>]*>[\s\S]*?<\/select>/g);
+  assert.equal(selects?.length, 2);
+  for (const select of selects ?? []) {
+    assert.match(
+      select,
+      /<option\b(?=[^>]*value="")(?=[^>]*selected="")[^>]*>/
+    );
+    assert.doesNotMatch(
+      select,
+      /<option\b(?=[^>]*value="[^"]+")(?=[^>]*selected="")[^>]*>/
+    );
+  }
 });
 
 for (const tier of TIERS) {

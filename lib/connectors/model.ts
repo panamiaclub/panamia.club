@@ -27,6 +27,11 @@ export type HouseId =
   | 'narrativeShifters'
   | 'culturalWorkers';
 
+export interface HouseFocus {
+  majorHouse: HouseId;
+  minorHouse: HouseId;
+}
+
 export type TierId = 1 | 2 | 3;
 
 export type PodId = 'miami' | 'broward' | 'palmBeach';
@@ -187,6 +192,32 @@ export function getHouse(id: HouseId): House {
   const house = HOUSES.find((h) => h.id === id);
   if (!house) throw new Error(`Unknown connector house: ${id}`);
   return house;
+}
+
+export function isHouseId(value: unknown): value is HouseId {
+  return (
+    typeof value === 'string' && HOUSES.some((house) => house.id === value)
+  );
+}
+
+export const HOUSE_FOCUS_ERROR =
+  'Choose a major house and a different minor house.';
+
+export function parseHouseFocus(value: unknown): HouseFocus | null {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    Array.isArray(value) ||
+    !('majorHouse' in value) ||
+    !('minorHouse' in value) ||
+    !isHouseId(value.majorHouse) ||
+    !isHouseId(value.minorHouse) ||
+    value.majorHouse === value.minorHouse
+  ) {
+    return null;
+  }
+
+  return { majorHouse: value.majorHouse, minorHouse: value.minorHouse };
 }
 
 export interface Tier {

@@ -90,6 +90,62 @@ describe('parseConnector — keeping what can be rendered', () => {
   });
 });
 
+describe('parseConnector — explicit major and minor houses', () => {
+  test('explicit roles are authoritative and supply the compatibility houses', () => {
+    for (const houses of [
+      undefined,
+      [],
+      ['relationshipBuilding', 'education'],
+    ]) {
+      const parsed = parseConnector({
+        ...VALID,
+        houses,
+        majorHouse: 'culturalWorkers',
+        minorHouse: 'education',
+      });
+      assert.equal(parsed?.majorHouse, 'culturalWorkers');
+      assert.equal(parsed?.minorHouse, 'education');
+      assert.deepEqual(parsed?.houses, ['culturalWorkers', 'education']);
+      assert.equal(parsed?.status, 'active');
+    }
+  });
+
+  test('one through four unranked houses preserve access without guessing roles', () => {
+    const houses = [
+      'narrativeShifters',
+      'education',
+      'culturalWorkers',
+      'relationshipBuilding',
+    ];
+    for (let count = 1; count <= houses.length; count++) {
+      const interests = houses.slice(0, count);
+      const parsed = parseConnector({ ...VALID, houses: interests, tier: 3 });
+      assert.equal(parsed?.status, 'active');
+      assert.equal(parsed?.tier, 3);
+      assert.deepEqual(parsed?.houses, interests);
+      assert.equal(parsed?.majorHouse, null);
+      assert.equal(parsed?.minorHouse, null);
+    }
+  });
+
+  test('incomplete, unknown, or duplicate roles do not strand an older membership', () => {
+    for (const focus of [
+      { majorHouse: 'education' },
+      { minorHouse: 'culturalWorkers' },
+      { majorHouse: 'education', minorHouse: 'education' },
+      { majorHouse: 'retiredHouse', minorHouse: 'education' },
+      { majorHouse: 'education', minorHouse: null },
+      { majorHouse: 1, minorHouse: ['education'] },
+    ]) {
+      const parsed = parseConnector({ ...VALID, ...focus });
+      assert.equal(parsed?.status, 'active');
+      assert.deepEqual(parsed?.houses, VALID.houses);
+      assert.equal(parsed?.majorHouse, null);
+      assert.equal(parsed?.minorHouse, null);
+    }
+  });
+});
+
 describe('parseConnector — the legacy commitments key', () => {
   /* drizzle/0056 moved commitments into their own table and deliberately left
    * the old jsonb key in place: the copy is additive so a code rollback does

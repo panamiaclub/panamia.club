@@ -21,7 +21,11 @@ import {
   ActionLibrary,
   TierLadder,
 } from '@/components/connectors/action-library';
-import { EventCard, HousePill } from '@/components/connectors/dashboard-parts';
+import {
+  ConnectorHousePills,
+  EventCard,
+  HousePill,
+} from '@/components/connectors/dashboard-parts';
 import {
   OpportunityFacts,
   OpportunityState,
@@ -51,6 +55,8 @@ export function HqDashboard({
   commitments,
   opportunities,
   houses,
+  majorHouse,
+  minorHouse,
   pod,
   tier,
   bring,
@@ -59,6 +65,8 @@ export function HqDashboard({
   commitments: readonly ConnectorCommitment[];
   opportunities: readonly ConnectorOpportunity[];
   houses: readonly HouseId[];
+  majorHouse: HouseId | null;
+  minorHouse: HouseId | null;
   pod: PodId;
   tier: TierId;
   bring: string;
@@ -414,13 +422,15 @@ export function HqDashboard({
               {getPod(pod).name} pod
             </h2>
             <p className="text-pana-ink/65 mt-2 text-xs leading-relaxed">
-              Your houses describe the work you love. They don&apos;t fence you
-              in.
+              Your houses describe your focus, not a limit on where you can
+              help.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {houses.map((house) => (
-                <HousePill key={house} houseId={house} />
-              ))}
+              <ConnectorHousePills
+                houses={houses}
+                majorHouse={majorHouse}
+                minorHouse={minorHouse}
+              />
             </div>
             <button
               type="button"

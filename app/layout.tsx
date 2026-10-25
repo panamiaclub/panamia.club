@@ -188,7 +188,7 @@ export default async function RootLayout({
    * land. */
   const chromeSurface = resolveChromeSurface(surface, pathname);
 
-  const standalone = wearsOwnChrome(pathname);
+  const standalone = wearsOwnChrome(pathname, chromeSurface);
   const wearsMainChrome = chromeSurface.id === 'www' && !standalone;
 
   /* Pages this surface is borrowing from another one get a slim bar and a slim

@@ -1,0 +1,76 @@
+{
+  "skipLink": "Saltar al contenido",
+  "homeLabel": "Inicio de información de Pana MIA Club",
+  "nav": {
+    "label": "Navegación de información",
+    "about": "Sobre Pana",
+    "changeLanguage": "Leer en inglés"
+  },
+  "hero": {
+    "eyebrow": "Con raíces en el sur de Florida",
+    "title": "El futuro es",
+    "titleAccent": "local.",
+    "description": "Conoce a las personas creativas, los pequeños negocios y los vecinos que hacen del sur de Florida nuestro hogar. Pana MIA nos une para construir una economía local más conectada y regenerativa.",
+    "explore": "Explora el directorio",
+    "newsletter": "Mantente al día",
+    "region": "Miami-Dade, Broward y Palm Beach",
+    "imageAlt": "Panas compartiendo comida y conversación en una cena comunitaria",
+    "caption": "Pana: un amigo, un vecino, alguien con quien puedes contar."
+  },
+  "paths": {
+    "eyebrow": "Encuentra a tu gente",
+    "title": "Tu próxima conexión local empieza aquí.",
+    "description": "Descubre a alguien cerca de ti, participa en tu comunidad o comparte lo que haces. Elige por dónde empezar.",
+    "directory": {
+      "title": "Busca en el directorio local",
+      "description": "Encuentra personas creativas, negocios independientes y organizaciones del sur de Florida."
+    },
+    "social": {
+      "title": "Únete a Pana Social",
+      "description": "Comparte lo que estás creando y conecta con otros Panas en nuestra red comunitaria."
+    },
+    "events": {
+      "title": "Encuentra eventos comunitarios",
+      "description": "Explora encuentros locales, mercados, talleres y espectáculos en el calendario."
+    },
+    "connectors": {
+      "title": "Sé un Conector Comunitario",
+      "description": "Conoce el programa y ayuda a convertir las relaciones locales en acción colectiva."
+    },
+    "listing": {
+      "title": "Añade tu trabajo al directorio",
+      "description": "Presenta tu negocio, proyecto creativo u organización en el directorio."
+    },
+    "support": {
+      "title": "Apoya el movimiento",
+      "description": "Ayuda a nuestra organización sin fines de lucro a crear herramientas y programas para un futuro más local."
+    }
+  },
+  "newsletter": {
+    "eyebrow": "El Pana MIA Post",
+    "title": "Un poco más de lo local en tu correo.",
+    "description": "Suscríbete para recibir noticias de la comunidad, historias locales y novedades de Pana MIA.",
+    "aside": "No necesitas una cuenta ni un número de teléfono.",
+    "formLabel": "Suscripción al boletín Pana MIA Post",
+    "name": "Nombre (opcional)",
+    "email": "Correo electrónico",
+    "consent": "Quiero recibir el Pana MIA Post por correo electrónico.",
+    "privacyNote": "Consulta cómo manejamos tu información en nuestra",
+    "verification": "Completa la verificación de seguridad para suscribirte.",
+    "unavailable": "No se pudo cargar la verificación de seguridad. Actualiza la página o contáctanos para recibir ayuda.",
+    "submit": "Quiero suscribirme",
+    "submitting": "Guardando tu suscripción...",
+    "success": "¡Gracias, Pana! Hemos recibido tu suscripción al boletín.",
+    "duplicate": "Este correo ya está en la lista del boletín.",
+    "failed": "No pudimos guardar tu suscripción. Inténtalo de nuevo."
+  },
+  "footer": {
+    "mission": "Pana MIA Club es una organización sin fines de lucro 501(c)(3) que apoya a las personas creativas, los pequeños negocios y las comunidades del sur de Florida. El futuro es local.",
+    "socialLabel": "Sigue a Pana MIA",
+    "legalLabel": "Contacto y políticas",
+    "contact": "Contáctanos",
+    "privacy": "Política de Privacidad",
+    "terms": "Términos de Servicio",
+    "copyright": "Copyright {{year}} Pana MIA Club. Hecho en el sur de Florida."
+  }
+}

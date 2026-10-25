@@ -6,24 +6,19 @@ import {
   reactivateConnector,
   setHousesAndTier,
 } from '@/lib/connectors/roster';
-import { HOUSES, TIERS } from '@/lib/connectors/model';
-import type { HouseId, TierId } from '@/lib/connectors/model';
+import {
+  HOUSE_FOCUS_ERROR,
+  TIERS,
+  parseHouseFocus,
+} from '@/lib/connectors/model';
+import type { TierId } from '@/lib/connectors/model';
 
 /**
- * Move a connector between houses, or change their tier.
- *
- * The mock called this "Assign a house" and listed people who had joined
- * without one. Nobody is ever in that state: `parseConnector` refuses a
- * membership with no recognised house, so somebody with none is not a
- * connector with a gap — they are not a connector at all. What staff actually
- * need is to *change* an existing answer, which is what this does.
- *
- * Houses are a set, not a single value, because the programme's own structure
- * says so: a pana who runs a reading group and books the venue for it is in
- * two houses and picking one would be a lie about half their work.
+ * Record an active connector's major/minor houses or change their tier.
+ * House updates replace both roles together. Omitting both leaves existing
+ * choices intact, so a tier-only edit never guesses legacy house roles.
  */
 
-const HOUSE_IDS = new Set<string>(HOUSES.map((h) => h.id));
 const TIER_IDS = new Set<number>(TIERS.map((t) => t.id));
 
 export async function POST(request: NextRequest) {
@@ -114,22 +109,16 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const houses = Array.isArray(payload.houses)
-      ? payload.houses.filter(
-          (h): h is HouseId => typeof h === 'string' && HOUSE_IDS.has(h)
-        )
-      : [];
-
-    /* An empty set is rejected rather than stored. A membership with no house
-     * does not parse, so saving one here would not clear somebody's houses —
-     * it would delete their membership out from under them, and they would
-     * open HQ to the join form with no idea why. */
-    if (houses.length === 0) {
+    const changesHouses =
+      Object.hasOwn(payload, 'majorHouse') ||
+      Object.hasOwn(payload, 'minorHouse') ||
+      Object.hasOwn(payload, 'houses');
+    const focus = parseHouseFocus(payload);
+    if (changesHouses && !focus) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            'A connector has to be in at least one house. Pick the one that fits best rather than clearing them all.',
+          error: HOUSE_FOCUS_ERROR,
         },
         { status: 400 }
       );
@@ -143,7 +132,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const updated = await setHousesAndTier(profileId, houses, tier as TierId);
+    const updated = await setHousesAndTier(profileId, focus, tier as TierId);
 
     /* `setHousesAndTier` refuses anything that is not already an accepted
      * member, so this also covers "that is a pending applicant" — which is
