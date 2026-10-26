@@ -9,6 +9,7 @@ import {
   notBusinessListing,
 } from '@/lib/server/profile-owners';
 import { describeDbError, isUniqueViolation } from '@/lib/server/db-error';
+import { ensureActorForProfile } from '@/lib/federation/wrappers/actor';
 
 // Rate limit: once per 90 days (~3 months)
 const SCREENNAME_COOLDOWN_DAYS = 90;
@@ -71,6 +72,9 @@ export async function POST(request: NextRequest) {
     currentUser?.screenname &&
     currentUser.screenname.toLowerCase() === newScreenname.toLowerCase()
   ) {
+    if (currentUser.profile && !currentUser.profile.socialActor) {
+      await ensureActorForProfile(currentUser.profile.id);
+    }
     return NextResponse.json({
       success: true,
       data: { screenname: currentUser.screenname, timelineReset: false },
@@ -252,13 +256,14 @@ export async function POST(request: NextRequest) {
   // The name is only written when supplied, because profiles.name is NOT NULL
   // and must never be blanked. notBusinessListing keeps a business that was
   // welded to profiles.userId from being renamed out from under its owner.
-  await db
+  const [savedProfile] = await db
     .update(profiles)
     .set({
       screenname: newScreenname,
       ...(displayName?.trim() ? { name: displayName.trim() } : {}),
     })
-    .where(and(eq(profiles.userId, session.user.id), notBusinessListing));
+    .where(and(eq(profiles.userId, session.user.id), notBusinessListing))
+    .returning({ id: profiles.id, socialEligible: profiles.socialEligible });
 
   // Sync screenname to SocialActor if one exists
   const socialActorId = currentUser?.profile?.socialActor?.id;
@@ -282,6 +287,10 @@ export async function POST(request: NextRequest) {
         followingUrl: getFollowingUrl(newScreenname),
       })
       .where(eq(socialActors.id, socialActorId));
+  }
+
+  if (savedProfile?.socialEligible && !socialActorId) {
+    await ensureActorForProfile(savedProfile.id);
   }
 
   return NextResponse.json({

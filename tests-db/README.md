@@ -29,6 +29,14 @@ suggestion tiers include those members without admitting remote accounts.
 Case-insensitive handles, follow/unfollow counts, eligibility, block/mute
 filtering, and signing-key projection are covered without rewriting identities.
 
+`social-activation.test.ts` covers automatic setup through the current-actor,
+handle-assignment, active-profile, and follow paths. Real unique constraints
+exercise concurrent creation and conflicting identities. The bounded admin
+repair covers existing members without their signing in, while excluding
+unclaimed listings, missing handles, and ineligible profiles. Ownership,
+legacy identities, public-key projection, retry behavior, and the removal of
+the separate activation prompt are also covered.
+
 The suite renders the production addressing predicate with `PgDialect`, then
 executes the actual actor-post, permalink, redirect lookup, reply, public-feed,
 and mention queries through Drizzle against PGlite. It also calls the real

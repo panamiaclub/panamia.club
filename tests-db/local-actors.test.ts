@@ -338,7 +338,7 @@ test('ineligible members are not granted follow access by the domain fix', async
   assert.deepEqual(await db.select().from(schema.socialFollows), []);
 });
 
-test('following still requires a signed-in member with social features enabled', async () => {
+test('following rejects signed-out sessions and profiles without an available actor', async () => {
   signedIn = false;
   assert.equal((await followRoute.POST(request('POST'), params())).status, 401);
   signedIn = true;
@@ -349,7 +349,7 @@ test('following still requires a signed-in member with social features enabled',
   assert.equal(response.status, 403);
   assert.equal(
     (await response.json()).error,
-    'You must enable social features first'
+    'Social features are unavailable for this profile'
   );
   assert.deepEqual(await db.select().from(schema.socialFollows), []);
 });

@@ -2,17 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useMyActor, useEnableSocial } from '@/lib/query/social';
-import { toast } from '@/hooks/use-toast';
-import { useTranslation } from 'react-i18next';
-import {
-  Users,
-  Loader2,
-  AlertCircle,
-  CheckCircle,
-  Info,
-  RefreshCw,
-} from 'lucide-react';
+import { useMyActor } from '@/lib/query/social';
+import { Users, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 
 interface SocialEligibilityGateProps {
@@ -23,8 +14,6 @@ export function SocialEligibilityGate({
   children,
 }: SocialEligibilityGateProps) {
   const { data, isLoading, isError, error, isFetching, refetch } = useMyActor();
-  const enableSocial = useEnableSocial();
-  const { t } = useTranslation('toast');
 
   // Loading state
   if (isLoading) {
@@ -38,7 +27,7 @@ export function SocialEligibilityGate({
   // The eligibility check itself failed. A backend/network fault is NOT the
   // same as "your account can't use social features", so offer a retry rather
   // than the confident-but-wrong "Social Features Unavailable" dead end below.
-  if (isError) {
+  if (isError || (data?.eligible && data.screenname && !data.actor)) {
     return (
       <Card className="mx-auto max-w-md">
         <CardHeader className="text-center">
@@ -80,80 +69,23 @@ export function SocialEligibilityGate({
     return <>{children}</>;
   }
 
-  // User is eligible but hasn't enabled social yet
+  // Eligible profiles with a handle are provisioned by the actor endpoint.
   if (data?.eligible) {
-    const handleEnable = async () => {
-      try {
-        await enableSocial.mutateAsync();
-        toast({
-          title: t('socialEnabled'),
-          description: t('socialEnabledDesc'),
-        });
-      } catch {
-        toast({
-          title: t('error'),
-          description: t('socialEnableFailed'),
-          variant: 'destructive',
-        });
-      }
-    };
-
-    const screenname = data.screenname;
-
     return (
       <Card className="mx-auto max-w-md">
         <CardHeader className="text-center">
           <div className="bg-primary/10 mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full">
             <Users className="text-primary h-6 w-6" />
           </div>
-          <CardTitle>Enable Social Features</CardTitle>
+          <CardTitle>Choose Your Handle</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground text-center">
-            Post updates, follow others, and join the conversation.
+            Social features are available automatically. Choose a handle on your
+            profile to post updates and follow other members.
           </p>
-
-          {screenname && (
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <p className="text-muted-foreground mb-1 text-sm">
-                Your social handle will be:
-              </p>
-              <p className="font-mono font-medium">@{screenname}</p>
-            </div>
-          )}
-
-          <div className="bg-muted/30 flex gap-3 rounded-lg border p-3">
-            <Info className="text-muted-foreground mt-0.5 h-4 w-4 flex-shrink-0" />
-            <p className="text-muted-foreground text-sm">
-              Your social handle is based on your profile screenname and{' '}
-              <strong className="text-foreground">cannot be changed</strong>{' '}
-              once enabled. To use a different handle,{' '}
-              <Link
-                href="/account/profile/edit"
-                className="hover:text-foreground underline"
-              >
-                update your screenname
-              </Link>{' '}
-              before enabling social features.
-            </p>
-          </div>
-
-          <Button
-            onClick={handleEnable}
-            disabled={enableSocial.isPending}
-            className="w-full"
-          >
-            {enableSocial.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Enabling...
-              </>
-            ) : (
-              <>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Enable Social Features
-              </>
-            )}
+          <Button asChild className="w-full">
+            <Link href="/account/profile/edit">Choose Your Handle</Link>
           </Button>
         </CardContent>
       </Card>

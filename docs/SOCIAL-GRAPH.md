@@ -82,6 +82,28 @@ appear in both suggestion tiers. Handle lookups are case-insensitive, matching
 public profile URLs. These reads do not rewrite stored domains or ActivityPub
 URIs; remote actors without a local profile still require remote acceptance.
 
+### Eligible members are followable automatically
+
+An eligible member with a handle gets a social actor when choosing their handle,
+without a separate "Enable Social" step. The existing sign-in repair remains
+best-effort; authenticated social requests also
+repair a missing actor for the authorized active profile, preserving "act as
+business" ownership checks. Missing handles still require profile setup, and
+`socialEligible = false` still prevents automatic provisioning.
+
+Existing members who do not return are repaired with the admin-only
+`POST /api/admin/social/actors/backfill` endpoint. Each request prepares at most
+10 account-linked profiles and returns `{ success: true, data: { processed,
+remaining } }`. Repeat until `remaining` is zero. Unclaimed directory listings,
+profiles without handles, and ineligible profiles are excluded. Creation uses
+the running application's configured federation domain, not the UI host.
+Conflicts are reported as HTTP 409; earlier successful repairs are safe to retry.
+
+Repeated or concurrent setup reuses the actor linked to the same profile.
+It never adopts another profile's actor or changes an existing actor's keys,
+domain, or URI. Making an account followable does not create any follows or
+mutual Pana relationships, or expose private account names in member search.
+
 ### A Pana is a mutual follow
 
 `countMutualFollows` and `listMutualFollows` (`follow.ts` L318, L336) self-join `social_follows`
