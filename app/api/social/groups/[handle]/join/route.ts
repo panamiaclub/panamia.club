@@ -30,7 +30,10 @@ async function resolve(userId: string, handle: string) {
   if (!profile?.socialActor) {
     return {
       error: NextResponse.json(
-        { success: false, error: 'You must enable social features first' },
+        {
+          success: false,
+          error: 'Social features are unavailable for this profile',
+        },
         { status: 403 }
       ),
     };

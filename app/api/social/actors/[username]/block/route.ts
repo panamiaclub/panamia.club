@@ -80,7 +80,10 @@ async function resolve(
     return {
       ok: false,
       response: NextResponse.json(
-        { success: false, error: 'You must enable social features first' },
+        {
+          success: false,
+          error: 'Social features are unavailable for this profile',
+        },
         { status: 403 }
       ),
     };

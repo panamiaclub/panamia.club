@@ -114,7 +114,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const profile = await getActiveProfileWithActor(session.user.id);
   if (!profile?.socialActor) {
     return NextResponse.json(
-      { success: false, error: 'You must enable social features first' },
+      {
+        success: false,
+        error: 'Social features are unavailable for this profile',
+      },
       { status: 403 }
     );
   }

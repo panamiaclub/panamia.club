@@ -15,7 +15,7 @@ export type GateResult = {
 };
 
 /**
- * Check if a user can create a social actor (enable social features).
+ * Check if a profile is eligible for an automatic social identity.
  *
  * Requirements:
  * - Profile must exist

@@ -1,18 +1,15 @@
 /**
- * GET /api/social/actors/me - Get current user's actor
- * POST /api/social/actors/me - Enable social features (create actor)
+ * GET /api/social/actors/me - Prepare and get the current user's actor
+ * POST /api/social/actors/me - Idempotent setup for older clients
  */
 
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db } from '@/lib/db';
-import { profiles } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
 import { createActorForProfile, canCreateSocialActor } from '@/lib/federation';
 import { toPublicActor } from '@/lib/schema';
 import {
   getActiveProfile,
-  getActiveProfileId,
+  getActiveProfileWithActor,
 } from '@/lib/server/active-profile';
 
 export async function GET() {
@@ -24,14 +21,7 @@ export async function GET() {
     );
   }
 
-  // The profile being acted as, with its actor and linked user (for screenname)
-  const activeId = await getActiveProfileId(session.user.id);
-  const profile = activeId
-    ? await db.query.profiles.findFirst({
-        where: eq(profiles.id, activeId),
-        with: { socialActor: true, user: true },
-      })
-    : null;
+  const profile = await getActiveProfileWithActor(session.user.id);
 
   if (!profile) {
     return NextResponse.json({
@@ -52,9 +42,8 @@ export async function GET() {
       actor: profile.socialActor ? toPublicActor(profile.socialActor) : null,
       eligible: gateResult.allowed,
       reason: gateResult.reason,
-      // Include screenname so UI can show what the social username will be.
       // Profile-first: a business listing owns its handle and has no user.
-      screenname: profile.screenname ?? profile.user?.screenname,
+      screenname: (profile.screenname ?? profile.user?.screenname)?.trim(),
       profileId: profile.id,
       profileName: profile.name,
     },
@@ -70,8 +59,7 @@ export async function POST() {
     );
   }
 
-  // Enable social for whoever they're acting as, so a business listing can be
-  // given its own actor by an owner who already has one personally.
+  // Retain the same ownership boundary for clients using explicit setup.
   const profile = await getActiveProfile(session.user.id);
 
   if (!profile) {

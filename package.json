@@ -16,7 +16,7 @@
     "test:relay": "node --import tsx --test tests-relay/*.test.ts",
     "test:unit": "node --import tsx --test tests-unit/*.test.ts",
     "test:db": "node --experimental-test-module-mocks --import tsx --test --test-concurrency=1 tests-db/*.test.ts",
-    "test:db:visibility": "node --experimental-test-module-mocks --import tsx --test tests-db/visibility.test.ts tests-db/feed-page.test.ts tests-db/post-composer.test.ts tests-db/local-actors.test.ts",
+    "test:db:visibility": "node --experimental-test-module-mocks --import tsx --test tests-db/visibility.test.ts tests-db/feed-page.test.ts tests-db/post-composer.test.ts tests-db/local-actors.test.ts tests-db/social-activation.test.ts",
     "prepare": "husky && (git remote get-url activities-upstream 2>/dev/null || git remote add activities-upstream https://github.com/llun/activities.next.git)",
     "subtree:pull": "git subtree pull --prefix=external/activities.next activities-upstream main --squash",
     "env:check": "npx tsx scripts/env-check.ts check",
