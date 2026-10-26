@@ -103,6 +103,7 @@ See [FEATURES.md](./docs/FEATURES.md) for a complete feature overview.
 | Document                                       | Description                             |
 | ---------------------------------------------- | --------------------------------------- |
 | [Quick Start](./docs/QUICK-START.md)           | Developer setup guide                   |
+| [Android](./docs/ANDROID.md)                   | Phone testing and Google Play releases  |
 | [Features](./docs/FEATURES.md)                 | Platform feature overview               |
 | [Database Design](./docs/DATABASE-DESIGN.md)   | Schema, migrations, connection setup    |
 | [Articles Roadmap](./docs/ARTICLE-ROADMAP.md)  | Community articles implementation plan  |

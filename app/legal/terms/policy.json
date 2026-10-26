@@ -3,9 +3,9 @@
   "@type": "TermsOfService",
   "name": "Pana MIA Club Terms of Service",
   "version": "0.1",
-  "status": "draft",
-  "effectiveDate": null,
-  "url": "https://pana.social/legal/terms",
+  "status": "effective",
+  "effectiveDate": "2026-10-26",
+  "url": "https://panamia.club/legal/terms",
   "jurisdiction": "US-FL",
   "venue": "Broward County, Florida",
   "disputeResolution": {
@@ -42,57 +42,57 @@
   "modules": [
     {
       "name": "profiles",
-      "url": "https://pana.social/legal/terms/modules/profiles",
+      "url": "https://panamia.club/legal/terms/modules/profiles",
       "version": "0.1",
-      "status": "draft"
+      "status": "effective"
     },
     {
       "name": "articles",
-      "url": "https://pana.social/legal/terms/modules/articles",
+      "url": "https://panamia.club/legal/terms/modules/articles",
       "version": "0.1",
-      "status": "draft"
+      "status": "effective"
     },
     {
       "name": "social",
-      "url": "https://pana.social/legal/terms/modules/social",
+      "url": "https://panamia.club/legal/terms/modules/social",
       "version": "0.1",
-      "status": "draft"
+      "status": "effective"
     },
     {
       "name": "mentoring",
-      "url": "https://pana.social/legal/terms/modules/mentoring",
+      "url": "https://panamia.club/legal/terms/modules/mentoring",
       "version": "0.1",
-      "status": "draft"
+      "status": "effective"
     },
     {
       "name": "events",
-      "url": "https://pana.social/legal/terms/modules/events",
+      "url": "https://panamia.club/legal/terms/modules/events",
       "version": "0.1",
-      "status": "draft"
+      "status": "effective"
     },
     {
       "name": "uploads",
-      "url": "https://pana.social/legal/terms/modules/uploads",
+      "url": "https://panamia.club/legal/terms/modules/uploads",
       "version": "0.1",
-      "status": "draft"
+      "status": "effective"
     },
     {
       "name": "payments",
-      "url": "https://pana.social/legal/terms/modules/payments",
+      "url": "https://panamia.club/legal/terms/modules/payments",
       "version": "0.1",
-      "status": "draft"
+      "status": "effective"
     },
     {
       "name": "resilience",
-      "url": "https://pana.social/legal/terms/modules/resilience",
+      "url": "https://panamia.club/legal/terms/modules/resilience",
       "version": "0.1",
-      "status": "draft"
+      "status": "effective"
     },
     {
       "name": "community",
-      "url": "https://pana.social/legal/terms/modules/community",
+      "url": "https://panamia.club/legal/terms/modules/community",
       "version": "0.1",
-      "status": "draft"
+      "status": "effective"
     }
   ]
 }

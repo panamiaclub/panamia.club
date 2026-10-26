@@ -6,7 +6,7 @@ import { LegalJsonLd } from '@/components/legal/JsonLd';
 // Live web origin for this app — not a stale federation value to "correct".
 // Never find-and-replace `pana.social`; most occurrences are federated
 // identity and repointing those is permanent. See docs/DOMAINS.md.
-const SITE = 'https://pana.social';
+const SITE = 'https://panamia.club';
 
 export const metadata: Metadata = {
   title: 'Terms of Service - Pana MIA Club',
@@ -42,7 +42,9 @@ export default function TermsPage() {
       />
       <header className="mb-10 border-b pb-6">
         <h1 className="text-4xl font-bold">Terms of Service</h1>
-        <p className="text-muted-foreground mt-2">Version 0.1 — Draft</p>
+        <p className="text-muted-foreground mt-2">
+          Version 0.1 — Effective October 26, 2026
+        </p>
         <p className="text-muted-foreground mt-1 text-sm">
           The English-language version of these terms shall take precedence over
           any translations.

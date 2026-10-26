@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { useIsNativeApp } from '@/lib/mobile/use-native-app';
 import type { ShopItemKind, ShopPrice } from '@/lib/shop/types';
 
 const STORAGE_KEY = 'panamia-shop-cart-v1';
@@ -51,13 +52,18 @@ function readStoredCart(): CartLine[] {
 }
 
 export function ShopCartProvider({ children }: { children: ReactNode }) {
+  const isNativeApp = useIsNativeApp();
   const [lines, setLines] = useState<CartLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setLines(readStoredCart());
+    setLines(
+      readStoredCart().filter(
+        (line) => !isNativeApp || line.kind !== 'subscription'
+      )
+    );
     setHydrated(true);
-  }, []);
+  }, [isNativeApp]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -67,6 +73,7 @@ export function ShopCartProvider({ children }: { children: ReactNode }) {
   const kind = lines[0]?.kind ?? null;
   const add = useCallback(
     (price: ShopPrice, quantity = 1) => {
+      if (isNativeApp && price.kind === 'subscription') return false;
       if (kind && kind !== price.kind) return false;
       setLines((current) => {
         const existing = current.find((line) => line.id === price.id);
@@ -94,7 +101,7 @@ export function ShopCartProvider({ children }: { children: ReactNode }) {
       });
       return true;
     },
-    [kind]
+    [isNativeApp, kind]
   );
   const update = useCallback((priceId: string, quantity: number) => {
     if (quantity < 1) {
