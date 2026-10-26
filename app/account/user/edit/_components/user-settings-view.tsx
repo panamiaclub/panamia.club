@@ -5,7 +5,6 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import {
   AlertCircle,
-  ArrowUpRight,
   BadgeCheck,
   Check,
   Fingerprint,
@@ -48,6 +47,7 @@ import { SETTINGS_SECTIONS, SettingsNav, type SectionId } from './settings-nav';
 import { AvatarEditor } from './avatar-editor';
 import { SmsSubscriptionCard } from './sms-subscription-card';
 import { ReferralCard } from './referral-card';
+import { PublicProfileSettings } from './public-profile-settings';
 
 // Channels the app manages, spelled as GHL requires. Mirrors GHL_DND_CHANNELS
 // in lib/ghl.ts; kept local so this client component does not pull in the
@@ -892,25 +892,12 @@ export function UserSettingsView({
                     </div>
                   )}
                 </SettingsRow>
-
-                {/* The rest of the profile, named so members stop looking for
-                    it here. Bio and links are the next two things people
-                    arrive on this page hoping to change. */}
-                <SettingsRow
-                  label="Your public profile"
-                  note="Your bio, links, categories, and the location shown on your listing are part of your profile, and are edited together in one place."
-                  control={
-                    <Link
-                      href="/account/profile/edit"
-                      className="settings-btn"
-                      data-variant="quiet"
-                    >
-                      Edit profile
-                      <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-                    </Link>
-                  }
-                />
               </SettingsCard>
+            </Section>
+
+            {/* ---- Public profile --------------------------------------- */}
+            <Section id="profile">
+              <PublicProfileSettings />
             </Section>
 
             {/* ---- Sign-in ----------------------------------------------- */}

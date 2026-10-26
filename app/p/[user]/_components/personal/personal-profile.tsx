@@ -314,7 +314,7 @@ function renderActions({
         variant="outline"
         className="border-pana-ink/20 flex-1 rounded-full font-extrabold"
       >
-        <Link href="/account/profile/edit">
+        <Link href="/account/user/edit#profile">
           <Pencil className="h-4 w-4" aria-hidden="true" />
           Edit profile
         </Link>
