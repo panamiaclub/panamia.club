@@ -4,6 +4,7 @@ import { frontDoorPath, type PanaverseSurface } from '@/lib/panaverse/surfaces';
 import { SURFACE_MARK, SURFACE_TONE } from '@/lib/panaverse/branding';
 import { SurfaceIdentity } from '@/components/panaverse/SurfaceIdentity';
 import { SurfaceSearch } from '@/components/panaverse/SurfaceSearch';
+import { SocialSearch } from '@/components/panaverse/SocialSearch';
 import { NotificationsMenu } from '@/components/account/notifications-menu';
 import { MessagesLink } from '@/components/account/messages-link';
 
@@ -58,7 +59,7 @@ export function SurfaceMemberHeader({
     >
       <div
         className="panaverse-masthead-inner container mx-auto max-w-6xl px-4"
-        data-layout="search"
+        data-layout={surface.id === 'social' ? 'social-search' : 'search'}
       >
         <Link
           href={frontDoorPath(surface, host)}
@@ -78,9 +79,13 @@ export function SurfaceMemberHeader({
           />
         </Link>
 
-        <SurfaceSearch
-          initialScope={surface.id === 'events' ? 'event' : 'group'}
-        />
+        {surface.id === 'social' ? (
+          <SocialSearch />
+        ) : (
+          <SurfaceSearch
+            initialScope={surface.id === 'events' ? 'event' : 'group'}
+          />
+        )}
 
         <div className="panaverse-masthead-right">
           {/* Both gate themselves on the session — this header renders on the

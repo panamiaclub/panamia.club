@@ -140,8 +140,7 @@ export const SURFACES: readonly PanaverseSurface[] = [
     // `/search` is deliberately absent: it is now a redirect into whichever
     // scope was asked for, so it never renders social chrome and claiming it
     // here would only be stale documentation. Searching from this surface
-    // lands on /groups?q=<term> -- see components/panaverse/SurfaceSearch.tsx
-    // for why that field commits to groups rather than offering a scope menu.
+    // uses the category selected in components/panaverse/SocialSearch.tsx.
     paths: ['/s', '/p', '/g', '/groups', '/timeline', '/inbox'],
   },
   {

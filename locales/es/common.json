@@ -230,6 +230,40 @@
     },
     "resultsAvailable_one": "{{count}} sugerencia disponible",
     "resultsAvailable_other": "{{count}} sugerencias disponibles",
+    "suggestionsLoading": "Buscando sugerencias...",
+    "suggestionsUnavailable": "Las sugerencias no están disponibles. Puedes usar Buscar de todas formas.",
+    "social": {
+      "label": "Buscar en la comunidad",
+      "trigger": "Abrir búsqueda de la comunidad",
+      "close": "Cerrar búsqueda de la comunidad",
+      "clear": "Borrar búsqueda",
+      "submit": "Buscar",
+      "title": "Encuentra a tu gente.",
+      "description": "Panas, lugares y buenos planes.",
+      "kicker": "Un poco más cerca de tu comunidad",
+      "categories": "Categorías de búsqueda",
+      "suggestions": "Sugerencias de búsqueda de la comunidad",
+      "signIn": "Inicia sesión para encontrar miembros",
+      "locked": "{{category}} (requiere iniciar sesión)",
+      "category": {
+        "pana": "Panas",
+        "group": "Grupos",
+        "event": "Eventos",
+        "directory": "Directorio"
+      },
+      "placeholder": {
+        "pana": "Encuentra un Pana...",
+        "group": "Encuentra un grupo...",
+        "event": "Encuentra un evento...",
+        "directory": "Encuentra un lugar local..."
+      },
+      "hint": {
+        "pana": "Busca miembros por nombre, oficio o @usuario.",
+        "group": "Encuentra un grupo para lo que te gusta.",
+        "event": "Encuentra mercados, talleres y tu próximo plan.",
+        "directory": "Descubre negocios locales, creadores y lugares."
+      }
+    },
     "kind": {
       "directory": "Directorio",
       "pana": "Pana",

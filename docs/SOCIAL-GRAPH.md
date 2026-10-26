@@ -240,6 +240,24 @@ Local profile-linked accounts remain included even when their saved federation i
 older domain. Local-author filtering happens before pagination, so remote posts cannot consume
 the page limit or hide the next page.
 
+### Header search
+
+Social's compact header search opens four color-coded categories: Panas, Groups, Events and
+Directory. Signed-in members start in Panas; guests start in public Groups, with member search
+locked behind sign-in. A chosen public category is retained if the session resolves later.
+Here, the existing **Panas search category discovers eligible member profiles**, not only the
+mutual connections shown by the Panas feed. Search does not change post visibility or filter
+the current timeline.
+
+Suggestions are scoped to the chosen category, start after two characters and link to real
+profiles, groups, events or directory entries. The visible Search button opens that category's
+full results; Enter selects a highlighted suggestion, or searches the typed term otherwise.
+Lookup failures are shown explicitly while full search remains available.
+
+Phones open a full-width, focus-managed search panel. Category and query survive closing,
+reopening and switching between desktop and mobile. Native GET forms remain available without
+JavaScript; the phone fallback searches public groups.
+
 ### Posting audiences and the friendly composer
 
 New personal composers start with **Everyone (public)**. Members can choose **Panas** in the always-visible
