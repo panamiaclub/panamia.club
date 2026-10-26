@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { Bug, Camera, Send } from 'lucide-react';
+import { Bug, ImagePlus, Send } from 'lucide-react';
 import { useSession } from '@/lib/auth-client';
 import { useTurnstile } from '@/components/Turnstile';
 import { Button } from '@/components/ui/button';
@@ -240,13 +240,12 @@ export default function BugReportDialog() {
               <span className="text-muted-foreground">(optional)</span>
             </Label>
             <div className="flex items-center gap-2">
-              <Camera className="text-muted-foreground h-5 w-5 shrink-0" />
+              <ImagePlus className="text-muted-foreground h-5 w-5 shrink-0" />
               <Input
                 ref={fileRef}
                 id="bug-report-screenshot"
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
-                capture="environment"
                 onChange={(event) =>
                   chooseScreenshot(event.target.files?.[0] ?? null)
                 }
@@ -254,8 +253,8 @@ export default function BugReportDialog() {
               />
             </div>
             <p className="text-muted-foreground text-xs">
-              PNG, JPEG, or WebP, up to 5 MB. Remove private information before
-              attaching.
+              Choose an image from your photo library or files. PNG, JPEG, or
+              WebP, up to 5 MB. Remove private information before attaching.
             </p>
           </div>
 
