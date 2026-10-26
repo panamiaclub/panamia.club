@@ -43,6 +43,7 @@ export interface UploadedMedia {
 export interface MediaUploadHandle {
   addFiles: (files: File[]) => Promise<void>;
   isUploading: () => boolean;
+  openPicker: (kind: 'media' | 'audio') => void;
 }
 
 /** The same playable attachments in the writing and formatting-preview views. */
@@ -141,6 +142,7 @@ interface MultiMediaUploadProps {
    *  competing with button utilities it would have to override one by one. */
   triggerClassName?: string;
   presentation?: 'default' | 'composer' | 'compact';
+  showControls?: boolean;
   showAttachments?: boolean;
   onUploadingChange?: (uploading: boolean) => void;
   ref?: Ref<MediaUploadHandle>;
@@ -158,6 +160,7 @@ export default function MultiMediaUpload({
   wrapperClassName = 'space-y-2',
   triggerClassName,
   presentation = 'default',
+  showControls = true,
   showAttachments = true,
   onUploadingChange,
   ref,
@@ -312,6 +315,10 @@ export default function MultiMediaUpload({
   useImperativeHandle(ref, () => ({
     addFiles,
     isUploading: () => busy.current,
+    openPicker: (kind) => {
+      if (disabled || busy.current || value.length >= maxItems) return;
+      (kind === 'audio' ? audioInputRef : fileInputRef).current?.click();
+    },
   }));
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -336,15 +343,30 @@ export default function MultiMediaUpload({
           : 'Media';
   const pickerDisabled = disabled || value.length >= maxItems || uploading;
   const friendly = presentation !== 'default';
+  const hasVisibleContent =
+    showControls ||
+    (showAttachments && value.length > 0) ||
+    uploading ||
+    mediaError ||
+    safariNotice;
 
   return (
-    <div className={wrapperClassName}>
+    <div className={hasVisibleContent ? wrapperClassName : 'hidden'}>
       <input
         ref={fileInputRef}
         type="file"
         multiple
         accept={friendly ? PHOTO_VIDEO_ACCEPT : accept}
         aria-label={friendly ? 'Choose photos or videos' : 'Choose media'}
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+      <input
+        ref={audioInputRef}
+        type="file"
+        multiple
+        accept="audio/*"
+        aria-label="Choose audio"
         className="hidden"
         onChange={handleFileSelect}
       />
@@ -357,121 +379,115 @@ export default function MultiMediaUpload({
         />
       )}
 
-      {friendly ? (
-        <div className="space-y-2">
-          <input
-            ref={audioInputRef}
-            type="file"
-            multiple
-            accept="audio/*"
-            aria-label="Choose audio"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
-          <div
-            className={
-              presentation === 'compact'
-                ? 'flex flex-wrap items-center gap-2'
-                : 'flex items-stretch gap-2.5'
-            }
-          >
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={pickerDisabled}
-              aria-describedby={hintId}
+      {showControls &&
+        (friendly ? (
+          <div className="space-y-2">
+            <div
               className={
                 presentation === 'compact'
-                  ? 'composer-chip'
-                  : 'border-pana-indigo/20 bg-pana-indigo/4 hover:border-pana-indigo/45 hover:bg-pana-indigo/8 focus-visible:ring-pana-indigo flex min-w-0 flex-1 items-center gap-3 rounded-2xl border-2 border-dashed p-3 text-left transition-colors focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-45 sm:p-4'
+                  ? 'flex flex-wrap items-center gap-2'
+                  : 'flex items-stretch gap-2.5'
               }
             >
-              <span
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={pickerDisabled}
+                aria-describedby={hintId}
                 className={
-                  presentation === 'composer'
-                    ? 'bg-pana-orange/15 text-pana-ink grid h-10 w-10 flex-none place-items-center rounded-xl'
-                    : ''
+                  presentation === 'compact'
+                    ? 'composer-chip'
+                    : 'border-pana-indigo/20 bg-pana-indigo/4 hover:border-pana-indigo/45 hover:bg-pana-indigo/8 focus-visible:ring-pana-indigo flex min-w-0 flex-1 items-center gap-3 rounded-2xl border-2 border-dashed p-3 text-left transition-colors focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-45 sm:p-4'
                 }
               >
-                <ImagePlus
+                <span
+                  className={
+                    presentation === 'composer'
+                      ? 'bg-pana-orange/15 text-pana-ink grid h-10 w-10 flex-none place-items-center rounded-xl'
+                      : ''
+                  }
+                >
+                  <ImagePlus
+                    className={
+                      presentation === 'composer' ? 'h-5 w-5' : 'h-4 w-4'
+                    }
+                    aria-hidden="true"
+                  />
+                </span>
+                <span className="min-w-0">
+                  <span className="text-pana-ink block text-sm leading-snug font-extrabold">
+                    Add photos or video
+                  </span>
+                  {presentation === 'composer' && (
+                    <span className="text-pana-ink/50 mt-0.5 hidden text-xs font-semibold sm:block">
+                      Choose from your device, or drop files here
+                    </span>
+                  )}
+                </span>
+              </button>
+              <button
+                type="button"
+                aria-label="Add audio"
+                onClick={() => audioInputRef.current?.click()}
+                disabled={pickerDisabled}
+                className={
+                  presentation === 'compact'
+                    ? 'composer-chip'
+                    : 'border-pana-ink/10 bg-pana-cream/70 text-pana-ink/70 hover:border-pana-indigo/40 hover:text-pana-indigo focus-visible:ring-pana-indigo flex w-17 flex-none flex-col items-center justify-center gap-1 rounded-2xl border px-3 py-3 text-xs font-extrabold focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-45 sm:w-20'
+                }
+              >
+                <Volume2
                   className={
                     presentation === 'composer' ? 'h-5 w-5' : 'h-4 w-4'
                   }
                   aria-hidden="true"
                 />
-              </span>
-              <span className="min-w-0">
-                <span className="text-pana-ink block text-sm leading-snug font-extrabold">
-                  Add photos or video
-                </span>
-                {presentation === 'composer' && (
-                  <span className="text-pana-ink/50 mt-0.5 hidden text-xs font-semibold sm:block">
-                    Choose from your device, or drop files here
-                  </span>
-                )}
-              </span>
-            </button>
-            <button
-              type="button"
-              aria-label="Add audio"
-              onClick={() => audioInputRef.current?.click()}
-              disabled={pickerDisabled}
-              className={
-                presentation === 'compact'
-                  ? 'composer-chip'
-                  : 'border-pana-ink/10 bg-pana-cream/70 text-pana-ink/70 hover:border-pana-indigo/40 hover:text-pana-indigo focus-visible:ring-pana-indigo flex w-17 flex-none flex-col items-center justify-center gap-1 rounded-2xl border px-3 py-3 text-xs font-extrabold focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-45 sm:w-20'
-              }
+                Audio
+              </button>
+            </div>
+            <p
+              id={hintId}
+              className="text-pana-ink/45 px-1 text-[11px] font-semibold"
             >
-              <Volume2
-                className={presentation === 'composer' ? 'h-5 w-5' : 'h-4 w-4'}
-                aria-hidden="true"
-              />
-              Audio
-            </button>
+              {value.length
+                ? `${value.length} of ${maxItems} attachments`
+                : `Up to ${maxItems} attachments`}
+              <span className="hidden sm:inline">
+                {' '}
+                &middot; You can paste images, too
+              </span>
+            </p>
           </div>
-          <p
-            id={hintId}
-            className="text-pana-ink/45 px-1 text-[11px] font-semibold"
+        ) : triggerClassName ? (
+          <button
+            type="button"
+            className={triggerClassName}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={pickerDisabled}
           >
-            {value.length
-              ? `${value.length} of ${maxItems} attachments`
-              : `Up to ${maxItems} attachments`}
-            <span className="hidden sm:inline">
-              {' '}
-              &middot; You can paste images, too
-            </span>
-          </p>
-        </div>
-      ) : triggerClassName ? (
-        <button
-          type="button"
-          className={triggerClassName}
-          onClick={() => fileInputRef.current?.click()}
-          disabled={pickerDisabled}
-        >
-          {uploading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <ImagePlus className="h-3.5 w-3.5" />
-          )}
-          {triggerLabel}
-        </button>
-      ) : (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={pickerDisabled}
-        >
-          {uploading ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-          ) : (
-            <ImagePlus className="mr-1 h-4 w-4" />
-          )}
-          {triggerLabel}
-        </Button>
-      )}
+            {uploading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ImagePlus className="h-3.5 w-3.5" />
+            )}
+            {triggerLabel}
+          </button>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={pickerDisabled}
+          >
+            {uploading ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <ImagePlus className="mr-1 h-4 w-4" />
+            )}
+            {triggerLabel}
+          </Button>
+        ))}
 
       {uploading && (
         <p

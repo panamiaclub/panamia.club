@@ -8,31 +8,7 @@ import { usePanas, useMyGroups } from '@/lib/query/social';
 import { FeedCalendarRail } from './feed-calendar-rail';
 import type { SocialActor } from '@/lib/schema';
 
-/* Held-open space, same treatment as the mock: designed in now so the rail
-   does not have to be re-laid-out when these land. Copy rather than data, so
-   it lives here instead of being imported from the mock's fixtures — a
-   production route should not depend on /mock.
-
-   "Events & RSVPs" has left this list because it shipped — see
-   FeedCalendarRail above it. Worth noting what it promised: "a real going and
-   interested count". Half of that was wrong before it was built, because the
-   RSVP enum is going | maybe | not_going and there is no interested. The
-   module that replaced it counts only 'going', and says 'going'. */
-const RESERVED_MODULES: { title: string; description: string }[] = [
-  {
-    title: 'Saved posts',
-    description: 'Bookmarks that survive a scroll, grouped into named lists.',
-  },
-  {
-    title: 'Jams',
-    description: 'Live rooms a Pana can drop into straight from the timeline.',
-  },
-  {
-    title: 'Trending & hashtags',
-    description:
-      'What your county is talking about right now, and a tag to follow it by.',
-  },
-];
+const RESERVED_MODULES = ['Saved posts', 'Jams', 'Trending & hashtags'];
 
 /* The rail beside the timeline.
  *
@@ -69,8 +45,8 @@ export function FeedRail({ actor }: { actor: SocialActor }) {
     : actor.username.slice(0, 2).toUpperCase();
 
   return (
-    <aside className="feed-rail space-y-5">
-      <section className="profile-card p-4">
+    <aside className="feed-rail space-y-4">
+      <section className="border-pana-flame/20 from-pana-flame/9 rounded-3xl border bg-linear-to-br to-white p-4">
         <Link href={`/p/${actor.username}`} className="flex items-center gap-3">
           <Avatar className="border-pana-ink/10 h-11 w-11 flex-none border-2">
             <AvatarImage src={actor.iconUrl || undefined} alt="" />
@@ -115,26 +91,36 @@ export function FeedRail({ actor }: { actor: SocialActor }) {
 
       <FeedCalendarRail />
 
-      <section aria-labelledby="rail-reserved">
-        <h2 id="rail-reserved" className="rail-heading">
-          Coming to the feed
+      <section
+        aria-labelledby="rail-reserved"
+        className="border-pana-ink/10 bg-pana-cream/45 rounded-3xl border p-4"
+      >
+        <p className="text-pana-indigo inline-flex items-center gap-1.5 text-[10px] font-extrabold tracking-wider uppercase">
+          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+          Growing with the Panas
+        </p>
+        <h2 id="rail-reserved" className="mt-2 text-sm font-extrabold">
+          Good things ahead.
         </h2>
-        <div className="mt-2.5 space-y-2.5">
+        <p className="text-pana-ink/65 mt-1.5 text-xs leading-relaxed">
+          More ways to save, gather and discover, without crowding your feed.
+        </p>
+        <div
+          className="mt-3 flex flex-wrap gap-1.5"
+          aria-label="Coming to the feed"
+        >
           {RESERVED_MODULES.map((module) => (
-            <div key={module.title} className="reserved-slot p-3.5">
-              <p className="reserved-slot-title inline-flex items-center gap-1.5 text-[14px]">
-                <Sparkles
-                  className="text-pana-indigo h-3.5 w-3.5"
-                  aria-hidden="true"
-                />
-                {module.title}
-              </p>
-              <p className="text-pana-ink/65 text-[12px] leading-snug font-medium">
-                {module.description}
-              </p>
-            </div>
+            <span
+              key={module}
+              className="text-pana-ink/60 rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-bold"
+            >
+              {module}
+            </span>
           ))}
         </div>
+        <p className="text-pana-ink/60 mt-3 text-[10px] font-semibold">
+          Coming to the feed
+        </p>
       </section>
 
       <p className="text-pana-ink/45 text-[12px] leading-snug font-bold">

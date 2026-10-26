@@ -1607,6 +1607,29 @@ describe('readable comment threads', () => {
     });
   });
 
+  it('expands a two-comment preview into a normal page without gaps or repeated comments', async () => {
+    const preview = await status.getStatusReplies(rootId, undefined, 2);
+    assert.deepEqual(
+      preview.replies.map((reply) => reply.id),
+      orderedIds.slice(0, 2)
+    );
+    assert.ok(preview.nextCursor);
+    const expanded = await status.getStatusReplies(
+      rootId,
+      preview.nextCursor,
+      20
+    );
+    assert.deepEqual(
+      expanded.replies.map((reply) => reply.id),
+      orderedIds.slice(2)
+    );
+    assert.equal(expanded.nextCursor, null);
+    assert.deepEqual(
+      [...preview.replies, ...expanded.replies].map((reply) => reply.id),
+      orderedIds
+    );
+  });
+
   it('returns the current viewer like state without exposing the joined like rows', async () => {
     assert.equal((await status.likeStatus('bob', orderedIds[0])).liked, true);
     for (const actorId of ['bob', 'carol', undefined]) {

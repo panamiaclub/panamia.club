@@ -16,6 +16,8 @@ interface PostActionsProps {
   showReplyButton?: boolean;
   repliesExpanded?: boolean;
   repliesId?: string;
+  repliesPreviewed?: boolean;
+  appearance?: 'default' | 'feed';
 }
 
 export function PostActions({
@@ -28,6 +30,8 @@ export function PostActions({
   showReplyButton = true,
   repliesExpanded,
   repliesId,
+  repliesPreviewed = false,
+  appearance = 'default',
 }: PostActionsProps) {
   const likePost = useLikePost();
   const unlikePost = useUnlikePost();
@@ -73,7 +77,7 @@ export function PostActions({
       ? repliesCount > 0
         ? `Reply, ${repliesCount} ${repliesCount === 1 ? 'reply' : 'replies'}`
         : 'Reply'
-      : `${repliesExpanded ? 'Hide' : 'Show'} comments${
+      : `${repliesPreviewed ? (repliesExpanded ? 'Close conversation' : 'Open conversation') : `${repliesExpanded ? 'Hide' : 'Show'} comments`}${
           repliesCount > 0
             ? `, ${repliesCount} ${repliesCount === 1 ? 'comment' : 'comments'}`
             : ''
@@ -82,46 +86,67 @@ export function PostActions({
     likesCount > 0
       ? `Like, ${likesCount} ${likesCount === 1 ? 'like' : 'likes'}`
       : 'Like';
+  const feed = appearance === 'feed';
+  const actionClass = feed
+    ? 'text-pana-indigo hover:bg-pana-indigo/7 h-11 min-w-11 rounded-xl px-2'
+    : 'text-muted-foreground hover:text-foreground h-8 px-2 pointer-coarse:h-11 pointer-coarse:min-w-11';
+
+  const replyButton = showReplyButton && (
+    <Button
+      variant="ghost"
+      size="sm"
+      aria-label={replyLabel}
+      aria-expanded={repliesExpanded}
+      aria-controls={repliesId}
+      className={actionClass}
+      onClick={onReply}
+    >
+      <MessageCircle className="mr-1 h-4 w-4" />
+      {repliesCount > 0 && <span className="text-xs">{repliesCount}</span>}
+    </Button>
+  );
+
+  const likeButton = (
+    <Button
+      variant="ghost"
+      size="sm"
+      aria-label={likeLabel}
+      aria-pressed={liked}
+      className={`${feed ? 'h-11 min-w-11 rounded-xl px-2' : 'h-8 px-2 pointer-coarse:h-11 pointer-coarse:min-w-11'} ${
+        liked
+          ? feed
+            ? 'text-pana-red-deep bg-pana-red/7 hover:bg-pana-red/12'
+            : 'text-red-500 hover:text-red-600'
+          : feed
+            ? 'text-pana-indigo hover:bg-pana-indigo/7'
+            : 'text-muted-foreground hover:text-red-500'
+      }`}
+      onClick={handleLike}
+      disabled={likePost.isPending || unlikePost.isPending}
+    >
+      <Heart className={`mr-1 h-4 w-4 ${liked ? 'fill-current' : ''}`} />
+      {likesCount > 0 && <span className="text-xs">{likesCount}</span>}
+    </Button>
+  );
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1">
-      {showReplyButton && (
-        <Button
-          variant="ghost"
-          size="sm"
-          aria-label={replyLabel}
-          aria-expanded={repliesExpanded}
-          aria-controls={repliesId}
-          className="text-muted-foreground hover:text-foreground h-8 px-2 pointer-coarse:h-11 pointer-coarse:min-w-11"
-          onClick={onReply}
-        >
-          <MessageCircle className="mr-1 h-4 w-4" />
-          {repliesCount > 0 && <span className="text-xs">{repliesCount}</span>}
-        </Button>
+      {feed ? (
+        <>
+          {likeButton}
+          {replyButton}
+        </>
+      ) : (
+        <>
+          {replyButton}
+          {likeButton}
+        </>
       )}
-
-      <Button
-        variant="ghost"
-        size="sm"
-        aria-label={likeLabel}
-        aria-pressed={liked}
-        className={`h-8 px-2 pointer-coarse:h-11 pointer-coarse:min-w-11 ${
-          liked
-            ? 'text-red-500 hover:text-red-600'
-            : 'text-muted-foreground hover:text-red-500'
-        }`}
-        onClick={handleLike}
-        disabled={likePost.isPending || unlikePost.isPending}
-      >
-        <Heart className={`mr-1 h-4 w-4 ${liked ? 'fill-current' : ''}`} />
-        {likesCount > 0 && <span className="text-xs">{likesCount}</span>}
-      </Button>
-
       <Button
         variant="ghost"
         size="sm"
         aria-label="Copy link to post"
-        className="text-muted-foreground hover:text-foreground h-8 px-2 pointer-coarse:h-11 pointer-coarse:min-w-11"
+        className={actionClass}
         onClick={handleShare}
       >
         <Share2 className="h-4 w-4" />

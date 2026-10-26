@@ -242,8 +242,8 @@ the page limit or hide the next page.
 
 ### Posting audiences and the friendly composer
 
-New personal composers start with **Everyone (public)**. Members can choose **Panas** beside their
-identity; no local-only or group destinations are offered there. Group posting starts on the group's
+New personal composers start with **Everyone (public)**. Members can choose **Panas** in the always-visible
+audience control; no local-only or group destinations are offered there. Group posting starts on the group's
 page, and replies keep their parent's audience instead of offering another destination.
 
 The media-forward card supports photos, video and audio, file drop, and image paste, with up to four
@@ -251,7 +251,9 @@ attachments and a 500-character caption. Media-only posts are valid. Posting and
 during uploads, and upload/publishing failures remain visible without discarding the draft. Content
 warnings and the optional Markdown formatting preview live under **More**; the preview hides text and
 media together when a warning is set. The account's saved Creative Commons license is applied on the
-server, without a per-post CC button. Explicit API license overrides remain supported.
+server, without a per-post CC button. Explicit API license overrides remain supported. The idle card stays
+compact, with labelled photo/video, audio, audience and Post controls. Writing or adding media expands it;
+an empty draft can be collapsed with Done. Large drop targets appear only while dragging files.
 
 **Panas posting is not a rename of followers-only visibility.** New posts carry the internal `Panas`
 status type, `visibility: private`, and an explicit `audience: panas` request. The complete accepted
@@ -272,14 +274,23 @@ migrated. Stories, DMs, and group membership retain their separate rules.
 
 ### Inline conversations
 
-The comment button expands readable comments and the reply composer inside the post card.
-Posting keeps the conversation open and refreshes its comments and counts. Non-members can read
-comments on public group posts without being offered a reply composer.
+Feed cards show up to **two readable comments by default**, loading shortly before the conversation
+scrolls into view. Content warnings still hide comment text and attachments; a warning on the post also
+prevents automatic comment previews until revealed. View all appears only when more readable comments
+are available. The comment button always opens the full conversation and the permitted reply composer,
+including when both comments are already visible. Collapsing returns to the same two-comment preview.
+Nested threads are fetched only when explicitly opened, not recursively previewed.
+
+Previews and expanded conversations share one paginated cache: two comments on the first page, then
+normal 20-comment pages on expansion. Posting keeps the conversation open and refreshes comments,
+likes and counts. Non-members can read comments on public group posts without a reply composer.
 
 Post timestamps are metadata, not links to another page. The explicit copy-link action keeps
 permalinks available for intentional sharing. Comment pages follow publication time and then ID,
 with visible loading, retry, and load-more states rather than treating a failed request as an
-empty conversation.
+empty conversation. The feed's peach headers and indigo action strips do not change post audiences.
+Empty story placeholders are omitted, while story creation and live stories remain available. Upcoming
+sidebar features share one quiet panel; real profile counts, calendar and discovery modules remain.
 
 ---
 
