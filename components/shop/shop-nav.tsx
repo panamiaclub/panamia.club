@@ -25,6 +25,7 @@ export function ShopNav() {
   return (
     <nav
       aria-label="Shop"
+      data-shop-nav="true"
       className="border-pana-ink/10 bg-pana-cream sticky top-[59px] z-30 overflow-x-auto border-b"
     >
       <div className="container mx-auto flex min-h-16 min-w-max items-center gap-2 px-4 text-sm font-bold sm:gap-3">
