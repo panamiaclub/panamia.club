@@ -110,12 +110,15 @@ never mounted anywhere.
 
 ## Layout Components
 
-| Component             | Description                 |
-| --------------------- | --------------------------- |
-| `MainHeader.tsx`      | Site header with navigation |
-| `MainFooter.tsx`      | Site footer                 |
-| `HeroBar.tsx`         | Page hero section           |
-| `CallToActionBar.tsx` | Promotional banner          |
+| Component             | Description                                  |
+| --------------------- | -------------------------------------------- |
+| `MainHeader.tsx`      | Site header with navigation                  |
+| `MainFooter.tsx`      | Site footer                                  |
+| `HeroBar.tsx`         | Page hero section                            |
+| `CallToActionBar.tsx` | Profile completion or test-site announcement  |
+
+The main header does not display a newsletter signup banner. Visitors can
+still subscribe through the newsletter form on `/info#newsletter-signup`.
 
 ## Branding Components
 

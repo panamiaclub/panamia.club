@@ -211,6 +211,10 @@
   border-bottom: 1px solid rgb(17 13 13 / 0.08);
 }
 
+:global(html.native-app) .masthead {
+  top: env(safe-area-inset-top);
+}
+
 .mastheadInner {
   display: grid;
   grid-template-columns: 1fr auto 1fr;

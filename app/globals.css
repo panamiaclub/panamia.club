@@ -4012,6 +4012,14 @@ button.bizprofile-update-action:hover {
  * `max()` rather than addition: the inset is a floor, not a surcharge. On a
  * device with no notch every one of these resolves to 0 and the existing
  * padding is what applies, so this is inert everywhere it is not needed. */
+html.native-app {
+  background-color: var(--color-pana-cream);
+}
+
+html.native-app body {
+  padding-top: env(safe-area-inset-top);
+}
+
 .panaverse-masthead {
   padding-left: max(1.125rem, env(safe-area-inset-left));
   padding-right: max(1.125rem, env(safe-area-inset-right));
@@ -4019,6 +4027,19 @@ button.bizprofile-update-action:hover {
 
 .panaverse-masthead[data-sticky='true'] {
   padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+/* Android 16 enforces edge-to-edge WebViews, so the status bar always overlays
+   the page and Capacitor's `overlaysWebView` setting no longer has any effect.
+   The body inset protects the first band on initial load; sticky controls need
+   the same inset as their resting top once that body padding scrolls away. */
+html.native-app .panaverse-masthead[data-sticky='true'] {
+  top: env(safe-area-inset-top);
+  padding-top: 0.75rem;
+}
+
+html.native-app [data-shop-nav='true'] {
+  top: calc(59px + env(safe-area-inset-top));
 }
 
 /* The home indicator floats over the foot of the viewport, so the last thing
