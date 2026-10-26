@@ -209,29 +209,28 @@ export default function MainHeader({
         {/* Ambient unread cues: browser-tab count + desktop notifications */}
         <NotificationAlerts />
         {/* The shop carries its own purpose-built announcement. The generic
-            newsletter/profile CTA changes the first band of the approved shop
+            profile/test-site CTA changes the first band of the approved shop
             design and makes the masthead feel like a borrowed component. */}
         {status !== 'loading' && isShopRoute && (
           <div className={styles.shopAnnouncement}>
             {t('nav.shopAnnouncement')}
           </div>
         )}
-        {/* CTA bar: newsletter for unauthenticated, profile completion for authenticated without profile */}
-        {status !== 'loading' && !isShopRoute && !session && (
-          <div id="call-to-action-bar">
-            <CallToActionBar isProductionSite={isProductionSite} />
-          </div>
-        )}
+        {status !== 'loading' &&
+          !isProductionSite &&
+          !isShopRoute &&
+          !session && (
+            <div id="call-to-action-bar">
+              <CallToActionBar variant="test-site" />
+            </div>
+          )}
         {status !== 'loading' &&
           session &&
           hasProfile === false &&
           !isShopRoute &&
           !isOnboardingRoute(pathname) && (
             <div id="call-to-action-bar">
-              <CallToActionBar
-                variant="complete-profile"
-                isProductionSite={isProductionSite}
-              />
+              <CallToActionBar variant="complete-profile" />
             </div>
           )}
         {/* Centered masthead: menu (left) · logo (center) · actions (right) */}
