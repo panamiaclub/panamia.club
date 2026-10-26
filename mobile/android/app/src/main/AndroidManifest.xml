@@ -25,7 +25,7 @@
               This is the app's half of the claim; the site's half is served
               from app/.well-known/assetlinks.json. BOTH are required and
               neither reports anything when it is missing — the symptom is
-              simply that every pana.social link keeps opening in Chrome.
+              simply that every panamia.club link keeps opening in Chrome.
 
               android:autoVerify="true" is what makes these links open the app
               silently, with no disambiguation dialog: at install time Android
@@ -49,8 +49,8 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="pana.social" />
-                <data android:scheme="https" android:host="social.pana.social" />
+                <data android:scheme="https" android:host="panamia.club" />
+                <data android:scheme="https" android:host="social.panamia.club" />
             </intent-filter>
         </activity>
 

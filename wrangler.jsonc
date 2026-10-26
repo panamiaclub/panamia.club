@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "panamia-next",
+  "account_id": "99a70a6ec57b862e51035de6fd126cea",
   "main": "worker/index.ts",
   "compatibility_date": "2026-02-24",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],

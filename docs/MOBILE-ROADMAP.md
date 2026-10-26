@@ -7,7 +7,7 @@ second implementation of the product.
 
 The Android and iOS apps are a **native shell around the live deploy**. Both
 stores receive a real, signed, installable app; what that app renders is
-`https://pana.social`, served by the same Worker that serves the website.
+`https://panamia.club`, served by the same Worker that serves the website.
 
 This is deliberate, and the alternative was considered and rejected. The site is
 server-rendered React Server Components running on Cloudflare Workers. There is
@@ -42,8 +42,8 @@ screen has exactly one implementation, and it is the one already in `app/`.
 │  Native shell (Capacitor)                    │
 │  ┌────────────────────────────────────────┐  │
 │  │  WKWebView / Android WebView           │  │
-│  │      →  https://pana.social            │  │──── same Worker as the website
-│  │      →  https://social.pana.social     │  │
+│  │      →  https://panamia.club           │  │──── same Worker as the website
+│  │      →  https://social.panamia.club    │  │
 │  └────────────────────────────────────────┘  │
 │  splash · offline page · back button         │
 │  deep links · status bar                     │
@@ -76,7 +76,7 @@ material on top, because Capacitor's template leaves keystores **un**ignored.
 The list in `capacitor.config.ts` is not a convenience. Anything not on it opens
 in the system browser, outside the app's cookie store, and three things break:
 
-1. **`*.pana.social`** — the surface switcher links between Pana Mia and Pana
+1. **`*.panamia.club`** — the surface switcher links between Pana Mia and Pana
    social by absolute cross-origin URL. Without this entry, tapping "Pana
    social" ejects the member into Chrome or Safari and "one app, both surfaces"
    is not true.
@@ -98,7 +98,7 @@ in the system browser, outside the app's cookie store, and three things break:
 | App icons and splash images             | Generated from `mobile/assets/` (see below)        |
 | Built or run on a device                | **Not yet** — but both platforms compile in CI     |
 | CI builds both platforms                | Done, green (`.github/workflows/mobile-build.yml`) |
-| Signing, store listings                 | **Not yet**                                        |
+| Signing, store listings                 | Android tooling ready; credentials/listing pending |
 | OAuth in WebView                        | Resolved — app is magic link only                  |
 
 ---
@@ -122,12 +122,15 @@ yarn mobile:assets         # regenerate app icons + splash screens
 yarn mobile:open:android   # open in Android Studio
 yarn mobile:open:ios       # open in Xcode (macOS only)
 yarn mobile:doctor         # check local native toolchain setup
+yarn mobile:bundle:android --version-code 1 --version-name 1.0.0
 ```
 
 `yarn mobile` is the one to reach for day to day. From a shell with nothing set
 up it will find your JDK and Android SDK, start an emulator if no device is
 attached, sync, build, install, and launch — see
 [Running it on an Android emulator](#running-it-on-an-android-emulator).
+For USB/wireless phone setup and Google Play publishing, see
+[Android Device Testing and Publishing](./ANDROID.md).
 
 Run `yarn mobile:sync` after any change to `capacitor.config.ts`, after adding a
 Capacitor plugin, and after editing `mobile/www/`. `yarn mobile` does it for
@@ -196,7 +199,7 @@ ones.
 
 ## Deep links
 
-A tapped `pana.social` link should open the app rather than the browser. This
+A tapped `panamia.club` link should open the app rather than the browser. This
 requires **two** claims that must agree, and the failure mode when they do not
 is silent — no error anywhere, links simply keep opening in the browser.
 
@@ -369,7 +372,7 @@ verifies every change, that one runs on tags. See **Next Steps** below.
 
 The app has now been built, installed, and launched on an emulator. This
 required no Mac, no device, and no dev server — `server.url` points at
-`https://pana.social`, so the emulator loads production exactly as a phone
+`https://panamia.club`, so the emulator loads production exactly as a phone
 would.
 
 ```bash
@@ -454,6 +457,12 @@ itself.
 
 ## Store submission
 
+Android signing, Play-ready App Bundle generation, and optional internal-track
+publishing are documented in
+[Android Device Testing and Publishing](./ANDROID.md). The first Play upload is
+manual so Play App Signing and the required declarations are established before
+API releases begin.
+
 ### Apple guideline 4.2 ("minimum functionality")
 
 Apple rejects apps that are "simply a repackaged website." This is the main
@@ -516,13 +525,13 @@ Apple references:
 1. **Exercise sign-in on the emulator.** The app runs (`yarn mobile`), but
    sign-in has not been walked end to end. Confirm the magic-link email opens
    back into the app rather than the browser once App Links are verified.
-2. **Test on real hardware.** Everything so far has been an emulator, which
-   shares neither a real device's network conditions nor its OEM WebView
-   version. CI attaches a debug APK to every run, so this needs no toolchain —
-   just sideload it.
-3. **Generate signing keys**, upload a first internal-test build, then set
-   `ANDROID_APP_CERT_FINGERPRINTS` and `APPLE_APP_TEAM_ID` and verify deep links
-   end to end. This is also when a release workflow becomes worth writing.
+2. **Test on real hardware.** Follow [docs/ANDROID.md](./ANDROID.md) to install
+   directly over USB or wireless debugging, then repeat against the Play
+   internal-test build because it carries Google's app-signing certificate.
+3. **Create and back up the Android upload key**, upload the first internal-test
+   bundle, then set `ANDROID_APP_CERT_FINGERPRINTS` to both Play certificates
+   and verify deep links end to end. The release workflow is ready after the
+   Play service account has been granted access.
 4. **Complete Apple's nonprofit approval and donation compliance work.** Do not
    enable `/donate` in the iOS app until approval is confirmed, fund use is
    disclosed in-app, and tax-receipt behavior is implemented and verified.

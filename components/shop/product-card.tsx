@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { useIsNativeApp } from '@/lib/mobile/use-native-app';
 import type { ShopPrice } from '@/lib/shop/types';
 import { useShopCart } from './cart-provider';
 
@@ -34,7 +35,10 @@ export function formatShopPrice(price: ShopPrice): string {
 
 export function ProductCard({ price }: { price: ShopPrice }) {
   const cart = useShopCart();
+  const isNativeApp = useIsNativeApp();
   const [message, setMessage] = useState('');
+
+  if (isNativeApp && price.kind === 'subscription') return null;
 
   function add() {
     if (price.isMock) {

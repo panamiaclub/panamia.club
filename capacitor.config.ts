@@ -25,6 +25,7 @@
 
 import type { CapacitorConfig } from '@capacitor/cli';
 import { MOBILE_APP_ID } from './lib/mobile/app-identity';
+import { DEFAULT_ROOT_DOMAIN } from './lib/panaverse/root-domain';
 
 /**
  * The deploy the app talks to.
@@ -41,7 +42,7 @@ import { MOBILE_APP_ID } from './lib/mobile/app-identity';
  * pointed anywhere else is a shell nobody can sign in to.
  */
 const SERVER_URL =
-  process.env.CAPACITOR_SERVER_URL?.trim() || 'https://pana.social';
+  process.env.CAPACITOR_SERVER_URL?.trim() || `https://${DEFAULT_ROOT_DOMAIN}`;
 
 /** True for http:// dev servers, which Android blocks by default. Derived
  *  rather than configured so it cannot be left on in a production build. */
@@ -103,7 +104,7 @@ const config: CapacitorConfig = {
      * itself up as part of Pana Mia — but it makes this list load-bearing in
      * three separate ways:
      *
-     * 1. social.pana.social is a Custom Domain on the same Worker and the
+     * 1. social.panamia.club is a Custom Domain on the same Worker and the
      *    surface switcher links to it absolutely whenever PANAVERSE_SUBDOMAINS
      *    is on (see originForFrom). Leaving it out is what would turn "one app
      *    with both surfaces" into an app that ejects members to their browser
@@ -122,8 +123,8 @@ const config: CapacitorConfig = {
      *    the member pays and the app never learns that they did.
      */
     allowNavigation: [
-      'pana.social',
-      '*.pana.social',
+      DEFAULT_ROOT_DOMAIN,
+      `*.${DEFAULT_ROOT_DOMAIN}`,
       'accounts.google.com',
       'appleid.apple.com',
       'meta.wikimedia.org',

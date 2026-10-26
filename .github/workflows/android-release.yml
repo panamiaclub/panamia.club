@@ -1,0 +1,117 @@
+name: Android Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: Public version (for example 1.0.0)
+        required: true
+        type: string
+      version_code:
+        description: Increasing Play Store build number
+        required: true
+        type: number
+      publish_to_play:
+        description: Publish the bundle to Google Play
+        required: true
+        default: false
+        type: boolean
+      track:
+        description: Google Play track
+        required: true
+        default: internal
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      release_status:
+        description: Google Play release status
+        required: true
+        default: completed
+        type: choice
+        options:
+          - draft
+          - completed
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Signed Android App Bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: yarn
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Configure release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo "::error::ANDROID_KEYSTORE_BASE64 is not configured"; exit 1; }
+          test -n "$STORE_PASSWORD" || { echo "::error::ANDROID_KEYSTORE_PASSWORD is not configured"; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "::error::ANDROID_KEY_ALIAS is not configured"; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "::error::ANDROID_KEY_PASSWORD is not configured"; exit 1; }
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > mobile/android/release-upload.jks
+          {
+            echo "storeFile=release-upload.jks"
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > mobile/android/keystore.properties
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build signed bundle
+        working-directory: mobile/android
+        run: |
+          ./gradlew bundleRelease \
+            -PversionCode=${{ inputs.version_code }} \
+            -PversionName=${{ inputs.version_name }} \
+            --no-daemon \
+            --stacktrace
+
+      - name: Upload signed bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: pana-mia-android-${{ inputs.version_name }}-${{ inputs.version_code }}
+          path: mobile/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish to Google Play
+        if: ${{ inputs.publish_to_play }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: social.pana.app
+          releaseFiles: mobile/android/app/build/outputs/bundle/release/app-release.aab
+          track: ${{ inputs.track }}
+          status: ${{ inputs.release_status }}

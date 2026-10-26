@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { useShopCart } from '@/components/shop/cart-provider';
+import { useIsNativeApp } from '@/lib/mobile/use-native-app';
 
 function money(cents: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -16,6 +17,7 @@ function money(cents: number): string {
 
 export default function ShopCartPage() {
   const cart = useShopCart();
+  const isNativeApp = useIsNativeApp();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -54,7 +56,9 @@ export default function ShopCartPage() {
       <main className="container mx-auto px-4 py-20 text-center">
         <h1 className="text-4xl font-black">Your cart is empty.</h1>
         <p className="text-pana-ink/65 mt-3">
-          Merchandise and memberships are waiting back in the shop.
+          {isNativeApp
+            ? 'Merchandise is waiting back in the shop.'
+            : 'Merchandise and memberships are waiting back in the shop.'}
         </p>
         <Button asChild className="bg-pana-ink text-pana-cream mt-7">
           <Link href="/shop">Browse the shop</Link>

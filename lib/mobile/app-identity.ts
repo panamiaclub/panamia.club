@@ -23,7 +23,7 @@
  */
 
 /**
- * Reverse-DNS of PANAVERSE_ROOT_DOMAIN (pana.social), matching the convention
+ * Reverse-DNS of PANAVERSE_ROOT_DOMAIN (panamia.club), matching the convention
  * both stores expect.
  */
 export const MOBILE_APP_ID = 'social.pana.app';

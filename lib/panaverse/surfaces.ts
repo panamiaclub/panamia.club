@@ -13,6 +13,9 @@
  */
 
 import { getConfiguredFederationDomain } from '@/lib/federation/domain';
+import { DEFAULT_ROOT_DOMAIN } from './root-domain';
+
+export { DEFAULT_ROOT_DOMAIN } from './root-domain';
 
 export type SurfaceId =
   'www' | 'info' | 'social' | 'events' | 'connectors' | 'admin';
@@ -25,7 +28,7 @@ export interface PanaverseSurface {
   tagline: string;
   /**
    * Label under the root domain, or null for the apex.
-   * `social` → social.pana.social
+   * `social` → social.panamia.club
    */
   subdomain: string | null;
   /**
@@ -77,8 +80,6 @@ export interface PanaverseSurface {
  * to pana.social so existing actor IDs never change with the website hostname.
  * See lib/federation/domain.ts.
  */
-export const DEFAULT_ROOT_DOMAIN = 'panamia.club';
-
 export function getRootDomain(): string {
   return process.env.PANAVERSE_ROOT_DOMAIN?.trim() || DEFAULT_ROOT_DOMAIN;
 }
