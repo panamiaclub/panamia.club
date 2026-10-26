@@ -512,6 +512,13 @@
       "when": 1792886400000,
       "tag": "0071_connector_opportunities",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1793030400000,
+      "tag": "0072_profile_contact_email",
+      "breakpoints": true
     }
   ]
 }

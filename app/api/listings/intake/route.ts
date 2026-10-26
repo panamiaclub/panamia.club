@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { profiles, referralEvents } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { profiles, profileOwners, referralEvents } from '@/lib/schema';
+import { and, sql } from 'drizzle-orm';
 import { verifyTurnstile } from '@/lib/turnstile';
-import { sendTemplateEmail } from '@/lib/email';
 import { createUniqueString } from '@/lib/standardized';
 import { BUSINESS_INTAKE_SOURCE } from '@/lib/server/profile-owners';
+import { describeDbError } from '@/lib/server/db-error';
+import { sendListingSubmissionEmails } from '@/lib/server/listing-submission';
 import { auth, sendMagicLinkTo } from '@/auth';
 import { profileCategoryList } from '@/lib/lists';
 import type { ProfileDescriptions } from '@/lib/interfaces';
@@ -22,8 +23,9 @@ import {
  * Deliberately unauthenticated. Most South Florida businesses hear about Pana
  * from another Pana, not from the site, and making them create an account
  * before they can tell us they exist loses them. This writes an *unclaimed*
- * listing: `profiles.userId` stays null, and the owner attaches an account
- * later via the claim flow (magic link to the address on the listing).
+ * listing: `profiles.userId` stays null. A signed-in applicant can explicitly
+ * manage it through profile_owners; guests can invite a personal address or
+ * claim it later. The contact email never determines account ownership.
  *
  * Unclaimed rows are already first-class in the directory — see
  * lib/server/directory.ts, which ORs `isNull(profiles.userId)` with the
@@ -191,15 +193,10 @@ export async function POST(request: NextRequest) {
   // was never required would be a worse outcome than silently not sending an
   // invitation.
   //
-  // Equal to the business address is the common case of the solo vendor who
-  // has exactly one inbox. Nothing to do for them: intake already mails that
-  // address a receipt, and an invitation to claim the listing they are in the
-  // middle of submitting is noise. Dropping it also keeps the column from
-  // duplicating profiles.email.
+  // It may equal the business address. Asking for an account is an explicit
+  // choice, independent of which inbox receives listing updates.
   const pendingOwnerEmail =
-    personalEmail && personalEmail !== email && validateEmail(personalEmail)
-      ? personalEmail
-      : null;
+    personalEmail && validateEmail(personalEmail) ? personalEmail : null;
 
   if (fiveWords.length < 3) {
     return NextResponse.json(
@@ -261,12 +258,40 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // `profiles.email` is unique, so a collision is a real conflict rather
-    // than a race we can retry. The message stays deliberately vague about
-    // whether the existing listing is claimed — saying so would tell a
-    // stranger which businesses have accounts attached.
+    const session = await auth();
+    const manageWithPana = body.manageWithPana === true;
+    if (manageWithPana && !session?.user?.id) {
+      return NextResponse.json(
+        {
+          error:
+            'Sign in again to manage this listing, or choose to claim it later.',
+        },
+        { status: 401 }
+      );
+    }
+    if (
+      manageWithPana &&
+      body.expectedManagerId != null &&
+      body.expectedManagerId !== session?.user?.id
+    ) {
+      return NextResponse.json(
+        {
+          code: 'manager_changed',
+          error:
+            'Your Pana sign-in changed. Confirm the listing contact and management choice again.',
+        },
+        { status: 409 }
+      );
+    }
+
+    // A matching personal profile is not a duplicate application. Different
+    // listings may also share an inbox; only the same name and contact collide.
     const existingProfile = await db.query.profiles.findFirst({
-      where: eq(profiles.email, email),
+      where: and(
+        sql`lower(${profiles.email}) = ${email}`,
+        sql`lower(${profiles.name}) = lower(${name})`,
+        sql`${profiles.status}->>'source' = ${BUSINESS_INTAKE_SOURCE}`
+      ),
       columns: { id: true },
     });
 
@@ -274,7 +299,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'There is already a listing with this email. Sign in to manage it, or contact us if you think this is a mistake.',
+            'A listing with this name and contact email has already been submitted. Sign in to manage it, or contact us if you need help claiming it.',
         },
         { status: 409 }
       );
@@ -288,7 +313,6 @@ export async function POST(request: NextRequest) {
     };
 
     const submittedAt = new Date();
-    const session = await auth();
     const cookieAttribution = await getActiveCookieAttribution(request);
     if (session?.user?.id && cookieAttribution) {
       await attachReferralToUser(cookieAttribution.id, session.user.id);
@@ -298,12 +322,11 @@ export async function POST(request: NextRequest) {
       session?.user?.id
     );
 
-    await db.transaction(async (tx) => {
+    const createdProfile = await db.transaction(async (tx) => {
       const [createdProfile] = await tx
         .insert(profiles)
         .values({
-          // No owner yet — this is the whole point of intake. The claim flow
-          // attaches a user later.
+          // Ownership belongs in profile_owners, never the human's identity slot.
           userId: null,
           name,
           email,
@@ -311,7 +334,7 @@ export async function POST(request: NextRequest) {
           // form, so it only ever becomes an invitation the named person can
           // accept or dismiss once signed in — never an ownership grant. See
           // lib/server/pending-listing-owner.ts.
-          pendingOwnerEmail,
+          pendingOwnerEmail: manageWithPana ? null : pendingOwnerEmail,
           phoneNumber: phoneNumber || null,
           pronouns: pronouns || null,
           addressLine1: addressLine1 || null,
@@ -347,7 +370,15 @@ export async function POST(request: NextRequest) {
             agreedToTermsAt: submittedAt.toISOString(),
           },
         })
-        .returning({ id: profiles.id });
+        .returning();
+
+      if (manageWithPana && session?.user?.id) {
+        await tx.insert(profileOwners).values({
+          profileId: createdProfile.id,
+          userId: session.user.id,
+          role: 'owner',
+        });
+      }
 
       if (referralAttribution && createdProfile) {
         await tx
@@ -364,16 +395,25 @@ export async function POST(request: NextRequest) {
             target: [referralEvents.attributionId, referralEvents.eventType],
           });
       }
+
+      return createdProfile;
     });
 
-    await sendSubmissionEmails(email);
+    try {
+      await sendListingSubmissionEmails(createdProfile);
+    } catch (error) {
+      // The application is committed; a mail outage must not invite a retry
+      // that can only report a duplicate. Staff can resend from the saved row.
+      console.error('[listings/intake] notification email failed', error);
+    }
 
-    if (pendingOwnerEmail) {
+    let invitationSent = false;
+    if (!manageWithPana && pendingOwnerEmail) {
       const callbackParams = new URLSearchParams({ next: '/account' });
       if (referralAttribution) {
         callbackParams.set('attribution', referralAttribution.id);
       }
-      await sendOwnerMagicLink(
+      invitationSent = await sendOwnerMagicLink(
         pendingOwnerEmail,
         request,
         referralAttribution
@@ -382,7 +422,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = NextResponse.json({ success: true }, { status: 201 });
+    const response = NextResponse.json(
+      {
+        success: true,
+        profileId: createdProfile.id,
+        management: manageWithPana
+          ? 'account'
+          : pendingOwnerEmail
+            ? 'invitation'
+            : 'unclaimed',
+        invitationEmail: manageWithPana ? null : pendingOwnerEmail,
+        invitationSent,
+      },
+      { status: 201 }
+    );
     if (session?.user?.id && cookieAttribution) {
       response.cookies.set(REFERRAL_COOKIE, '', {
         httpOnly: true,
@@ -395,6 +448,19 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('[listings/intake] submission failed', error);
+    const details = describeDbError(error);
+    if (
+      details.code === '23505' &&
+      details.constraint === 'profiles_listing_name_email_unique'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'A listing with this name and contact email has already been submitted. Sign in to manage it, or contact us if you need help claiming it.',
+        },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
       { error: 'Something went wrong saving your listing. Please try again.' },
       { status: 500 }
@@ -424,66 +490,12 @@ async function sendOwnerMagicLink(
   email: string,
   request: NextRequest,
   callbackUrl: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     await sendMagicLinkTo(email, request.headers, callbackUrl);
+    return true;
   } catch (error) {
     console.error('[listings/intake] owner magic link failed', error);
-  }
-}
-
-/**
- * Mail the business a receipt and staff an approve/decline pair. Re-reads the
- * row so the access key and normalized fields come from what actually landed.
- *
- * Best-effort on purpose: a mail provider outage must not cost us the
- * submission, which is already committed by this point. Staff can re-trigger
- * these from /api/profile/sendSubmission.
- */
-async function sendSubmissionEmails(email: string): Promise<void> {
-  try {
-    const profile = await db.query.profiles.findFirst({
-      where: eq(profiles.email, email),
-    });
-    if (!profile) return;
-
-    const status = profile.status as { access?: string } | null;
-    const descriptions = profile.descriptions as ProfileDescriptions | null;
-    const socials = profile.socials as Record<string, string> | null;
-
-    const baseActionUrl = `${process.env.NEXT_PUBLIC_HOST_URL}/admin/profile/action`;
-    const approveUrl = new URL(baseActionUrl);
-    approveUrl.searchParams.set('email', profile.email);
-    approveUrl.searchParams.set('access', status?.access || '');
-    approveUrl.searchParams.set('action', 'approve');
-
-    const declineUrl = new URL(baseActionUrl);
-    declineUrl.searchParams.set('email', profile.email);
-    declineUrl.searchParams.set('access', status?.access || '');
-    declineUrl.searchParams.set('action', 'decline');
-
-    await Promise.all([
-      sendTemplateEmail('admin.profile_submission', {
-        name: profile.name,
-        email: profile.email,
-        details: descriptions?.details || '',
-        phone_number: profile.phoneNumber || '',
-        five_words: descriptions?.fiveWords || '',
-        tags: descriptions?.tags || '',
-        socials_website: socials?.website || 'n/a',
-        socials_instagram: socials?.instagram || 'n/a',
-        hearaboutus: descriptions?.hearaboutus || 'Public business intake form',
-        affiliate: profile.affiliate || 'n/a',
-        approve_url: approveUrl.toString(),
-        decline_url: declineUrl.toString(),
-      }),
-      sendTemplateEmail(
-        'profile.submitted',
-        { name: profile.name },
-        profile.email
-      ),
-    ]);
-  } catch (error) {
-    console.error('[listings/intake] notification email failed', error);
+    return false;
   }
 }

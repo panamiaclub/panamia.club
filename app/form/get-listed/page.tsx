@@ -22,6 +22,7 @@ import { CheckCircle2, Send, Shield, Store, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
 import { profileCategoryList } from '@/lib/lists';
+import { useSession } from '@/lib/auth-client';
 
 /**
  * Public directory intake. No auth gate on purpose — see the rationale in
@@ -45,6 +46,16 @@ function ListYourBusinessForm() {
   // Separate from `personalEmail` so the success screen keeps describing what
   // was actually submitted even after resetForm clears the inputs.
   const [submittedPersonalEmail, setSubmittedPersonalEmail] = useState('');
+  const [submittedManaged, setSubmittedManaged] = useState(false);
+  const [submittedInvitationSent, setSubmittedInvitationSent] = useState(false);
+  const { data: session, status: sessionStatus } = useSession();
+  const [usePanaEmail, setUsePanaEmail] = useState(true);
+  const [manageWithPana, setManageWithPana] = useState(true);
+  const [confirmedContact, setConfirmedContact] = useState<{
+    email: string;
+    personalEmail: string;
+    managerId: string | null;
+  } | null>(null);
 
   // Step 2 — what kind of listing, and whether they qualify
   const [accountType, setAccountType] = useState('directory');
@@ -54,13 +65,15 @@ function ListYourBusinessForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  // Optional, and deliberately so. Giving a personal address gets you signed
-  // in and holding the listing; withholding it costs nothing, which matters
-  // because plenty of these are submitted by someone other than the owner.
+  // A personal address requests an invitation, not an ownership grant.
   const [personalEmail, setPersonalEmail] = useState('');
   // Kept inline rather than in a toast: the only way to resolve it is to edit
   // or empty this one field, so the message belongs next to it.
   const [personalEmailError, setPersonalEmailError] = useState('');
+  const panaEmail = session?.user?.email ?? '';
+  const usingPanaEmail = Boolean(panaEmail && usePanaEmail);
+  const listingEmail = usingPanaEmail ? panaEmail : email;
+  const managesWithPana = Boolean(session?.user?.id && manageWithPana);
 
   // Step 4 — pronouns
   const [pronouns, setPronouns] = useState('');
@@ -134,27 +147,32 @@ function ListYourBusinessForm() {
 
   function submitStep3(e: FormEvent) {
     e.preventDefault();
+    if (sessionStatus === 'loading') {
+      refuse(t('loadingAccount'));
+      return;
+    }
     if (name.trim().length < 2) {
       refuse(t('errName'));
       return;
     }
-    if (!EMAIL_PATTERN.test(email.trim())) {
+    if (!EMAIL_PATTERN.test(listingEmail.trim())) {
       refuse(t('errEmail'));
       return;
     }
     // An optional field must stay cheap to abandon. Both of these are shown
     // against the field and clear the moment it is emptied, so nobody can get
     // stuck behind something they never had to fill in.
-    const personal = personalEmail.trim();
+    const personal = managesWithPana ? '' : personalEmail.trim();
     if (personal && !EMAIL_PATTERN.test(personal)) {
       setPersonalEmailError(t('errPersonalEmail'));
       return;
     }
-    if (personal && personal.toLowerCase() === email.trim().toLowerCase()) {
-      setPersonalEmailError(t('errPersonalEmailSame'));
-      return;
-    }
     setPersonalEmailError('');
+    setConfirmedContact({
+      email: listingEmail.trim(),
+      personalEmail: personal,
+      managerId: managesWithPana ? (session?.user?.id ?? null) : null,
+    });
     goTo(4);
   }
 
@@ -192,6 +210,20 @@ function ListYourBusinessForm() {
 
   async function submitForm(e: FormEvent) {
     e.preventDefault();
+    if (sessionStatus === 'loading') {
+      refuse(t('loadingAccount'));
+      return;
+    }
+
+    if (
+      !confirmedContact ||
+      (confirmedContact.managerId &&
+        confirmedContact.managerId !== session?.user?.id)
+    ) {
+      refuse(t('errReviewContact'));
+      goTo(3);
+      return;
+    }
 
     if (!agreeTos) {
       refuse(t('errTos'));
@@ -216,8 +248,10 @@ function ListYourBusinessForm() {
         '/api/listings/intake',
         {
           name,
-          email,
-          personalEmail,
+          email: confirmedContact.email,
+          personalEmail: confirmedContact.personalEmail,
+          manageWithPana: Boolean(confirmedContact.managerId),
+          expectedManagerId: confirmedContact.managerId,
           fiveWords,
           instagram,
           website,
@@ -243,15 +277,10 @@ function ListYourBusinessForm() {
       );
 
       if (response.data?.success) {
-        setSubmittedEmail(email);
-        // Mirrors the server's own rule for whether a link went out, so the
-        // success screen never promises an email that was dropped.
-        const personal = personalEmail.trim();
-        const linkWasSent =
-          personal !== '' &&
-          personal.toLowerCase() !== email.trim().toLowerCase() &&
-          EMAIL_PATTERN.test(personal);
-        setSubmittedPersonalEmail(linkWasSent ? personal : '');
+        setSubmittedEmail(confirmedContact.email.toLowerCase());
+        setSubmittedManaged(response.data.management === 'account');
+        setSubmittedPersonalEmail(response.data.invitationEmail || '');
+        setSubmittedInvitationSent(response.data.invitationSent === true);
         if (typeof window !== 'undefined') {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -259,6 +288,11 @@ function ListYourBusinessForm() {
       }
 
       resetTurnstile();
+      if (response.data?.code === 'manager_changed') {
+        refuse(t('errReviewContact'));
+        goTo(3);
+        return;
+      }
       toast({
         variant: 'destructive',
         title: tToast('submissionFailed'),
@@ -282,6 +316,9 @@ function ListYourBusinessForm() {
     setLocallyBased('');
     setName('');
     setEmail('');
+    setUsePanaEmail(true);
+    setManageWithPana(true);
+    setConfirmedContact(null);
     setPhoneNumber('');
     setPersonalEmail('');
     setPersonalEmailError('');
@@ -303,6 +340,8 @@ function ListYourBusinessForm() {
     setAgreeTos(false);
     setSubmittedEmail('');
     setSubmittedPersonalEmail('');
+    setSubmittedManaged(false);
+    setSubmittedInvitationSent(false);
     resetTurnstile();
   }
 
@@ -323,7 +362,7 @@ function ListYourBusinessForm() {
                 <p className="text-pana-ink/75 dark:text-muted-foreground text-lg">
                   {t('successBody', { email: submittedEmail })}
                 </p>
-                {submittedPersonalEmail && (
+                {(submittedManaged || submittedPersonalEmail) && (
                   <div className="border-pana-indigo/20 bg-pana-blue/15 mt-5 flex gap-3 rounded-xl border p-4 text-left">
                     <UserPlus
                       className="text-pana-indigo mt-0.5 h-5 w-5 shrink-0"
@@ -331,12 +370,21 @@ function ListYourBusinessForm() {
                     />
                     <div>
                       <p className="font-extrabold">
-                        {t('successAccountTitle')}
+                        {t(
+                          submittedManaged
+                            ? 'successManagedTitle'
+                            : 'successAccountTitle'
+                        )}
                       </p>
                       <p className="text-pana-ink/75 dark:text-muted-foreground mt-1 text-sm">
-                        {t('successPersonalEmail', {
-                          email: submittedPersonalEmail,
-                        })}
+                        {submittedManaged
+                          ? t('successManagedBody')
+                          : t(
+                              submittedInvitationSent
+                                ? 'successPersonalEmail'
+                                : 'successInvitationPending',
+                              { email: submittedPersonalEmail }
+                            )}
                       </p>
                     </div>
                   </div>
@@ -348,9 +396,15 @@ function ListYourBusinessForm() {
                 <ol className="text-pana-ink/75 dark:text-muted-foreground list-decimal space-y-2 pl-5 text-sm">
                   <li>{t('successNext1')}</li>
                   <li>
-                    {submittedPersonalEmail
-                      ? t('successNextAccount')
-                      : t('successNextNoAccount')}
+                    {submittedManaged
+                      ? t('successNextManaged')
+                      : submittedPersonalEmail
+                        ? t(
+                            submittedInvitationSent
+                              ? 'successNextAccount'
+                              : 'successNextInvitationPending'
+                          )
+                        : t('successNextNoAccount')}
                   </li>
                   <li>{t('successNext2')}</li>
                 </ol>
@@ -364,7 +418,9 @@ function ListYourBusinessForm() {
                   asChild
                   className="bg-pana-flame text-pana-ink hover:bg-pana-burnt font-extrabold"
                 >
-                  <Link href="/">{t('successHome')}</Link>
+                  <Link href={submittedManaged ? '/account' : '/'}>
+                    {t(submittedManaged ? 'successManage' : 'successHome')}
+                  </Link>
                 </Button>
               </div>
             </CardContent>
@@ -391,7 +447,7 @@ function ListYourBusinessForm() {
     <Button
       type="submit"
       className="bg-pana-flame text-pana-ink hover:bg-pana-burnt font-extrabold"
-      disabled={isSubmitting}
+      disabled={isSubmitting || sessionStatus === 'loading'}
     >
       {label || t('next')}
     </Button>
@@ -591,6 +647,39 @@ function ListYourBusinessForm() {
                 </div>
 
                 <div className="space-y-2">
+                  {panaEmail && (
+                    <fieldset className="mb-4 space-y-3">
+                      <legend className="text-base font-bold">
+                        {t('emailChoiceTitle')}
+                      </legend>
+                      <RadioGroup
+                        value={usingPanaEmail ? 'pana' : 'different'}
+                        onValueChange={(value) =>
+                          setUsePanaEmail(value === 'pana')
+                        }
+                        disabled={isSubmitting}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="pana" id="email-use-pana" />
+                          <Label htmlFor="email-use-pana">
+                            {t('emailUsePana', { email: panaEmail })}
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem
+                            value="different"
+                            id="email-use-different"
+                          />
+                          <Label htmlFor="email-use-different">
+                            {t('emailUseDifferent')}
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                      <p className="text-muted-foreground text-sm">
+                        {t('emailCopyNote')}
+                      </p>
+                    </fieldset>
+                  )}
                   <Label htmlFor="business-email">
                     {t('emailLabel')}{' '}
                     <span className="text-destructive">*</span>
@@ -602,7 +691,8 @@ function ListYourBusinessForm() {
                     maxLength={100}
                     required
                     placeholder={t('emailPlaceholder')}
-                    value={email}
+                    value={listingEmail}
+                    readOnly={usingPanaEmail}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isSubmitting}
                   />
@@ -611,65 +701,94 @@ function ListYourBusinessForm() {
                   </p>
                 </div>
 
-                <div className="border-pana-indigo/20 bg-pana-blue/10 space-y-4 rounded-xl border p-4 sm:p-5">
-                  <div className="flex gap-3">
-                    <UserPlus
-                      className="text-pana-indigo mt-0.5 h-5 w-5 shrink-0"
-                      aria-hidden="true"
-                    />
-                    <div>
-                      <p className="font-extrabold">
-                        {t('accountOptionTitle')}
-                      </p>
-                      <p className="text-muted-foreground mt-1 text-sm">
-                        {t('accountOptionBody')}
-                      </p>
+                {sessionStatus === 'loading' && (
+                  <p role="status" className="text-muted-foreground text-sm">
+                    {t('loadingAccount')}
+                  </p>
+                )}
+
+                {session?.user?.id && (
+                  <div className="border-pana-indigo/20 bg-pana-blue/10 space-y-2 rounded-xl border p-4 sm:p-5">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="manage-with-pana"
+                        checked={manageWithPana}
+                        onCheckedChange={(checked) =>
+                          setManageWithPana(checked === true)
+                        }
+                        disabled={isSubmitting}
+                      />
+                      <Label htmlFor="manage-with-pana">
+                        {t('manageWithPana', { email: panaEmail })}
+                      </Label>
+                    </div>
+                    <p className="text-muted-foreground text-sm">
+                      {t('manageWithPanaNote')}
+                    </p>
+                  </div>
+                )}
+
+                {sessionStatus !== 'loading' && !managesWithPana && (
+                  <div className="border-pana-indigo/20 bg-pana-blue/10 space-y-4 rounded-xl border p-4 sm:p-5">
+                    <div className="flex gap-3">
+                      <UserPlus
+                        className="text-pana-indigo mt-0.5 h-5 w-5 shrink-0"
+                        aria-hidden="true"
+                      />
+                      <div>
+                        <p className="font-extrabold">
+                          {t('accountOptionTitle')}
+                        </p>
+                        <p className="text-muted-foreground mt-1 text-sm">
+                          {t('accountOptionBody')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="personal-email">
+                        {t('personalEmailLabel')}
+                      </Label>
+                      <Input
+                        id="personal-email"
+                        name="personalEmail"
+                        type="email"
+                        maxLength={100}
+                        placeholder={t('personalEmailPlaceholder')}
+                        value={personalEmail}
+                        onChange={(e) => {
+                          setPersonalEmail(e.target.value);
+                          if (personalEmailError) setPersonalEmailError('');
+                        }}
+                        disabled={isSubmitting}
+                        aria-invalid={personalEmailError ? true : undefined}
+                        aria-describedby={
+                          personalEmailError
+                            ? 'personal-email-error'
+                            : 'personal-email-note'
+                        }
+                      />
+                      {personalEmailError ? (
+                        <p
+                          id="personal-email-error"
+                          role="alert"
+                          className="text-destructive text-sm"
+                        >
+                          {personalEmailError}
+                        </p>
+                      ) : (
+                        <p
+                          id="personal-email-note"
+                          className="text-muted-foreground text-sm"
+                        >
+                          {personalEmail
+                            ? t('personalEmailReady', { email: personalEmail })
+                            : t('personalEmailNote')}
+                        </p>
+                      )}
                     </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="personal-email">
-                      {t('personalEmailLabel')}
-                    </Label>
-                    <Input
-                      id="personal-email"
-                      name="personalEmail"
-                      type="email"
-                      maxLength={100}
-                      placeholder={t('personalEmailPlaceholder')}
-                      value={personalEmail}
-                      onChange={(e) => {
-                        setPersonalEmail(e.target.value);
-                        if (personalEmailError) setPersonalEmailError('');
-                      }}
-                      disabled={isSubmitting}
-                      aria-invalid={personalEmailError ? true : undefined}
-                      aria-describedby={
-                        personalEmailError
-                          ? 'personal-email-error'
-                          : 'personal-email-note'
-                      }
-                    />
-                    {personalEmailError ? (
-                      <p
-                        id="personal-email-error"
-                        role="alert"
-                        className="text-destructive text-sm"
-                      >
-                        {personalEmailError}
-                      </p>
-                    ) : (
-                      <p
-                        id="personal-email-note"
-                        className="text-muted-foreground text-sm"
-                      >
-                        {personalEmail
-                          ? t('personalEmailReady', { email: personalEmail })
-                          : t('personalEmailNote')}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="business-phone">{t('phoneLabel')}</Label>
@@ -1085,7 +1204,11 @@ function ListYourBusinessForm() {
                     type="submit"
                     size="lg"
                     className="bg-pana-flame text-pana-ink hover:bg-pana-burnt font-extrabold"
-                    disabled={isSubmitting || !turnstileToken}
+                    disabled={
+                      isSubmitting ||
+                      !turnstileToken ||
+                      sessionStatus === 'loading'
+                    }
                   >
                     {isSubmitting ? (
                       t('sending')

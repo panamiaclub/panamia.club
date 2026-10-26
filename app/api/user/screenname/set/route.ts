@@ -162,9 +162,8 @@ export async function POST(request: NextRequest) {
   // filtered on users.accountType, which defaults to 'personal'; only
   // directory and hybrid are published.
   if (!currentUser?.profile) {
-    // An unclaimed profile may already exist for this email — a listing created
-    // before the account existed. auth.ts claims those at sign-in, but re-check
-    // here so we can never trip the unique constraint on profiles.email.
+    // An imported personal profile may predate the account. auth.ts claims
+    // those at sign-in; re-check here before creating a separate identity.
     //
     // Business listings are excluded: absorbing one would make this human *be*
     // the business and burn their single identity slot. They are administered
@@ -185,26 +184,6 @@ export async function POST(request: NextRequest) {
         .where(eq(profiles.id, unclaimed.id));
       await addProfileOwner(unclaimed.id, session.user.id);
     } else {
-      // profiles.email is NOT NULL UNIQUE, and the lookup above cannot see the
-      // row most likely to collide with this insert: a business listing this
-      // member submitted through the public intake form using their own
-      // personal address. notBusinessListing hides it on purpose — absorbing a
-      // listing would make the human *be* the business and burn their single
-      // identity slot, and profiles.email is attacker-writable through that
-      // unauthenticated form. See lib/server/profile-owners.ts:17-28.
-      //
-      // So the comment above, which asserts this insert can never trip the
-      // unique constraint, is false in exactly that case. The collision is
-      // pinned in tests-db/screenname-profile-email-collision.test.ts.
-      //
-      // This catch is a floor, not the fix. The member still ends up without a
-      // profile — they just learn why, and it is diagnosable, instead of an
-      // unhandled rejection. Resolving it properly means answering a schema
-      // question that is deliberately left open here: does profiles.email need
-      // to be unique at all, when users.email is already unique and
-      // authoritative? Every clean fix collides with that constraint while the
-      // member's personal profile still needs some address, and when a listing
-      // already holds the only address they have, no value satisfies both.
       try {
         await db.insert(profiles).values({
           userId: session.user.id,
@@ -215,10 +194,6 @@ export async function POST(request: NextRequest) {
           active: true,
         });
       } catch (err: unknown) {
-        // Log before classifying, so a violation on some other column — the
-        // unique profiles.userId, a NOT NULL, a statement timeout — stays
-        // diagnosable rather than collapsing into the same opaque 500 it is
-        // today.
         const details = describeDbError(err);
         console.error('[screenname] profile creation failed', {
           userId: session.user.id,
@@ -230,11 +205,9 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(
             {
               success: false,
-              // Additive: the callers read `success` and `error`, and this
-              // gives a UI something to branch on without parsing prose.
-              code: 'profile_email_taken',
+              code: 'profile_conflict',
               error:
-                'Your screenname is saved, but we could not create your profile: this email is already attached to another profile — usually a business listing submitted before this account existed. Claim that listing from its page in the directory, or contact support.',
+                'Your screenname is saved, but your profile changed during setup. Reload the page and try again, or contact support.',
             },
             { status: 409 }
           );

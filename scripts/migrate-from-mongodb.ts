@@ -77,7 +77,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { createId } from '@paralleldrive/cuid2';
-import { eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { config as loadDotenv } from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -1134,7 +1134,7 @@ async function migrateProfiles(
         collection: 'profiles',
         legacyId,
         identifier: str(doc.slug),
-        reason: 'no email address (profiles.email is NOT NULL and unique)',
+        reason: 'no email address (profiles.email is NOT NULL)',
       });
       continue;
     }
@@ -1271,15 +1271,35 @@ async function migrateProfiles(
     };
 
     if (db) {
-      const inserted = await db
-        .insert(profiles)
-        .values(row)
-        .onConflictDoNothing({ target: profiles.email })
-        .returning({ id: profiles.id });
-      if (inserted.length === 0) {
-        const existing = await db.query.profiles.findFirst({
-          where: (p, { eq: equals }) => equals(p.email, addr),
+      // The legacy export has one profile per email. New directory listings
+      // may share that inbox and must never be overwritten by a legacy merge.
+      const matches = await db.query.profiles.findMany({
+        where: and(
+          eq(profiles.email, addr),
+          sql`${profiles.status}->>'source' IS DISTINCT FROM 'business_intake'`
+        ),
+        limit: 2,
+      });
+      if (matches.length > 1) {
+        skipped++;
+        report.skipped.push({
+          collection: 'profiles',
+          legacyId,
+          identifier: addr,
+          reason:
+            'multiple personal profiles match; resolve by profile id before importing',
         });
+        continue;
+      }
+      const existing = matches[0];
+      const inserted = existing
+        ? []
+        : await db
+            .insert(profiles)
+            .values(row)
+            .onConflictDoNothing()
+            .returning({ id: profiles.id });
+      if (inserted.length === 0) {
         if (!existing || !merge) {
           skipped++;
           report.skipped.push({
@@ -1454,7 +1474,12 @@ async function createPlaceholderUsers(
           createdAt: profiles.createdAt,
         })
         .from(profiles)
-        .where(isNull(profiles.userId))
+        .where(
+          and(
+            isNull(profiles.userId),
+            sql`${profiles.status}->>'source' IS DISTINCT FROM 'business_intake'`
+          )
+        )
     : [];
 
   let written = 0;

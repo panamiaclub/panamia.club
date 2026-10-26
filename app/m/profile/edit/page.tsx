@@ -9,12 +9,12 @@ import { ProfileForm } from './_components/profile-form';
 
 export default async function EditProfilePage() {
   const session = await auth();
-  if (!session?.user?.email) {
+  if (!session?.user?.id) {
     redirectToSignIn('/m/profile/edit');
   }
 
   const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.email, session.user.email),
+    where: eq(profiles.userId, session.user.id),
   });
 
   // Require profile to access mentoring features

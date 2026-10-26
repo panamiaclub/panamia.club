@@ -19,6 +19,7 @@ function ProfileActionContent() {
     if (!searchParams) return;
 
     const email = searchParams.get('email');
+    const profileId = searchParams.get('profileId');
     const accessKey = searchParams.get('access');
     const action = searchParams.get('action');
 
@@ -27,7 +28,7 @@ function ProfileActionContent() {
       axios
         .post(
           '/api/admin/profile/action',
-          { email, access: accessKey, action },
+          { profileId, email, access: accessKey, action },
           {
             headers: {
               Accept: 'application/json',

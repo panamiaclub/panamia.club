@@ -230,6 +230,18 @@ Admin-only endpoints (require admin role):
 | `/api/admin/contactSubmissions` | PATCH  | Set contact submission status |
 | `/api/getSignupList`            | GET    | List signup requests          |
 
+Directory intake accepts a listing contact `email` independently of account
+ownership. Signed-in applicants can explicitly set `manageWithPana: true` to
+manage the new listing with their existing account. Otherwise, optional
+`personalEmail` records an invitation and receives a sign-in link; omitting it
+leaves the listing unclaimed without creating an account. The two email
+addresses may match. A successful response includes `profileId`, `management`
+(`account`, `invitation`, or `unclaimed`), `invitationEmail`, and
+`invitationSent`, so the form does not promise an invitation email that failed.
+The form also sends `expectedManagerId` to reject a changed sign-in rather than
+silently assigning the listing to another account. Submission resends target
+`profileId` and require a listing manager or staff administrator.
+
 ## Payments
 
 | Endpoint                       | Method    | Description                                      |

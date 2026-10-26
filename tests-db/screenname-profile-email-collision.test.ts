@@ -1,227 +1,224 @@
-/**
- * The profiles.email collision at screenname assignment
- *
- * app/api/user/screenname/set/route.ts creates a profile for any signed-in
- * member who does not have one yet. Before inserting, it looks for an unclaimed
- * profile already holding their email, and its own comment states the reason:
- *
- *   "re-check here so we can never trip the unique constraint on profiles.email"
- *
- * That lookup excludes business listings via `notBusinessListing`, and the
- * exclusion is correct — absorbing a listing into profiles.userId would make
- * the human *be* the business, burn their single 1:1 identity slot, and let an
- * attacker-supplied email from the public unauthenticated intake form be
- * absorbed into a real account. See lib/server/profile-owners.ts:17-28.
- *
- * But the exclusion also means the lookup misses the one row that will reject
- * the insert. A solo vendor who lists their business through the public intake
- * form using their own personal address creates a profile holding that address
- * with userId NULL. auth.ts skips it at sign-in for the same correct reason.
- * So when they set a screenname, the lookup returns nothing, control falls to
- * the bare insert, and Postgres rejects it on profiles_email_unique.
- *
- * These tests pin that mechanism to the data layer. They assert the *specific*
- * SQLSTATE and constraint rather than merely that something rejected, because
- * a test that only expects a throw passes just as happily when it throws for an
- * unrelated reason — a foreign key, a NOT NULL, a timeout.
- *
- * They deliberately do not assert what the route should do instead. Making the
- * collision survivable is a schema-semantics question (does profiles.email need
- * to be unique at all, when users.email is already unique and authoritative?)
- * and it belongs to the repo owner. What is pinned here is only that the
- * collision is real and that the route's guard can recognise it.
- *
- * Every fixture is created under a per-run random suffix and deleted in the
- * `after` hook, so this is safe against a shared or seeded database. It never
- * truncates anything.
- */
-import { test, before, after } from 'node:test';
+import { after, before, beforeEach, mock, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { config } from 'dotenv';
+import { readFile } from 'node:fs/promises';
+import { PGlite } from '@electric-sql/pglite';
+import { drizzle } from 'drizzle-orm/pglite';
+import { getTableConfig } from 'drizzle-orm/pg-core';
+import { eq } from 'drizzle-orm';
+import * as schema from '@/lib/schema';
 
-// lib/db reads POSTGRES_URL when the module is first evaluated, and static
-// imports hoist above this call. The dynamic imports below are what keep the
-// env in place before the connection is built.
-config({ path: '.env.local' });
+const pg = new PGlite();
+const db = drizzle(pg, { schema });
+const email = 'solo-vendor@test.invalid';
+const userId = 'solo-vendor';
+const listingId = 'solo-vendor-listing';
+const tables = [
+  schema.users,
+  schema.profiles,
+  schema.screennameHistory,
+  schema.socialActors,
+  schema.socialGroups,
+  schema.profileOwners,
+];
 
-const { db } = await import('@/lib/db');
-const { and, eq, isNull } = await import('drizzle-orm');
-const { profiles, users } = await import('@/lib/schema');
-const { notBusinessListing, BUSINESS_INTAKE_SOURCE } = await import(
-  '@/lib/server/profile-owners'
-);
-const { describeDbError, isUniqueViolation } = await import(
-  '@/lib/server/db-error'
-);
+mock.module(import.meta.resolve('../lib/db.ts'), {
+  namedExports: { db },
+});
+mock.module(import.meta.resolve('../auth.ts'), {
+  namedExports: {
+    auth: async () => ({ user: { id: userId, email, name: 'Solo Vendor' } }),
+  },
+});
 
-const suffix = Math.random().toString(36).slice(2, 8);
-
-// The solo vendor's one and only address. It is on their user row *and* on the
-// business listing they submitted, which is the whole shape of the bug.
-const vendorEmail = `sn-vendor-${suffix}@test.invalid`;
-// A legacy personal profile, for the control case.
-const legacyEmail = `sn-legacy-${suffix}@test.invalid`;
-
-let vendorUserId: string;
-let legacyProfileId: string;
-
-const createdUserIds: string[] = [];
-const createdProfileIds: string[] = [];
+let route: typeof import('../app/api/user/screenname/set/route');
+let handles: typeof import('../lib/screenname');
+let profiles: typeof import('../lib/server/profile');
+let NextRequest: typeof import('next/server').NextRequest;
 
 before(async () => {
-  // The human. Signed in, no profile of their own yet — exactly the state the
-  // route's `if (!currentUser?.profile)` branch is written for.
-  const [vendor] = await db
-    .insert(users)
-    .values({ email: vendorEmail, name: 'Solo Vendor' })
-    .returning();
-  vendorUserId = vendor.id;
-  createdUserIds.push(vendor.id);
+  for (const table of tables) {
+    const { name, columns } = getTableConfig(table);
+    const definitions = columns.map(
+      (column) =>
+        `"${column.name}" ${column.enumValues ? 'text' : column.getSQLType()}` +
+        (column.primary ? ' PRIMARY KEY' : '') +
+        (column.isUnique ? ` CONSTRAINT "${column.uniqueName}" UNIQUE` : '')
+    );
+    await pg.exec(`CREATE TABLE "${name}" (${definitions.join(', ')})`);
+  }
+  await pg.exec(`
+    ALTER TABLE profiles ADD CONSTRAINT profiles_email_unique UNIQUE (email);
+    CREATE UNIQUE INDEX profile_owners_profile_user_unique
+      ON profile_owners (profile_id, user_id);
+  `);
+  await db.insert(schema.profiles).values({
+    id: 'migration-control',
+    email: 'migration@test.invalid',
+    name: 'Existing Shop',
+  });
+  await pg.exec(
+    await readFile(
+      new URL('../drizzle/0072_profile_contact_email.sql', import.meta.url),
+      'utf8'
+    )
+  );
+  assert.equal(
+    (await db.query.profiles.findFirst())?.id,
+    'migration-control',
+    'the real migration must preserve existing profiles'
+  );
 
-  // Their business, as app/api/listings/intake/route.ts writes it: no owner,
-  // marked by status.source. The email is the vendor's own personal address,
-  // because a one-person business has no other address to give.
-  const [listing] = await db
-    .insert(profiles)
-    .values({
-      userId: null,
-      email: vendorEmail,
-      name: 'Solo Vendor Bakery',
-      status: { source: BUSINESS_INTAKE_SOURCE },
-    })
-    .returning();
-  createdProfileIds.push(listing.id);
+  route = await import('../app/api/user/screenname/set/route');
+  handles = await import('../lib/screenname');
+  profiles = await import('../lib/server/profile');
+  ({ NextRequest } = await import('next/server'));
+});
 
-  // An admin-imported personal profile waiting for its owner to sign in.
-  // Identical to the listing except for status.source, which is the point.
-  const [legacy] = await db
-    .insert(profiles)
-    .values({ userId: null, email: legacyEmail, name: 'Legacy Person' })
-    .returning();
-  legacyProfileId = legacy.id;
-  createdProfileIds.push(legacy.id);
+beforeEach(async () => {
+  for (const table of [...tables].reverse()) await db.delete(table);
+  await db.insert(schema.users).values({ id: userId, email });
+  await db.insert(schema.profiles).values({
+    id: listingId,
+    userId: null,
+    email,
+    name: 'Solo Vendor Bakery',
+    status: { source: 'business_intake' },
+  });
 });
 
 after(async () => {
-  for (const id of createdProfileIds) {
-    await db.delete(profiles).where(eq(profiles.id, id));
-  }
-  for (const id of createdUserIds) {
-    await db.delete(users).where(eq(users.id, id));
-  }
-
-  // postgres.js holds the process open otherwise, which hangs the runner.
-  const client = (db as unknown as { $client?: { end?: () => Promise<void> } })
-    .$client;
-  await client?.end?.();
+  await pg.close();
 });
 
-/**
- * The control. Without this, the reproduction below proves nothing: a lookup
- * that found nothing because the fixture was malformed would look identical to
- * one that found nothing because of the filter.
- */
-test('the unclaimed lookup finds a legacy personal profile', async () => {
-  const unclaimed = await db.query.profiles.findFirst({
-    where: and(
-      eq(profiles.email, legacyEmail),
-      isNull(profiles.userId),
-      notBusinessListing
-    ),
-    columns: { id: true },
-  });
-
-  assert.equal(
-    unclaimed?.id,
-    legacyProfileId,
-    'the lookup must still adopt legacy personal profiles — that is what it is for'
-  );
-});
-
-/**
- * The gap. Same query, same unclaimed state, same matching email; the only
- * difference from the control is status.source.
- */
-test('the unclaimed lookup misses a business listing holding the same email', async () => {
-  const unclaimed = await db.query.profiles.findFirst({
-    where: and(
-      eq(profiles.email, vendorEmail),
-      isNull(profiles.userId),
-      notBusinessListing
-    ),
-    columns: { id: true },
-  });
-
-  assert.equal(
-    unclaimed,
-    undefined,
-    'notBusinessListing must keep excluding listings — the exclusion is load-bearing security, not the bug'
-  );
-});
-
-/**
- * The 500. Having found nothing above, the route falls through to a bare insert
- * with no onConflict and, before this PR, no catch anywhere in the file.
- */
-test('the insert the route falls through to is rejected on profiles_email_unique', async () => {
-  // Mirrors app/api/user/screenname/set/route.ts exactly: userId, email, name,
-  // active. profiles.userId is also unique, and this user has no profile, so it
-  // is free — asserting the constraint name below is what proves the rejection
-  // came from the email collision and not from something incidental.
-  const rejection = await db
-    .insert(profiles)
-    .values({
-      userId: vendorUserId,
-      email: vendorEmail,
-      name: 'solovendor',
-      active: true,
+test('a member can create their personal identity after listing with the same inbox', async () => {
+  const response = await route.POST(
+    new NextRequest('https://signup.test.invalid/api/user/screenname/set', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ screenname: 'solovendor', name: 'Solo Vendor' }),
     })
-    .returning({ id: profiles.id })
-    .then(
-      (rows) => {
-        // Should be unreachable. Registered for cleanup regardless, so a
-        // non-reproduction does not also leak a row into a shared database.
-        for (const row of rows) createdProfileIds.push(row.id);
-        return null;
-      },
-      (err: unknown) => err
-    );
-
-  assert.ok(
-    rejection,
-    'the insert succeeded — profiles.email is no longer unique, and this analysis is stale'
   );
-
-  const details = describeDbError(rejection);
-
-  // Printed so the CI log carries the actual Postgres error, not just a green
-  // tick. The evidence is the deliverable here; a passing assertion proves the
-  // shape held but shows the reader nothing.
-  console.log('[repro] profiles.email collision:', {
-    code: details.code,
-    constraint: details.constraint,
-    table: details.table,
-    detail: details.detail,
-    message: details.message,
+  assert.equal(response.status, 200);
+  const personal = await db.query.profiles.findFirst({
+    where: eq(schema.profiles.userId, userId),
   });
+  assert.ok(personal);
+  assert.notEqual(personal.id, listingId);
+  assert.equal(personal.email, email);
+  assert.equal(personal.screenname, 'solovendor');
 
-  assert.equal(
-    details.code,
-    '23505',
-    `expected a unique violation, got ${details.code}: ${details.message}`
-  );
-  assert.equal(
-    details.constraint,
-    'profiles_email_unique',
-    `expected the email constraint to be the one that rejected this, got ${details.constraint}`
-  );
+  const listing = await db.query.profiles.findFirst({
+    where: eq(schema.profiles.id, listingId),
+  });
+  assert.equal(listing?.userId, null);
+  assert.equal(listing?.name, 'Solo Vendor Bakery');
+  assert.equal(listing?.screenname, null);
+  assert.deepEqual(await db.select().from(schema.profileOwners), []);
+});
 
-  // The route's guard classifies with this helper, so pin it against the real
-  // driver error rather than a synthetic one. If postgres.js ever stops
-  // populating these fields, the guard degrades to a 500 and this catches it.
+test('email-based legacy adoption still excludes a directory listing', async () => {
+  assert.equal(await profiles.ensureProfile(userId, email), null);
+  const listing = await db.query.profiles.findFirst({
+    where: eq(schema.profiles.id, listingId),
+  });
+  assert.equal(listing?.userId, null);
+});
+
+test('an imported personal profile is adopted instead of the listing sharing its email', async () => {
+  await db.insert(schema.profiles).values({
+    id: 'legacy-person',
+    email,
+    name: 'Legacy Person',
+  });
+  const personal = await profiles.ensureProfile(userId, email);
+  assert.equal(personal?.id, 'legacy-person');
+  assert.equal(personal?.userId, userId);
   assert.equal(
-    isUniqueViolation(rejection),
-    true,
-    'the route guard would not recognise this error, so it would still 500'
+    (
+      await db.query.profiles.findFirst({
+        where: eq(schema.profiles.id, listingId),
+      })
+    )?.userId,
+    null
+  );
+});
+
+test('sharing an inbox never lets a person take a listing handle', async () => {
+  await db
+    .update(schema.profiles)
+    .set({ screenname: 'vendor-bakery' })
+    .where(eq(schema.profiles.id, listingId));
+  assert.equal(
+    await handles.isScreennameAvailable('vendor-bakery', email),
+    false
+  );
+});
+
+test('a person can still keep their own mirrored handle', async () => {
+  await db
+    .update(schema.users)
+    .set({ screenname: 'solovendor' })
+    .where(eq(schema.users.id, userId));
+  await db.insert(schema.profiles).values({
+    userId,
+    email,
+    name: 'Solo Vendor',
+    screenname: 'solovendor',
+  });
+  assert.equal(await handles.isScreennameAvailable('solovendor', email), true);
+});
+
+test('differently named directory listings can share an inbox', async () => {
+  await db.insert(schema.profiles).values({
+    email,
+    name: 'Solo Vendor Studio',
+    status: { source: 'business_intake' },
+  });
+  const matches = await db.query.profiles.findMany({
+    where: eq(schema.profiles.email, email),
+  });
+  assert.equal(matches.length, 2);
+});
+
+test('duplicate directory names and emails are still constrained case-insensitively', async () => {
+  const { describeDbError } = await import('../lib/server/db-error');
+  await assert.rejects(
+    db.insert(schema.profiles).values({
+      email: email.toUpperCase(),
+      name: 'SOLO VENDOR BAKERY',
+      status: { source: 'business_intake' },
+    }),
+    (error: unknown) => {
+      const details = describeDbError(error);
+      assert.equal(details.code, '23505');
+      assert.equal(details.constraint, 'profiles_listing_name_email_unique');
+      return true;
+    }
+  );
+});
+
+test('account emails and the personal identity slot remain unique', async () => {
+  const { describeDbError } = await import('../lib/server/db-error');
+  await assert.rejects(
+    db.insert(schema.users).values({ email }),
+    (error: unknown) => {
+      assert.equal(describeDbError(error).constraint, 'users_email_unique');
+      return true;
+    }
+  );
+  await db.insert(schema.profiles).values({ userId, email, name: 'Person' });
+  await assert.rejects(
+    db.insert(schema.profiles).values({
+      userId,
+      email: 'another@test.invalid',
+      name: 'Another identity',
+    }),
+    (error: unknown) => {
+      assert.equal(
+        describeDbError(error).constraint,
+        'profiles_user_id_unique'
+      );
+      return true;
+    }
   );
 });

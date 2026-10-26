@@ -19,7 +19,7 @@
 
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { and, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import * as schema from '../lib/schema';
 
 const { users, profiles } = schema;
@@ -66,11 +66,14 @@ async function main() {
       // Guaranteed by the isNotNull filter above.
       const screenname = user.screenname!;
 
-      // An unclaimed profile may already exist for this address — a listing
-      // created before the account. Attach it instead of inserting a duplicate,
-      // which profiles.email UNIQUE would reject anyway.
+      // Only adopt an imported personal profile. A listing sharing this inbox
+      // must stay separate from the human's identity.
       const unclaimed = await db.query.profiles.findFirst({
-        where: and(eq(profiles.email, email), isNull(profiles.userId)),
+        where: and(
+          eq(profiles.email, email),
+          isNull(profiles.userId),
+          sql`${profiles.status}->>'source' IS DISTINCT FROM 'business_intake'`
+        ),
         columns: { id: true },
       });
 

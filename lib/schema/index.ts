@@ -839,7 +839,9 @@ export const profiles = pgTable(
     // picks one. This is what lets a business have a federated actor without
     // being attached to a user — see drizzle/0036_profile_screenname.sql.
     screenname: text('screenname'),
-    email: text('email').notNull().unique(),
+    // Contact address, not identity. A person and the listings they administer
+    // may share an inbox; users.email remains the unique sign-in address.
+    email: text('email').notNull(),
     /**
      * A personal address that asked to be given this listing, before any
      * account existed to give it to.
@@ -973,6 +975,10 @@ export const profiles = pgTable(
     nostrPubkeySource: nostrPubkeySource('nostr_pubkey_source'),
   },
   (table) => ({
+    emailIdx: index('profiles_email_idx').on(table.email),
+    listingNameEmailUnique: uniqueIndex('profiles_listing_name_email_unique')
+      .on(sql`lower(${table.name})`, sql`lower(${table.email})`)
+      .where(sql`${table.status}->>'source' = 'business_intake'`),
     activeIdx: index('profiles_active_idx').on(table.active),
     nostrPubkeyIdx: index('profiles_nostr_pubkey_idx').on(table.nostrPubkey),
     // Partial in the migration (WHERE pending_owner_email IS NOT NULL) — the
