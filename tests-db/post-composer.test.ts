@@ -41,13 +41,15 @@ const { PostComposer } = await import('../components/social/PostComposer');
 const { MediaAttachments } = await import('../components/MultiMediaUpload');
 after(() => mock.restoreAll());
 
-it('renders the approved public card with identity, visible media actions, and one Post action', () => {
+it('starts compact with identity, visible media actions, and a public audience', () => {
   const html = renderToStaticMarkup(createElement(PostComposer));
   assert.match(html, /Fixture Pana/);
   assert.match(html, /aria-label="Audience: Everyone"/);
-  assert.match(html, /Add photos or video/);
+  assert.match(html, /aria-label="Add photos or video"/);
   assert.match(html, /aria-label="Add audio"/);
-  assert.match(html, /aria-label="More post options"/);
+  assert.match(html, /data-expanded="false"/);
+  assert.match(html, /rows="1"/);
+  assert.doesNotMatch(html, /aria-label="More post options"/);
   assert.match(html, /Anyone can read this/);
   assert.match(html, /type="submit"[^>]*disabled=""/);
   assert.doesNotMatch(html, /Local Panas|Your groups|CC BY|cheatsheet/);
@@ -63,11 +65,11 @@ it('keeps replies compact, with no audience control or duplicate identity row', 
   assert.match(html, /aria-label="Reply composer"/);
   assert.match(html, />Reply<\/button>/);
   assert.match(html, /class="flex flex-wrap items-center gap-2"/);
-  assert.match(html, /class="[^"]*border-t[^"]*flex-wrap"/);
+  assert.match(html, /class="(?=[^"]*\bborder-t\b)(?=[^"]*\bflex-wrap\b)/);
   assert.doesNotMatch(html, /Audience:|Fixture Pana|rounded-3xl/);
 });
 
-it('pins group posting without describing it as a personal public post', () => {
+it('pins compact group posting without describing it as a personal public post', () => {
   const html = renderToStaticMarkup(
     createElement(PostComposer, { lockedGroupHandle: 'room' })
   );

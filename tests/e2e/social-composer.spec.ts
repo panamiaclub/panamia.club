@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
+import type { CalendarEntry } from '@/lib/query/social';
 
 const photo = {
   name: 'photo.png',
@@ -13,6 +14,26 @@ const uploadedPhoto = {
   mediaType: 'image/webp',
   url: '/img/impact/zine-series.webp',
   name: 'Photo',
+};
+const calendarEntry: CalendarEntry = {
+  id: 'fixture-event',
+  slug: 'community-table',
+  title: 'Community table',
+  startsAt: '2099-01-02T17:00:00.000Z',
+  endsAt: null,
+  timezone: 'America/New_York',
+  coverImage: null,
+  mode: 'offline',
+  attendeeCount: 3,
+  visibility: 'public',
+  reason: 'rsvp',
+  rsvp: 'going',
+  hostKind: 'pana',
+  hostName: 'Fixture Pana',
+  hostHandle: 'fixture',
+  venueName: null,
+  venueCity: null,
+  because: null,
 };
 
 // Exercise the actual /s page and production upload/composer components. Only
@@ -79,6 +100,26 @@ async function openComposer(
         },
       });
     }
+    if (path === '/api/social/follows') {
+      return json({ success: true, data: { actors: [], nextCursor: null } });
+    }
+    if (path === '/api/social/stories/summary') {
+      return json({
+        success: true,
+        data: {
+          fixture: { hasStories: false, hasUnseen: false, isOwner: true },
+        },
+      });
+    }
+    if (path === '/api/social/actors/fixture/panas') {
+      return json({ success: true, data: { actors: [], count: 0 } });
+    }
+    if (path === '/api/social/actors/me/calendar') {
+      return json({
+        success: true,
+        data: { committed: [calendarEntry], suggested: [] },
+      });
+    }
     if (path === '/api/consent/check') return json({ consented: true });
     if (path === '/api/social/statuses' && request.method() === 'POST') {
       posts.push(request.postDataJSON());
@@ -108,12 +149,12 @@ async function openComposer(
   });
   await expect(composer).toBeVisible();
   await expect(
-    composer.getByText('Fixture Pana', { exact: true })
-  ).toBeVisible();
+    composer.getByRole('textbox', { name: 'Write a post' })
+  ).toHaveAttribute('placeholder', "What's on your mind, Fixture?");
   return { composer, posts, uploads: () => uploads };
 }
 
-test('friendly composer has only Everyone/Panas and fits desktop and small phones', async ({
+test('compact composer keeps media and Everyone/Panas visible at desktop, tablet and phone sizes', async ({
   page,
 }) => {
   const { composer } = await openComposer(page);
@@ -139,19 +180,90 @@ test('friendly composer has only Everyone/Panas and fits desktop and small phone
   ).toBeVisible();
   await expect(page.getByRole('menu')).not.toContainText('Our room');
   await page.keyboard.press('Escape');
-  for (const width of [320, 390, 1280]) {
+  for (const width of [320, 390, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     const bounds = await composer.boundingBox();
     expect(bounds).not.toBeNull();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    expect(bounds!.height).toBeLessThanOrEqual(width < 640 ? 190 : 150);
+    await expect(composer).toHaveAttribute('data-expanded', 'false');
     await expect(
       composer.getByRole('button', { name: 'Post', exact: true })
     ).toBeVisible();
     expect(
       await composer.evaluate((node) => node.scrollWidth <= node.clientWidth)
     ).toBe(true);
+    for (const name of [
+      'Add photos or video',
+      'Add audio',
+      'Audience: Everyone',
+      'Post',
+    ]) {
+      const action = composer.getByRole('button', { name, exact: true });
+      const target = await action.boundingBox();
+      expect(target!.height).toBeGreaterThanOrEqual(44);
+    }
   }
+  const stories = page.getByRole('region', { name: 'Stories', exact: true });
+  await expect(stories.getByRole('listitem')).toHaveCount(1);
+  await expect(
+    stories.getByRole('button', { name: 'Post a story' })
+  ).toBeVisible();
+  expect((await stories.boundingBox())!.height).toBeLessThanOrEqual(64);
+  const upcoming = page.getByRole('region', { name: 'Good things ahead.' });
+  await expect(upcoming).toBeVisible();
+  await expect(upcoming).toContainText('Saved posts');
+  await expect(upcoming).toContainText('Jams');
+  await expect(upcoming).toContainText('Trending & hashtags');
+  await expect(upcoming.locator('.reserved-slot')).toHaveCount(0);
+  await expect(
+    page
+      .getByRole('region', { name: 'Coming up', exact: true })
+      .getByRole('link', { name: /Community table/ })
+  ).toHaveAttribute('href', '/e/community-table');
+});
+
+test('writing expands the card, Done collapses an empty draft, and labelled buttons open the real pickers', async ({
+  page,
+}) => {
+  const { composer } = await openComposer(page);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const idleHeight = (await composer.boundingBox())!.height;
+  const input = composer.getByRole('textbox', { name: 'Write a post' });
+  await expect(
+    composer.getByRole('button', { name: 'More post options' })
+  ).toHaveCount(0);
+  await input.fill('A little moment');
+  await expect(composer).toHaveAttribute('data-expanded', 'true');
+  expect((await composer.boundingBox())!.height).toBeGreaterThan(
+    idleHeight + 80
+  );
+  await expect(
+    composer.getByRole('button', { name: 'More post options' })
+  ).toBeVisible();
+  await input.fill('');
+  await composer.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(composer).toHaveAttribute('data-expanded', 'false');
+  expect((await composer.boundingBox())!.height).toBe(idleHeight);
+
+  const photos = page.waitForEvent('filechooser');
+  await composer
+    .getByRole('button', { name: 'Add photos or video', exact: true })
+    .click();
+  const photoChooser = await photos;
+  expect(photoChooser.isMultiple()).toBe(true);
+  expect(await photoChooser.element().getAttribute('accept')).toMatch(
+    /image\/.*video\/\*/
+  );
+  await photoChooser.setFiles([]);
+  const audio = page.waitForEvent('filechooser');
+  await composer
+    .getByRole('button', { name: 'Add audio', exact: true })
+    .click();
+  const audioChooser = await audio;
+  expect(await audioChooser.element().getAttribute('accept')).toBe('audio/*');
+  await audioChooser.setFiles([]);
 });
 
 test('real image upload blocks early submission, then allows a public media-only post', async ({
@@ -193,6 +305,7 @@ test('real image upload blocks early submission, then allows a public media-only
   await expect(
     composer.getByRole('img', { name: 'Photo', exact: true })
   ).toHaveCount(0);
+  await expect(composer).toHaveAttribute('data-expanded', 'false');
 });
 
 test('Panas requests use the explicit mutual audience and keep drafts on failure', async ({

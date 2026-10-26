@@ -30,10 +30,6 @@ import type { SocialActor } from '@/lib/schema';
    their profile and in the feed. */
 const FOLLOW_SCAN_LIMIT = 50;
 
-/* Placeholders drawn when there is nothing to watch. Four reads as a row that
-   happens to be empty; one reads as a broken avatar. */
-const GHOST_COUNT = 4;
-
 function initials(actor: Pick<SocialActor, 'name' | 'username'>): string {
   const source = actor.name || actor.username || '';
   return source.slice(0, 2).toUpperCase();
@@ -98,7 +94,7 @@ export function StoriesRail({ actor }: { actor: SocialActor | null }) {
   const empty = live.length === 0;
 
   return (
-    <section className="stories-rail" aria-label="Stories">
+    <section className="stories-rail" data-empty={empty} aria-label="Stories">
       <ul className="stories-rail-track">
         {/* The viewer's own circle. StoryRing already answers both states from
             the summary it fetches -- the add button when there is nothing up,
@@ -112,7 +108,14 @@ export function StoriesRail({ actor }: { actor: SocialActor | null }) {
               </Avatar>
             </StoryRing>
           </span>
-          <span className="stories-rail-label">Your story</span>
+          <div className={empty ? 'min-w-0 space-y-1' : 'contents'}>
+            <span className="stories-rail-label">Your story</span>
+            {empty && (
+              <p className="stories-rail-note">
+                A little moment from your day.
+              </p>
+            )}
+          </div>
         </li>
 
         {live.map((pana) => (
@@ -134,31 +137,12 @@ export function StoriesRail({ actor }: { actor: SocialActor | null }) {
             </span>
           </li>
         ))}
-
-        {/* Decorative only. The sentence below carries the meaning, so these
-            are hidden rather than read out as four empty list items. */}
-        {empty &&
-          Array.from({ length: GHOST_COUNT }, (_, i) => (
-            <li
-              key={`ghost-${i}`}
-              className="stories-rail-item"
-              aria-hidden="true"
-            >
-              <span className="stories-rail-slot">
-                <span className="stories-rail-ghost" />
-              </span>
-              <span className="stories-rail-label stories-rail-label-ghost">
-                &nbsp;
-              </span>
-            </li>
-          ))}
       </ul>
 
       {empty && (
-        <p className="stories-rail-note">
-          Stories from the panas you follow appear here for 24 hours. Tap your
-          own circle to post one.
-        </p>
+        <span className="text-pana-ink/60 hidden flex-none text-[10px] font-semibold sm:block">
+          Here for 24 hours
+        </span>
       )}
     </section>
   );

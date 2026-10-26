@@ -135,7 +135,7 @@ function FeedContent() {
   const firstName = (actor?.name || actor?.username || '').split(' ')[0];
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
       <div className="min-w-0">
         <StoriesRail actor={actor} />
         <div>

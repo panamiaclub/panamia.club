@@ -38,6 +38,7 @@ interface PostCardProps {
   showReplyComposer?: boolean;
   isDetail?: boolean;
   compact?: boolean;
+  preview?: boolean;
 }
 
 export function PostCard({
@@ -45,6 +46,7 @@ export function PostCard({
   showReplyComposer = false,
   isDetail = false,
   compact = false,
+  preview = false,
 }: PostCardProps) {
   const [showCWContent, setShowCWContent] = useState(false);
   const [showReplyBox, setShowReplyBox] = useState(false);
@@ -69,50 +71,81 @@ export function PostCard({
 
   const hasCW =
     status.contentWarning && status.contentWarning.trim().length > 0;
+  const avatar = (
+    <Avatar className={preview ? 'mt-0.5 h-7.5 w-7.5' : 'h-10 w-10'}>
+      <AvatarImage src={status.actor.iconUrl || undefined} alt="" />
+      <AvatarFallback>{actorInitials}</AvatarFallback>
+    </Avatar>
+  );
 
   return (
-    <Card className={isDetail || compact ? 'border-0 shadow-none' : ''}>
+    <Card
+      className={
+        preview
+          ? 'border-0 bg-transparent shadow-none'
+          : isDetail || compact
+            ? 'border-0 shadow-none'
+            : ''
+      }
+    >
       <CardContent
-        className={compact ? 'p-0' : isDetail ? 'px-0 pt-0' : 'pt-4'}
+        className={compact || preview ? 'p-0' : isDetail ? 'px-0 pt-0' : 'pt-4'}
       >
         {/* Header */}
-        <div className="flex items-start gap-3">
-          <StoryRing
-            username={status.actor.username}
-            href={`/p/${status.actor.username}`}
-            size="sm"
-          >
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={status.actor.iconUrl || undefined} />
-              <AvatarFallback>{actorInitials}</AvatarFallback>
-            </Avatar>
-          </StoryRing>
+        <div className={`flex items-start ${preview ? 'gap-2.5' : 'gap-3'}`}>
+          {preview ? (
+            <Link
+              href={`/p/${status.actor.username}`}
+              className="flex-none"
+              aria-label={`${status.actor.name || status.actor.username}'s profile`}
+            >
+              {avatar}
+            </Link>
+          ) : (
+            <StoryRing
+              username={status.actor.username}
+              href={`/p/${status.actor.username}`}
+              size="sm"
+            >
+              {avatar}
+            </StoryRing>
+          )}
 
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
+          <div
+            className={`min-w-0 flex-1 ${preview ? 'rounded-2xl rounded-tl-sm bg-white/85 px-3 py-2' : ''}`}
+          >
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <Link
                 href={`/p/${status.actor.username}`}
-                className="truncate font-semibold hover:underline"
+                className={`truncate hover:underline ${preview ? 'text-xs font-extrabold' : 'font-semibold'}`}
               >
                 {status.actor.name || status.actor.username}
               </Link>
-              <Link
-                href={`/p/${status.actor.username}`}
-                className="text-muted-foreground truncate text-sm"
-              >
-                @{status.actor.username}
-              </Link>
-              <span className="text-muted-foreground text-sm">&middot;</span>
+              {!preview && (
+                <Link
+                  href={`/p/${status.actor.username}`}
+                  className="text-muted-foreground truncate text-sm"
+                >
+                  @{status.actor.username}
+                </Link>
+              )}
+              {!preview && (
+                <span className="text-muted-foreground text-sm">&middot;</span>
+              )}
               <time
                 dateTime={publishedDate.toISOString()}
-                className="text-muted-foreground text-sm"
+                className={
+                  preview
+                    ? 'text-pana-ink/60 text-[10px] font-semibold'
+                    : 'text-muted-foreground text-sm'
+                }
               >
                 {timeAgo}
               </time>
             </div>
 
             {/* Reply indicator */}
-            {status.inReplyTo && (
+            {!preview && status.inReplyTo && (
               <p className="text-muted-foreground mt-1 text-sm">
                 Replying to{' '}
                 <Link
@@ -158,8 +191,8 @@ export function PostCard({
                 />
               ) : (
                 <CollapsibleContent
-                  className="prose prose-sm dark:prose-invert mt-2 max-w-none break-words"
-                  maxLines={10}
+                  className={`prose prose-sm dark:prose-invert max-w-none [overflow-wrap:anywhere] ${preview ? 'text-pana-ink/80 mt-1 text-[13px] leading-relaxed' : 'mt-2 break-words'}`}
+                  maxLines={preview ? 3 : 10}
                 >
                   <SafeHtml html={status.content} />
                 </CollapsibleContent>
@@ -173,7 +206,7 @@ export function PostCard({
               )}
 
             {/* Location */}
-            {status.location && (
+            {!preview && status.location && (
               <a
                 href={
                   status.location.latitude && status.location.longitude
@@ -194,31 +227,37 @@ export function PostCard({
             )}
 
             {/* CC License + Actions */}
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-              <PostActions
-                statusId={status.id}
-                actorUsername={status.actor.username}
-                liked={status.liked}
-                likesCount={status.likesCount}
-                repliesCount={status.repliesCount}
-                onReply={() => setShowReplyBox(!showReplyBox)}
-                showReplyButton={!isDetail}
-                repliesExpanded={repliesOpen}
-                repliesId={repliesId}
-              />
-              {status.ccLicense &&
-                getVisibilityFromRecipients(
-                  status.recipientTo,
-                  status.recipientCc,
-                  status.type
-                ) !== 'private' && (
-                  <CCBadge license={status.ccLicense as CCLicenseValue} />
-                )}
-            </div>
+            {!preview && (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <PostActions
+                  statusId={status.id}
+                  actorUsername={status.actor.username}
+                  liked={status.liked}
+                  likesCount={status.likesCount}
+                  repliesCount={status.repliesCount}
+                  onReply={() => setShowReplyBox(!showReplyBox)}
+                  showReplyButton={!isDetail}
+                  repliesExpanded={repliesOpen}
+                  repliesId={repliesId}
+                />
+                {status.ccLicense &&
+                  getVisibilityFromRecipients(
+                    status.recipientTo,
+                    status.recipientCc,
+                    status.type
+                  ) !== 'private' && (
+                    <CCBadge license={status.ccLicense as CCLicenseValue} />
+                  )}
+              </div>
+            )}
           </div>
         </div>
-        <section id={repliesId} hidden={!repliesOpen} aria-label="Comments">
-          {repliesOpen && (
+        <section
+          id={repliesId}
+          hidden={preview || !repliesOpen}
+          aria-label="Comments"
+        >
+          {!preview && repliesOpen && (
             <div className="border-muted mt-3 space-y-4 border-l-2 pl-2">
               <PostReplies statusId={status.id} group={status.group} />
               {canReply && (

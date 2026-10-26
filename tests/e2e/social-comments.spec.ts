@@ -35,11 +35,15 @@ async function openFeed(
   options: {
     group?: SocialStatusDisplay['group'];
     replies?: SocialStatusDisplay[];
+    root?: Partial<SocialStatusDisplay>;
+    before?: SocialStatusDisplay[];
+    failReplies?: (url: URL) => boolean;
   } = {}
 ) {
   const root = makePost('root-post', 'An inline conversation', {
     repliesCount: options.replies?.length ?? 2,
     group: options.group,
+    ...options.root,
   });
   const replies = new Map<string, SocialStatusDisplay[]>([
     [
@@ -113,9 +117,29 @@ async function openFeed(
     if (path === '/api/social/actors/me/groups') {
       return json({ success: true, data: { groups: [] } });
     }
+    if (path === '/api/social/follows') {
+      return json({ success: true, data: { actors: [], nextCursor: null } });
+    }
+    if (path === '/api/social/stories/summary') {
+      return json({
+        success: true,
+        data: {
+          fixture: { hasStories: false, hasUnseen: false, isOwner: true },
+        },
+      });
+    }
+    if (path === '/api/social/actors/fixture/panas') {
+      return json({ success: true, data: { actors: [], count: 0 } });
+    }
+    if (path === '/api/social/actors/me/calendar') {
+      return json({ success: true, data: { committed: [], suggested: [] } });
+    }
     const thread = path.match(/^\/api\/social\/statuses\/([^/]+)\/replies$/);
     if (thread) {
       replyRequests.push(request.url());
+      if (options.failReplies?.(url)) {
+        return json({ success: false, error: 'Try again later' }, 503);
+      }
       const all = replies.get(thread[1]) ?? [];
       const cursor = url.searchParams.get('cursor');
       const start = cursor
@@ -166,7 +190,7 @@ async function openFeed(
     if (path === '/api/social/statuses' || path === '/api/social/timeline') {
       return json({
         success: true,
-        data: { statuses: [root], nextCursor: null },
+        data: { statuses: [...(options.before ?? []), root], nextCursor: null },
       });
     }
     return json(
@@ -176,14 +200,12 @@ async function openFeed(
   });
   const response = await page.goto('/s');
   expect(response?.status()).toBe(200);
-  const card = page
-    .locator('article')
-    .filter({ hasText: 'An inline conversation' });
+  const card = page.locator('#feed-panel > article').last();
   await expect(card).toBeVisible();
   return { card, posts, replyRequests };
 }
 
-test('comments expand in place, timestamps do not navigate, and warning media stays hidden', async ({
+test('two comments preview in place, timestamps do not navigate, and warning media stays hidden', async ({
   page,
 }) => {
   const { card, replyRequests } = await openFeed(page);
@@ -192,10 +214,30 @@ test('comments expand in place, timestamps do not navigate, and warning media st
   expect(await time.evaluate((node) => Boolean(node.closest('a')))).toBe(false);
   await time.click();
   await expect(page).toHaveURL(url);
-  expect(replyRequests).toHaveLength(0);
+  await expect(card.getByRole('listitem')).toHaveCount(2);
+  await expect(
+    card.getByText('First inline comment', { exact: true })
+  ).toBeVisible();
+  expect(replyRequests).toHaveLength(1);
+  expect(new URL(replyRequests[0]).searchParams.get('limit')).toBe('2');
+  expect(
+    replyRequests.every((url) =>
+      new URL(url).pathname.endsWith('/root-post/replies')
+    )
+  ).toBe(true);
+  await expect(card.getByRole('button', { name: /^View all/ })).toHaveCount(0);
+  await expect(
+    card.getByRole('form', { name: 'Reply composer', exact: true })
+  ).toHaveCount(0);
+  await expect(
+    card.getByText('Second inline comment', { exact: true })
+  ).not.toBeVisible();
+  await expect(
+    card.getByRole('img', { name: 'Comment photo', exact: true })
+  ).toHaveCount(0);
 
   const toggle = card.getByRole('button', {
-    name: 'Show comments, 2 comments',
+    name: 'Open conversation, 2 comments',
     exact: true,
   });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -204,7 +246,10 @@ test('comments expand in place, timestamps do not navigate, and warning media st
     card.getByText('First inline comment', { exact: true })
   ).toBeVisible();
   await expect(
-    card.getByRole('button', { name: 'Hide comments, 2 comments', exact: true })
+    card.getByRole('button', {
+      name: 'Close conversation, 2 comments',
+      exact: true,
+    })
   ).toHaveAttribute('aria-expanded', 'true');
   await expect(
     card.getByText('Second inline comment', { exact: true })
@@ -231,7 +276,7 @@ test('comments expand in place, timestamps do not navigate, and warning media st
   ).toBe(true);
   await expect(page).toHaveURL(url);
 
-  for (const width of [320, 390, 1280]) {
+  for (const width of [320, 390, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     expect(
       await card.evaluate((node) => node.scrollWidth <= node.clientWidth)
@@ -243,11 +288,18 @@ test('comments expand in place, timestamps do not navigate, and warning media st
     ).toBe(true);
   }
   await card
-    .getByRole('button', { name: 'Hide comments, 2 comments', exact: true })
+    .getByRole('button', {
+      name: 'Close conversation, 2 comments',
+      exact: true,
+    })
     .click();
   await expect(
     card.getByText('First inline comment', { exact: true })
-  ).not.toBeVisible();
+  ).toBeVisible();
+  await expect(card.getByRole('listitem')).toHaveCount(2);
+  await expect(
+    card.getByRole('form', { name: 'Reply composer', exact: true })
+  ).toHaveCount(0);
   await expect(page).toHaveURL(url);
 });
 
@@ -256,7 +308,7 @@ test('posting a comment keeps the thread open and refreshes its comments and cou
 }) => {
   const { card, posts } = await openFeed(page);
   await card
-    .getByRole('button', { name: 'Show comments, 2 comments', exact: true })
+    .getByRole('button', { name: 'Open conversation, 2 comments', exact: true })
     .click();
   const composer = card.getByRole('form', {
     name: 'Reply composer',
@@ -270,7 +322,10 @@ test('posting a comment keeps the thread open and refreshes its comments and cou
     card.getByText('A freshly posted comment', { exact: true })
   ).toBeVisible();
   await expect(
-    card.getByRole('button', { name: 'Hide comments, 3 comments', exact: true })
+    card.getByRole('button', {
+      name: 'Close conversation, 3 comments',
+      exact: true,
+    })
   ).toHaveAttribute('aria-expanded', 'true');
   await expect(
     composer.getByRole('textbox', { name: 'Write a reply' })
@@ -290,7 +345,7 @@ test('comment likes and nested conversations stay current without leaving the fe
   const { card } = await openFeed(page);
   const url = page.url();
   await card
-    .getByRole('button', { name: 'Show comments, 2 comments', exact: true })
+    .getByRole('button', { name: 'Open conversation, 2 comments', exact: true })
     .click();
   const first = card
     .getByRole('listitem')
@@ -371,7 +426,10 @@ test('an empty conversation accepts its first comment and preserves drafts when 
     card.getByText('The first comment', { exact: true })
   ).toBeVisible();
   await expect(
-    card.getByRole('button', { name: 'Hide comments, 1 comment', exact: true })
+    card.getByRole('button', {
+      name: 'Close conversation, 1 comment',
+      exact: true,
+    })
   ).toHaveAttribute('aria-expanded', 'true');
   await expect(card.getByText('No comments yet.', { exact: true })).toHaveCount(
     0
@@ -390,7 +448,7 @@ test('readable public-group comments remain accessible without offering non-memb
     },
   });
   await card
-    .getByRole('button', { name: 'Show comments, 2 comments', exact: true })
+    .getByRole('button', { name: 'Open conversation, 2 comments', exact: true })
     .click();
   await expect(
     card.getByText('First inline comment', { exact: true })
@@ -412,19 +470,8 @@ test('readable public-group comments remain accessible without offering non-memb
 test('loading failures are retryable instead of looking like an empty conversation', async ({
   page,
 }) => {
-  const { card } = await openFeed(page);
   let failing = true;
-  await page.route('**/api/social/statuses/root-post/replies?**', (route) =>
-    failing
-      ? route.fulfill({
-          status: 503,
-          json: { success: false, error: 'Try again later' },
-        })
-      : route.fallback()
-  );
-  await card
-    .getByRole('button', { name: 'Show comments, 2 comments', exact: true })
-    .click();
+  const { card } = await openFeed(page, { failReplies: () => failing });
   await expect(card.getByRole('status')).toHaveText('Loading comments...');
   await expect(card.getByRole('alert')).toContainText(
     'Could not load comments'
@@ -442,33 +489,33 @@ test('loading failures are retryable instead of looking like an empty conversati
 test('loading more comments retains earlier pages and can recover from a later-page failure', async ({
   page,
 }) => {
-  const { card } = await openFeed(page, {
+  let failing = true;
+  const { card, replyRequests } = await openFeed(page, {
     replies: Array.from({ length: 23 }, (_, i) =>
       makePost(`paged-${i}`, `Paged comment ${i + 1}`)
     ),
+    failReplies: (url) => failing && url.searchParams.has('cursor'),
   });
-  let failing = true;
-  await page.route('**/api/social/statuses/root-post/replies?**', (route) =>
-    failing && new URL(route.request().url()).searchParams.has('cursor')
-      ? route.fulfill({
-          status: 503,
-          json: { success: false, error: 'Try again later' },
-        })
-      : route.fallback()
-  );
-  await card
-    .getByRole('button', { name: 'Show comments, 23 comments', exact: true })
-    .click();
-  await expect(card.getByRole('listitem')).toHaveCount(20);
-  await card
-    .getByRole('button', { name: 'Load more comments', exact: true })
-    .click();
+  await expect(card.getByRole('listitem')).toHaveCount(2);
+  const disclosure = card.getByRole('button', {
+    name: 'View all 23 comments',
+    exact: true,
+  });
+  await disclosure.focus();
+  await disclosure.press('Enter');
   await expect(card.getByRole('alert')).toContainText(
     'Could not load more comments'
   );
-  await expect(card.getByRole('listitem')).toHaveCount(20);
+  await expect(card.getByRole('listitem')).toHaveCount(2);
+  await expect(
+    card.getByRole('button', { name: 'Show fewer comments', exact: true })
+  ).toBeFocused();
   failing = false;
   await card.getByRole('button', { name: 'Try again', exact: true }).click();
+  await expect(card.getByRole('listitem')).toHaveCount(22);
+  await card
+    .getByRole('button', { name: 'Load more comments', exact: true })
+    .click();
   await expect(card.getByRole('listitem')).toHaveCount(23);
   await expect(
     card.getByRole('button', { name: 'Load more comments', exact: true })
@@ -476,6 +523,86 @@ test('loading more comments retains earlier pages and can recover from a later-p
   await expect(card.getByText('Paged comment 1', { exact: true })).toHaveCount(
     1
   );
+  expect(
+    replyRequests.some((url) => {
+      const params = new URL(url).searchParams;
+      return params.get('cursor') === 'paged-1' && params.get('limit') === '20';
+    })
+  ).toBe(true);
+  const requestsBeforeCollapse = replyRequests.length;
+  await card
+    .getByRole('button', { name: 'Show fewer comments', exact: true })
+    .click();
+  await expect(card.getByRole('listitem')).toHaveCount(2);
+  await expect(
+    card.getByRole('button', { name: 'View all 23 comments', exact: true })
+  ).toBeFocused();
+  await expect(
+    card.getByText('Paged comment 1', { exact: true })
+  ).toBeVisible();
+  await expect(
+    card.getByText('Paged comment 2', { exact: true })
+  ).toBeVisible();
+  await expect(card.getByText('Paged comment 3', { exact: true })).toHaveCount(
+    0
+  );
+  await card
+    .getByRole('button', {
+      name: 'Open conversation, 23 comments',
+      exact: true,
+    })
+    .click();
+  await expect(card.getByRole('listitem')).toHaveCount(23);
+  expect(replyRequests).toHaveLength(requestsBeforeCollapse);
+});
+
+test('a post content warning prevents automatic comment previews until revealed', async ({
+  page,
+}) => {
+  const { card, replyRequests } = await openFeed(page, {
+    root: { contentWarning: 'Post heads-up' },
+  });
+  await expect(
+    card.getByText('First inline comment', { exact: true })
+  ).toHaveCount(0);
+  expect(replyRequests).toHaveLength(0);
+  await card
+    .getByRole('button', { name: 'Post heads-up', exact: true })
+    .click();
+  await expect(card.getByRole('listitem')).toHaveCount(2);
+  await expect(
+    card.getByText('First inline comment', { exact: true })
+  ).toBeVisible();
+  expect(replyRequests).toHaveLength(1);
+});
+
+test('offscreen comments wait until the card approaches the viewport', async ({
+  page,
+}) => {
+  const { card, replyRequests } = await openFeed(page, {
+    before: [
+      makePost('long-post', '', {
+        content: Array.from(
+          { length: 50 },
+          () => '<p>A longer post above the conversation.</p>'
+        ).join(''),
+      }),
+    ],
+  });
+  const comments = card.getByRole('region', { name: 'Comments', exact: true });
+  expect((await comments.boundingBox())!.y).toBeGreaterThan(
+    page.viewportSize()!.height + 200
+  );
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      )
+  );
+  expect(replyRequests).toHaveLength(0);
+  await card.scrollIntoViewIfNeeded();
+  await expect(card.getByRole('listitem')).toHaveCount(2);
+  expect(replyRequests).toHaveLength(1);
 });
 
 test('the explicit share action still copies a permalink without navigating the card', async ({

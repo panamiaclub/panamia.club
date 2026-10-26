@@ -1294,7 +1294,14 @@ export const useStatusReplies = (
   });
 };
 
-export const useInfiniteStatusReplies = (statusId: string, limit = 20) =>
+export const useInfiniteStatusReplies = (
+  statusId: string,
+  limit = 20,
+  {
+    initialLimit = limit,
+    enabled = true,
+  }: { initialLimit?: number; enabled?: boolean } = {}
+) =>
   useInfiniteQuery({
     queryKey: [
       socialQueryKey,
@@ -1302,12 +1309,13 @@ export const useInfiniteStatusReplies = (statusId: string, limit = 20) =>
       statusId,
       'replies',
       'infinite',
-      { limit },
+      { limit, initialLimit },
     ],
     initialPageParam: '',
-    queryFn: ({ pageParam }) => fetchStatusReplies(statusId, pageParam, limit),
+    queryFn: ({ pageParam }) =>
+      fetchStatusReplies(statusId, pageParam, pageParam ? limit : initialLimit),
     getNextPageParam: (page) => page?.nextCursor ?? undefined,
-    enabled: Boolean(statusId),
+    enabled: Boolean(statusId) && enabled,
   });
 
 // `enabled` lets callers skip the request for signed-out viewers: this endpoint

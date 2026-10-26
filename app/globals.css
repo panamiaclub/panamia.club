@@ -2379,10 +2379,8 @@ button.bizprofile-update-action:hover {
 
 /* ==========================================================================
    Pana Social feed
-   The timeline surface. Builds on the personal-profile primitives above rather
-   than restating them — `.profile-card`, `.profile-tabs`, `.post-action`, and
-   `.identity-pill` are all reused here on purpose, because a post should look
-   the same whether it is read on a profile or in the feed.
+   The timeline surface shares profile tabs, identity pills and working social
+   controls, with warmer feed cards and a compact, expanding composer.
 
    Everything below is what the timeline needs and the profile does not: a
    composer, a filter rail that carries counts, per-post author attribution,
@@ -2423,11 +2421,8 @@ button.bizprofile-update-action:hover {
   width: 4.25rem;
 }
 
-/* A fixed-height circle slot. StoryRing only draws its 7px ring and gap when
-   there is actually something to watch, so an owner with no story up sits 7px
-   shorter than the ghosts beside them and drags its label out of line. Sizing
-   the slot to the ringed case and centring inside it keeps every label on one
-   baseline whatever each circle happens to be doing. */
+/* StoryRing adds its ring only when a story exists; reserve that space so
+   labels stay aligned with the owner's unringed avatar. */
 .stories-rail-slot {
   display: flex;
   align-items: center;
@@ -2451,28 +2446,35 @@ button.bizprofile-update-action:hover {
   color: rgb(17 13 13 / 0.6);
 }
 
-/* An empty slot, not a missing avatar. Dashed and unfilled so it reads as a
-   space reserved for something rather than a face that failed to load. The
-   extra 7px matches the ring and gap StoryRing draws around a real avatar at
-   this size, so full and empty circles sit on the same line. */
-.stories-rail-ghost {
-  width: calc(var(--story-circle) + 7px);
-  height: calc(var(--story-circle) + 7px);
-  border-radius: 9999px;
-  border: 2px dashed rgb(17 13 13 / 0.18);
+.stories-rail[data-empty='true'] {
+  --story-circle: 2.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: space-between;
 }
 
-/* Holds the row's height steady so the strip does not resize when the first
-   real story arrives and pushes a labelled circle in beside the ghosts. */
-.stories-rail-label-ghost {
-  visibility: hidden;
+.stories-rail[data-empty='true'] .stories-rail-item {
+  width: auto;
+  flex-direction: row;
+  gap: 0.75rem;
+}
+
+.stories-rail[data-empty='true'] .stories-rail-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.stories-rail[data-empty='true'] .stories-rail-slot {
+  flex: none;
+  padding: 0 0.25rem;
 }
 
 .stories-rail-note {
-  margin: 0 0 0.25rem;
-  font-size: 0.75rem;
+  margin: 0;
+  font-size: 0.6875rem;
   line-height: 1.4;
-  color: rgb(17 13 13 / 0.45);
+  color: rgb(17 13 13 / 0.6);
 }
 
 /* Composer. Butter rather than white so the one box the reader is meant to
