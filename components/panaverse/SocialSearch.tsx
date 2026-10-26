@@ -116,6 +116,7 @@ export function SocialSearch() {
       hint: t(`search.social.hint.${scope}`),
       value: term,
       onValueChange: setTerm,
+      onNavigate: () => setMobileOpen(false),
     },
   };
 

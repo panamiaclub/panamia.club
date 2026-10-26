@@ -64,69 +64,46 @@ test.describe('Public Navigation', () => {
     ).toBeVisible();
   });
 
-  // The same menu, in the surface masthead. It ships there so a member can
-  // reach all four kinds from the social surface instead of being sent to the
-  // homepage for three of them.
-  //
-  // Asserted signed out, on purpose and not as a compromise. The masthead is
-  // chosen by path rather than by session -- `wearsSurfaceChrome` takes a
-  // surface and a pathname and never a session -- so /groups serves this
-  // header to anyone, and the suite has no signed-in fixture to use even if
-  // one were wanted. That makes the signed-out case both the reachable one and
-  // the one worth guarding: the menu offers all four scopes, and the one that
-  // is members-only is offered locked rather than as a door onto a sign-in
-  // wall. Same reasoning as the /panas test above.
-  test('social masthead offers a scope menu', async ({ page }) => {
+  // Public social pages wear the same masthead as the feed, so category
+  // discovery must remain usable without exposing member-only search.
+  test('social masthead offers categories and locks member discovery', async ({
+    page,
+  }) => {
     const res = await page.goto('/groups');
     expect(res?.status()).toBe(200);
 
-    // Scoped to the banner: the groups page carries its own search field, and
-    // an unscoped match would pass on the wrong control.
-    const trigger = page
-      .getByRole('banner')
-      .getByRole('button', { name: /Search scope/ });
-
-    // Groups is the default, so a bare submit still lands where it always did.
-    await expect(trigger).toBeVisible();
-    await expect(trigger).toHaveAttribute('aria-label', /currently Groups/i);
-    await expect(
-      page
-        .getByRole('banner')
-        .getByRole('combobox', { name: 'Search groups', exact: true })
-    ).toHaveAttribute('placeholder', 'Search groups');
-    await expect(page.getByRole('banner').getByRole('search')).toHaveAttribute(
+    const masthead = page.getByRole('banner');
+    const input = masthead.getByRole('combobox', {
+      name: 'Find a group...',
+      exact: true,
+    });
+    await expect(input).toHaveAttribute('placeholder', 'Find a group...');
+    await expect(masthead.getByRole('search')).toHaveAttribute(
       'action',
       '/groups'
     );
+    await expect(
+      masthead.getByRole('button', { name: 'Search', exact: true })
+    ).toBeVisible();
 
-    const menu = page.getByRole('menu', { name: /Search scope/i });
-
-    // The trigger is server-rendered, but it is a React button: until the
-    // bundle hydrates its click handler does not exist yet, so an early click
-    // is simply lost and aria-expanded never leaves "false". Measured rather
-    // than guessed -- three no-wait clicks in a row were swallowed, while the
-    // same click after hydration opened the menu every time. That is expected
-    // of any React control, and is the same reason the form degrades to the
-    // group default without JS rather than to a dead field.
-    //
-    // So retry the click until it takes, instead of sleeping a fixed number
-    // that would still be a guess on slower CI. The visibility guard is
-    // load-bearing: the trigger toggles, so re-clicking an open menu would
-    // close it again.
+    const categories = masthead.getByRole('group', {
+      name: 'Search categories',
+    });
     await expect(async () => {
-      if (!(await menu.isVisible())) await trigger.click();
-      await expect(menu).toBeVisible({ timeout: 1000 });
+      if (!(await categories.isVisible())) await input.click();
+      await expect(categories).toBeVisible({ timeout: 1000 });
     }).toPass({ timeout: 30_000 });
 
-    await expect(menu.getByRole('menuitem')).toHaveCount(4);
-
-    // Panas is the only gated scope. Locked rather than absent, and locked
-    // rather than live, is the whole safety argument for putting a menu in
-    // chrome that does not know who is looking.
-    await expect(menu.getByRole('menuitem', { name: /Panas/ })).toHaveAttribute(
-      'aria-disabled',
-      'true'
-    );
+    await expect(categories.getByRole('button')).toHaveCount(4);
+    await expect(
+      categories.getByRole('button', { name: 'Groups', exact: true })
+    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(
+      categories.getByRole('button', { name: /Panas/ })
+    ).toBeDisabled();
+    await expect(
+      masthead.getByRole('link', { name: 'Sign in to find members' })
+    ).toBeVisible();
   });
 
   test('panas search page loads', async ({ page }) => {

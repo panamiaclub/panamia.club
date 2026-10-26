@@ -109,6 +109,7 @@ interface DirectorySuggestBaseProps {
     hint: string;
     value: string;
     onValueChange: (value: string) => void;
+    onNavigate?: () => void;
   };
 }
 
@@ -606,6 +607,7 @@ export function DirectorySuggest({
   function goToSearch() {
     if (!trimmed) return;
     close();
+    discovery?.onNavigate?.();
     if (onSearch) {
       onSearch(trimmed);
       return;
@@ -618,6 +620,7 @@ export function DirectorySuggest({
   function goToSuggestion(suggestion: Suggestion) {
     close();
     setTerm(suggestion.name);
+    discovery?.onNavigate?.();
     startNavigation(() => {
       router.push(suggestion.href);
     });

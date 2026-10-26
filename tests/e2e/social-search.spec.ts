@@ -533,23 +533,53 @@ test('phone search traps and restores focus, preserves state, and fits down to 3
   expect(requests).toHaveLength(1);
 });
 
-test('the mobile Search button submits the chosen public scope', async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 320, height: 800 });
-  await openSearch(page);
-  const trigger = page.getByRole('button', { name: 'Open community search' });
-  const dialog = page.getByRole('dialog', { name: 'Find your people.' });
-  await expect(async () => {
-    if (!(await dialog.isVisible())) await trigger.click();
-    await expect(dialog).toBeVisible({ timeout: 1000 });
-  }).toPass({ timeout: 30_000 });
-  await dialog.getByRole('button', { name: 'Groups', exact: true }).click();
-  await dialog.getByRole('combobox').fill('makers');
-  await expectDestination(page, scopePath('group', 'makers'), () =>
-    dialog.getByRole('button', { name: 'Search', exact: true }).click()
-  );
-});
+for (const selection of ['Search', 'suggestion'] as const) {
+  test(`mobile ${selection} opens its destination and dismisses before the response`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await openSearch(page);
+    const trigger = page.getByRole('button', { name: 'Open community search' });
+    const dialog = page.getByRole('dialog', { name: 'Find your people.' });
+    await expect(async () => {
+      if (!(await dialog.isVisible())) await trigger.click();
+      await expect(dialog).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 30_000 });
+    await dialog.getByRole('button', { name: 'Groups', exact: true }).click();
+    await dialog.getByRole('combobox').fill('makers');
+    const row = dialog.getByRole('option', { name: /group result for makers/ });
+    await expect(row).toBeVisible();
+    const destination =
+      selection === 'Search'
+        ? scopePath('group', 'makers')
+        : '/g/social-search-fixture';
+    const target =
+      selection === 'Search'
+        ? dialog.getByRole('button', { name: 'Search', exact: true })
+        : row;
+    let release = () => {};
+    const heldResponse = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(
+      (url) => url.pathname === new URL(destination, page.url()).pathname,
+      async (route) => {
+        await heldResponse;
+        await route.continue();
+      }
+    );
+    try {
+      await expectDestination(page, destination, () =>
+        Promise.all([
+          target.click({ noWaitAfter: true }),
+          expect(dialog).toHaveCount(0, { timeout: 3000 }).then(release),
+        ])
+      );
+    } finally {
+      release();
+    }
+  });
+}
 
 test('the real search controls are translated into Spanish', async ({
   page,
