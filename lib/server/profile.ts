@@ -88,15 +88,6 @@ export function extractCoordinates(
 }
 
 /**
- * Get profile by email address
- */
-export const getProfile = async (email: string) => {
-  return await db.query.profiles.findFirst({
-    where: eq(profiles.email, email),
-  });
-};
-
-/**
  * Transform Drizzle profile to legacy format for page components
  * This provides backward compatibility during migration
  */

@@ -26,10 +26,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Find associated profile if exists
     const userProfile = await db.query.profiles.findFirst({
-      where: and(
-        eq(profiles.email, foundUser.email),
-        eq(profiles.active, true)
-      ),
+      where: and(eq(profiles.userId, foundUser.id), eq(profiles.active, true)),
     });
 
     const verification = userProfile?.verification as {

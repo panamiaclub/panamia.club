@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from '@/lib/auth-client';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Save } from 'lucide-react';
 
@@ -20,6 +20,8 @@ export default function AccountProfileContact() {
   const mutation = useMutateProfileContact();
   const { data, isLoading } = useProfile();
   const profile = data as ProfileInterface;
+  const emailInput = useRef<HTMLInputElement>(null);
+  const isListing = Boolean(profile && profile.userId !== session?.user?.id);
   const [showOtherDesc, setShowOtherDesc] = useState(
     profile?.pronouns?.other || false
   );
@@ -87,17 +89,39 @@ export default function AccountProfileContact() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">
+                {isListing ? 'Listing contact email' : 'Pana account email'}
+              </Label>
               <Input
+                key={profile.id ?? profile._id}
+                ref={emailInput}
                 id="email"
                 name="email"
                 type="email"
                 defaultValue={profile.email}
-                disabled
-                className="bg-gray-50"
+                maxLength={100}
+                required={isListing}
+                disabled={!isListing}
+                className={!isListing ? 'bg-gray-50' : undefined}
               />
+              {isListing && session.user.email && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (emailInput.current) {
+                      emailInput.current.value = session.user.email ?? '';
+                    }
+                  }}
+                >
+                  Use my Pana email
+                </Button>
+              )}
               <p className="text-sm text-gray-500">
-                Used for contacting you, not displayed on profile
+                {isListing
+                  ? 'Only used for this listing, not displayed publicly. Changing it does not change your Pana account email.'
+                  : 'Change your sign-in email in account settings. Listing contact emails are edited separately.'}
               </p>
             </div>
 

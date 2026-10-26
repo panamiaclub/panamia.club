@@ -124,7 +124,13 @@ async function main(): Promise<void> {
     where: or(
       eq(schema.profiles.id, viewerKey),
       eq(schema.profiles.screenname, viewerKey),
-      eq(schema.profiles.email, viewerKey)
+      inArray(
+        schema.profiles.userId,
+        db
+          .select({ id: schema.users.id })
+          .from(schema.users)
+          .where(sql`lower(${schema.users.email}) = lower(${viewerKey})`)
+      )
     ),
     columns: { id: true, name: true, screenname: true, email: true },
   });

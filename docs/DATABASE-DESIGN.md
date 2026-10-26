@@ -66,6 +66,33 @@ every signed-in reader in local dev, from a `Promise.all` in
 
 ## Design Decisions
 
+### Accounts, Listings, and Contact Email
+
+`users.email` is the unique address used to sign in. A person's identity profile
+is linked by the unique `profiles.user_id`; directory listings are separate
+profiles administered through `profile_owners`, with `user_id` left null.
+
+`profiles.email` is a private contact address, not an identifier. A person's
+profile and several differently named listings may share it. Migration
+`0072_profile_contact_email` replaces the old email-unique constraint with a
+lookup index. Repeat business-intake applications are instead constrained by
+the case-insensitive combination of listing name and contact email.
+
+Signed-in applicants may copy their Pana email into a listing or enter another
+contact address. Copying is not a live link: subsequent account-email changes
+only update the identity profile. Listing contact details remain independently
+editable. Managing the listing is a separate, explicit choice bound to the
+authenticated user ID, never inferred from its contact address.
+
+Guests may submit without an account and optionally invite a personal address,
+including the same address as the listing contact. The sign-in link goes only
+to that chosen personal address, and ownership requires accepting the invitation.
+Without an invitation the listing stays unclaimed; later claims verify access
+to the listing inbox while retaining the claimant's separate personal account.
+
+Approval links and listing edits identify profiles by ID. Legacy approval
+links remain valid by matching both email and their review access key.
+
 ### JSONB for Flexible Fields
 
 Fields with variable structure use `jsonb` columns rather than normalized tables, avoiding premature schema rigidity:

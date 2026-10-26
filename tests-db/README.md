@@ -10,6 +10,19 @@ Kept separate from `tests/` (Playwright, browser) and `tests-relay/`
 
 ## Running
 
+### Directory contact and signup regressions (no secrets)
+
+```
+yarn node --experimental-test-module-mocks --import tsx --test tests-db/listing-intake.test.ts tests-db/screenname-profile-email-collision.test.ts tests-db/screenname-required-fields.test.ts
+```
+
+These suites use isolated PGlite databases and stub only session, mail, and
+verification boundaries. They apply the actual contact-email migration and
+exercise production intake, invitation acceptance, approval, contact-edit,
+account-email-change, and screenname handlers. Shared inboxes must not merge
+identities, transfer ownership, approve the wrong listing, or update another
+profile's mentoring data. Login emails and personal identity slots remain unique.
+
 ### Isolated status visibility regression (no secrets)
 
 ```

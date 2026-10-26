@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { mentorSessions, profiles } from '@/lib/schema';
+import { mentorSessions, users } from '@/lib/schema';
 import type { SessionType, SessionStatus } from '@/lib/schema';
 import { and, eq, or } from 'drizzle-orm';
 import { ProfileMentoring } from '@/lib/interfaces';
@@ -65,9 +65,11 @@ export async function POST(request: NextRequest) {
     validation.data;
 
   // Verify mentor exists and has mentoring enabled
-  const mentor = await db.query.profiles.findFirst({
-    where: eq(profiles.email, mentorEmail),
+  const mentorUser = await db.query.users.findFirst({
+    where: eq(users.email, mentorEmail.toLowerCase()),
+    with: { profile: true },
   });
+  const mentor = mentorUser?.profile;
 
   const mentoring = mentor?.mentoring as ProfileMentoring | null;
   if (!mentor || !mentoring?.enabled) {
@@ -91,7 +93,7 @@ export async function POST(request: NextRequest) {
   const [newSession] = await db
     .insert(mentorSessions)
     .values({
-      mentorEmail,
+      mentorEmail: mentorUser.email,
       menteeEmail: session.user.email,
       scheduledAt: new Date(scheduledAt),
       duration,
