@@ -47,10 +47,10 @@ import { scopePlaceholderShortKey, type Scope } from '@/lib/directory-scopes';
  * visitor is never offered a door that will not open, and the homepage has
  * shown this same menu to guests on the same terms since it shipped.
  *
- * The masthead supplies the initial scope: Events starts with events, while
- * Social keeps its groups default. This is server-rendered, so the placeholder,
- * menu and GET action agree even without JavaScript. The menu can still change
- * what the visitor searches after hydration.
+ * The masthead supplies the initial scope: Events starts with events. Social's
+ * discovery-style field lives in SocialSearch. The placeholder, menu and GET
+ * action here agree even without JavaScript; choosing a scope changes what
+ * the visitor searches after hydration.
  *
  * Client rather than server, which it was: the chosen scope is state, and it
  * has to narrow the placeholder and retarget the form between renders.

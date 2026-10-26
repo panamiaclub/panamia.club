@@ -11,13 +11,14 @@ import {
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { KIND_ICON } from '@/components/kind-icon';
 import { cn } from '@/lib/utils';
 import {
   DEFAULT_SCOPE,
+  SCOPE_TONE,
   scopePath,
   searchForScopeKey,
   type Scope,
@@ -63,9 +64,7 @@ interface DirectorySuggestBaseProps {
    * one has to decide rather than inherit a federated search silently.
    *
    * The scope pages pass their own, so a search run from inside Events stays
-   * in Events rather than silently changing the subject. The home hero and the
-   * Pana Social masthead hold it in state beside a `ScopeMenu`, so it follows
-   * whatever the visitor picked.
+   * in Events. Header and hero callers keep it beside their category controls.
    */
   scope?: Scope;
   /**
@@ -104,6 +103,14 @@ interface DirectorySuggestBaseProps {
    * to that business, pana, group or event, which is the whole point of it.
    */
   onSearch?: (term: string) => void;
+  discovery?: {
+    label: string;
+    controls: ReactNode;
+    hint: string;
+    value: string;
+    onValueChange: (value: string) => void;
+    onNavigate?: () => void;
+  };
 }
 
 /**
@@ -111,12 +118,12 @@ interface DirectorySuggestBaseProps {
  * `pill` merges the two into a single rounded bar, as the homepage hero does —
  * the button sits inside the input's surface rather than next to it.
  * `masthead` is the surface header's field: a magnifier and an input in one
- * short bar, with no button at all, because chrome that repeats on every page
- * cannot afford a second control's width.
+ * short bar, with no button. `discovery` adds a focus-open category panel and
+ * submit button; `discovery-sheet` keeps those controls inside a mobile dialog.
  *
  * Spelled as a union so the button's label is required exactly when there is a
  * button to put it on — a `masthead` caller has nothing to pass it for, and the
- * other two would otherwise be free to render an unlabelled control.
+ * other layouts would otherwise be free to render an unlabelled control.
  *
  * `leading` is deliberately not part of this union. It lives on the base props
  * because `pill` and `masthead` both take one, and the union exists to track
@@ -127,6 +134,11 @@ type DirectorySuggestProps = DirectorySuggestBaseProps &
   (
     | { layout?: 'stacked' | 'pill'; buttonLabel: string }
     | { layout: 'masthead'; buttonLabel?: never }
+    | {
+        layout: 'discovery' | 'discovery-sheet';
+        buttonLabel: string;
+        discovery: NonNullable<DirectorySuggestBaseProps['discovery']>;
+      }
   );
 
 // Long enough that a fast typist finishes a word first, short enough that the
@@ -147,7 +159,7 @@ const FALLBACK_IMAGE = '/img/bg_coconut_blue.jpg';
  * An in-memory cache of answered terms, so backspacing is free.
  *
  * A signed-in visitor gets `private, no-store` from the suggest route, on
- * purpose: the response carries the members-only half — panas and groups — and
+ * purpose: the response can carry members-only profile discovery, and
  * the browser's disk cache is the wrong place for that on a shared device. The
  * cost of that stance is that the people it protects are the only ones with no
  * caching at all, and deleting a character to widen a search is the single most
@@ -348,6 +360,7 @@ export function DirectorySuggest({
   initialTerm = '',
   leading,
   onSearch,
+  discovery,
 }: DirectorySuggestProps) {
   const router = useRouter();
   const { t } = useTranslation('common');
@@ -364,9 +377,17 @@ export function DirectorySuggest({
     [baseId]
   );
 
-  const [term, setTerm] = useState(initialTerm);
+  const [localTerm, setLocalTerm] = useState(initialTerm);
+  const term = discovery?.value ?? localTerm;
+  const setTerm = (value: string) => {
+    if (discovery) discovery.onValueChange(value);
+    else setLocalTerm(value);
+  };
+  const trimmed = term.trim();
+  const isDiscovery = layout === 'discovery' || layout === 'discovery-sheet';
+  const isSheet = layout === 'discovery-sheet';
   /**
-   * The rows, tagged with the scope they were fetched for.
+   * Rows are tagged with both the scope and term they were fetched for.
    *
    * Tagged rather than bare because the scope is a live control: someone can
    * have "music" typed with directory rows on screen and then pick Events,
@@ -379,11 +400,22 @@ export function DirectorySuggest({
    * two disagree: a scope that does not match reads as no rows immediately, on
    * the same render that moved the chip.
    */
-  const [fetched, setFetched] = useState<{ scope: Scope; rows: Suggestion[] }>({
+  const [fetched, setFetched] = useState<{
+    scope: Scope;
+    term: string;
+    rows: Suggestion[];
+    loading: boolean;
+    failed: boolean;
+  }>({
     scope,
+    term: trimmed,
     rows: [],
+    loading: false,
+    failed: false,
   });
-  const suggestions = fetched.scope === scope ? fetched.rows : NO_SUGGESTIONS;
+  const currentLookup = fetched.scope === scope && fetched.term === trimmed;
+  const suggestions = currentLookup ? fetched.rows : NO_SUGGESTIONS;
+  const lookupFailed = currentLookup && fetched.failed;
   const [open, setOpen] = useState(false);
   // -1 means "nothing highlighted": Enter then submits the typed term rather
   // than picking a row the visitor never moved to.
@@ -415,11 +447,12 @@ export function DirectorySuggest({
    */
   const [navigating, startNavigation] = useTransition();
 
-  const trimmed = term.trim();
   // The trailing "search for this term" row is an option too, so it can be
   // arrowed to and is counted in the keyboard bounds below.
   const optionCount = suggestions.length + 1;
   const searchRowIndex = suggestions.length;
+  const visibleActiveIndex =
+    activeIndex >= 0 && activeIndex < optionCount ? activeIndex : -1;
 
   const close = useCallback(() => {
     setOpen(false);
@@ -432,6 +465,10 @@ export function DirectorySuggest({
   // list would sit ready to open under a field the visitor has not touched.
   const typedRef = useRef(false);
   const seeded = !typedRef.current && term === initialTerm;
+  const lookupPending =
+    !seeded &&
+    trimmed.length >= MIN_TERM_LENGTH &&
+    (!currentLookup || fetched.loading);
 
   // Fetch suggestions, debounced. Every run aborts the previous request, so a
   // slow response for "da" can't land after a fast one for "dana" and repaint
@@ -439,7 +476,13 @@ export function DirectorySuggest({
   useEffect(() => {
     if (seeded || trimmed.length < MIN_TERM_LENGTH) {
       abortRef.current?.abort();
-      setFetched({ scope, rows: NO_SUGGESTIONS });
+      setFetched({
+        scope,
+        term: trimmed,
+        rows: NO_SUGGESTIONS,
+        loading: false,
+        failed: false,
+      });
       return;
     }
 
@@ -450,11 +493,24 @@ export function DirectorySuggest({
     const cached = readSuggestCache(scope, trimmed);
     if (cached) {
       abortRef.current?.abort();
-      setFetched({ scope, rows: cached });
+      setFetched({
+        scope,
+        term: trimmed,
+        rows: cached,
+        loading: false,
+        failed: false,
+      });
       setActiveIndex(-1);
       return;
     }
 
+    setFetched({
+      scope,
+      term: trimmed,
+      rows: NO_SUGGESTIONS,
+      loading: true,
+      failed: false,
+    });
     const timer = setTimeout(async () => {
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -468,22 +524,39 @@ export function DirectorySuggest({
           `/api/directory/suggest?q=${encodeURIComponent(trimmed)}&scope=${encodeURIComponent(scope)}`,
           { signal: controller.signal }
         );
-        const body = await response.json();
-        const rows: Suggestion[] = body.success ? (body.data ?? []) : [];
-        // Only a real answer is kept. Caching the empty list a failed lookup
-        // falls back to would turn one bad response into a minute of them.
-        if (body.success) writeSuggestCache(scope, trimmed, rows);
-        setFetched({ scope, rows });
+        if (!response.ok) throw new Error('Suggestion request failed');
+        const body: { success?: boolean; data?: Suggestion[] } =
+          await response.json();
+        if (body.success !== true || !Array.isArray(body.data)) {
+          throw new Error('Suggestion response is unavailable');
+        }
+        if (controller.signal.aborted) return;
+        const rows = body.data;
+        writeSuggestCache(scope, trimmed, rows);
+        setFetched({
+          scope,
+          term: trimmed,
+          rows,
+          loading: false,
+          failed: false,
+        });
         setActiveIndex(-1);
-      } catch (error) {
-        if ((error as Error)?.name === 'AbortError') return;
-        // The box still submits without suggestions, so a failed lookup just
-        // empties the list instead of surfacing an error.
-        setFetched({ scope, rows: NO_SUGGESTIONS });
+      } catch {
+        if (controller.signal.aborted) return;
+        setFetched({
+          scope,
+          term: trimmed,
+          rows: NO_SUGGESTIONS,
+          loading: false,
+          failed: true,
+        });
       }
     }, DEBOUNCE_MS);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      abortRef.current?.abort();
+    };
   }, [trimmed, seeded, scope]);
 
   // Close on an outside click. Blur alone isn't enough — clicking an option is
@@ -526,7 +599,7 @@ export function DirectorySuggest({
    * throw the page back to the top for nothing.
    */
   function revealOnSmallScreens() {
-    if (layout === 'masthead') return;
+    if (layout === 'masthead' || isDiscovery) return;
     if (!window.matchMedia('(max-width: 767px)').matches) return;
     rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -534,6 +607,7 @@ export function DirectorySuggest({
   function goToSearch() {
     if (!trimmed) return;
     close();
+    discovery?.onNavigate?.();
     if (onSearch) {
       onSearch(trimmed);
       return;
@@ -546,6 +620,7 @@ export function DirectorySuggest({
   function goToSuggestion(suggestion: Suggestion) {
     close();
     setTerm(suggestion.name);
+    discovery?.onNavigate?.();
     startNavigation(() => {
       router.push(suggestion.href);
     });
@@ -562,8 +637,8 @@ export function DirectorySuggest({
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (open && activeIndex >= 0) {
-      selectIndex(activeIndex);
+    if (!isDiscovery && open && visibleActiveIndex >= 0) {
+      selectIndex(visibleActiveIndex);
       return;
     }
     goToSearch();
@@ -571,7 +646,19 @@ export function DirectorySuggest({
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     switch (event.key) {
+      case 'Enter':
+        if (
+          isDiscovery &&
+          open &&
+          trimmed.length >= MIN_TERM_LENGTH &&
+          visibleActiveIndex >= 0
+        ) {
+          event.preventDefault();
+          selectIndex(visibleActiveIndex);
+        }
+        return;
       case 'ArrowDown':
+        if (trimmed.length < MIN_TERM_LENGTH) return;
         event.preventDefault();
         if (!open && trimmed.length >= MIN_TERM_LENGTH) {
           setOpen(true);
@@ -588,6 +675,10 @@ export function DirectorySuggest({
         );
         return;
       case 'Escape':
+        if (isSheet) {
+          close();
+          return;
+        }
         // Only swallow the key when there is a popup to dismiss, so Escape
         // keeps its native "clear the search input" behavior otherwise.
         if (open) {
@@ -596,13 +687,14 @@ export function DirectorySuggest({
         }
         return;
       case 'Tab':
-        close();
+        if (!isDiscovery) close();
         return;
       default:
     }
   }
 
   const showList = open && trimmed.length >= MIN_TERM_LENGTH;
+  const showDiscoveryPanel = isDiscovery && (open || isSheet);
 
   /**
    * The wiring every layout's input needs.
@@ -619,6 +711,8 @@ export function DirectorySuggest({
     // A real field name, for the no-JS GET on the form above. Matches the ?q=
     // spelling the results page already accepts.
     name: 'q',
+    required: isDiscovery,
+    pattern: isDiscovery ? '.*\\S.*' : undefined,
     role: 'combobox',
     autoComplete: 'off',
     // Mobile keyboard hints. type="search" would add a native clear button
@@ -630,10 +724,12 @@ export function DirectorySuggest({
     autoCapitalize: 'off',
     spellCheck: false,
     'aria-expanded': showList,
-    'aria-controls': listboxId,
+    'aria-controls': showList ? listboxId : undefined,
     'aria-autocomplete': 'list',
     'aria-activedescendant':
-      showList && activeIndex >= 0 ? optionId(activeIndex) : undefined,
+      showList && visibleActiveIndex >= 0
+        ? optionId(visibleActiveIndex)
+        : undefined,
     value: term,
     onChange: (event) => {
       typedRef.current = true;
@@ -644,9 +740,12 @@ export function DirectorySuggest({
     onKeyDown: handleKeyDown,
     onFocus: () => {
       setFocused(true);
-      if (!seeded && trimmed.length >= MIN_TERM_LENGTH) setOpen(true);
+      if (isDiscovery || (!seeded && trimmed.length >= MIN_TERM_LENGTH)) {
+        setOpen(true);
+      }
       revealOnSmallScreens();
     },
+    onClick: isDiscovery ? () => setOpen(true) : undefined,
     onBlur: () => setFocused(false),
     // Blanked while the rotation is up so the two are never drawn on top of
     // each other. The accessible name comes from `aria-label` either way, so
@@ -656,10 +755,143 @@ export function DirectorySuggest({
     'aria-label': ariaLabel,
   };
 
+  const suggestionPanel = (!isDiscovery || showDiscoveryPanel) && (
+    <div
+      className={isDiscovery ? 'social-search-panel' : 'contents'}
+      role={isDiscovery ? 'region' : undefined}
+      aria-label={isDiscovery ? t('search.social.suggestions') : undefined}
+    >
+      {isDiscovery && discovery?.controls}
+      {isDiscovery && !showList && (
+        <p className="social-search-hint">{discovery?.hint}</p>
+      )}
+      {showList && (
+        <ul
+          id={listboxId}
+          role="listbox"
+          aria-label={label}
+          className={cn(
+            'directory-suggest-list bg-popover text-popover-foreground z-50 overscroll-contain rounded-xl border shadow-lg',
+            isDiscovery
+              ? 'social-search-results'
+              : 'absolute top-full right-0 left-0 mt-2 max-h-[min(60vh,22rem)] overflow-y-auto'
+          )}
+        >
+          {(lookupPending || lookupFailed) && (
+            <li role="presentation" className="px-3 py-3 text-sm">
+              <p className="text-muted-foreground flex items-center gap-2">
+                {lookupPending && (
+                  <Loader2
+                    className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                )}
+                {t(
+                  lookupFailed
+                    ? 'search.suggestionsUnavailable'
+                    : 'search.suggestionsLoading'
+                )}
+              </p>
+            </li>
+          )}
+          {suggestions.map((suggestion, index) => {
+            const KindIcon = KIND_ICON[suggestion.kind];
+            const kindLabel = t(kindLabelKey(suggestion.kind));
+            return (
+              <li
+                key={`${suggestion.kind}:${suggestion.id}`}
+                id={optionId(index)}
+                role="option"
+                aria-selected={index === visibleActiveIndex}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  goToSuggestion(suggestion);
+                }}
+                onMouseEnter={() => setActiveIndex(index)}
+                className={cn(
+                  'flex cursor-pointer items-center gap-3 px-3 py-2 text-left',
+                  index === visibleActiveIndex && 'bg-accent'
+                )}
+              >
+                <span className="relative shrink-0">
+                  <img
+                    src={suggestion.imageUrl || FALLBACK_IMAGE}
+                    alt=""
+                    aria-hidden="true"
+                    className={cn(
+                      'h-10 w-10 object-cover',
+                      KIND_IMAGE_SHAPE[suggestion.kind]
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      'bg-background ring-background absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full shadow-sm ring-2',
+                      isDiscovery && 'social-search-kind'
+                    )}
+                    data-tone={
+                      isDiscovery ? SCOPE_TONE[suggestion.kind] : undefined
+                    }
+                    aria-hidden="true"
+                  >
+                    <KindIcon className="h-3 w-3" />
+                  </span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">
+                    {suggestion.name}
+                  </span>
+                  {suggestion.subtitle && (
+                    <span className="text-muted-foreground block truncate text-sm">
+                      {suggestion.subtitle}
+                    </span>
+                  )}
+                </span>
+                <span className="sr-only">{kindLabel}</span>
+              </li>
+            );
+          })}
+          <li
+            id={optionId(searchRowIndex)}
+            role="option"
+            aria-selected={visibleActiveIndex === searchRowIndex}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              goToSearch();
+            }}
+            onMouseEnter={() => setActiveIndex(searchRowIndex)}
+            className={cn(
+              'bg-popover sticky bottom-0 flex cursor-pointer items-center gap-2 px-3 py-3 text-left text-sm',
+              suggestions.length > 0 && 'border-t',
+              visibleActiveIndex === searchRowIndex && 'bg-accent'
+            )}
+          >
+            <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="truncate">
+              {t(searchForScopeKey(scope), { term: trimmed })}
+            </span>
+          </li>
+        </ul>
+      )}
+      <div role="status" aria-live="polite" className="sr-only">
+        {showList
+          ? lookupFailed
+            ? t('search.suggestionsUnavailable')
+            : lookupPending
+              ? t('search.suggestionsLoading')
+              : t('search.resultsAvailable', { count: suggestions.length })
+          : ''}
+      </div>
+    </div>
+  );
+
   return (
     <form
       ref={rootRef}
       role="search"
+      aria-label={isDiscovery ? discovery?.label : undefined}
+      data-search-layout={
+        isSheet ? 'sheet' : isDiscovery ? 'popover' : undefined
+      }
       // The fallback path, not the normal one: `handleSubmit` preventDefaults
       // once hydrated. Until then this is a plain GET to the query-string form
       // of the results page, which is what the field does with scripting off.
@@ -668,30 +900,54 @@ export function DirectorySuggest({
       action={scopePath(scope, '')}
       method="get"
       onSubmit={handleSubmit}
+      onFocusCapture={isDiscovery ? () => setOpen(true) : undefined}
+      onBlurCapture={
+        isDiscovery
+          ? (event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) close();
+            }
+          : undefined
+      }
+      onKeyDown={
+        isDiscovery && !isSheet
+          ? (event) => {
+              if (event.key !== 'Escape') return;
+              event.preventDefault();
+              rootRef.current?.querySelector('input')?.focus();
+              close();
+            }
+          : undefined
+      }
       // The masthead has no submit button to carry a spinner, so the form
       // itself is what announces an in-flight navigation there.
       aria-busy={navigating}
       // scroll-mt clears the sticky site header when revealOnSmallScreens runs.
-      className={cn('scroll-mt-24', className)}
+      className={cn(
+        'scroll-mt-24',
+        isDiscovery && 'social-search-form',
+        className
+      )}
     >
       <label htmlFor={inputId} className="sr-only">
         {label}
       </label>
       <div
         className={
-          layout === 'pill'
-            ? cn(
-                'directory-suggest-pill',
-                leading && 'directory-suggest-pill-lead'
-              )
-            : layout === 'masthead'
-              ? // `contents` rather than a box: the masthead pill is itself the
-                // flex row, sized and padded by `.panaverse-search`, and this
-                // wrapper exists only because the other two layouts need one.
-                // Dissolving it leaves the icon and the field as that row's own
-                // children, which is the markup the stylesheet was written for.
-                'contents'
-              : 'flex flex-col items-center justify-center gap-4 md:flex-row'
+          isDiscovery
+            ? 'social-search-bar'
+            : layout === 'pill'
+              ? cn(
+                  'directory-suggest-pill',
+                  leading && 'directory-suggest-pill-lead'
+                )
+              : layout === 'masthead'
+                ? // `contents` rather than a box: the masthead pill is itself the
+                  // flex row, sized and padded by `.panaverse-search`, and this
+                  // wrapper exists only because the other two layouts need one.
+                  // Dissolving it leaves the icon and the field as that row's own
+                  // children, which is the markup the stylesheet was written for.
+                  'contents'
+                : 'flex flex-col items-center justify-center gap-4 md:flex-row'
         }
       >
         {/* Inside the pill rather than beside it, so scope and term read as
@@ -734,8 +990,13 @@ export function DirectorySuggest({
 
         {/* The masthead has no button at all, so its magnifier is the only
             thing saying what the bar is. */}
-        {layout === 'masthead' && (
-          <Search className="panaverse-search-icon" aria-hidden="true" />
+        {(layout === 'masthead' || isDiscovery) && (
+          <Search
+            className={
+              isDiscovery ? 'social-search-icon' : 'panaverse-search-icon'
+            }
+            aria-hidden="true"
+          />
         )}
 
         {/* `directory-suggest-field` rather than a positional selector: the
@@ -748,10 +1009,15 @@ export function DirectorySuggest({
               deliberately resolves against the whole pill so it spans the bar
               rather than stopping at the field. */}
           <div className="directory-suggest-input-shell">
-            {layout === 'masthead' ? (
+            {layout === 'masthead' || isDiscovery ? (
               <input
                 {...inputProps}
-                className={cn('panaverse-search-input', inputClassName)}
+                className={cn(
+                  isDiscovery
+                    ? 'social-search-input'
+                    : 'panaverse-search-input',
+                  inputClassName
+                )}
               />
             ) : (
               // `text-pana-ink` because the field paints a white background but
@@ -771,119 +1037,24 @@ export function DirectorySuggest({
             )}
           </div>
 
-          {showList && (
-            <ul
-              id={listboxId}
-              role="listbox"
-              aria-label={label}
-              // Height is capped rather than left to the row count: a full ten
-              // rows is taller than a phone viewport once the keyboard is up,
-              // which buried the "search for this term" row below the fold.
-              // Scrolls internally instead, and overscroll-contain stops that
-              // scroll from chaining to the page behind it.
-              // The class carries no styles of its own; it is the hook the
-              // home hero uses to drop its own clip while this panel is open.
-              // See `.home-hero-banner:has(.directory-suggest-list)`.
-              className="directory-suggest-list bg-popover text-popover-foreground absolute top-full right-0 left-0 z-50 mt-2 max-h-[min(60vh,22rem)] overflow-y-auto overscroll-contain rounded-xl border shadow-lg"
-            >
-              {suggestions.map((suggestion, index) => {
-                const KindIcon = KIND_ICON[suggestion.kind];
-                const kindLabel = t(kindLabelKey(suggestion.kind));
-                return (
-                  <li
-                    // Ids are only unique within their own table, so the kind
-                    // has to be part of the key — an event and a profile can
-                    // hold the same cuid.
-                    key={`${suggestion.kind}:${suggestion.id}`}
-                    id={optionId(index)}
-                    role="option"
-                    aria-selected={index === activeIndex}
-                    // Pointer-down rather than click: click fires after blur,
-                    // and the outside-click handler would have closed the list
-                    // first.
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                      goToSuggestion(suggestion);
-                    }}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    className={cn(
-                      'flex cursor-pointer items-center gap-3 px-3 py-2 text-left',
-                      index === activeIndex && 'bg-accent'
-                    )}
-                  >
-                    <span className="relative shrink-0">
-                      <img
-                        src={suggestion.imageUrl || FALLBACK_IMAGE}
-                        alt=""
-                        aria-hidden="true"
-                        className={cn(
-                          'h-10 w-10 object-cover',
-                          KIND_IMAGE_SHAPE[suggestion.kind]
-                        )}
-                      />
-                      {/* The badge sits in the same corner on every row, so
-                          the kind can be read down the list in one pass rather
-                          than found separately on each. Its own background and
-                          ring keep it legible over a photo of anything. */}
-                      <span
-                        className="bg-background ring-background absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full shadow-sm ring-2"
-                        aria-hidden="true"
-                      >
-                        <KindIcon className="h-3 w-3" />
-                      </span>
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">
-                        {suggestion.name}
-                      </span>
-                      {suggestion.subtitle && (
-                        <span className="text-muted-foreground block truncate text-sm">
-                          {suggestion.subtitle}
-                        </span>
-                      )}
-                    </span>
-                    {/* The word behind the icon. Sighted users have the badge;
-                        without this a screen reader hears four identically
-                        shaped rows and no way to tell a pana from an event. */}
-                    <span className="sr-only">{kindLabel}</span>
-                  </li>
-                );
-              })}
-
-              <li
-                id={optionId(searchRowIndex)}
-                role="option"
-                aria-selected={activeIndex === searchRowIndex}
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  goToSearch();
-                }}
-                onMouseEnter={() => setActiveIndex(searchRowIndex)}
-                // Pinned to the bottom of the scroll area so the escape hatch
-                // to the full results page is reachable without scrolling past
-                // ten suggestions. py-3 keeps it at a 44px touch target.
-                className={cn(
-                  'bg-popover sticky bottom-0 flex cursor-pointer items-center gap-2 px-3 py-3 text-left text-sm',
-                  suggestions.length > 0 && 'border-t',
-                  activeIndex === searchRowIndex && 'bg-accent'
-                )}
-              >
-                <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span className="truncate">
-                  {t(searchForScopeKey(scope), { term: trimmed })}
-                </span>
-              </li>
-            </ul>
-          )}
-
-          {/* Screen readers get the count; sighted users get the list itself. */}
-          <div role="status" aria-live="polite" className="sr-only">
-            {showList
-              ? t('search.resultsAvailable', { count: suggestions.length })
-              : ''}
-          </div>
+          {!isDiscovery && suggestionPanel}
         </div>
 
+        {isDiscovery && term.length > 0 && (
+          <button
+            type="button"
+            className="social-search-clear"
+            aria-label={t('search.social.clear')}
+            onClick={() => {
+              typedRef.current = true;
+              setTerm('');
+              setActiveIndex(-1);
+              rootRef.current?.querySelector('input')?.focus();
+            }}
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
         {/* No button in the masthead: chrome that repeats on every page of a
             surface cannot spend the width, and the magnifier plus Enter are
             what a header search is expected to answer to anyway. */}
@@ -895,9 +1066,15 @@ export function DirectorySuggest({
             // the spinner with the state a screen reader can act on.
             disabled={navigating}
             aria-busy={navigating}
-            aria-label={layout === 'pill' ? buttonLabel : undefined}
+            aria-label={
+              layout === 'pill' || isDiscovery ? buttonLabel : undefined
+            }
             className={
-              layout === 'pill' ? 'directory-suggest-pill-button' : 'px-8'
+              isDiscovery
+                ? 'social-search-submit'
+                : layout === 'pill'
+                  ? 'directory-suggest-pill-button'
+                  : 'px-8'
             }
           >
             {navigating ? (
@@ -930,6 +1107,7 @@ export function DirectorySuggest({
           </Button>
         )}
       </div>
+      {isDiscovery && suggestionPanel}
     </form>
   );
 }

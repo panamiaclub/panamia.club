@@ -230,6 +230,40 @@
     },
     "resultsAvailable_one": "{{count}} suggestion available",
     "resultsAvailable_other": "{{count}} suggestions available",
+    "suggestionsLoading": "Finding suggestions...",
+    "suggestionsUnavailable": "Suggestions are unavailable. You can still use Search.",
+    "social": {
+      "label": "Community search",
+      "trigger": "Open community search",
+      "close": "Close community search",
+      "clear": "Clear search",
+      "submit": "Search",
+      "title": "Find your people.",
+      "description": "Panas, places and good things to do.",
+      "kicker": "A little closer to your community",
+      "categories": "Search categories",
+      "suggestions": "Community search suggestions",
+      "signIn": "Sign in to find members",
+      "locked": "{{category}} (sign in required)",
+      "category": {
+        "pana": "Panas",
+        "group": "Groups",
+        "event": "Events",
+        "directory": "Directory"
+      },
+      "placeholder": {
+        "pana": "Find a Pana...",
+        "group": "Find a group...",
+        "event": "Find an event...",
+        "directory": "Find a local spot..."
+      },
+      "hint": {
+        "pana": "Search members by name, craft or @handle.",
+        "group": "Find a group for the things you love.",
+        "event": "Find markets, workshops and your next plan.",
+        "directory": "Discover local businesses, makers and places."
+      }
+    },
     "kind": {
       "directory": "Directory",
       "pana": "Pana",
