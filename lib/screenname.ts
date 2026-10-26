@@ -6,7 +6,7 @@ import {
   socialActors,
   socialGroups,
 } from '@/lib/schema';
-import { and, eq, ne, sql } from 'drizzle-orm';
+import { and, eq, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
 
 // Reserved screennames that cannot be used
 export const RESERVED_SCREENNAMES = [
@@ -163,9 +163,8 @@ export function validateScreenname(
  * and acct:handle@domain resolve a group through the identical path, so a
  * group named after an existing pana would shadow them.
  *
- * `excludeEmail` lets a human keep their own name during a rename;
- * `excludeProfileId` does the same for a listing, which is needed separately
- * because a business listing's email is the business's, not the owner's.
+ * `excludeEmail` identifies the human's unique account, not every profile
+ * sharing its contact email. `excludeProfileId` does the same for a listing.
  */
 export async function isScreennameAvailable(
   name: string,
@@ -190,9 +189,20 @@ export async function isScreennameAvailable(
     sql`lower(${profiles.screenname}) = lower(${name})`,
     ...(excludeProfileId ? [ne(profiles.id, excludeProfileId)] : []),
     // A person's own profile mirrors their handle, so a plain user rename must
-    // not collide with itself.
+    // not collide with itself. A listing sharing their inbox still blocks.
     ...(excludeEmail
-      ? [sql`lower(${profiles.email}) != lower(${excludeEmail})`]
+      ? [
+          or(
+            isNull(profiles.userId),
+            notInArray(
+              profiles.userId,
+              db
+                .select({ id: users.id })
+                .from(users)
+                .where(sql`lower(${users.email}) = lower(${excludeEmail})`)
+            )
+          ),
+        ]
       : []),
   ];
 

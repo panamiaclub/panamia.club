@@ -4,10 +4,11 @@ import { db } from '@/lib/db';
 import { profiles } from '@/lib/schema';
 import { and, ne, sql } from 'drizzle-orm';
 import { ProfileMentoring } from '@/lib/interfaces';
+import { notBusinessListing } from '@/lib/server/profile-owners';
 
 export async function GET(request: NextRequest) {
   const session = await auth();
-  if (!session?.user?.email) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -19,7 +20,8 @@ export async function GET(request: NextRequest) {
   // Get all profiles with mentoring enabled and filter in JS
   const mentorProfiles = await db.query.profiles.findMany({
     where: and(
-      ne(profiles.email, session.user.email),
+      ne(profiles.userId, session.user.id),
+      notBusinessListing,
       sql`${profiles.mentoring}->>'enabled' = 'true'`
     ),
     columns: {
@@ -32,7 +34,7 @@ export async function GET(request: NextRequest) {
       primaryImageCdn: true,
       galleryImages: true,
     },
-    with: { user: { columns: { screenname: true } } },
+    with: { user: { columns: { screenname: true, email: true } } },
     limit: 100,
   });
 
@@ -53,7 +55,7 @@ export async function GET(request: NextRequest) {
     _id: p.id,
     id: p.id,
     name: p.name,
-    email: p.email,
+    email: p.user?.email,
     mentoring: p.mentoring,
     availability: p.availability,
     screenname: p.user?.screenname || null,

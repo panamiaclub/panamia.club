@@ -90,11 +90,9 @@ export async function POST(request: NextRequest) {
 
     await addProfileOwner(profile.id, session.user.id, 'owner');
 
-    // Give the listing its social actor now. Without one the profile's Updates
-    // section is permanently empty, and the only way to fix that is to act as
-    // the business and find the opt-in on /s -- which nothing points the owner
-    // towards. Claiming is the consent signal, and the row federates nothing
-    // until the owner actually posts.
+    // Prepare the listing's social identity at claim time, without waiting for
+    // the owner to visit /s as the business. Claiming is the consent signal, and
+    // the row federates nothing until the owner actually posts.
     //
     // Deliberately isolated from the outer catch: ownership is already
     // committed by this point, so letting an actor failure surface as a 500

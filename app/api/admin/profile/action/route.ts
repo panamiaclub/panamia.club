@@ -34,7 +34,18 @@ import {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { email, access, action } = body;
+  const { profileId, email, access, action } = body;
+
+  if (
+    typeof access !== 'string' ||
+    !access ||
+    (action !== 'approve' && action !== 'decline')
+  ) {
+    return NextResponse.json(
+      { success: false, error: 'Invalid review link' },
+      { status: 400 }
+    );
+  }
 
   let totalProfiles = 0;
   try {
@@ -64,10 +75,15 @@ export async function POST(request: NextRequest) {
     console.log('profile.count failed');
   }
 
-  if (email) {
-    const emailCheck = email.toString().toLowerCase();
+  if (typeof profileId === 'string' || typeof email === 'string') {
+    // Old emails identify a row by contact email AND its capability, not by
+    // whichever matching profile happens to come first. New links use its id.
+    const selector =
+      typeof profileId === 'string'
+        ? eq(profiles.id, profileId)
+        : sql`lower(${profiles.email}) = ${email.trim().toLowerCase()}`;
     const existingProfile = await db.query.profiles.findFirst({
-      where: eq(profiles.email, emailCheck),
+      where: and(selector, sql`${profiles.status}->>'access' = ${access}`),
     });
 
     if (!existingProfile) {
@@ -87,7 +103,10 @@ export async function POST(request: NextRequest) {
       });
 
       if (!result.ok) {
-        return NextResponse.json({ success: false, error: 'Profile Not Found' });
+        return NextResponse.json({
+          success: false,
+          error: 'Profile Not Found',
+        });
       }
 
       return NextResponse.json(
@@ -95,14 +114,13 @@ export async function POST(request: NextRequest) {
           success: true,
           data: [
             {
-              message:
-                result.mailFailed
-                  ? action === 'approve'
-                    ? 'Profile is active, but the notification email could not be sent'
-                    : 'Profile is declined, but the notification email could not be sent'
-                  : action === 'approve'
-                    ? 'Profile has been set active'
-                    : 'Profile has been declined',
+              message: result.mailFailed
+                ? action === 'approve'
+                  ? 'Profile is active, but the notification email could not be sent'
+                  : 'Profile is declined, but the notification email could not be sent'
+                : action === 'approve'
+                  ? 'Profile has been set active'
+                  : 'Profile has been declined',
               name: result.name,
               handle: null,
               total: totalProfiles,

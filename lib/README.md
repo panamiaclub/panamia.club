@@ -212,9 +212,11 @@ import { db } from '@/lib/db';
 import { users, profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 const user = await db.query.users.findFirst({ where: eq(users.email, email) });
-const profile = await db.query.profiles.findFirst({
-  where: eq(profiles.email, email),
-});
+const profile = user
+  ? await db.query.profiles.findFirst({
+      where: eq(profiles.userId, user.id),
+    })
+  : undefined;
 
 // Interfaces
 import type { UserInterface, ArticleInterface } from '@/lib/interfaces';

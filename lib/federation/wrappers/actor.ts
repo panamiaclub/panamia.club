@@ -59,10 +59,10 @@ export async function createActorForProfile(
   // so sourcing this from profiles is what lets it federate.
   const username = profile.screenname ?? profile.user?.screenname;
 
-  if (!username) {
+  if (!username?.trim()) {
     return {
       success: false,
-      error: 'A handle is required to enable social features',
+      error: 'A handle is required to use social features',
     };
   }
 
@@ -96,9 +96,38 @@ export async function createActorForProfile(
       summary: getProfileSummary(profile),
       iconUrl: profile.primaryImageCdn ?? undefined,
     })
+    .onConflictDoNothing()
     .returning();
 
+  if (!actor) {
+    // A concurrent request may have created this profile's identity. Only
+    // reuse that identity, never another profile's conflicting handle or URI.
+    const existing = await db.query.socialActors.findFirst({
+      where: eq(socialActors.profileId, profileId),
+    });
+    if (existing) {
+      return { success: true, actor: toPublicActor(existing) };
+    }
+    return {
+      success: false,
+      error: 'A social identity already uses this handle or URI',
+    };
+  }
+
   return { success: true, actor: toPublicActor(actor) };
+}
+
+/**
+ * Prepare an eligible profile's identity without a separate activation step.
+ * Ineligibility is expected; provisioning failures must remain visible.
+ */
+export async function ensureActorForProfile(
+  profileId: string
+): Promise<PublicSocialActor | null> {
+  const result = await createActorForProfile(profileId);
+  if (result.success) return result.actor;
+  if (result.gateResult && !result.gateResult.allowed) return null;
+  throw new Error(`Could not prepare social account: ${result.error}`);
 }
 
 /**

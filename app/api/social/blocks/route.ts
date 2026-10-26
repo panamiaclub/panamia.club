@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
   const profile = await getActiveProfileWithActor(session.user.id);
   if (!profile?.socialActor) {
-    // An empty list, not a 403. Someone who never enabled social features has
+    // An empty list, not a 403. A profile without a social identity has
     // blocked nobody, and that is a true answer rather than an error.
     return NextResponse.json({ success: true, data: { blocks: [], kind } });
   }

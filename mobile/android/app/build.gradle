@@ -1,5 +1,21 @@
 apply plugin: 'com.android.application'
 
+def releaseVersionCode = providers.gradleProperty("versionCode").orElse("1").get().toInteger()
+def releaseVersionName = providers.gradleProperty("versionName").orElse("1.0").get()
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+def hasReleaseSigning = keystorePropertiesFile.exists()
+
+if (hasReleaseSigning) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+
+    ["storeFile", "storePassword", "keyAlias", "keyPassword"].each { property ->
+        if (!keystoreProperties[property]) {
+            throw new GradleException("Missing ${property} in ${keystorePropertiesFile}")
+        }
+    }
+}
+
 android {
     namespace = "social.pana.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +23,8 @@ android {
         applicationId "social.pana.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode releaseVersionCode
+        versionName releaseVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +32,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile rootProject.file(keystoreProperties["storeFile"])
+                storePassword keystoreProperties["storePassword"]
+                keyAlias keystoreProperties["keyAlias"]
+                keyPassword keystoreProperties["keyPassword"]
+            }
+        }
+    }
     buildTypes {
         release {
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -43,6 +72,26 @@ dependencies {
 }
 
 apply from: 'capacitor.build.gradle'
+
+tasks.register("verifyReleaseSigning") {
+    doLast {
+        if (!hasReleaseSigning) {
+            throw new GradleException(
+                "Release signing is not configured. Create mobile/android/keystore.properties; " +
+                "see docs/ANDROID.md."
+            )
+        }
+
+        def keystore = rootProject.file(keystoreProperties["storeFile"])
+        if (!keystore.exists()) {
+            throw new GradleException("Release keystore does not exist: ${keystore}")
+        }
+    }
+}
+
+tasks.matching { it.name == "bundleRelease" || it.name == "assembleRelease" }.configureEach {
+    dependsOn tasks.named("verifyReleaseSigning")
+}
 
 try {
     def servicesJSON = file('google-services.json')

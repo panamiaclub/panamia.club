@@ -18,6 +18,7 @@ import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
 import { profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
+import { ensureActorForProfile } from '@/lib/federation/wrappers/actor';
 import { canAdministerProfile } from './profile-owners';
 
 export const ACTIVE_PROFILE_COOKIE = 'pana_active_profile';
@@ -59,7 +60,7 @@ export async function getActiveProfile(userId: string) {
 }
 
 /**
- * Active profile with its social actor loaded.
+ * Active profile with its social actor prepared and loaded.
  *
  * This is what makes "post as the business" work: the actor is resolved from
  * whoever the user is acting as, so a status created while switched to a
@@ -69,12 +70,22 @@ export async function getActiveProfileWithActor(userId: string) {
   const id = await getActiveProfileId(userId);
   if (!id) return null;
 
-  return (
-    (await db.query.profiles.findFirst({
+  const loadProfile = () =>
+    db.query.profiles.findFirst({
       where: eq(profiles.id, id),
-      with: { socialActor: true },
-    })) ?? null
-  );
+      with: { socialActor: true, user: { columns: { screenname: true } } },
+    });
+  const profile = await loadProfile();
+  if (
+    profile &&
+    !profile.socialActor &&
+    profile.socialEligible &&
+    (profile.screenname ?? profile.user?.screenname)?.trim()
+  ) {
+    await ensureActorForProfile(profile.id);
+    return (await loadProfile()) ?? null;
+  }
+  return profile ?? null;
 }
 
 /**

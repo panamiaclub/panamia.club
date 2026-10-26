@@ -29,3 +29,9 @@ jobs:
       - run: yarn install --immutable
       # In-process Postgres only: no secrets, service, or shared database lock.
       - run: yarn test:db:visibility
+      - name: Directory intake and account identity
+        run: >-
+          yarn node --experimental-test-module-mocks --import tsx --test
+          tests-db/listing-intake.test.ts
+          tests-db/screenname-profile-email-collision.test.ts
+          tests-db/screenname-required-fields.test.ts

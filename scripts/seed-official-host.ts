@@ -57,8 +57,8 @@ import { config } from 'dotenv';
 config({ path: '.env.local', quiet: true });
 
 const { db } = await import('@/lib/db');
-const { eq } = await import('drizzle-orm');
-const { profiles, socialActors } = await import('@/lib/schema');
+const { eq, sql } = await import('drizzle-orm');
+const { profiles, socialActors, users } = await import('@/lib/schema');
 const { createGroup } = await import('@/lib/federation/wrappers/group');
 const { OFFICIAL_HOST_HANDLE, officialHostGroupId, resetOfficialHostCache } =
   await import('@/lib/server/official-host');
@@ -104,7 +104,11 @@ async function resolveFounder(selector: string): Promise<Founder> {
     .where(
       byScreenname
         ? eq(profiles.screenname, value)
-        : eq(profiles.email, value.toLowerCase())
+        : sql`EXISTS (
+            SELECT 1 FROM ${users}
+            WHERE ${users.id} = ${profiles.userId}
+              AND lower(${users.email}) = ${value.toLowerCase()}
+          )`
     )
     .limit(1);
 

@@ -10,6 +10,19 @@ Kept separate from `tests/` (Playwright, browser) and `tests-relay/`
 
 ## Running
 
+### Directory contact and signup regressions (no secrets)
+
+```
+yarn node --experimental-test-module-mocks --import tsx --test tests-db/listing-intake.test.ts tests-db/screenname-profile-email-collision.test.ts tests-db/screenname-required-fields.test.ts
+```
+
+These suites use isolated PGlite databases and stub only session, mail, and
+verification boundaries. They apply the actual contact-email migration and
+exercise production intake, invitation acceptance, approval, contact-edit,
+account-email-change, and screenname handlers. Shared inboxes must not merge
+identities, transfer ownership, approve the wrong listing, or update another
+profile's mentoring data. Login emails and personal identity slots remain unique.
+
 ### Isolated status visibility regression (no secrets)
 
 ```
@@ -28,6 +41,14 @@ legacy-domain members resolve by handle, local follows are accepted, and both
 suggestion tiers include those members without admitting remote accounts.
 Case-insensitive handles, follow/unfollow counts, eligibility, block/mute
 filtering, and signing-key projection are covered without rewriting identities.
+
+`social-activation.test.ts` covers automatic setup through the current-actor,
+handle-assignment, active-profile, and follow paths. Real unique constraints
+exercise concurrent creation and conflicting identities. The bounded admin
+repair covers existing members without their signing in, while excluding
+unclaimed listings, missing handles, and ineligible profiles. Ownership,
+legacy identities, public-key projection, retry behavior, and the removal of
+the separate activation prompt are also covered.
 
 The suite renders the production addressing predicate with `PgDialect`, then
 executes the actual actor-post, permalink, redirect lookup, reply, public-feed,

@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 
+import { useIsNativeApp } from '@/lib/mobile/use-native-app';
 import { useShopCart } from './cart-provider';
 
 export function ShopNav() {
   const { itemCount } = useShopCart();
+  const isNativeApp = useIsNativeApp();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const kind = searchParams.get('kind');
@@ -23,9 +25,9 @@ export function ShopNav() {
   return (
     <nav
       aria-label="Shop"
-      className="border-pana-ink/10 bg-pana-cream sticky top-[59px] z-30 border-b"
+      className="border-pana-ink/10 bg-pana-cream sticky top-[59px] z-30 overflow-x-auto border-b"
     >
-      <div className="container mx-auto flex min-h-16 items-center gap-2 px-4 text-sm font-bold sm:gap-3">
+      <div className="container mx-auto flex min-h-16 min-w-max items-center gap-2 px-4 text-sm font-bold sm:gap-3">
         <Link href="/shop" className="mr-2 text-lg font-black sm:mr-4">
           Pana Shop
         </Link>
@@ -51,15 +53,17 @@ export function ShopNav() {
         >
           Merchandise
         </Link>
-        <Link
-          href="/shop?kind=subscription"
-          className={`${filterClass(onCatalog && kind === 'subscription')} hidden sm:inline-flex`}
-          aria-current={
-            onCatalog && kind === 'subscription' ? 'page' : undefined
-          }
-        >
-          Memberships
-        </Link>
+        {!isNativeApp && (
+          <Link
+            href="/shop?kind=subscription"
+            className={`${filterClass(onCatalog && kind === 'subscription')} hidden sm:inline-flex`}
+            aria-current={
+              onCatalog && kind === 'subscription' ? 'page' : undefined
+            }
+          >
+            Memberships
+          </Link>
+        )}
         <Link
           href="/shop/cart"
           className="bg-pana-ink text-pana-cream ml-auto inline-flex items-center gap-2 rounded-full px-5 py-2.5"

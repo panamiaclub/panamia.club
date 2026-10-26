@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Search local actors by name or username (case-insensitive)
-  // Only return actors that have a linked profile (local users with social enabled)
+  // Only return actors linked to local profiles.
   // Includes current user (allows sending voice memos to yourself) -- callers
   // that cannot act on that row, like the Messages search box, exclude it
   // themselves rather than this endpoint guessing which kind of caller it has.

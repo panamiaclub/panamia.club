@@ -121,8 +121,9 @@ export interface InternationalAddress {
 }
 
 export interface ProfileInterface {
+  id?: string;
   _id: string;
-  userId?: string; // PostgreSQL User.id (cuid format) - links to auth system
+  userId?: string | null; // PostgreSQL User.id; null for a directory listing
   email: string;
   name: string;
   screenname?: string; // From User.screenname

@@ -8,7 +8,7 @@ import { ProfileMentoring } from '@/lib/interfaces';
 export async function PATCH(request: Request) {
   const session = await auth();
 
-  if (!session?.user?.email) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -59,8 +59,15 @@ export async function PATCH(request: Request) {
     const [profile] = await db
       .update(profiles)
       .set({ mentoring: mentoringData as unknown as Record<string, unknown> })
-      .where(eq(profiles.email, session.user.email))
+      .where(eq(profiles.userId, session.user.id))
       .returning({ mentoring: profiles.mentoring });
+
+    if (!profile) {
+      return NextResponse.json(
+        { error: 'Create your personal profile before enabling mentoring.' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
