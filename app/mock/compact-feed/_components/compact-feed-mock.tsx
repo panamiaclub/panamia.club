@@ -13,13 +13,13 @@ import {
   Heart,
   MessageCircle,
   Plus,
-  Search,
   Share2,
   Sparkles,
   Users,
   Volume2,
 } from 'lucide-react';
 import { ComposerMock } from '../../composer/_components/composer-mock';
+import { CompactSearchMock } from './compact-search-mock';
 import {
   MOCK_POSTS,
   MOCK_VIEWER,
@@ -120,14 +120,11 @@ type Filter = (typeof FILTERS)[number]['id'];
 
 export function CompactFeedMock() {
   const [filter, setFilter] = useState<Filter>('everyone');
-  const [search, setSearch] = useState('');
   const active = FILTERS.find((entry) => entry.id === filter)!;
   const posts = SAMPLE_POSTS.filter((post) => {
     if (filter === 'voice') return false;
     if (filter === 'panas' && !post.fromPana) return false;
-    return `${post.body} ${post.author.name} ${post.author.handle}`
-      .toLowerCase()
-      .includes(search.trim().toLowerCase());
+    return true;
   });
 
   return (
@@ -138,7 +135,7 @@ export function CompactFeedMock() {
           Design mock
         </span>
         <span className="hidden sm:inline">
-          Compact composer + warm paper cards
+          People-first search + a quieter header
         </span>
         <Link
           href="/mock/composer"
@@ -159,30 +156,9 @@ export function CompactFeedMock() {
             alt="Pana Social"
             width={190}
             height={52}
-            className="h-8 w-auto min-w-0 object-contain sm:h-9"
+            className="h-6 w-auto min-w-0 object-contain"
           />
-          <div className="border-pana-ink/10 mx-auto hidden max-w-md min-w-0 flex-1 items-center gap-2 rounded-full border bg-white p-1.5 sm:flex">
-            <Link
-              href="/mock/groups"
-              className="bg-pana-cream text-pana-indigo inline-flex min-h-9 flex-none items-center gap-1.5 rounded-full px-3 text-xs font-extrabold"
-            >
-              <Users className="h-4 w-4" aria-hidden="true" />
-              Groups
-              <ChevronDown className="h-3 w-3" aria-hidden="true" />
-            </Link>
-            <Search
-              className="text-pana-ink/50 h-4 w-4 flex-none"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              aria-label="Search example posts"
-              placeholder="Search this feed"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="text-pana-ink placeholder:text-pana-ink/60 min-w-0 flex-1 border-0 bg-transparent pr-3 text-sm outline-none"
-            />
-          </div>
+          <CompactSearchMock />
           <nav
             aria-label="Mock account navigation"
             className="ml-auto flex flex-none items-center gap-1.5"
@@ -299,12 +275,12 @@ export function CompactFeedMock() {
                 <p className="font-extrabold">
                   {filter === 'voice'
                     ? 'No voice notes in this sample.'
-                    : 'No example posts match that search.'}
+                    : 'No example posts in this feed yet.'}
                 </p>
                 <p className="text-pana-ink/65 mt-1 leading-relaxed">
                   {filter === 'voice'
                     ? 'Try the Audio button above to preview a file from your device.'
-                    : 'Try a different name or a word like paper.'}
+                    : 'Switch to Everyone to see the sample community posts.'}
                 </p>
               </div>
             )}
