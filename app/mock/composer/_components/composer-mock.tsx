@@ -1,6 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type DragEvent,
+  type FormEvent,
+} from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
@@ -84,8 +91,9 @@ function mediaKind(file: File): MediaKind | null {
   return null;
 }
 
-export function ComposerMock() {
+export function ComposerMock({ compact = false }: { compact?: boolean } = {}) {
   const [audience, setAudience] = useState<Audience>('everyone');
+  const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState('');
   const [preview, setPreview] = useState(false);
   const [attachments, setAttachments] = useState<MockAttachment[]>([]);
@@ -113,6 +121,11 @@ export function ComposerMock() {
     draft.length <= MAX_LENGTH;
   const atMediaLimit = attachments.length >= MAX_ATTACHMENTS;
   const firstName = MOCK_VIEWER.name.split(' ')[0];
+  const isExpanded =
+    expanded ||
+    Boolean(
+      draft || attachments.length || showWarning || preview || mediaError
+    );
 
   const addFiles = (files: File[]) => {
     if (!files.length) return;
@@ -250,6 +263,406 @@ export function ComposerMock() {
     </div>
   );
 
+  const formEvents = {
+    onSubmit(event: FormEvent<HTMLFormElement>) {
+      event.preventDefault();
+      if (canPost) setSubmitted(true);
+    },
+    onDragOver(event: DragEvent<HTMLFormElement>) {
+      if (event.dataTransfer.types.includes('Files')) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        setIsDragging(true);
+      }
+    },
+    onDragLeave(event: DragEvent<HTMLFormElement>) {
+      if (
+        !(event.relatedTarget instanceof Node) ||
+        !event.currentTarget.contains(event.relatedTarget)
+      ) {
+        setIsDragging(false);
+      }
+    },
+    onDrop(event: DragEvent<HTMLFormElement>) {
+      if (!event.dataTransfer.types.includes('Files')) return;
+      event.preventDefault();
+      setIsDragging(false);
+      addFiles(Array.from(event.dataTransfer.files));
+    },
+    onPaste(event: ClipboardEvent<HTMLFormElement>) {
+      if (!event.clipboardData.files.length) return;
+      event.preventDefault();
+      addFiles(Array.from(event.clipboardData.files));
+    },
+  };
+
+  const audiencePicker = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Audience: ${selected.label}`}
+          className={`bg-pana-indigo/7 text-pana-indigo hover:bg-pana-indigo/12 focus-visible:ring-pana-indigo inline-flex flex-none items-center gap-1.5 rounded-full px-2.5 text-xs font-extrabold focus-visible:ring-2 ${compact ? 'min-h-11' : 'min-h-8'}`}
+        >
+          <AudienceIcon className="h-3.5 w-3.5" aria-hidden="true" />
+          {selected.label}
+          <ChevronDown className="h-3 w-3" aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        sideOffset={8}
+        collisionPadding={12}
+        className="destination-menu"
+      >
+        <DropdownMenuLabel className="destination-menu-heading">
+          Who can see this?
+        </DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={audience}>
+          {AUDIENCES.map((option) => (
+            <DropdownMenuRadioItem
+              key={option.id}
+              value={option.id}
+              onSelect={() => {
+                setAudience(option.id);
+                setSubmitted(false);
+              }}
+              className="destination-option [&>span:first-child]:hidden"
+            >
+              <option.icon
+                className="destination-option-icon"
+                aria-hidden="true"
+              />
+              <span className="min-w-0">
+                <span className="destination-option-label">{option.label}</span>
+                <span className="destination-option-hint">{option.hint}</span>
+              </span>
+              {audience === option.id && (
+                <Check
+                  className="destination-option-check"
+                  aria-hidden="true"
+                />
+              )}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const optionsMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="text-pana-ink/65 hover:bg-pana-ink/5 hover:text-pana-indigo focus-visible:ring-pana-indigo inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-xs font-extrabold focus-visible:ring-2"
+          aria-label="More post options"
+        >
+          <Ellipsis className="h-3.5 w-3.5" aria-hidden="true" />
+          More
+          {showWarning && (
+            <span className="bg-pana-indigo h-1.5 w-1.5 rounded-full">
+              <span className="sr-only">Content warning enabled</span>
+            </span>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        sideOffset={8}
+        collisionPadding={12}
+        className="destination-menu"
+      >
+        <DropdownMenuLabel className="destination-menu-heading">
+          Optional
+        </DropdownMenuLabel>
+        <DropdownMenuCheckboxItem
+          checked={showWarning}
+          onCheckedChange={(checked) => {
+            setShowWarning(checked === true);
+            if (checked !== true) setWarning('');
+            setSubmitted(false);
+          }}
+          className="rounded-xl py-2.5 text-[13px] font-bold"
+        >
+          <AlertTriangle className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
+          Content warning
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={preview}
+          onCheckedChange={(checked) => setPreview(checked === true)}
+          className="rounded-xl py-2.5 text-[13px] font-bold"
+        >
+          <Eye className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
+          Preview formatting
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuSeparator className="destination-menu-separator" />
+        <p className="destination-menu-empty">
+          Your saved account license applies automatically.
+        </p>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const fileInputs = (
+    <>
+      <input
+        ref={photoInput}
+        type="file"
+        multiple
+        accept={PHOTO_VIDEO_ACCEPT}
+        aria-label="Choose photos or videos"
+        className="hidden"
+        onChange={(event) => {
+          addFiles(Array.from(event.currentTarget.files ?? []));
+          event.currentTarget.value = '';
+        }}
+      />
+      <input
+        ref={audioInput}
+        type="file"
+        multiple
+        accept="audio/*"
+        aria-label="Choose audio"
+        className="hidden"
+        onChange={(event) => {
+          addFiles(Array.from(event.currentTarget.files ?? []));
+          event.currentTarget.value = '';
+        }}
+      />
+    </>
+  );
+
+  const warningField = showWarning && !preview && (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label
+          htmlFor="mock-composer-warning"
+          className="text-xs font-extrabold"
+        >
+          Content warning
+        </Label>
+        <button
+          type="button"
+          aria-label="Remove content warning"
+          className="text-pana-ink/65 hover:text-pana-indigo grid h-11 w-11 place-items-center rounded-full"
+          onClick={() => {
+            setShowWarning(false);
+            setWarning('');
+            setSubmitted(false);
+          }}
+        >
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </div>
+      <Input
+        id="mock-composer-warning"
+        value={warning}
+        onChange={(event) => {
+          setWarning(event.target.value);
+          setSubmitted(false);
+        }}
+        placeholder="Give people a heads-up before they open your post"
+        maxLength={100}
+        className="composer-surface"
+      />
+    </div>
+  );
+
+  const previewPanel = (
+    <div aria-label="Post preview" className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-pana-ink/65 text-xs font-bold">
+          Formatting preview
+        </span>
+        <button
+          type="button"
+          onClick={() => setPreview(false)}
+          className="text-pana-indigo inline-flex min-h-11 items-center gap-1 text-xs font-extrabold"
+        >
+          <ArrowLeft className="h-3 w-3" aria-hidden="true" />
+          Back to writing
+        </button>
+      </div>
+      {showWarning ? (
+        <details className="composer-surface">
+          <summary className="text-pana-ink cursor-pointer text-sm font-bold">
+            {warning.trim() || 'Content warning'}
+          </summary>
+          <div className="mt-3">{postBody}</div>
+        </details>
+      ) : (
+        postBody
+      )}
+    </div>
+  );
+
+  const mediaErrorAlert = mediaError && (
+    <p
+      role="alert"
+      className="text-destructive flex items-start gap-2 text-xs font-semibold"
+    >
+      <AlertTriangle
+        className="mt-0.5 h-3.5 w-3.5 flex-none"
+        aria-hidden="true"
+      />
+      <span className="min-w-0 break-words">{mediaError}</span>
+    </p>
+  );
+
+  const addSamplePhoto = () => {
+    setAttachments([...attachments, SAMPLE_PHOTO]);
+    setPreview(false);
+    setMediaError(null);
+    setSubmitted(false);
+  };
+  const sampleDisabled =
+    atMediaLimit ||
+    attachments.some((attachment) => attachment.id === SAMPLE_PHOTO.id);
+
+  if (compact) {
+    return (
+      <section aria-label="Compact post composer">
+        <form
+          aria-label="Create a mock post"
+          data-expanded={isExpanded}
+          className={`border-pana-ink/12 focus-within:border-pana-indigo/40 shadow-pana-burnt/5 overflow-hidden rounded-3xl border bg-white shadow-sm ${isDragging ? 'outline-pana-indigo outline-2 outline-offset-4' : ''}`}
+          {...formEvents}
+        >
+          {fileInputs}
+          <div className="space-y-3 p-4 pb-2">
+            <div className="flex items-start gap-3">
+              <Image
+                src={MOCK_VIEWER.avatar}
+                alt={MOCK_VIEWER.name}
+                width={40}
+                height={40}
+                className="border-pana-flame/20 mt-0.5 h-10 w-10 flex-none rounded-full border-2 object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                {preview ? (
+                  previewPanel
+                ) : (
+                  <textarea
+                    aria-label="Write a post"
+                    aria-describedby="mock-composer-count"
+                    aria-invalid={draft.length > MAX_LENGTH}
+                    value={draft}
+                    onFocus={() => setExpanded(true)}
+                    onChange={(event) => {
+                      setDraft(event.target.value);
+                      setSubmitted(false);
+                    }}
+                    placeholder={`What's on your mind, ${firstName}?`}
+                    rows={isExpanded ? 3 : 1}
+                    className={`text-pana-ink placeholder:text-pana-ink/60 block w-full min-w-0 resize-none border-0 bg-transparent py-2 text-base leading-6 font-semibold outline-none ${isExpanded ? 'min-h-24' : 'h-11'}`}
+                  />
+                )}
+              </div>
+            </div>
+            {warningField}
+            {!preview && attachedMedia}
+            {isDragging && (
+              <div
+                role="status"
+                className="border-pana-indigo/40 bg-pana-indigo/5 text-pana-indigo rounded-2xl border-2 border-dashed p-5 text-center text-sm font-extrabold"
+              >
+                Drop your photos, video or audio here
+              </div>
+            )}
+            {mediaErrorAlert}
+          </div>
+
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 px-3 pb-3 sm:flex sm:flex-wrap">
+            <div className="col-span-2 flex flex-wrap items-center gap-1.5 sm:contents">
+              <button
+                type="button"
+                aria-label="Add photos or video"
+                onClick={() => photoInput.current?.click()}
+                disabled={atMediaLimit}
+                className="text-pana-burnt-deep hover:bg-pana-flame/10 focus-visible:ring-pana-indigo inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2.5 text-xs font-extrabold focus-visible:ring-2 disabled:opacity-45"
+              >
+                <ImagePlus className="h-4 w-4" aria-hidden="true" />
+                Photo / video
+              </button>
+              <button
+                type="button"
+                aria-label="Add audio"
+                onClick={() => audioInput.current?.click()}
+                disabled={atMediaLimit}
+                className="text-pana-indigo hover:bg-pana-indigo/6 focus-visible:ring-pana-indigo inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2.5 text-xs font-extrabold focus-visible:ring-2 disabled:opacity-45"
+              >
+                <Volume2 className="h-4 w-4" aria-hidden="true" />
+                Audio
+              </button>
+            </div>
+            <div className="justify-self-start sm:ml-auto">
+              {audiencePicker}
+            </div>
+            <Button
+              type="submit"
+              disabled={!canPost}
+              className="bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 h-11 justify-self-end rounded-full px-5 text-xs font-extrabold"
+            >
+              Post
+            </Button>
+          </div>
+
+          {isExpanded ? (
+            <div className="border-pana-ink/8 bg-pana-cream/35 border-t px-4 py-2">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                {optionsMenu}
+                <button
+                  type="button"
+                  disabled={sampleDisabled}
+                  onClick={addSamplePhoto}
+                  className="text-pana-indigo min-h-11 text-xs font-extrabold underline decoration-current/30 underline-offset-4 disabled:opacity-40"
+                >
+                  Try a sample photo
+                </button>
+                <span
+                  id="mock-composer-count"
+                  className={`ml-auto text-xs font-bold ${draft.length > MAX_LENGTH ? 'text-destructive' : 'text-pana-ink/65'}`}
+                >
+                  {draft.length}/{MAX_LENGTH}
+                </span>
+                {!draft && !attachments.length && !preview && !showWarning && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExpanded(false);
+                      setMediaError(null);
+                    }}
+                    className="text-pana-ink/65 min-h-11 px-1 text-xs font-extrabold"
+                  >
+                    Done
+                  </button>
+                )}
+              </div>
+              <p className="text-pana-ink/65 pb-1 text-xs leading-relaxed">
+                {selected.reach}
+                <span className="mt-0.5 block">
+                  {attachments.length
+                    ? `${attachments.length} of ${MAX_ATTACHMENTS} attachments.`
+                    : 'Up to 4 attachments. Drag files or paste an image, too.'}
+                </span>
+              </p>
+            </div>
+          ) : (
+            <span id="mock-composer-count" className="sr-only">
+              0/{MAX_LENGTH}
+            </span>
+          )}
+        </form>
+        {submitted && (
+          <p role="status" className="text-pana-indigo mt-2 text-xs font-bold">
+            Mock only - nothing was published.
+          </p>
+        )}
+      </section>
+    );
+  }
+
   return (
     <main className="surface-cream min-h-screen pb-12">
       <div className="mock-toolbar">
@@ -291,36 +704,7 @@ export function ComposerMock() {
         <section aria-label="Post composer preview">
           <form
             className={`border-pana-ink/10 focus-within:border-pana-indigo/45 space-y-5 rounded-3xl border-2 bg-white p-4 shadow-sm transition-colors sm:p-6 ${isDragging ? 'outline-pana-indigo outline-2 outline-offset-4' : ''}`}
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (canPost) setSubmitted(true);
-            }}
-            onDragOver={(event) => {
-              if (event.dataTransfer.types.includes('Files')) {
-                event.preventDefault();
-                event.dataTransfer.dropEffect = 'copy';
-                setIsDragging(true);
-              }
-            }}
-            onDragLeave={(event) => {
-              if (
-                !(event.relatedTarget instanceof Node) ||
-                !event.currentTarget.contains(event.relatedTarget)
-              ) {
-                setIsDragging(false);
-              }
-            }}
-            onDrop={(event) => {
-              if (!event.dataTransfer.types.includes('Files')) return;
-              event.preventDefault();
-              setIsDragging(false);
-              addFiles(Array.from(event.dataTransfer.files));
-            }}
-            onPaste={(event) => {
-              if (!event.clipboardData.files.length) return;
-              event.preventDefault();
-              addFiles(Array.from(event.clipboardData.files));
-            }}
+            {...formEvents}
           >
             <div className="flex items-center gap-3">
               <Image
@@ -334,129 +718,14 @@ export function ComposerMock() {
                 <span className="text-pana-ink text-sm font-extrabold">
                   {MOCK_VIEWER.name}
                 </span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label={`Audience: ${selected.label}`}
-                      className="bg-pana-indigo/7 text-pana-indigo hover:bg-pana-indigo/12 focus-visible:ring-pana-indigo inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-extrabold focus-visible:ring-2"
-                    >
-                      <AudienceIcon
-                        className="h-3.5 w-3.5"
-                        aria-hidden="true"
-                      />
-                      {selected.label}
-                      <ChevronDown className="h-3 w-3" aria-hidden="true" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    sideOffset={8}
-                    collisionPadding={12}
-                    className="destination-menu"
-                  >
-                    <DropdownMenuLabel className="destination-menu-heading">
-                      Who can see this?
-                    </DropdownMenuLabel>
-                    <DropdownMenuRadioGroup value={audience}>
-                      {AUDIENCES.map((option) => (
-                        <DropdownMenuRadioItem
-                          key={option.id}
-                          value={option.id}
-                          onSelect={() => {
-                            setAudience(option.id);
-                            setSubmitted(false);
-                          }}
-                          className="destination-option [&>span:first-child]:hidden"
-                        >
-                          <option.icon
-                            className="destination-option-icon"
-                            aria-hidden="true"
-                          />
-                          <span className="min-w-0">
-                            <span className="destination-option-label">
-                              {option.label}
-                            </span>
-                            <span className="destination-option-hint">
-                              {option.hint}
-                            </span>
-                          </span>
-                          {audience === option.id && (
-                            <Check
-                              className="destination-option-check"
-                              aria-hidden="true"
-                            />
-                          )}
-                        </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {audiencePicker}
               </div>
             </div>
 
-            {showWarning && !preview && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label
-                    htmlFor="mock-composer-warning"
-                    className="text-xs font-extrabold"
-                  >
-                    Content warning
-                  </Label>
-                  <button
-                    type="button"
-                    aria-label="Remove content warning"
-                    className="text-pana-ink/50 hover:text-pana-indigo rounded-full p-1"
-                    onClick={() => {
-                      setShowWarning(false);
-                      setWarning('');
-                      setSubmitted(false);
-                    }}
-                  >
-                    <X className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
-                </div>
-                <Input
-                  id="mock-composer-warning"
-                  value={warning}
-                  onChange={(event) => {
-                    setWarning(event.target.value);
-                    setSubmitted(false);
-                  }}
-                  placeholder="Give people a heads-up before they open your post"
-                  maxLength={100}
-                  className="composer-surface"
-                />
-              </div>
-            )}
+            {warningField}
 
             {preview ? (
-              <div aria-label="Post preview" className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-pana-ink/45 text-xs font-bold">
-                    Formatting preview
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setPreview(false)}
-                    className="text-pana-indigo inline-flex items-center gap-1 text-xs font-extrabold"
-                  >
-                    <ArrowLeft className="h-3 w-3" aria-hidden="true" />
-                    Back to writing
-                  </button>
-                </div>
-                {showWarning ? (
-                  <details className="composer-surface">
-                    <summary className="text-pana-ink cursor-pointer text-sm font-bold">
-                      {warning.trim() || 'Content warning'}
-                    </summary>
-                    <div className="mt-3">{postBody}</div>
-                  </details>
-                ) : (
-                  postBody
-                )}
-              </div>
+              previewPanel
             ) : (
               <>
                 <textarea
@@ -477,30 +746,7 @@ export function ComposerMock() {
             )}
 
             <div className="space-y-2">
-              <input
-                ref={photoInput}
-                type="file"
-                multiple
-                accept={PHOTO_VIDEO_ACCEPT}
-                aria-label="Choose photos or videos"
-                className="hidden"
-                onChange={(event) => {
-                  addFiles(Array.from(event.currentTarget.files ?? []));
-                  event.currentTarget.value = '';
-                }}
-              />
-              <input
-                ref={audioInput}
-                type="file"
-                multiple
-                accept="audio/*"
-                aria-label="Choose audio"
-                className="hidden"
-                onChange={(event) => {
-                  addFiles(Array.from(event.currentTarget.files ?? []));
-                  event.currentTarget.value = '';
-                }}
-              />
+              {fileInputs}
               <div className="flex items-stretch gap-2.5">
                 <button
                   type="button"
@@ -548,74 +794,10 @@ export function ComposerMock() {
               </p>
             </div>
 
-            {mediaError && (
-              <p
-                role="alert"
-                className="text-destructive flex items-start gap-2 text-xs font-semibold"
-              >
-                <AlertTriangle
-                  className="mt-0.5 h-3.5 w-3.5 flex-none"
-                  aria-hidden="true"
-                />
-                <span className="min-w-0 break-words">{mediaError}</span>
-              </p>
-            )}
+            {mediaErrorAlert}
 
             <div className="border-pana-ink/8 flex items-center gap-2 border-t pt-3">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="text-pana-ink/55 hover:bg-pana-ink/5 hover:text-pana-indigo focus-visible:ring-pana-indigo inline-flex h-10 items-center gap-1.5 rounded-xl px-2 text-xs font-extrabold focus-visible:ring-2"
-                    aria-label="More post options"
-                  >
-                    <Ellipsis className="h-3.5 w-3.5" aria-hidden="true" />
-                    More
-                    {showWarning && (
-                      <span className="bg-pana-indigo h-1.5 w-1.5 rounded-full">
-                        <span className="sr-only">Content warning enabled</span>
-                      </span>
-                    )}
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  sideOffset={8}
-                  collisionPadding={12}
-                  className="destination-menu"
-                >
-                  <DropdownMenuLabel className="destination-menu-heading">
-                    Optional
-                  </DropdownMenuLabel>
-                  <DropdownMenuCheckboxItem
-                    checked={showWarning}
-                    onCheckedChange={(checked) => {
-                      setShowWarning(checked === true);
-                      if (checked !== true) setWarning('');
-                      setSubmitted(false);
-                    }}
-                    className="rounded-xl py-2.5 text-[13px] font-bold"
-                  >
-                    <AlertTriangle
-                      className="mr-2 h-3.5 w-3.5"
-                      aria-hidden="true"
-                    />
-                    Content warning
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={preview}
-                    onCheckedChange={(checked) => setPreview(checked === true)}
-                    className="rounded-xl py-2.5 text-[13px] font-bold"
-                  >
-                    <Eye className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
-                    Preview formatting
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuSeparator className="destination-menu-separator" />
-                  <p className="destination-menu-empty">
-                    Your saved account license applies automatically.
-                  </p>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {optionsMenu}
               <span
                 id="mock-composer-count"
                 className={`ml-auto text-[11px] font-bold ${draft.length > MAX_LENGTH ? 'text-destructive' : 'text-pana-ink/40'}`}
@@ -648,18 +830,8 @@ export function ComposerMock() {
             </p>
             <button
               type="button"
-              disabled={
-                atMediaLimit ||
-                attachments.some(
-                  (attachment) => attachment.id === SAMPLE_PHOTO.id
-                )
-              }
-              onClick={() => {
-                setAttachments([...attachments, SAMPLE_PHOTO]);
-                setPreview(false);
-                setMediaError(null);
-                setSubmitted(false);
-              }}
+              disabled={sampleDisabled}
+              onClick={addSamplePhoto}
               className="text-pana-indigo text-xs font-extrabold underline decoration-current/30 underline-offset-4 disabled:opacity-40"
             >
               Try a sample photo

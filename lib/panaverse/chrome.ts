@@ -22,7 +22,11 @@ import {
  * Route prefixes that render standalone. A prefix matches the path itself and
  * anything beneath it, so `/signin` also covers a future `/signin/verify`.
  */
-export const STANDALONE_ROUTES: readonly string[] = ['/signin', '/info'];
+export const STANDALONE_ROUTES: readonly string[] = [
+  '/signin',
+  '/info',
+  '/mock/compact-feed',
+];
 
 /**
  * Request header carrying the path being served.
