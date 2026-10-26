@@ -6,7 +6,12 @@
  */
 
 import axios from 'axios';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { SocialStatusDisplay, SocialActorDisplay } from '@/lib/interfaces';
 import type {
   SocialActor,
@@ -1289,6 +1294,22 @@ export const useStatusReplies = (
   });
 };
 
+export const useInfiniteStatusReplies = (statusId: string, limit = 20) =>
+  useInfiniteQuery({
+    queryKey: [
+      socialQueryKey,
+      'status',
+      statusId,
+      'replies',
+      'infinite',
+      { limit },
+    ],
+    initialPageParam: '',
+    queryFn: ({ pageParam }) => fetchStatusReplies(statusId, pageParam, limit),
+    getNextPageParam: (page) => page?.nextCursor ?? undefined,
+    enabled: Boolean(statusId),
+  });
+
 // `enabled` lets callers skip the request for signed-out viewers: this endpoint
 // is session-scoped and answers 401 with no session, so firing it anonymously
 // only produces console noise.
@@ -1696,6 +1717,11 @@ export const useCreatePost = () => {
       queryClient.invalidateQueries({
         queryKey: [socialQueryKey, 'me', 'posts'],
       });
+      if (variables.inReplyTo) {
+        queryClient.invalidateQueries({
+          queryKey: [socialQueryKey, 'status'],
+        });
+      }
       // Invalidate messages if this was a direct message
       if (variables.visibility === 'direct') {
         queryClient.invalidateQueries({
@@ -1713,6 +1739,9 @@ export const useDeletePost = () => {
       return axios.delete(`/api/social/statuses/${statusId}`);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [socialQueryKey, 'status'],
+      });
       queryClient.invalidateQueries({
         queryKey: [socialQueryKey, 'timeline'],
       });
@@ -1770,9 +1799,9 @@ export const useLikePost = () => {
         );
       }
     },
-    onSettled: (_data, _error, statusId) => {
+    onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: [socialQueryKey, 'status', statusId],
+        queryKey: [socialQueryKey, 'status'],
       });
       queryClient.invalidateQueries({
         queryKey: [socialQueryKey, 'timeline'],
@@ -1822,9 +1851,9 @@ export const useUnlikePost = () => {
         );
       }
     },
-    onSettled: (_data, _error, statusId) => {
+    onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: [socialQueryKey, 'status', statusId],
+        queryKey: [socialQueryKey, 'status'],
       });
       queryClient.invalidateQueries({
         queryKey: [socialQueryKey, 'timeline'],

@@ -248,6 +248,17 @@ Legacy `Note` rows with private visibility remain followers-only. Existing unlis
 publicly readable, not geographically restricted; neither legacy visibility is reinterpreted or
 migrated. Stories, DMs, and group membership retain their separate rules.
 
+### Inline conversations
+
+The comment button expands readable comments and the reply composer inside the post card.
+Posting keeps the conversation open and refreshes its comments and counts. Non-members can read
+comments on public group posts without being offered a reply composer.
+
+Post timestamps are metadata, not links to another page. The explicit copy-link action keeps
+permalinks available for intentional sharing. Comment pages follow publication time and then ID,
+with visible loading, retry, and load-more states rather than treating a failed request as an
+empty conversation.
+
 ---
 
 ## Decision 1 — The "Follows You" Badge
