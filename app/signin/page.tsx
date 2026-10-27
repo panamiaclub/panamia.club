@@ -74,6 +74,7 @@ export default async function SignInPage() {
          sending a developer out to the live site. */
       mainSiteUrl={isMainSite ? null : originForFrom(DEFAULT_SURFACE, host)}
       enabledOAuthProviders={resolveEnabledOAuthProviders()}
+      googleClientId={process.env.GOOGLE_CLIENT_ID?.trim() || null}
     />
   );
 }

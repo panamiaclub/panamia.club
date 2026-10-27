@@ -110,13 +110,12 @@ const config: CapacitorConfig = {
      *    with both surfaces" into an app that ejects members to their browser
      *    the first time they tap Pana Social.
      *
-     * 2. The OAuth providers have to finish inside the WebView or they do not
-     *    finish at all. The callback sets the session cookie, and a cookie set
-     *    in Chrome Custom Tabs or SFSafariViewController is not a cookie the
-     *    WebView can read — the member would complete sign-in and land back on
-     *    a signed-out app. (Google refuses OAuth in embedded WebViews on top of
-     *    this; that constraint is unsolved here and written up in
-     *    docs/MOBILE-ROADMAP.md.)
+     * 2. Legacy OAuth links reached outside the sign-in screen must not
+     *    accidentally move callbacks to a different cookie store. The app's
+     *    own Google button uses the native SDK and exchanges its ID token
+     *    through the WebView's Better Auth client instead; embedded Google
+     *    OAuth is not offered. App-requested email links also verify inside
+     *    the WebView, through /signin/mobile.
      *
      * 3. Stripe Checkout redirects back to a success URL on this origin, so it
      *    has the same round-trip problem as OAuth: sent to the system browser,
@@ -134,6 +133,14 @@ const config: CapacitorConfig = {
   },
 
   plugins: {
+    SocialLogin: {
+      providers: {
+        google: true,
+        apple: false,
+        facebook: false,
+        twitter: false,
+      },
+    },
     SplashScreen: {
       /* Hidden as soon as the web app says it is ready, but never held longer
        * than launchShowDuration, because this shell has a network round-trip

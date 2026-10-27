@@ -1,0 +1,454 @@
+import { test, expect, type Page } from '@playwright/test';
+import {
+  mobileMagicLinkAppUrl,
+  mobileMagicLinkUrl,
+} from '../../lib/mobile/auth-links';
+
+async function nativeBridge(
+  page: Page,
+  options: {
+    platform?: 'android' | 'ios';
+    googlePlugin?: boolean;
+    cancelGoogle?: boolean;
+    launchUrl?: string;
+  } = {}
+) {
+  await page.addInitScript((config) => {
+    const callbacks: Record<string, (data: unknown) => void> = {};
+    const record = (plugin: string, method: string, args: unknown) => {
+      const calls = JSON.parse(
+        sessionStorage.getItem('native-auth-test.calls') ?? '[]'
+      );
+      calls.push({ plugin, method, args });
+      sessionStorage.setItem('native-auth-test.calls', JSON.stringify(calls));
+    };
+    const headers = [
+      {
+        name: 'App',
+        methods: [
+          { name: 'getLaunchUrl', rtype: 'promise' },
+          { name: 'exitApp', rtype: 'promise' },
+          { name: 'addListener', rtype: 'callback' },
+          { name: 'removeListener', rtype: 'callback' },
+        ],
+      },
+      {
+        name: 'SplashScreen',
+        methods: [{ name: 'hide', rtype: 'promise' }],
+      },
+      ...(config.googlePlugin === false
+        ? []
+        : [
+            {
+              name: 'SocialLogin',
+              methods: [
+                { name: 'initialize', rtype: 'promise' },
+                { name: 'login', rtype: 'promise' },
+              ],
+            },
+          ]),
+    ];
+    Object.assign(window, {
+      CapacitorCustomPlatform: { name: config.platform ?? 'android' },
+      Capacitor: {
+        isNativePlatform: () => true,
+        getPlatform: () => config.platform ?? 'android',
+        isPluginAvailable: (name: string) =>
+          headers.some((header) => header.name === name),
+        PluginHeaders: headers,
+        nativePromise: async (
+          plugin: string,
+          method: string,
+          args: unknown
+        ) => {
+          record(plugin, method, args);
+          if (plugin === 'SocialLogin' && method === 'login') {
+            if (config.cancelGoogle) {
+              throw Object.assign(new Error('Cancelled'), {
+                code: 'USER_CANCELLED',
+              });
+            }
+            return {
+              provider: 'google',
+              result: {
+                responseType: 'online',
+                idToken: 'native-google-test-id-token',
+                accessToken: null,
+              },
+            };
+          }
+          if (plugin === 'App' && method === 'getLaunchUrl') {
+            return config.launchUrl ? { url: config.launchUrl } : {};
+          }
+          return {};
+        },
+        nativeCallback: (
+          plugin: string,
+          method: string,
+          args: { eventName: string },
+          callback: (data: unknown) => void
+        ) => {
+          record(plugin, method, args);
+          if (method === 'addListener') callbacks[args.eventName] = callback;
+          if (method === 'removeListener') delete callbacks[args.eventName];
+          return args.eventName;
+        },
+      },
+    });
+    window.addEventListener('native-auth-test.app-url', (event) => {
+      if (event instanceof CustomEvent) {
+        callbacks.appUrlOpen?.({ url: event.detail });
+      }
+    });
+    window.addEventListener('native-auth-test.back', (event) => {
+      if (event instanceof CustomEvent) {
+        callbacks.backButton?.({ canGoBack: event.detail });
+      }
+    });
+  }, options);
+  await page.route('**/api/auth/get-session', (route) =>
+    route.fulfill({ json: null })
+  );
+}
+
+function calls(page: Page) {
+  return page.evaluate(
+    () =>
+      JSON.parse(sessionStorage.getItem('native-auth-test.calls') ?? '[]') as {
+        plugin: string;
+        method: string;
+        args: {
+          eventName?: string;
+          google?: { webClientId: string; mode: string };
+          options?: { nonce: string; scopes: string[] };
+        };
+      }[]
+  );
+}
+
+test.describe('sign-in hydration', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('sign-in controls cannot accept taps before event handlers are ready', async ({
+    page,
+  }) => {
+    await page.goto('/signin');
+    await expect(
+      page.getByRole('button', { name: 'Continue with Google' })
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Sign in with email' })
+    ).toBeDisabled();
+    await page.goto('/signin?error=INVALID_TOKEN');
+    await expect(page.getByPlaceholder('your@email.com')).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Send sign-in link', exact: true })
+    ).toBeDisabled();
+  });
+});
+
+test.describe('native Google sign-in', () => {
+  test('uses the native account picker and exchanges its token in the app', async ({
+    page,
+    context,
+  }) => {
+    await nativeBridge(page);
+    const exchanges: {
+      provider: string;
+      idToken: { token: string; nonce: string };
+    }[] = [];
+    await page.route('**/api/auth/sign-in/social', async (route) => {
+      exchanges.push(route.request().postDataJSON());
+      await route.fulfill({
+        headers: {
+          'Set-Cookie': 'native-auth-test-session=app; Path=/; HttpOnly',
+        },
+        json: {
+          redirect: false,
+          token: 'test-session',
+          user: { id: 'member' },
+        },
+      });
+    });
+    await page.goto('/signin?callbackUrl=%2Fsignin%3FnativeComplete%3D1');
+    await expect(page.locator('html')).toHaveClass(/native-app/);
+    await page.getByRole('button', { name: 'Continue with Google' }).click();
+    await expect(page).toHaveURL(/\/signin\?nativeComplete=1$/);
+    expect(exchanges).toHaveLength(1);
+    const exchange = exchanges[0];
+    expect(exchange).toMatchObject({
+      provider: 'google',
+      idToken: { token: 'native-google-test-id-token' },
+    });
+    const nativeCalls = await calls(page);
+    const initialize = nativeCalls.find((call) => call.method === 'initialize');
+    expect(initialize?.args.google?.mode).toBe('online');
+    expect(initialize?.args.google?.webClientId).toMatch(
+      /\.apps\.googleusercontent\.com$/
+    );
+    const login = nativeCalls.find((call) => call.method === 'login');
+    expect(exchange?.idToken.nonce).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    expect(exchange?.idToken.nonce).toBe(login?.args.options?.nonce);
+    expect(login?.args.options?.scopes).toEqual(['email', 'profile']);
+    expect(await context.cookies()).toContainEqual(
+      expect.objectContaining({
+        name: 'native-auth-test-session',
+        httpOnly: true,
+      })
+    );
+  });
+
+  test('cancelling the account picker restores the button without web OAuth', async ({
+    page,
+  }) => {
+    await nativeBridge(page, { cancelGoogle: true });
+    let exchanges = 0;
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname === '/api/auth/sign-in/social') {
+        exchanges += 1;
+      }
+    });
+    await page.goto('/signin');
+    await expect(page.locator('html')).toHaveClass(/native-app/);
+    const button = page.getByRole('button', { name: 'Continue with Google' });
+    await button.click();
+    await expect
+      .poll(async () =>
+        (await calls(page)).some((call) => call.method === 'login')
+      )
+      .toBe(true);
+    await expect(button).toBeEnabled();
+    expect(exchanges).toBe(0);
+    await expect(page).toHaveURL(/\/signin$/);
+  });
+
+  test('a rejected token exchange explains the failure and leaves the app signed out', async ({
+    page,
+    context,
+  }) => {
+    await nativeBridge(page);
+    await page.route('**/api/auth/sign-in/social', (route) =>
+      route.fulfill({
+        status: 401,
+        json: { code: 'INVALID_TOKEN', message: 'Rejected test ID token' },
+      })
+    );
+    await page.goto('/signin');
+    await expect(page.locator('html')).toHaveClass(/native-app/);
+    const button = page.getByRole('button', { name: 'Continue with Google' });
+    await button.click();
+    await expect(
+      page.getByText('Google sign-in could not start. Please try again.')
+    ).toBeVisible();
+    await expect(button).toBeEnabled();
+    await expect(page).toHaveURL(/\/signin$/);
+    expect(await context.cookies()).not.toContainEqual(
+      expect.objectContaining({ name: 'native-auth-test-session' })
+    );
+  });
+
+  for (const options of [
+    { platform: 'android' as const, googlePlugin: false },
+    { platform: 'ios' as const },
+  ]) {
+    test(`${options.platform} without supported native Google keeps email sign-in`, async ({
+      page,
+    }) => {
+      await nativeBridge(page, options);
+      await page.goto('/signin');
+      await expect(page.getByPlaceholder('your@email.com')).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Continue with Google' })
+      ).toHaveCount(0);
+    });
+  }
+});
+
+test('native Android back lets a modal consume the event before exiting', async ({
+  page,
+}) => {
+  await nativeBridge(page);
+  await page.goto('/signin');
+  await expect
+    .poll(async () =>
+      (await calls(page)).some(
+        (call) =>
+          call.method === 'addListener' && call.args.eventName === 'backButton'
+      )
+    )
+    .toBe(true);
+  await page.evaluate(() => {
+    window.addEventListener(
+      'native-back-button',
+      (event) => event.preventDefault(),
+      { once: true }
+    );
+    window.dispatchEvent(
+      new CustomEvent('native-auth-test.back', { detail: false })
+    );
+  });
+  expect(
+    (await calls(page)).filter((call) => call.method === 'exitApp')
+  ).toHaveLength(0);
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new CustomEvent('native-auth-test.back', { detail: false })
+    );
+  });
+  await expect
+    .poll(
+      async () =>
+        (await calls(page)).filter((call) => call.method === 'exitApp').length
+    )
+    .toBe(1);
+});
+
+test.describe('app email-link handoff', () => {
+  test('email requested in the app carries native metadata to the server', async ({
+    page,
+    baseURL,
+  }) => {
+    await nativeBridge(page, { googlePlugin: false });
+    await page.route('**/api/config/turnstile', (route) =>
+      route.fulfill({ json: { siteKey: 'mobile-auth-test-site-key' } })
+    );
+    await page.route(
+      'https://challenges.cloudflare.com/turnstile/v0/api.js?*',
+      (route) =>
+        route.fulfill({
+          contentType: 'application/javascript',
+          body: `window.turnstile = {
+            render: function (element, options) {
+              queueMicrotask(function () { options.callback('mobile-auth-test-token'); });
+              return 'mobile-auth-test-widget';
+            },
+            reset: function () {},
+            remove: function () {}
+          };`,
+        })
+    );
+    await page.route('**/api/auth/verify-turnstile', (route) =>
+      route.fulfill({ json: { success: true } })
+    );
+    const requests: Record<string, unknown>[] = [];
+    await page.route('**/api/auth/sign-in/magic-link', (route) => {
+      requests.push(route.request().postDataJSON());
+      return route.fulfill({ json: { status: true } });
+    });
+    await page.goto('/signin');
+    await page.getByPlaceholder('your@email.com').fill('member@example.test');
+    const button = page.getByRole('button', {
+      name: 'Send sign-in link',
+      exact: true,
+    });
+    await expect(button).toBeEnabled();
+    await button.click();
+    await expect.poll(() => requests.length).toBe(1);
+    expect(requests[0]).toMatchObject({
+      email: 'member@example.test',
+      callbackURL: `${baseURL}/`,
+      metadata: { nativeApp: true },
+    });
+  });
+
+  test('a browser landing does not consume the token or silently sign in', async ({
+    page,
+  }) => {
+    let verifications = 0;
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname === '/api/auth/magic-link/verify') {
+        verifications += 1;
+      }
+    });
+    const response = await page.goto('/signin/mobile?token=email-test-token');
+    await expect(
+      page.getByRole('link', { name: 'Open Pana Mia app' })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Continue in browser instead' })
+    ).toHaveAttribute('href', /\/api\/auth\/magic-link\/verify\?/);
+    expect(verifications).toBe(0);
+    expect(response?.headers()['cache-control']).toContain('no-store');
+    expect(response?.headers()['referrer-policy']).toBe('no-referrer');
+  });
+
+  for (const cold of [true, false]) {
+    test(`${cold ? 'cold launch' : 'warm app link'} verifies once in the app's cookie store`, async ({
+      page,
+      context,
+      baseURL,
+    }) => {
+      const verification = new URL('/api/auth/magic-link/verify', baseURL);
+      verification.search = new URLSearchParams({
+        token: 'email-test-token',
+        callbackURL: '/signin?emailComplete=1',
+      }).toString();
+      const mobile = mobileMagicLinkUrl(verification.href);
+      const appUrl = mobileMagicLinkAppUrl(mobile);
+      await nativeBridge(page, cold ? { launchUrl: appUrl } : {});
+      let verifications = 0;
+      await page.route('**/api/auth/magic-link/verify?*', (route) => {
+        verifications += 1;
+        return route.fulfill({
+          status: 302,
+          headers: {
+            Location: '/signin?emailComplete=1',
+            'Set-Cookie': 'native-email-test-session=app; Path=/; HttpOnly',
+          },
+        });
+      });
+      await page.goto('/signin');
+      if (!cold) {
+        await expect
+          .poll(async () =>
+            (await calls(page)).some(
+              (call) =>
+                call.method === 'addListener' &&
+                call.args.eventName === 'appUrlOpen'
+            )
+          )
+          .toBe(true);
+        await page.evaluate((url) => {
+          window.dispatchEvent(
+            new CustomEvent('native-auth-test.app-url', { detail: url })
+          );
+        }, appUrl);
+      }
+      await expect(page).toHaveURL(/\/signin\?emailComplete=1$/);
+      expect(verifications).toBe(1);
+      expect(await context.cookies()).toContainEqual(
+        expect.objectContaining({
+          name: 'native-email-test-session',
+          httpOnly: true,
+        })
+      );
+
+      const launchReads = (await calls(page)).filter(
+        (call) => call.method === 'getLaunchUrl'
+      ).length;
+      await page.reload();
+      await expect
+        .poll(
+          async () =>
+            (await calls(page)).filter((call) => call.method === 'getLaunchUrl')
+              .length
+        )
+        .toBeGreaterThan(launchReads);
+      await expect(page).toHaveURL(/\/signin\?emailComplete=1$/);
+      expect(verifications).toBe(1);
+    });
+  }
+
+  test('invalid handoff links show recovery instead of attempting verification', async ({
+    page,
+  }) => {
+    await nativeBridge(page);
+    await page.goto('/signin/mobile');
+    await expect(page.getByRole('alert')).toContainText(
+      'We could not open this sign-in link'
+    );
+    await expect(
+      page.getByRole('link', { name: 'Request a new sign-in link' })
+    ).toHaveAttribute('href', '/signin');
+  });
+});

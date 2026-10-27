@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { MOBILE_MAGIC_LINK_PATH } from '@/lib/mobile/auth-links';
 
 const AP_TYPES = ['application/activity+json', 'application/ld+json'];
 
@@ -61,7 +62,9 @@ export function proxy(request: NextRequest) {
     /(?:^|;\s*)(?:__Secure-)?better-auth[.-]session_token=/.test(
       request.headers.get('cookie') ?? ''
     );
-  if (hasSessionCookie) {
+  const isMobileAuthPage =
+    pathname.replace(/\/+$/, '') === MOBILE_MAGIC_LINK_PATH;
+  if (hasSessionCookie || isMobileAuthPage) {
     response.headers.set('Cache-Control', 'private, no-store, max-age=0');
   }
 
@@ -80,7 +83,10 @@ export function proxy(request: NextRequest) {
   response.headers.set('X-XSS-Protection', '1; mode=block');
 
   // Referrer policy
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set(
+    'Referrer-Policy',
+    isMobileAuthPage ? 'no-referrer' : 'strict-origin-when-cross-origin'
+  );
 
   // Permissions policy - restrict access to sensitive APIs
   //

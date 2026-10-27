@@ -27,7 +27,11 @@ import {
   NATIVE_APP_CLASS,
   NATIVE_BACK_BUTTON_EVENT,
 } from '@/lib/mobile/native';
-import { DEFAULT_ROOT_DOMAIN } from '@/lib/panaverse/surfaces';
+import {
+  NATIVE_LAUNCH_URL_KEY,
+  nativeDeepLinkUrl,
+  nativeLaunchUrlFingerprint,
+} from '@/lib/mobile/auth-links';
 
 export function NativeShell() {
   useEffect(() => {
@@ -48,6 +52,34 @@ export function NativeShell() {
     const pending: Promise<{ remove: () => void }>[] = [];
 
     let cancelled = false;
+    let lastOpenedUrl: string | null = null;
+
+    const openUrl = async (url: string, fromLaunch = false) => {
+      if (lastOpenedUrl === url || cancelled) return;
+      lastOpenedUrl = url;
+      const target = nativeDeepLinkUrl(url, window.location.origin);
+      if (!target) {
+        console.warn('[mobile] rejected an untrusted app link');
+        return;
+      }
+
+      const fingerprint = await nativeLaunchUrlFingerprint(url);
+      if (cancelled) return;
+      if (
+        fromLaunch &&
+        sessionStorage.getItem(NATIVE_LAUNCH_URL_KEY) === fingerprint
+      ) {
+        return;
+      }
+      sessionStorage.setItem(NATIVE_LAUNCH_URL_KEY, fingerprint);
+      if (target.href !== window.location.href) {
+        window.location.assign(target.href);
+      }
+    };
+
+    const reportLinkError = (error: unknown) => {
+      console.error('[mobile] app link navigation failed', error);
+    };
 
     void (async () => {
       const [{ App }, { SplashScreen }] = await Promise.all([
@@ -100,65 +132,30 @@ export function NativeShell() {
         })
       );
 
-      /* Universal Links and App Links: a pana.social URL tapped in another app
-       * opens this one, and the OS hands over the URL that did it.
-       *
-       * Navigating explicitly is what makes that land somewhere useful.
-       * Without this the app opens on whatever it was last showing — or its
-       * start URL on a cold launch — so a member who tapped a link to a
-       * particular listing arrives at the home page, which reads as the link
-       * having been ignored.
-       *
-       * What counts as "ours" is any https host on the panaverse root domain,
-       * NOT just the origin currently loaded. That distinction is the whole
-       * point of shipping both surfaces in one app: this WebView may be
-       * showing pana.social when a social.pana.social link arrives, and those
-       * are different origins. Comparing against window.location.origin would
-       * silently drop exactly half the deep links — the cross-surface half —
-       * and produce the ignored-link behaviour this listener exists to fix.
-       *
-       * Anything outside that domain is dropped rather than followed. This
-       * listener should only ever be handed a URL the app has declared it
-       * handles (see app/.well-known/ and the native claims described there),
-       * so an unexpected origin means something went wrong, and treating it as
-       * a navigation instruction would turn a stray deep link into an open
-       * redirect inside the WebView. */
+      // HTTPS App/Universal Links and the narrowly scoped email-auth scheme
+      // share the same origin validation. Register before reading the cold
+      // launch URL so a link arriving during startup cannot be missed.
       pending.push(
         App.addListener('appUrlOpen', ({ url }) => {
-          let target: URL;
-          try {
-            target = new URL(url);
-          } catch {
-            return;
-          }
-
-          const root = DEFAULT_ROOT_DOMAIN;
-          const isOurs =
-            target.protocol === 'https:' &&
-            (target.hostname === root || target.hostname.endsWith(`.${root}`));
-
-          if (!isOurs) return;
-
-          /* Same origin keeps the URL relative so the WebView treats it as
-           * ordinary in-app navigation. A claimed host on a different origin
-           * is a surface crossing, which needs the absolute URL — and is
-           * allowed to stay in the app by the allowNavigation list in
-           * capacitor.config.ts. */
-          window.location.assign(
-            target.origin === window.location.origin
-              ? `${target.pathname}${target.search}${target.hash}`
-              : target.href
-          );
+          void openUrl(url).catch(reportLinkError);
         })
       );
-    })();
+      const launch = await App.getLaunchUrl();
+      if (launch?.url) await openUrl(launch.url, true);
+    })().catch((error: unknown) => {
+      console.error('[mobile] native shell setup failed', error);
+    });
 
     return () => {
       cancelled = true;
       /* Runs whether or not the async block got that far, because a promise
        * pushed before unmount still resolves to a live listener. */
       for (const handle of pending) {
-        void handle.then((h) => h.remove()).catch(() => {});
+        void handle
+          .then((h) => h.remove())
+          .catch((error: unknown) => {
+            console.warn('[mobile] native listener cleanup failed', error);
+          });
       }
     };
   }, []);
