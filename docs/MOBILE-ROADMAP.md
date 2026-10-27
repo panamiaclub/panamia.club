@@ -544,4 +544,3 @@ Apple references:
    returns a `delivered` count, and `delivered === 0` means the recipient holds
    no live socket — which is exactly the moment to push instead. See
    [CHAT-ROADMAP.md](./CHAT-ROADMAP.md#background-delivery-needs-push-and-that-is-true-everywhere).
-7. **Replace `mobile/assets/icon.png`** with a true ≥1024×1024 master.
