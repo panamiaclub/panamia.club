@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
     // Add human-readable message to each notification
     const notificationsWithMessages = result.notifications.map((notif) => ({
       ...notif,
+      _id: notif.id,
       displayMessage: getNotificationMessage(notif),
     }));
 
