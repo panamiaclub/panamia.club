@@ -31,6 +31,11 @@ import { SurfaceMemberHeader } from '@/components/panaverse/SurfaceMemberHeader'
 import { SurfaceMemberFooter } from '@/components/panaverse/SurfaceMemberFooter';
 import { PanaSitesProvider } from '@/components/panaverse/PanaSitesProvider';
 import { resolvePanaSites } from '@/lib/panaverse/sites';
+import {
+  DEFAULT_SOCIAL_PREVIEW_HEIGHT,
+  DEFAULT_SOCIAL_PREVIEW_PATH,
+  DEFAULT_SOCIAL_PREVIEW_WIDTH,
+} from '@/lib/social-preview';
 import BugReportDialog from '@/components/BugReportDialog';
 
 /**
@@ -58,6 +63,11 @@ export async function generateMetadata(): Promise<Metadata> {
    * is off, pana.social/s resolves to the default surface, so a host-keyed
    * title names the feed "Pana Mia". See `resolveChromeSurface`. */
   const chromeSurface = resolveChromeSurface(surface, pathname);
+  const description = SURFACE_DESCRIPTION[chromeSurface.id];
+  const previewImage = new URL(
+    DEFAULT_SOCIAL_PREVIEW_PATH,
+    `https://${getRootDomain()}`
+  ).href;
 
   /* A page a surface is borrowing points its canonical at the surface that
    * owns it.
@@ -94,7 +104,27 @@ export async function generateMetadata(): Promise<Metadata> {
    * it. */
   return {
     title: chromeSurface.name,
-    description: SURFACE_DESCRIPTION[chromeSurface.id],
+    description,
+    openGraph: {
+      title: chromeSurface.name,
+      description,
+      type: 'website',
+      siteName: 'Pana MIA Club',
+      images: [
+        {
+          url: previewImage,
+          width: DEFAULT_SOCIAL_PREVIEW_WIDTH,
+          height: DEFAULT_SOCIAL_PREVIEW_HEIGHT,
+          alt: 'Pana MIA Club — The Future Is Local',
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: chromeSurface.name,
+      description,
+      images: [previewImage],
+    },
     ...(owner && pathname
       ? {
           /* Both halves are load-bearing, and the second is the one that

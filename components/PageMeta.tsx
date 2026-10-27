@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import { DEFAULT_SOCIAL_PREVIEW_PATH } from '@/lib/social-preview';
 
 interface PageMetaProps {
   title: string;
@@ -21,7 +22,7 @@ export default function PageMeta(props: PageMetaProps) {
   let meta_image = (
     <meta
       property="og:image"
-      content={`${process.env.NEXT_PUBLIC_HOST_URL}/meta_image.jpg`}
+      content={`${process.env.NEXT_PUBLIC_HOST_URL || 'https://panamia.club'}${DEFAULT_SOCIAL_PREVIEW_PATH}`}
     />
   );
   if (props.image) {
@@ -37,6 +38,14 @@ export default function PageMeta(props: PageMetaProps) {
         {meta_desc}
         {meta_url}
         {meta_image}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+          name="twitter:image"
+          content={
+            props.image ||
+            `${process.env.NEXT_PUBLIC_HOST_URL || 'https://panamia.club'}${DEFAULT_SOCIAL_PREVIEW_PATH}`
+          }
+        />
       </Head>
       <h1 className="sr-only">{props.title}</h1>
     </>
