@@ -5,6 +5,10 @@ import type { BetterAuthOptions } from 'better-auth';
 import { memoryAdapter } from 'better-auth/adapters/memory';
 import { getEmail, type SendEmail } from '@/lib/email';
 import { getRootDomain } from '@/lib/panaverse/surfaces';
+import {
+  MOBILE_MAGIC_LINK_PATH,
+  magicLinkVerificationUrl,
+} from '@/lib/mobile/auth-links';
 
 const origin = 'https://panamia.club';
 const email = 'magic-link-member@example.test';
@@ -73,12 +77,16 @@ after(() => {
   mock.restoreAll();
 });
 
-async function requestLink(callbackURL = '/') {
+async function requestLink(callbackURL = '/', nativeApp = false) {
   const response = await handler(
     new Request(`${origin}/api/auth/sign-in/magic-link`, {
       method: 'POST',
       headers: { Origin: origin, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, callbackURL }),
+      body: JSON.stringify({
+        email,
+        callbackURL,
+        ...(nativeApp ? { metadata: { nativeApp: true } } : {}),
+      }),
     })
   );
   assert.equal(response.status, 200);
@@ -86,7 +94,7 @@ async function requestLink(callbackURL = '/') {
   const message = messages.at(-1);
   assert.ok(message);
   const match = message.text?.match(
-    /^https:\/\/panamia\.club\/api\/auth\/magic-link\/verify\?.+$/m
+    /^https:\/\/panamia\.club\/(?:api\/auth\/magic-link\/verify|signin\/mobile)\?.+$/m
   );
   assert.ok(match);
   return { url: new URL(match[0]), message };
@@ -103,6 +111,33 @@ function recoveryLocation(response: Response, callbackURL: string) {
 }
 
 describe('app magic-link lifetime and recovery', () => {
+  test('app-requested email defers verification until the link reaches the app', async () => {
+    const callbackURL = '/m/schedule/book?mentor=taylor&mode=video';
+    const { url, message } = await requestLink(callbackURL, true);
+    assert.equal(url.pathname, MOBILE_MAGIC_LINK_PATH);
+    assert.ok(message.html.includes(url.href));
+    assert.equal(storage.user.length, 0);
+    assert.equal(storage.session.length, 0);
+    assert.equal(storage.verification.length, 1);
+
+    const verification = magicLinkVerificationUrl(url.href);
+    const response = await handler(new Request(verification));
+    assert.equal(response.status, 302);
+    assert.equal(
+      response.headers.get('Location'),
+      new URL(callbackURL, origin).href
+    );
+    assert.match(response.headers.get('Set-Cookie') ?? '', /session_token=/);
+    assert.match(response.headers.get('Set-Cookie') ?? '', /HttpOnly/i);
+    assert.equal(storage.session.length, 1);
+    recoveryLocation(await handler(new Request(verification)), callbackURL);
+  });
+
+  test('browser-requested email keeps the existing web verification URL', async () => {
+    const { url } = await requestLink();
+    assert.equal(url.pathname, '/api/auth/magic-link/verify');
+  });
+
   test('stores a real 30-minute expiry and sends matching HTML and text', async (t) => {
     t.mock.timers.enable({ apis: ['Date'], now: start });
     const { url, message } = await requestLink();

@@ -28,6 +28,7 @@
 interface CapacitorBridge {
   isNativePlatform?: () => boolean;
   getPlatform?: () => string;
+  isPluginAvailable?: (name: string) => boolean;
 }
 
 declare global {
@@ -75,4 +76,11 @@ export function nativePlatform(): NativePlatform | null {
   if (!isNativeApp()) return null;
   const platform = window.Capacitor?.getPlatform?.();
   return platform === 'ios' || platform === 'android' ? platform : null;
+}
+
+export function hasNativeGoogleSignIn(): boolean {
+  return (
+    nativePlatform() === 'android' &&
+    window.Capacitor?.isPluginAvailable?.('SocialLogin') === true
+  );
 }

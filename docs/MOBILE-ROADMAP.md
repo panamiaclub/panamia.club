@@ -88,18 +88,18 @@ in the system browser, outside the app's cookie store, and three things break:
 
 ## Current State
 
-| Piece                                   | Status                                             |
-| --------------------------------------- | -------------------------------------------------- |
-| Capacitor config, plugins, offline page | Done                                               |
-| Android + iOS projects scaffolded       | Done                                               |
-| Splash, back button, deep-link handling | Done (`NativeShell`)                               |
-| Association routes                      | Done, 404 until env vars are set                   |
-| App Links / Universal Links native side | Done (manifest + entitlements)                     |
-| App icons and splash images             | Generated from `mobile/assets/` (see below)        |
-| Built or run on a device                | **Not yet** — but both platforms compile in CI     |
-| CI builds both platforms                | Done, green (`.github/workflows/mobile-build.yml`) |
-| Signing, store listings                 | Android tooling ready; credentials/listing pending |
-| OAuth in WebView                        | Resolved — app is magic link only                  |
+| Piece                                   | Status                                                             |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| Capacitor config, plugins, offline page | Done                                                               |
+| Android + iOS projects scaffolded       | Done                                                               |
+| Splash, back button, deep-link handling | Done (`NativeShell`)                                               |
+| Association routes                      | Done, 404 until env vars are set                                   |
+| App Links / Universal Links native side | Done (manifest + entitlements)                                     |
+| App icons and splash images             | Generated from `mobile/assets/` (see below)                        |
+| Built or run on a device                | **Not yet** — but both platforms compile in CI                     |
+| CI builds both platforms                | Done, green (`.github/workflows/mobile-build.yml`)                 |
+| Signing, store listings                 | Android tooling ready; credentials/listing pending                 |
+| Authentication                          | Android native Google + in-app email-link handoff; iOS email links |
 
 ---
 
@@ -240,37 +240,38 @@ place.
 
 ---
 
-## Sign-in: magic link only in the app
+## Sign-in: native Google and in-app email links
 
 **Google refuses to complete OAuth in an embedded WebView.** It returns
 `disallowed_useragent`, by policy, and there is no configuration that turns this
-off. Apple is less strict but not guaranteed. Magic link and password sign-in
-work normally.
+off. Android now uses Google's native Credential Manager through
+`@capgo/capacitor-social-login`. Its ID token and a fresh nonce are submitted by
+the WebView to Better Auth's `signIn.social`, which validates the token and sets
+the cookie in the app. No browser session or Firebase project is required.
+`GOOGLE_CLIENT_ID` supplies the public Web client ID at runtime. Register the
+package and each signing key's SHA-1 in Google Cloud; see
+[Android setup](./ANDROID.md#native-google-sign-in). Rebuild and install the
+native shell after adding the plugin; a website deploy alone cannot add it.
 
-This needed a product decision rather than a technical one:
+iOS and older Android builds without the plugin keep email sign-in only.
+Other providers remain hidden in native apps. Enabling Google on iOS remains
+separate work that must also address Sign in with Apple / guideline 4.8.
 
-| Option                                     | Cost                   | Consequence                                                                                                                                                   |
-| ------------------------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A. Hide third-party sign-in in the app** | Small                  | Magic link becomes the mobile path. Also sidesteps App Store guideline 4.8, which requires offering Sign in with Apple _alongside_ other third-party options. |
-| **B. Native sign-in plugins**              | Moderate, per provider | Real one-tap Google/Apple sign-in; exchanged for a session via Better Auth's `signInWithIdToken`. Pulls guideline 4.8 back in scope.                          |
-| **C. System browser + deep-link handoff**  | Moderate, one-time     | Sign-in opens in Safari/Chrome Custom Tabs and returns a token via a deep link. Works for every provider at once, but the flow visibly leaves the app.        |
+Email links requested inside the app carry `metadata.nativeApp=true`. The
+email URL is `/signin/mobile`, not the API verification endpoint. App Links or
+Universal Links take it into the app; otherwise a browser landing page leaves
+the token untouched and offers **Open Pana Mia app**. The explicit app scheme
+works without domain association, and Android's `intent://` targets
+`social.pana.app` explicitly. **Continue in browser instead** is available only
+as a deliberate choice. Verification occurs inside the WebView, where its
+session cookie is actually useful.
 
-**Option A is implemented.** `app/signin/_components/signin-view.tsx` drops the
-entire provider list when `useIsNativeApp()` is true. Nothing else on that screen
-needed changing: `hasOAuth` already drives the divider, the button list, the
-"back to options" link, and — the reason this works so cleanly — whether the
-magic-link form starts open. With no providers, it does.
-
-Accounts are unaffected. A member who signed up with Google on the web signs in
-to the app with a magic link to the same address and lands in the same account,
-because Better Auth links them by verified email (see `docs/SIGNIN.md`).
-
-The OAuth hosts stay in `allowNavigation` even though the app no longer links to
-them. They are not dead config: it keeps a sign-in reached some other way
-completing inside the WebView, where the resulting cookie is in the session's
-cookie store, rather than in a browser where it is not.
-
-Both B and C remain open. A is reversible and blocks neither.
+`NativeShell` validates HTTPS and narrowly scoped auth-scheme links, handles
+both `appUrlOpen` and `getLaunchUrl()`, and remembers only a launch fingerprint
+to avoid consuming the same link again after a reload or surface crossing.
+The handoff page is private/no-store and sends no referrer. Web-requested email
+links are unchanged. Accounts and verified-email linking are unchanged; see
+[the sign-in documentation](./SIGNIN.md#inside-the-android-and-ios-apps).
 
 ### The hydration problem, and why there is a hook for it
 
@@ -522,9 +523,10 @@ Apple references:
 
 ## Next Steps
 
-1. **Exercise sign-in on the emulator.** The app runs (`yarn mobile`), but
-   sign-in has not been walked end to end. Confirm the magic-link email opens
-   back into the app rather than the browser once App Links are verified.
+1. **Exercise sign-in on the emulator.** Register its debug signing SHA-1 for
+   native Google, then confirm Google and fresh email links create a session in
+   the app. Test email links with the app running and fully closed, and with
+   domain association disabled so the explicit app-opening fallback is used.
 2. **Test on real hardware.** Follow [docs/ANDROID.md](./ANDROID.md) to install
    directly over USB or wireless debugging, then repeat against the Play
    internal-test build because it carries Google's app-signing certificate.

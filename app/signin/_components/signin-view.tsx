@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useIsNativeApp } from '@/lib/mobile/use-native-app';
+import { hasNativeGoogleSignIn } from '@/lib/mobile/native';
 import { useTranslation } from 'react-i18next';
 
 function GoogleIcon() {
@@ -99,6 +100,8 @@ export interface SignInViewProps {
    * decides whether the buttons appear at all.
    */
   enabledOAuthProviders: readonly string[];
+  /** Public Web OAuth client ID, also used as the native Google token audience. */
+  googleClientId: string | null;
 }
 
 function SignInPageContent({
@@ -109,6 +112,7 @@ function SignInPageContent({
   mainSiteUrl,
   mainSiteName,
   enabledOAuthProviders,
+  googleClientId,
 }: SignInViewProps) {
   const searchParams = useSearchParams();
   /* Default to this surface's front door, not the main site's. Signing in on
@@ -215,27 +219,14 @@ function SignInPageContent({
       className: 'w-full bg-[#6364FF] text-white hover:bg-[#563ACC]',
     },
   ].filter(
-    /* Configured, and not inside the native app.
-     *
-     * Every one of these is hidden in the app because none of them can be
-     * trusted to complete in a WebView. Google refuses outright — it returns
-     * disallowed_useragent for embedded WebViews as a matter of policy, with
-     * no setting that changes it — and the rest would each need their own
-     * native SDK before they could be offered honestly. Showing them here
-     * would mean shipping buttons that fail, which is worse than not showing
-     * them: a member who taps one has no way to tell a broken app from a
-     * broken account.
-     *
-     * With none of them present, hasOAuth is false and the magic-link form
-     * below opens by default, which is the point. Magic link behaves
-     * identically in the app and the browser.
-     *
-     * This also keeps App Store guideline 4.8 out of scope. The requirement to
-     * offer Sign in with Apple is triggered by offering other third-party
-     * sign-in options, and this app offers none.
-     *
-     * See docs/MOBILE-ROADMAP.md for what it would take to change this. */
-    (provider) => enabledOAuthProviders.includes(provider.id) && !isNativeApp
+    // Older Android builds have no native plugin. iOS remains email-only until
+    // native Google and Sign in with Apple can be offered together.
+    (provider) =>
+      enabledOAuthProviders.includes(provider.id) &&
+      (!isNativeApp ||
+        (provider.id === 'google' &&
+          !!googleClientId &&
+          hasNativeGoogleSignIn()))
   );
 
   const hasOAuth = oauthProviders.length > 0;
@@ -245,13 +236,17 @@ function SignInPageContent({
   const handleOAuthSignIn = async (provider: string) => {
     setOAuthProvider(provider);
     try {
-      await signIn(provider, { callbackUrl });
+      await signIn(provider, {
+        callbackUrl,
+        googleClientId: googleClientId ?? undefined,
+      });
     } catch {
       toast({
         variant: 'destructive',
         title: tToast('error'),
         description: tToast('oauthSignInFailed'),
       });
+    } finally {
       setOAuthProvider(null);
     }
   };

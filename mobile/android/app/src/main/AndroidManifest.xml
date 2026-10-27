@@ -52,6 +52,15 @@
                 <data android:scheme="https" android:host="panamia.club" />
                 <data android:scheme="https" android:host="social.panamia.club" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="social.pana.app"
+                    android:host="auth"
+                    android:path="/magic-link" />
+            </intent-filter>
         </activity>
 
         <provider

@@ -85,36 +85,46 @@ if (!existingAccount) {
 
 ## Inside the Android and iOS apps
 
-**The native apps offer magic link only. No third-party sign-in is shown.**
+**Android offers native Google sign-in and email links. iOS remains email-only.**
 
-This is not a gap in the apps, it is the platforms refusing. Google returns
-`disallowed_useragent` for OAuth started in an embedded WebView, by policy and
-with no setting that changes it, and the remaining providers would each need
-their own native SDK before they could be offered honestly. Rendering the
-buttons anyway would ship controls that fail, and a member who taps one cannot
-tell a broken app from a broken account.
+Google web OAuth cannot run in an embedded WebView (`disallowed_useragent`).
+Android instead uses `@capgo/capacitor-social-login`, backed by Google's
+Credential Manager. The public Web client ID is resolved from the server's
+`GOOGLE_CLIENT_ID`, not a separate build-time variable. The native SDK returns
+an ID token with a fresh nonce; the WebView sends both to Better Auth's existing
+`signIn.social` endpoint. Better Auth verifies the signature, issuer, audience,
+expiry, and nonce and sets the app's own HttpOnly session cookie.
 
-So `app/signin/_components/signin-view.tsx` filters the whole provider list out
-when `useIsNativeApp()` is true. With no providers left, `hasOAuth` is false and
-the existing behaviour takes over: the magic-link form opens by default, with no
-toggle to get past first. Magic link behaves identically in the app and the
-browser.
+The button requires `NEXT_PUBLIC_GOOGLE_ENABLED=true`, a configured
+`GOOGLE_CLIENT_ID`, and an Android build containing the native plugin. Older
+builds keep email sign-in rather than attempting unsupported web OAuth.
+Register Android OAuth clients for `social.pana.app` and **each installed signing
+key's SHA-1**, in the same Google Cloud project as the Web client.
+See [Android setup](./ANDROID.md#native-google-sign-in).
 
-Nothing about accounts changes. A member who signed up with Google on the web
-signs in to the app with a magic link to the same address and lands in the same
-account — the linking described above is what makes that work.
+**App-requested email links must not verify in the browser first.** The app
+passes `metadata.nativeApp=true` when requesting a link. The email then points
+to `/signin/mobile`, preserving the original one-time token and callbacks
+without consuming them. Verified App Links / Universal Links open that page
+directly in the app. If a mail client opens a browser instead, the page offers
+an explicit **Open Pana Mia app** action using the registered
+`social.pana.app://auth/magic-link` scheme; Android targets our package with an
+`intent://` URL. Only the app then visits `/api/auth/magic-link/verify`, so the
+session belongs to its WebView. **Continue in browser instead** is an explicit
+alternative, not an automatic fallback that steals the app's token.
 
-Two consequences worth knowing:
+The handoff page is private/no-store and uses `Referrer-Policy: no-referrer`.
+Native links reject foreign origins and arbitrary scheme destinations.
+`NativeShell` handles warm links and `App.getLaunchUrl()` on cold launches;
+only a fingerprint is saved to prevent replaying a launch after navigation.
+Web-requested email links retain their existing browser verification URL.
+Existing links already consumed by a browser cannot be reused: request a fresh
+link from the updated app.
 
-- **App Store guideline 4.8 stays out of scope.** The requirement to offer Sign
-  in with Apple is triggered by offering _other_ third-party sign-in options.
-  This app offers none, so it does not apply.
-- **The OAuth hosts remain in `allowNavigation`** in `capacitor.config.ts`. They
-  are not reachable from the app's own UI, but leaving them listed means a
-  sign-in reached some other way still completes in the WebView, where its
-  cookie is readable, rather than in a browser where it is not.
-
-See `docs/MOBILE-ROADMAP.md` for what changing this would cost.
+Accounts are unchanged: Google and email sign-in to the same verified address
+use the same account. iOS does not expose Google or other third-party providers;
+adding native Google there must include the corresponding Sign in with Apple
+and App Store guideline 4.8 work.
 
 ## Data Structure
 

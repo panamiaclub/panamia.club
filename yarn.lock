@@ -616,6 +616,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@capgo/capacitor-social-login@npm:^8.7.5":
+  version: 8.7.5
+  resolution: "@capgo/capacitor-social-login@npm:8.7.5"
+  dependencies:
+    tslib: "npm:^2.8.1"
+  peerDependencies:
+    "@capacitor/core": ">=8.0.0"
+  checksum: 10c0/72ec94622e67107477410fde93e0f507b4e9e9f11e7c6d3035e407237fb5f001d37323649b56067bbd5c09ba029150eb4cacf39b1d03c0b98c36469ab51863d7
+  languageName: node
+  linkType: hard
+
 "@cloudflare/kv-asset-handler@npm:0.5.0":
   version: 0.5.0
   resolution: "@cloudflare/kv-asset-handler@npm:0.5.0"
@@ -9153,6 +9164,7 @@ __metadata:
     "@capacitor/network": "npm:^8.0.1"
     "@capacitor/splash-screen": "npm:^8.0.2"
     "@capacitor/status-bar": "npm:^8.0.4"
+    "@capgo/capacitor-social-login": "npm:^8.7.5"
     "@cloudflare/vite-plugin": "npm:1.65.0"
     "@commitlint/cli": "npm:21.2.4"
     "@commitlint/config-conventional": "npm:^21.2.4"
