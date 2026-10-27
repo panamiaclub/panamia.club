@@ -65,7 +65,7 @@
     "@capgo/capacitor-social-login": "^8.7.5",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
-    "@hookform/resolvers": "^5.9.1",
+    "@hookform/resolvers": "^6.0.0",
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
     "@paralleldrive/cuid2": "^3.3.0",
