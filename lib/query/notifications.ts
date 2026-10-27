@@ -76,7 +76,7 @@ export const useNotifications = (options?: {
 }) => {
   const { enabled = true, ...params } = options ?? {};
   return useQuery<NotificationsResponse | undefined, Error>({
-    queryKey: [notificationQueryKey, 'list', params],
+    queryKey: [...notificationQueryKey, 'list', params],
     queryFn: () => fetchNotifications(params),
     enabled,
   });
@@ -84,7 +84,7 @@ export const useNotifications = (options?: {
 
 export const useUnreadCount = (options?: { enabled?: boolean }) => {
   return useQuery<number, Error>({
-    queryKey: [notificationQueryKey, 'unreadCount'],
+    queryKey: [...notificationQueryKey, 'unreadCount'],
     queryFn: () => fetchUnreadCount(),
     refetchInterval: 30000, // Poll every 30 seconds
     staleTime: 10000, // Consider data stale after 10 seconds
