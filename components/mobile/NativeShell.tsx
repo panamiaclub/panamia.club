@@ -22,7 +22,11 @@
  */
 
 import { useEffect } from 'react';
-import { isNativeApp, NATIVE_APP_CLASS } from '@/lib/mobile/native';
+import {
+  isNativeApp,
+  NATIVE_APP_CLASS,
+  NATIVE_BACK_BUTTON_EVENT,
+} from '@/lib/mobile/native';
 import { DEFAULT_ROOT_DOMAIN } from '@/lib/panaverse/surfaces';
 
 export function NativeShell() {
@@ -81,6 +85,13 @@ export function NativeShell() {
        * gesture is handled by the WebView itself. */
       pending.push(
         App.addListener('backButton', ({ canGoBack }) => {
+          if (
+            !window.dispatchEvent(
+              new Event(NATIVE_BACK_BUTTON_EVENT, { cancelable: true })
+            )
+          ) {
+            return;
+          }
           if (canGoBack) {
             window.history.back();
           } else {

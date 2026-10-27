@@ -100,6 +100,7 @@ in the system browser, outside the app's cookie store, and three things break:
 | CI builds both platforms                | Done, green (`.github/workflows/mobile-build.yml`) |
 | Signing, store listings                 | Android tooling ready; credentials/listing pending |
 | OAuth in WebView                        | Resolved — app is magic link only                  |
+| Story photo/video camera                | Implemented; device testing pending               |
 
 ---
 
