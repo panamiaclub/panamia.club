@@ -47,7 +47,7 @@ const emptySubscribe = () => () => {};
 // Uses useSyncExternalStore rather than a mount effect because React is
 // required to call getServerSnapshot for the hydration render itself, which is
 // exactly the render that has to match the server.
-function useIsHydrated(): boolean {
+export function useIsHydrated(): boolean {
   return useSyncExternalStore(
     emptySubscribe,
     () => true,

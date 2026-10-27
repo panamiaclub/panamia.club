@@ -495,7 +495,7 @@ export function getNotificationMessage(notif: {
 
     case 'follow':
       if (notif.type === 'Follow') {
-        return `${actor} started following you`;
+        return notif.message || `${actor} started following you`;
       }
       break;
 

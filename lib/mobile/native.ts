@@ -49,6 +49,9 @@ export type NativePlatform = 'ios' | 'android';
  */
 export const NATIVE_APP_CLASS = 'native-app';
 
+/** A modal may prevent this event to consume Android back before navigation. */
+export const NATIVE_BACK_BUTTON_EVENT = 'native-back-button';
+
 /**
  * True only inside the shell.
  *

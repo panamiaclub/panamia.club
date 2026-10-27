@@ -108,6 +108,38 @@ Reinstall the updated native build to register the auth scheme. Test with the
 app already open and with it fully closed. A link already consumed by a browser
 cannot transfer that browser session to the app; request a new one instead.
 
+## Story camera
+
+Open **Your story (+) → Open camera** to capture inside the app. Use **Photo**
+for a still image, or **Video** to tap to start/stop a recording with sound.
+Videos stop automatically after 60 seconds. The camera-switch button changes
+between front and rear cameras when available.
+
+Review the capture, **Retake** if needed, or choose **Use photo / Use video** to
+upload it through the existing story uploader. Add a caption and tap **Post
+story** to publish; capturing or uploading alone does not publish anything.
+**Choose from gallery** remains available without camera permissions.
+Recorded MP4 and WebM clips use the same H.264/AAC MP4 conversion as gallery
+videos, so the posted story remains playable across Android, iOS, and browsers.
+
+Camera access is requested only after opening the camera; microphone access is
+requested only when starting a video. If access was denied, enable it under
+**Android Settings → Apps → Pana Mia → Permissions** and try again. Back returns
+to the story editor before leaving the screen. Closing the camera, reviewing a
+capture, or backgrounding the app releases the camera and microphone.
+Backgrounding during recording discards that unfinished recording.
+
+The Android manifest declares camera, recording, and audio-settings permissions
+for Capacitor's WebView permission handler. No gallery/storage permission is
+needed. Camera and microphone hardware are optional, so devices without them
+can still install the app and use gallery uploads. Existing installs need a
+rebuilt Android app to receive the new manifest permissions.
+
+Live capture needs a **secure context**. For USB testing against a local server,
+use `adb reverse tcp:3001 tcp:3001` with
+`CAPACITOR_SERVER_URL=http://localhost:3001`, or use a trusted HTTPS dev URL.
+An ordinary LAN HTTP address works for gallery uploads, but not live capture.
+
 ## Create the Google Play upload key
 
 Google Play App Signing should hold the app-signing key. The repository keeps

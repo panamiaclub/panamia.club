@@ -1,6 +1,6 @@
 'use client';
 
-import { signIn } from '@/lib/auth-client';
+import { signIn, useIsHydrated } from '@/lib/auth-client';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -115,6 +115,7 @@ function SignInPageContent({
   googleClientId,
 }: SignInViewProps) {
   const searchParams = useSearchParams();
+  const isHydrated = useIsHydrated();
   /* Default to this surface's front door, not the main site's. Signing in on
      Pana Social used to drop the member on the directory, which reads as the
      sign-in having failed and sent them somewhere else. */
@@ -360,7 +361,7 @@ function SignInPageContent({
                       onClick={() => handleOAuthSignIn(provider.id)}
                       className={provider.className}
                       size="lg"
-                      disabled={oauthProvider !== null}
+                      disabled={!isHydrated || oauthProvider !== null}
                     >
                       {provider.icon}
                       {oauthProvider === provider.id
@@ -388,6 +389,7 @@ function SignInPageContent({
               {!emailFormOpen ? (
                 <button
                   onClick={() => setShowEmailForm(true)}
+                  disabled={!isHydrated}
                   className="text-pana-indigo dark:text-pana-flame w-full text-center text-sm font-semibold hover:underline"
                 >
                   {t('signInWithEmail')}
@@ -400,7 +402,7 @@ function SignInPageContent({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    disabled={isSubmitting}
+                    disabled={!isHydrated || isSubmitting}
                   />
                   {TurnstileWidget}
                   {turnstileError && (
@@ -413,7 +415,7 @@ function SignInPageContent({
                   <Button
                     type="submit"
                     className="bg-pana-flame text-pana-ink hover:bg-pana-burnt w-full font-extrabold"
-                    disabled={isSubmitting || !turnstileToken}
+                    disabled={!isHydrated || isSubmitting || !turnstileToken}
                   >
                     {isSubmitting ? t('sendingLink') : t('sendLink')}
                   </Button>
@@ -421,6 +423,7 @@ function SignInPageContent({
                     <button
                       type="button"
                       onClick={() => setShowEmailForm(false)}
+                      disabled={!isHydrated}
                       className="text-muted-foreground hover:text-foreground w-full text-center text-sm"
                     >
                       {t('backToOptions')}

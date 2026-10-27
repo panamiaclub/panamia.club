@@ -27,6 +27,7 @@ async function nativeBridge(
         name: 'App',
         methods: [
           { name: 'getLaunchUrl', rtype: 'promise' },
+          { name: 'exitApp', rtype: 'promise' },
           { name: 'addListener', rtype: 'callback' },
           { name: 'removeListener', rtype: 'callback' },
         ],
@@ -99,6 +100,11 @@ async function nativeBridge(
         callbacks.appUrlOpen?.({ url: event.detail });
       }
     });
+    window.addEventListener('native-auth-test.back', (event) => {
+      if (event instanceof CustomEvent) {
+        callbacks.backButton?.({ canGoBack: event.detail });
+      }
+    });
   }, options);
   await page.route('**/api/auth/get-session', (route) =>
     route.fulfill({ json: null })
@@ -119,6 +125,27 @@ function calls(page: Page) {
       }[]
   );
 }
+
+test.describe('sign-in hydration', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('sign-in controls cannot accept taps before event handlers are ready', async ({
+    page,
+  }) => {
+    await page.goto('/signin');
+    await expect(
+      page.getByRole('button', { name: 'Continue with Google' })
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Sign in with email' })
+    ).toBeDisabled();
+    await page.goto('/signin?error=INVALID_TOKEN');
+    await expect(page.getByPlaceholder('your@email.com')).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Send sign-in link', exact: true })
+    ).toBeDisabled();
+  });
+});
 
 test.describe('native Google sign-in', () => {
   test('uses the native account picker and exchanges its token in the app', async ({
@@ -235,6 +262,45 @@ test.describe('native Google sign-in', () => {
       ).toHaveCount(0);
     });
   }
+});
+
+test('native Android back lets a modal consume the event before exiting', async ({
+  page,
+}) => {
+  await nativeBridge(page);
+  await page.goto('/signin');
+  await expect
+    .poll(async () =>
+      (await calls(page)).some(
+        (call) =>
+          call.method === 'addListener' && call.args.eventName === 'backButton'
+      )
+    )
+    .toBe(true);
+  await page.evaluate(() => {
+    window.addEventListener(
+      'native-back-button',
+      (event) => event.preventDefault(),
+      { once: true }
+    );
+    window.dispatchEvent(
+      new CustomEvent('native-auth-test.back', { detail: false })
+    );
+  });
+  expect(
+    (await calls(page)).filter((call) => call.method === 'exitApp')
+  ).toHaveLength(0);
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new CustomEvent('native-auth-test.back', { detail: false })
+    );
+  });
+  await expect
+    .poll(
+      async () =>
+        (await calls(page)).filter((call) => call.method === 'exitApp').length
+    )
+    .toBe(1);
 });
 
 test.describe('app email-link handoff', () => {

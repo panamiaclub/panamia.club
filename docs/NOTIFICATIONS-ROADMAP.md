@@ -121,7 +121,7 @@ export type NotificationActivityType =
   | 'Delete' // Content removed
   | 'Announce' // Boost/share (future)
   | 'Like' // Favorite (future)
-  | 'Follow' // User followed (future)
+  | 'Follow' // User followed
   | 'Undo'; // Undo previous action
 
 // Pana MIA-specific context for the activity
@@ -130,7 +130,7 @@ export type NotificationContext =
   | 'review' // Peer review workflow
   | 'article' // Article lifecycle
   | 'mention' // User mentioned (future)
-  | 'follow' // Follow relationship (future)
+  | 'follow' // Follow relationship
   | 'system'; // System announcements
 
 export interface INotification extends Document {
@@ -319,12 +319,24 @@ overstate what ships. Both lists are in the next section.
 | --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Writing**     | —                           | **Retired.** Co-author invite and response, review request and verdict, and publishing-notifies-contributors all used to fire; every one of those calls has been removed. `coauthor` and `review` survive as enum values and `case` blocks only so rows already in the table stay readable      |
 | **Mentoring**   | —                           | **Retired.** Request, accept, decline and cancel all used to fire; those calls have been removed. `mentoring` survives for the same reason                                                                                                                                                      |
-| **Pana Social** | —                           | Thin — the social graph itself notifies nobody. `follow` and `mention` have no caller, and `mention` has no `case` either, so it would fall through to the generic fallback; reply and boost-of-your-post are unwritten. The `message` rows that do fire belong to Messages below               |
+| **Pana Social** | `follow`                    | New accepted local member follows notify the followed account and link to the follower's profile. Existing follows and unfollows are silent. `mention` still has no caller or `case`; reply and boost-of-your-post are unwritten. The `message` rows that fire belong to Messages below |
 | **Events**      | `event` (Create, Delete)    | Two paths fire. A group's event going live announces itself to the group's members — on **publish**, not creation, because events are born as drafts and a draft is visible only to the group's managers. The other is an admin suspending a venue, which cancels its future events and tells going/maybe attendees. The organizer lifecycle is written but unwired — there is no co-organizer endpoint. RSVP and reminders missing; `venue` is an objectType with no context |
 | **Groups**      | `group`, `group_membership` | The widest coverage of any domain — invitations, join requests, role changes, removal, bans, and two announcements that reach the whole membership: a top-level post in the group feed, and a group event going live. The one thing missing is a way to turn the last two off; see "Announcing to a whole group" below |
 | **Messages**    | `message`                   | Voice memos only, suppressed when the sender is held in the recipient's Requests folder; needs per-conversation collapsing                                                                                                                                                                      |
 | **Connectors**  | —                           | **No context.** `app/connectors/{join,hq,admin}` notify nobody                                                                                                                                                                                                                                 |
 | **Admin**       | `event`                     | **Outbound only, and down to one path.** Suspending a venue cancels its future events and tells going/maybe attendees. Article remove and restore used to notify too; those calls are gone, which retired `article` entirely. Nothing travels the other way: report queues and verification requests reach admins only by visiting `app/admin/reports`, and `system` has a sentence with no caller |
+
+Follow alerts use the standard unread, block-filtered, 30-day notification path.
+Both actors must have a linked local user account; actors without one have no
+notification inbox. Following again after an unfollow creates a new alert, but
+repeating an existing follow does not backfill or duplicate one. Notification
+copy is "you and <follower> became Panas!" when the new follow completes two
+accepted directions; otherwise it is "<follower> started following you". The
+Panas message is saved when the notification is created, so later unfollows do
+not rewrite it or change the earlier one-way alert. Notification
+failures are logged without failing an already-saved follow. Pending outbound
+follows and inbound federated follows remain outside this local member flow;
+email and background push delivery are unchanged.
 
 ### Contexts that were switched off
 
@@ -378,7 +390,6 @@ wired:
 | Context  | Types                                  | Missing piece                                                           |
 | -------- | -------------------------------------- | ----------------------------------------------------------------------- |
 | `event`  | Invite, Accept, Reject, Update | No co-organizer endpoint. `Create` used to sit in this list and no longer does — a group event announces itself on publish |
-| `follow` | Follow                                 | The follow action does not notify                                       |
 | `system` | (passthrough `message`)                | Nothing creates a system notification                                   |
 
 Either wire them or delete the cases; leaving both is what made the table above

@@ -6,11 +6,12 @@ async function getFFmpeg(): Promise<FFmpeg> {
   if (ffmpegInstance) return ffmpegInstance;
   const { FFmpeg: FFmpegClass } = await import('@ffmpeg/ffmpeg');
   const ffmpeg = new FFmpegClass();
+  // The module worker imports the core's default export; the UMD build has none.
   await ffmpeg.load({
     coreURL:
-      'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.js',
+      'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js',
     wasmURL:
-      'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.wasm',
+      'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm',
   });
   ffmpegInstance = ffmpeg;
   return ffmpeg;

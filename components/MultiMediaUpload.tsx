@@ -41,7 +41,7 @@ export interface UploadedMedia {
 }
 
 export interface MediaUploadHandle {
-  addFiles: (files: File[]) => Promise<void>;
+  addFiles: (files: File[]) => Promise<UploadedMedia[]>;
   isUploading: () => boolean;
   openPicker: (kind: 'media' | 'audio') => void;
 }
@@ -205,13 +205,13 @@ export default function MultiMediaUpload({
     return publicUrl;
   };
 
-  const addFiles = async (files: File[]) => {
-    if (!files.length) return;
+  const addFiles = async (files: File[]): Promise<UploadedMedia[]> => {
+    if (!files.length) return [];
     if (disabled || busy.current) {
       setMediaError(
         'Wait for the current upload or post to finish before adding files.'
       );
-      return;
+      return [];
     }
 
     const errors: string[] = [];
@@ -235,7 +235,7 @@ export default function MultiMediaUpload({
     }
     setMediaError(errors.length ? errors.join(' ') : null);
     const filesToUpload = supported.slice(0, available);
-    if (!filesToUpload.length) return;
+    if (!filesToUpload.length) return [];
 
     if (
       filesToUpload.some((file) => file.type.startsWith('audio/')) &&
@@ -310,6 +310,7 @@ export default function MultiMediaUpload({
       setUploading(false);
       onUploadingChange?.(false);
     }
+    return added;
   };
 
   useImperativeHandle(ref, () => ({
