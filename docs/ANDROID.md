@@ -68,6 +68,59 @@ These are deployed web changes, not a new APK requirement. Apply
 app. Saving an event is a private bookmark, not an RSVP. Normal browsers keep
 the existing website navigation.
 
+## Native Google sign-in
+
+The Android Google button uses Credential Manager, not OAuth inside the WebView.
+It needs a rebuilt app containing `@capgo/capacitor-social-login`:
+
+```powershell
+yarn mobile
+```
+
+In the **same Google Cloud project** as the existing Web OAuth client:
+
+1. Keep `GOOGLE_CLIENT_ID` set to the **Web application** client ID and
+   `NEXT_PUBLIC_GOOGLE_ENABLED=true` in the Worker runtime. Keep
+   `GOOGLE_CLIENT_SECRET` server-side; never include it in native config.
+2. Create an **Android** OAuth client with package name `social.pana.app` and
+   the **SHA-1** of the certificate signing the installed app. Obtain local
+   fingerprints with:
+
+   ```powershell
+   Push-Location mobile\android
+   .\gradlew.bat signingReport --console=plain
+   Pop-Location
+   ```
+
+3. Register each signing key separately: debug, locally installed release /
+   upload key, and the **Play App Signing** key for Play-distributed installs.
+   The Android client IDs stay in Google Cloud; do not substitute one for the
+   Web client ID used by `SocialLogin.initialize`.
+4. If the OAuth consent screen is in testing mode, add the Google accounts
+   used for testing. Use a device or emulator with Google Play services.
+
+No Firebase setup or `google-services.json` is needed for this sign-in flow.
+Google returns an ID token with a nonce. The WebView exchanges it with Better
+Auth, which verifies it and creates the app's HttpOnly session cookie.
+An existing Google account and email sign-in use the same verified-email account.
+
+**SHA-1 for Google sign-in and SHA-256 for App Links are different settings.**
+`ANDROID_APP_CERT_FINGERPRINTS` does not register a Google OAuth client.
+
+## Email sign-in inside the app
+
+Request a **fresh** email link from the app. It points to `/signin/mobile` and
+does not consume the one-time token in the browser. Verified App Links open the
+app directly; otherwise tap **Open Pana Mia app** on the browser landing page.
+That action explicitly targets package `social.pana.app` and works without
+verified domain association. The app verifies the token in its own WebView,
+not Chrome. **Continue in browser instead** intentionally signs in only the
+browser.
+
+Reinstall the updated native build to register the auth scheme. Test with the
+app already open and with it fully closed. A link already consumed by a browser
+cannot transfer that browser session to the app; request a new one instead.
+
 ## Story camera
 
 Open **Your story (+) → Open camera** to capture inside the app. Use **Photo**

@@ -105,6 +105,7 @@ const tables = [
   schema.socialBlocks,
   schema.screennameHistory,
   schema.socialGroups,
+  schema.notifications,
 ];
 
 before(async () => {

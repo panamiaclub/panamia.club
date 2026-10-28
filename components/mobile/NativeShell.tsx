@@ -29,8 +29,11 @@ import {
   NATIVE_APP_CLASS,
   NATIVE_BACK_BUTTON_EVENT,
 } from '@/lib/mobile/native';
-import { DEFAULT_ROOT_DOMAIN } from '@/lib/panaverse/surfaces';
-import { nativeDeepLinkTarget } from '@/lib/mobile/app-navigation';
+import {
+  NATIVE_LAUNCH_URL_KEY,
+  nativeDeepLinkUrl,
+  nativeLaunchUrlFingerprint,
+} from '@/lib/mobile/auth-links';
 
 export function NativeShell() {
   const router = useRouter();
@@ -54,6 +57,45 @@ export function NativeShell() {
     const pending: Promise<{ remove: () => void }>[] = [];
 
     let cancelled = false;
+    let lastOpenedUrl: string | null = null;
+
+    const openUrl = async (url: string, fromLaunch = false) => {
+      if (lastOpenedUrl === url || cancelled) return;
+      lastOpenedUrl = url;
+      const target = nativeDeepLinkUrl(url, window.location.origin);
+      if (!target) {
+        console.warn('[mobile] rejected an untrusted app link');
+        return;
+      }
+
+      const fingerprint = await nativeLaunchUrlFingerprint(url);
+      if (cancelled) return;
+      if (
+        fromLaunch &&
+        sessionStorage.getItem(NATIVE_LAUNCH_URL_KEY) === fingerprint
+      ) {
+        return;
+      }
+      sessionStorage.setItem(NATIVE_LAUNCH_URL_KEY, fingerprint);
+      if (target.href !== window.location.href) {
+        if (
+          target.origin === window.location.origin &&
+          !target.pathname.startsWith('/api/') &&
+          !target.pathname.startsWith('/signin')
+        ) {
+          routerRef.current.push(
+            `${target.pathname}${target.search}${target.hash}`
+          );
+        } else {
+          // Auth links need their existing document navigation and cookie exchange.
+          window.location.assign(target.href);
+        }
+      }
+    };
+
+    const reportLinkError = (error: unknown) => {
+      console.error('[mobile] app link navigation failed', error);
+    };
 
     void (async () => {
       const [{ App }, { SplashScreen }] = await Promise.all([
@@ -117,82 +159,21 @@ export function NativeShell() {
         })
       );
 
-      /* Universal Links and App Links: a pana.social URL tapped in another app
-       * opens this one, and the OS hands over the URL that did it.
-       *
-       * Navigating explicitly is what makes that land somewhere useful.
-       * Without this the app opens on whatever it was last showing — or its
-       * start URL on a cold launch — so a member who tapped a link to a
-       * particular listing arrives at the home page, which reads as the link
-       * having been ignored.
-       *
-       * What counts as "ours" is any https host on the panaverse root domain,
-       * NOT just the origin currently loaded. That distinction is the whole
-       * point of shipping both surfaces in one app: this WebView may be
-       * showing pana.social when a social.pana.social link arrives, and those
-       * are different origins. Comparing against window.location.origin would
-       * silently drop exactly half the deep links — the cross-surface half —
-       * and produce the ignored-link behaviour this listener exists to fix.
-       *
-       * Anything outside that domain is dropped rather than followed. This
-       * listener should only ever be handed a URL the app has declared it
-       * handles (see app/.well-known/ and the native claims described there),
-       * so an unexpected origin means something went wrong, and treating it as
-       * a navigation instruction would turn a stray deep link into an open
-       * redirect inside the WebView. */
-      const navigate = (url: string) => {
-        const target = nativeDeepLinkTarget(
-          url,
-          window.location.origin,
-          DEFAULT_ROOT_DOMAIN
-        );
-        if (!target) {
-          console.warn('Ignored an unsupported app link');
-          return;
-        }
-        // Auth API links must perform their HTTP redirect/cookie exchange.
-        if (target.startsWith('/') && !target.startsWith('/api/')) {
-          routerRef.current.push(target);
-        } else {
-          window.location.assign(target);
-        }
-      };
+      // HTTPS App/Universal Links and the narrowly scoped email-auth scheme
+      // share the same origin validation. Register before reading the cold
+      // launch URL so a link arriving during startup cannot be missed.
       let receivedLaunch = false;
       pending.push(
         App.addListener('appUrlOpen', ({ url }) => {
           receivedLaunch = true;
-          navigate(url);
+          void openUrl(url).catch(reportLinkError);
         })
       );
-
       const launch = await App.getLaunchUrl();
-      if (
-        cancelled ||
-        receivedLaunch ||
-        !launch?.url ||
-        window.location.pathname !== '/'
-      )
-        return;
-      const target = nativeDeepLinkTarget(
-        launch.url,
-        window.location.origin,
-        DEFAULT_ROOT_DOMAIN
-      );
-      if (!target) return;
-      // The native launch intent can outlive an auth/document navigation.
-      try {
-        if (sessionStorage.getItem('pana:consumed-launch-url') === launch.url)
-          return;
-        sessionStorage.setItem('pana:consumed-launch-url', launch.url);
-      } catch (error) {
-        console.error('Could not retain the app launch-link guard:', error);
-        return;
-      }
-      if (new URL(target, window.location.origin).href !== window.location.href)
-        navigate(launch.url);
-    })().catch((error: unknown) =>
-      console.error('Native app integration failed:', error)
-    );
+      if (!receivedLaunch && launch?.url) await openUrl(launch.url, true);
+    })().catch((error: unknown) => {
+      console.error('[mobile] native shell setup failed', error);
+    });
 
     return () => {
       cancelled = true;
@@ -201,9 +182,9 @@ export function NativeShell() {
       for (const handle of pending) {
         void handle
           .then((h) => h.remove())
-          .catch((error: unknown) =>
-            console.error('Could not remove a native app listener:', error)
-          );
+          .catch((error: unknown) => {
+            console.warn('[mobile] native listener cleanup failed', error);
+          });
       }
     };
   }, []);

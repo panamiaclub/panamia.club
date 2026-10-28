@@ -7,6 +7,7 @@
  */
 
 import { db } from '@/lib/db';
+import { createNotification } from '@/lib/notifications';
 import {
   socialFollows,
   socialActors,
@@ -67,6 +68,7 @@ export async function createFollow(
     }),
     db.query.socialActors.findFirst({
       where: eq(socialActors.id, targetActorId),
+      with: { profile: { columns: { userId: true } } },
     }),
   ]);
 
@@ -155,6 +157,35 @@ export async function createFollow(
         .set({ followersCount: sql`${socialActors.followersCount} + 1` })
         .where(eq(socialActors.id, targetActorId)),
     ]);
+
+    if (
+      actor.profile?.userId &&
+      targetActor.profile?.userId &&
+      actor.profile.userId !== targetActor.profile.userId
+    ) {
+      try {
+        const becamePanas = await isFollowing(targetActorId, actorId);
+        await createNotification({
+          type: 'Follow',
+          actorId: actor.profile.userId,
+          targetId: targetActor.profile.userId,
+          context: 'follow',
+          objectId: actor.profile.id,
+          objectType: 'profile',
+          objectUrl: `/p/${encodeURIComponent(actor.username)}`,
+          message: becamePanas
+            ? `you and ${actor.username} became Panas!`
+            : undefined,
+        });
+      } catch (error) {
+        // The follow already succeeded; a notification failure must not undo it.
+        console.error('[createFollow] Failed to create follow notification', {
+          actorId,
+          targetActorId,
+          error,
+        });
+      }
+    }
   }
 
   return { success: true, follow: updatedFollow };

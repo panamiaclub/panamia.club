@@ -27,6 +27,7 @@ import {
 } from '@/lib/panaverse/surfaces';
 import { envConfig } from '@/lib/env.config';
 import { signInPath } from '@/lib/signin-redirect';
+import { mobileMagicLinkUrl } from '@/lib/mobile/auth-links';
 
 const MAGIC_LINK_EXPIRY_MINUTES = 30;
 
@@ -1127,13 +1128,15 @@ function getBetterAuth(): BetterAuthInstance {
     plugins: [
       magicLink({
         expiresIn: MAGIC_LINK_EXPIRY_MINUTES * 60,
-        sendMagicLink: async ({ email, url }) => {
-          const { host } = new URL(url);
+        sendMagicLink: async ({ email, url, metadata }) => {
+          const signInUrl =
+            metadata?.nativeApp === true ? mobileMagicLinkUrl(url) : url;
+          const { host } = new URL(signInUrl);
           await sendEmail(
             email,
             'Sign in to Pana MIA',
-            html({ url, host, email }),
-            text({ url, host })
+            html({ url: signInUrl, host, email }),
+            text({ url: signInUrl, host })
           );
         },
       }),

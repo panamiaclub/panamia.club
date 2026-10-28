@@ -88,6 +88,8 @@ export default defineConfig({
    */
   webServer: {
     command: 'npm run dev:http',
+    // Native Google coverage must not depend on deployment feature flags.
+    env: { NEXT_PUBLIC_GOOGLE_ENABLED: 'true' },
     url: 'http://127.0.0.1:3000',
     reuseExistingServer: false,
     timeout: 300 * 1000,

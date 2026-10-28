@@ -18,6 +18,8 @@ import {
 } from 'better-auth/client/plugins';
 import { useMemo, useSyncExternalStore } from 'react';
 import type { AppSession, BetterAuthServer } from '@/auth';
+import { hasNativeGoogleSignIn, isNativeApp } from '@/lib/mobile/native';
+import { isAppUrl } from '@/lib/mobile/auth-links';
 
 export const authClient = createAuthClient({
   plugins: [magicLinkClient(), customSessionClient<BetterAuthServer>()],
@@ -45,7 +47,7 @@ const emptySubscribe = () => () => {};
 // Uses useSyncExternalStore rather than a mount effect because React is
 // required to call getServerSnapshot for the hydration render itself, which is
 // exactly the render that has to match the server.
-function useIsHydrated(): boolean {
+export function useIsHydrated(): boolean {
   return useSyncExternalStore(
     emptySubscribe,
     () => true,
@@ -137,12 +139,15 @@ export function useSession(): {
 // ── signIn ───────────────────────────────────────────────────────────────────
 // Matches next-auth/react: signIn(provider?, options?)
 
+let initializedGoogleClientId: string | null = null;
+
 export async function signIn(
   provider?: string,
   options?: {
     email?: string;
     callbackUrl?: string;
     redirect?: boolean;
+    googleClientId?: string;
     [key: string]: unknown;
   }
 ): Promise<void> {
@@ -163,6 +168,7 @@ export async function signIn(
     const { error } = await authClient.signIn.magicLink({
       email: options?.email ?? '',
       callbackURL,
+      ...(isNativeApp() ? { metadata: { nativeApp: true } } : {}),
     });
     if (error) {
       throw new Error(error.message ?? 'Magic link sign-in failed');
@@ -170,7 +176,64 @@ export async function signIn(
     return;
   }
 
+  if (provider === 'google' && isNativeApp()) {
+    const clientId = options?.googleClientId?.trim();
+    if (!hasNativeGoogleSignIn() || !clientId) {
+      throw new Error('Native Google sign-in is not configured in this app');
+    }
+    if (!isAppUrl(new URL(callbackURL), window.location.origin)) {
+      throw new Error('Invalid sign-in callback URL');
+    }
+
+    const [{ SocialLogin }, { nanoid }] = await Promise.all([
+      import('@capgo/capacitor-social-login'),
+      import('nanoid'),
+    ]);
+    if (initializedGoogleClientId !== clientId) {
+      await SocialLogin.initialize({
+        google: { webClientId: clientId, mode: 'online' },
+      });
+      initializedGoogleClientId = clientId;
+    }
+
+    const nonce = nanoid(32);
+    const login = await SocialLogin.login({
+      provider: 'google',
+      options: { scopes: ['email', 'profile'], nonce },
+    }).catch((error: unknown) => {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'USER_CANCELLED'
+      ) {
+        return null;
+      }
+      throw error;
+    });
+    if (!login) return;
+    if (login.result.responseType !== 'online' || !login.result.idToken) {
+      throw new Error('Google did not return an ID token');
+    }
+
+    // The request runs in the WebView, so Better Auth's HttpOnly session cookie
+    // belongs to the app rather than Chrome's separate cookie store.
+    const { error } = await authClient.signIn.social({
+      provider: 'google',
+      idToken: { token: login.result.idToken, nonce },
+      callbackURL,
+    });
+    if (error) {
+      throw new Error(error.message ?? 'Native Google sign-in failed');
+    }
+    window.location.assign(callbackURL);
+    return;
+  }
+
   if (provider) {
+    if (isNativeApp()) {
+      throw new Error('This sign-in provider is not supported in the app');
+    }
     // Social / OAuth sign-in
     const { error } = await authClient.signIn.social({
       provider: provider as Parameters<
