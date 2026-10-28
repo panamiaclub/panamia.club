@@ -278,6 +278,15 @@ jobs:
           R2_BUCKET_NAME: ${{ vars.R2_BUCKET_NAME }}
           R2_PUBLIC_URL: ${{ vars.R2_PUBLIC_URL }}
 
+      - name: Seed native profile destination
+        run: |
+          psql "$POSTGRES_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO profiles
+            (id, created_at, updated_at, email, name, screenname, active)
+          VALUES
+            ('cafe', now(), now(), 'bay-cafe@example.invalid', 'Bay Cafe', 'bay-cafe', true);
+          SQL
+
       - name: Run Playwright tests
         run: yarn test
         env:

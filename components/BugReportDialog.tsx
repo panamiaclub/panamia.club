@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Bug, ImagePlus, Send } from 'lucide-react';
 import { useSession } from '@/lib/auth-client';
 import { useTurnstile } from '@/components/Turnstile';
@@ -30,6 +31,9 @@ const ALLOWED_SCREENSHOT_TYPES = new Set([
 
 export default function BugReportDialog() {
   const native = useIsNativeApp();
+  const pathname = usePathname() || '/';
+  const appPreview =
+    pathname === '/mock/app' || pathname.startsWith('/mock/app/');
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -180,11 +184,11 @@ export default function BugReportDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {!native && (
+      {!native && !appPreview && (
         <DialogTrigger asChild>
           <Button
             type="button"
-            className="bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full shadow-lg"
+            className="bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 rounded-full shadow-lg"
             aria-label="Report a bug"
           >
             <Bug className="h-4 w-4" aria-hidden="true" />

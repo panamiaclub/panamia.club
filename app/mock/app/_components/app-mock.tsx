@@ -121,6 +121,7 @@ function scrollToResultCard(card: HTMLElement, scroller: HTMLDivElement) {
 }
 
 export function AppMock() {
+  const [ready, setReady] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(APP_TABS[0].id);
   const [directoryProfileId, setDirectoryProfileId] = useState<string | null>(
     null
@@ -168,6 +169,7 @@ export function AppMock() {
     };
     syncProfile();
     window.addEventListener('hashchange', syncProfile);
+    setReady(true);
     return () => window.removeEventListener('hashchange', syncProfile);
   }, []);
 
@@ -180,7 +182,7 @@ export function AppMock() {
   };
 
   return (
-    <div className={styles.stage}>
+    <div className={styles.stage} data-app-mock-ready={ready}>
       <aside className={styles.guide} aria-label="About this design preview">
         <span className={styles.previewLabel}>
           <Sparkles size={14} aria-hidden="true" />A little app preview

@@ -15,6 +15,10 @@ test.use({ viewport: { width: 390, height: 844 } });
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/mock/app');
+  await expect(page.locator('[data-app-mock-ready]')).toHaveAttribute(
+    'data-app-mock-ready',
+    'true'
+  );
 });
 
 async function chooseSearchScope(
@@ -139,6 +143,9 @@ test('opens on Directory with ordered navigation and an existing-profile link', 
   await expect(
     page.getByRole('button', { name: 'Preview notifications' })
   ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Report a bug', exact: true })
+  ).toHaveCount(0);
   for (const [tab, title] of [
     ['Directory', 'Directory'],
     ['Social', 'Pana Social'],
@@ -186,6 +193,7 @@ test('keeps explicit tab links ahead of the default opening tab', async ({
 test('starts every tab with useful content instead of introductory text', async ({
   page,
 }) => {
+  await expect(page.getByRole('banner')).toBeVisible();
   const header = await page.getByRole('banner').boundingBox();
   if (!header) throw new Error('The app header has no rendered bounds');
   expect(header.height).toBeLessThanOrEqual(64);

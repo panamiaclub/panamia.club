@@ -145,6 +145,9 @@ test('a real profile destination and Back preserve the selected card and search'
   await fitted(page);
   await map(page).locator('article a').first().click();
   await expect(page).toHaveURL(/\/p\/bay-cafe$/);
+  await expect(
+    page.getByRole('heading', { name: 'Bay Cafe', exact: true })
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page).toHaveURL(/\/d$/);
   await expect(

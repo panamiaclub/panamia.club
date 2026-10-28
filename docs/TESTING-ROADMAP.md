@@ -2,14 +2,16 @@
 
 ## GitHub Automated Testing Infrastructure
 
-When code is pushed to GitHub or a pull request is opened, automated tests run using a dedicated Supabase test project that is completely separate from production.
+When code is pushed to GitHub or a pull request is opened, automated tests run against a disposable PostgreSQL instance on that GitHub-hosted runner. No test job connects to the production database or shares a database with another run.
 
 ### How It Works
 
-1. **Reset test database** — The CI job drops and recreates the `public` schema on the test Supabase project, giving every run a clean slate
-2. **Apply migrations** — All Drizzle migrations run against the empty database, verifying they work correctly
-3. **Run tests** — Playwright tests run against this freshly migrated database
-4. **No cleanup needed** — The next run resets the schema again automatically
+1. **Start isolated PostgreSQL** — Start the runner's database and create the roles and migration ledger required by the SQL migrations.
+2. **Validate and apply migrations** — Validate journal completeness, then replay every journaled migration against the empty database.
+3. **Run unit and database tests** — Check pure logic and data-layer behavior before starting a browser.
+4. **Build the app** — Build the production Worker and static assets.
+5. **Run browser tests** — Seed the native browser fixture's public profile destination, then start the built Worker with local Wrangler bindings and the runner's database. This exercises the same entry point as production, including route/chrome headers and request-scoped database setup. `vinext dev` bypasses that custom entry point and is only the default for local development.
+6. **Discard the runner** — The database and local bindings are discarded with the job. Browser failures stop after five failing cases, with line output and an HTML report, rather than exhausting the job timeout before diagnostics can upload.
 
 Your production database is never touched during testing.
 
@@ -19,32 +21,30 @@ Configure in GitHub → Repository Settings → Secrets and variables → Action
 
 **Secrets** (sensitive):
 
-| Secret                 | Value                                                                             |
-| ---------------------- | --------------------------------------------------------------------------------- |
-| `POSTGRES_URL`         | Test Supabase project connection string (session-mode pooler, port 5432)          |
-| `POSTGRES_DIRECT_URL`  | Test Supabase project direct connection string — used for migrations and DB reset |
-| `BETTER_AUTH_SECRET`   | Any random 32-byte secret (can differ from production)                            |
-| `ADMIN_EMAILS`         | Test admin email(s)                                                               |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key                                                   |
-| `R2_PUBLIC_URL`        | R2 public bucket URL                                                              |
-| `R2_ACCOUNT_ID`        | Cloudflare account ID                                                             |
-| `R2_ACCESS_KEY_ID`     | R2 API token key ID                                                               |
-| `R2_SECRET_ACCESS_KEY` | R2 API token secret                                                               |
-| `R2_BUCKET_NAME`       | R2 bucket name                                                                    |
+| Secret                 | Value                                                  |
+| ---------------------- | ------------------------------------------------------ |
+| `BETTER_AUTH_SECRET`   | Any random 32-byte secret (can differ from production) |
+| `ADMIN_EMAILS`         | Test admin email(s)                                    |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key                        |
+| `R2_ACCOUNT_ID`        | Cloudflare account ID                                  |
+| `R2_ACCESS_KEY_ID`     | R2 API token key ID                                    |
+| `R2_SECRET_ACCESS_KEY` | R2 API token secret                                    |
 
 **Variables** (non-sensitive):
 
-| Variable                         | Value                   |
-| -------------------------------- | ----------------------- |
-| `BETTER_AUTH_URL`                | `http://localhost:3000` |
-| `NEXT_PUBLIC_HOST_URL`           | `http://localhost:3000` |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Turnstile site key      |
-| `NEXT_PUBLIC_GOOGLE_ENABLED`     | `false`                 |
-| `NEXT_PUBLIC_APPLE_ENABLED`      | `false`                 |
-| `NEXT_PUBLIC_MASTODON_ENABLED`   | `false`                 |
-| `NEXT_PUBLIC_WIKIMEDIA_ENABLED`  | `false`                 |
+| Variable                         | Value                                      |
+| -------------------------------- | ------------------------------------------ |
+| `BETTER_AUTH_URL`                | `http://localhost:3000`                    |
+| `NEXT_PUBLIC_HOST_URL`           | `http://localhost:3000`                    |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Turnstile site key                         |
+| `NEXT_PUBLIC_GOOGLE_ENABLED`     | Enabled for native Google browser coverage |
+| `NEXT_PUBLIC_APPLE_ENABLED`      | `false`                                    |
+| `NEXT_PUBLIC_MASTODON_ENABLED`   | `false`                                    |
+| `NEXT_PUBLIC_WIKIMEDIA_ENABLED`  | `false`                                    |
+| `R2_BUCKET_NAME`                 | Test media bucket name                     |
+| `R2_PUBLIC_URL`                  | Test public media URL                      |
 
-> **Important**: `POSTGRES_URL` and `POSTGRES_DIRECT_URL` must point to a **dedicated Supabase test project**, not the production project. Create a separate free-tier Supabase project for CI use.
+> **Important**: The test workflow sets `POSTGRES_URL` to runner-local PostgreSQL. Do not replace it with a production secret. Production migration and deployment workflows use their own database configuration.
 
 ### Workflow File
 
