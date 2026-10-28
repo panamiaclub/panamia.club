@@ -55,6 +55,19 @@ yarn mobile
 Remove-Item Env:CAPACITOR_SERVER_URL
 ```
 
+## App navigation
+
+The native-only interface opens in **Directory**, followed by **Social**,
+**Community**, and **Profile**. Directory can search listings, Events, or Groups;
+Events use real venue locations on the map. Community separates **Yours**
+(joined groups, pending requests, plans, saved events) from **Discover**.
+Profile opens your existing personal profile page.
+
+These are deployed web changes, not a new APK requirement. Apply
+`drizzle/0073_event_bookmarks.sql` before deploying the Worker, then reload the
+app. Saving an event is a private bookmark, not an RSVP. Normal browsers keep
+the existing website navigation.
+
 ## Story camera
 
 Open **Your story (+) → Open camera** to capture inside the app. Use **Photo**

@@ -519,6 +519,13 @@
       "when": 1793030400000,
       "tag": "0072_profile_contact_email",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1793116800000,
+      "tag": "0073_event_bookmarks",
+      "breakpoints": true
     }
   ]
 }

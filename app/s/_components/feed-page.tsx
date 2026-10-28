@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import SurfaceLink from '@/components/panaverse/SurfaceLink';
 import { useSession } from '@/lib/auth-client';
+import { useIsNativeApp } from '@/lib/mobile/use-native-app';
 import { SocialEligibilityGate } from '@/components/social';
 import { useTimeline, usePublicTimeline, useMyActor } from '@/lib/query/social';
 import type { SocialStatusDisplay } from '@/lib/interfaces';
@@ -66,10 +67,24 @@ function hasAudio(status: SocialStatusDisplay): boolean {
  * remains the route it occupies in the shared tree, which is what every other
  * hostname reaches it by. One implementation, two doors — see app/page.tsx.
  */
-export function FeedPage() {
+export function FeedPage({
+  active = true,
+  captureSession = 0,
+}: {
+  active?: boolean;
+  captureSession?: number;
+} = {}) {
   const { status } = useSession();
+  const native = useIsNativeApp();
+  const pageClass = native
+    ? 'surface-cream native-social-feed'
+    : 'surface-cream min-h-screen pb-20';
+  const containerClass = native
+    ? 'container mx-auto native-social-container'
+    : 'container mx-auto max-w-6xl px-4 pt-8';
 
   if (status === 'unauthenticated') {
+    if (!active) return null;
     /* The callback is not only a courtesy that returns the member to the feed
      * after signing in. A bare '/signin' is a www doorway, so a signed-out
      * member sent here was offered "Pana Mia" to install, with the Pana Mia
@@ -81,8 +96,8 @@ export function FeedPage() {
 
   if (status === 'loading') {
     return (
-      <main className="surface-cream min-h-screen pb-20">
-        <div className="container mx-auto max-w-6xl px-4 pt-8">
+      <main className={pageClass}>
+        <div className={containerClass}>
           <div className="animate-pulse space-y-4">
             <div className="bg-pana-ink/10 h-28 rounded-2xl" />
             <div className="bg-pana-ink/10 h-40 rounded-2xl" />
@@ -94,22 +109,28 @@ export function FeedPage() {
   }
 
   return (
-    <main className="surface-cream min-h-screen pb-20">
-      <div className="container mx-auto max-w-6xl px-4 pt-8">
+    <main className={pageClass}>
+      <div className={containerClass}>
         {/* The surface masthead already flies the Pana Social mark, so a
             visible page title would repeat it. Screen readers still need a
             heading to land on. */}
         <h1 className="sr-only">My feed</h1>
 
         <SocialEligibilityGate>
-          <FeedContent />
+          <FeedContent native={native} captureSession={captureSession} />
         </SocialEligibilityGate>
       </div>
     </main>
   );
 }
 
-function FeedContent() {
+function FeedContent({
+  native,
+  captureSession,
+}: {
+  native: boolean;
+  captureSession: number;
+}) {
   const [filter, setFilter] = useState<FeedFilter>('everyone');
   /* Latched, not a timer: once a member has posted in this visit the ask stays
      available until they act on it or wave it away. Resetting it on the next
@@ -135,11 +156,19 @@ function FeedContent() {
   const firstName = (actor?.name || actor?.username || '').split(' ')[0];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
+    <div
+      className={
+        native
+          ? 'min-w-0'
+          : 'grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start'
+      }
+    >
       <div className="min-w-0">
-        <StoriesRail actor={actor} />
+        {native && <FeedFilters filter={filter} onChange={setFilter} compact />}
+        <StoriesRail key={`stories-${captureSession}`} actor={actor} />
         <div>
           <PostComposer
+            key={`composer-${captureSession}`}
             avatarUrl={actor?.iconUrl}
             avatarName={actor?.name || actor?.username}
             onSuccess={() => setHasPosted(true)}
@@ -160,30 +189,9 @@ function FeedContent() {
           />
         )}
 
-        <div className="mt-6" role="tablist" aria-label="Feed filters">
-          <div className="profile-tabs">
-            {FEED_FILTERS.map((entry) => {
-              const isActive = entry.id === filter;
-              return (
-                <button
-                  key={entry.id}
-                  type="button"
-                  role="tab"
-                  id={`feed-tab-${entry.id}`}
-                  aria-selected={isActive}
-                  aria-controls="feed-panel"
-                  className="profile-tab"
-                  data-active={isActive}
-                  onClick={() => setFilter(entry.id)}
-                >
-                  {entry.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        {!native && <FeedFilters filter={filter} onChange={setFilter} />}
 
-        {activeFilter && (
+        {!native && activeFilter && (
           <p className="text-pana-ink/60 mt-3 text-[13px] font-bold">
             {activeFilter.hint}
           </p>
@@ -217,7 +225,65 @@ function FeedContent() {
         )}
       </div>
 
-      {actor && <FeedRail actor={actor} />}
+      {actor && !native && <FeedRail actor={actor} />}
+    </div>
+  );
+}
+
+function FeedFilters({
+  filter,
+  onChange,
+  compact = false,
+}: {
+  filter: FeedFilter;
+  onChange: (filter: FeedFilter) => void;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={compact ? 'native-feed-filters' : 'mt-6'}
+      role="tablist"
+      aria-label="Feed filters"
+    >
+      <div className="profile-tabs">
+        {FEED_FILTERS.map((entry, index) => {
+          const selected = entry.id === filter;
+          return (
+            <button
+              key={entry.id}
+              type="button"
+              role="tab"
+              id={`feed-tab-${entry.id}`}
+              aria-selected={selected}
+              aria-controls="feed-panel"
+              tabIndex={selected ? 0 : -1}
+              className="profile-tab"
+              data-active={selected}
+              onClick={() => onChange(entry.id)}
+              onKeyDown={(event) => {
+                const next =
+                  event.key === 'ArrowRight'
+                    ? (index + 1) % FEED_FILTERS.length
+                    : event.key === 'ArrowLeft'
+                      ? (index + FEED_FILTERS.length - 1) % FEED_FILTERS.length
+                      : event.key === 'Home'
+                        ? 0
+                        : event.key === 'End'
+                          ? FEED_FILTERS.length - 1
+                          : null;
+                if (next === null) return;
+                event.preventDefault();
+                onChange(FEED_FILTERS[next].id);
+                document
+                  .getElementById(`feed-tab-${FEED_FILTERS[next].id}`)
+                  ?.focus();
+              }}
+            >
+              {compact && entry.id === 'panas' ? 'My Panas' : entry.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -271,7 +337,7 @@ function FeedError({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="reserved-slot items-start p-6">
       <p className="reserved-slot-title">That didn&apos;t load</p>
-      <p className="text-pana-ink/65 text-[13px] leading-snug font-medium">
+      <p className="text-pana-ink/65 text-[13px] font-medium leading-snug">
         Something went wrong fetching the timeline. This is a problem on our
         side, not an empty feed.
       </p>
@@ -291,7 +357,7 @@ function FeedEmpty() {
     <div className="space-y-5">
       <div className="reserved-slot items-start p-6">
         <p className="reserved-slot-title">Your Panas feed starts here</p>
-        <p className="text-pana-ink/65 text-[13px] leading-snug font-medium">
+        <p className="text-pana-ink/65 text-[13px] font-medium leading-snug">
           When you and someone follow each other, you become Panas. Their posts,
           your own posts, and posts from groups you join will appear here.
         </p>
@@ -315,7 +381,7 @@ function FilterEmpty({ filter }: { filter: FeedFilter }) {
   return (
     <div className="reserved-slot items-start p-6">
       <p className="reserved-slot-title">Nothing under {label} right now</p>
-      <p className="text-pana-ink/65 text-[13px] leading-snug font-medium">
+      <p className="text-pana-ink/65 text-[13px] font-medium leading-snug">
         {filter === 'voice'
           ? 'No voice memos in the posts loaded so far. Older ones further down the timeline will not show up here yet.'
           : 'No public posts yet. Share a post with Everyone to start the conversation.'}

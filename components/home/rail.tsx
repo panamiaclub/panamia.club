@@ -29,7 +29,10 @@ interface RailState {
  * gap, so a press lands on the next card rather than on an arbitrary
  * fraction of the viewport.
  */
-export function useRail<T extends HTMLElement>(itemSelector: string) {
+export function useRail<T extends HTMLElement>(
+  itemSelector: string,
+  behavior: ScrollBehavior = 'smooth'
+) {
   const railRef = useRef<T>(null);
   const [rail, setRail] = useState<RailState>({ prev: false, next: false });
 
@@ -60,9 +63,9 @@ export function useRail<T extends HTMLElement>(itemSelector: string) {
       if (!el) return;
       const card = el.querySelector<HTMLElement>(itemSelector);
       const step = card ? card.offsetWidth + 16 : el.clientWidth * 0.85;
-      el.scrollBy({ left: direction * step, behavior: 'smooth' });
+      el.scrollBy({ left: direction * step, behavior });
     },
-    [itemSelector]
+    [itemSelector, behavior]
   );
 
   return { railRef, rail, syncRail, nudge };

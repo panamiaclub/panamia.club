@@ -18,6 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { useIsNativeApp } from '@/lib/mobile/use-native-app';
+import { OPEN_BUG_REPORT_EVENT } from '@/lib/mobile/native';
 
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 const ALLOWED_SCREENSHOT_TYPES = new Set([
@@ -27,6 +29,7 @@ const ALLOWED_SCREENSHOT_TYPES = new Set([
 ]);
 
 export default function BugReportDialog() {
+  const native = useIsNativeApp();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -47,6 +50,13 @@ export default function BugReportDialog() {
   );
 
   const sessionEmail = session?.user?.email;
+  useEffect(() => {
+    if (!native) return;
+    const show = () => setOpen(true);
+    window.addEventListener(OPEN_BUG_REPORT_EVENT, show);
+    return () => window.removeEventListener(OPEN_BUG_REPORT_EVENT, show);
+  }, [native]);
+
   useEffect(() => {
     if (!open || !sessionEmail) return;
     setEmail((current) => current || sessionEmail);
@@ -170,16 +180,18 @@ export default function BugReportDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          type="button"
-          className="bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 rounded-full shadow-lg"
-          aria-label="Report a bug"
-        >
-          <Bug className="h-4 w-4" aria-hidden="true" />
-          <span className="hidden sm:inline">Report a bug</span>
-        </Button>
-      </DialogTrigger>
+      {!native && (
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            className="bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full shadow-lg"
+            aria-label="Report a bug"
+          >
+            <Bug className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Report a bug</span>
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Report a bug</DialogTitle>

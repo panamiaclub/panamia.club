@@ -51,6 +51,20 @@ export const NATIVE_APP_CLASS = 'native-app';
 /** A modal may prevent this event to consume Android back before navigation. */
 export const NATIVE_BACK_BUTTON_EVENT = 'native-back-button';
 
+export const OPEN_BUG_REPORT_EVENT = 'pana-open-bug-report';
+
+/** Custom menus share Radix's open marker; Back priority cannot rely on listener order. */
+export function hasOpenNativeOverlay(): boolean {
+  return (
+    typeof document !== 'undefined' &&
+    Boolean(
+      document.querySelector(
+        '[data-state="open"][role="dialog"], [data-state="open"][role="alertdialog"], [data-state="open"][role="menu"], [data-state="open"][role="listbox"]'
+      )
+    )
+  );
+}
+
 /**
  * True only inside the shell.
  *

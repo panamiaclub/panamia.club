@@ -42,7 +42,7 @@ export interface SearchResultsInterface {
   details: string;
   five_words: string;
   geo: {
-    coordinates?: Array<2>;
+    coordinates?: number[];
   };
   images: {
     primaryCDN: string;
@@ -153,10 +153,14 @@ export async function fetchSearch(query: DirectorySearchParams) {
   return emptyResponse;
 }
 
-export const useSearch = (filters: DirectorySearchParams) => {
+export const useSearch = (
+  filters: DirectorySearchParams,
+  options?: { enabled?: boolean }
+) => {
   return useQuery<SearchResponseInterface, Error>({
     queryKey: [directorySearchKey, filters],
     queryFn: () => fetchSearch(filters),
+    enabled: options?.enabled ?? true,
   });
 };
 

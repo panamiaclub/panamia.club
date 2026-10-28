@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { ArrowRight, Globe, MapPin, Store } from 'lucide-react';
+import { projectMockCoordinates } from '../../_data/map';
 import { LISTINGS } from '../_data';
 
 /**
@@ -29,16 +30,6 @@ import { LISTINGS } from '../_data';
  * results that have no address to pin.
  */
 
-/** The three counties the directory covers, as a bounding box. */
-const BOUNDS = { minLat: 25.6, maxLat: 26.85, minLng: -80.5, maxLng: -80.0 };
-
-function project({ lat, lng }: { lat: number; lng: number }) {
-  const x = ((lng - BOUNDS.minLng) / (BOUNDS.maxLng - BOUNDS.minLng)) * 100;
-  const y = ((BOUNDS.maxLat - lat) / (BOUNDS.maxLat - BOUNDS.minLat)) * 100;
-  // Inset so a pin at the edge of the range is not half-clipped by the frame.
-  return { left: `${6 + x * 0.88}%`, top: `${6 + y * 0.88}%` };
-}
-
 export function MapPane({
   selectedId,
   onSelect,
@@ -61,7 +52,7 @@ export function MapPane({
           type="button"
           className="dirsearch-map-pin"
           data-on={listing.id === selected?.id}
-          style={project(listing.coords!)}
+          style={projectMockCoordinates(listing.coords!)}
           onClick={() => onSelect(listing.id)}
           aria-label={`${listing.name}, ${listing.where}`}
         >

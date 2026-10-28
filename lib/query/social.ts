@@ -723,6 +723,12 @@ export const useJoinGroup = () => {
       queryClient.invalidateQueries({
         queryKey: [socialQueryKey, 'groups'],
       });
+      queryClient.invalidateQueries({
+        queryKey: [socialQueryKey, 'me', 'groups'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [socialQueryKey, 'me', 'calendar'],
+      });
     },
   });
 };
@@ -739,6 +745,12 @@ export const useLeaveGroup = () => {
       });
       queryClient.invalidateQueries({
         queryKey: [socialQueryKey, 'groups'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [socialQueryKey, 'me', 'groups'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [socialQueryKey, 'me', 'calendar'],
       });
     },
   });
@@ -785,8 +797,16 @@ export interface MyGroupSummary {
   nextEvent: MyGroupNextEvent | null;
 }
 
-interface MyGroupsResponse {
+export interface PendingGroupSummary {
+  id: string;
+  handle: string;
+  name: string;
+  iconUrl: string | null;
+}
+
+export interface MyGroupsResponse {
   groups: MyGroupSummary[];
+  pending?: PendingGroupSummary[];
 }
 
 async function fetchMyGroups(): Promise<MyGroupsResponse | null> {
@@ -802,9 +822,17 @@ async function fetchMyGroups(): Promise<MyGroupsResponse | null> {
  * public one for the member's own surfaces is why the feed rail used to
  * undercount anyone in a private group.
  */
-export const useMyGroups = (options?: { enabled?: boolean }) => {
+export const useMyGroups = (options?: {
+  enabled?: boolean;
+  viewerKey?: string;
+}) => {
   return useQuery<MyGroupsResponse | null, Error>({
-    queryKey: [socialQueryKey, 'me', 'groups'],
+    queryKey: [
+      socialQueryKey,
+      'me',
+      'groups',
+      ...(options?.viewerKey ? [options.viewerKey] : []),
+    ],
     queryFn: fetchMyGroups,
     // Callers that render for signed-out visitors too pass `enabled` rather
     // than calling conditionally, which hooks do not allow. The endpoint 401s
@@ -2146,9 +2174,17 @@ async function fetchMyCalendar(): Promise<PersonalCalendar | null> {
  * committed half includes unlisted events and undecided RSVPs, which are rows
  * a pana shared with an organiser rather than with the public.
  */
-export const useMyCalendar = (options?: { enabled?: boolean }) => {
+export const useMyCalendar = (options?: {
+  enabled?: boolean;
+  viewerKey?: string;
+}) => {
   return useQuery<PersonalCalendar | null, Error>({
-    queryKey: [socialQueryKey, 'me', 'calendar'],
+    queryKey: [
+      socialQueryKey,
+      'me',
+      'calendar',
+      ...(options?.viewerKey ? [options.viewerKey] : []),
+    ],
     queryFn: fetchMyCalendar,
     enabled: options?.enabled ?? true,
   });

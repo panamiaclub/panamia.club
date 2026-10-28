@@ -17,6 +17,7 @@ import {
   generateUniqueSlug,
   buildIcalUid,
   getUpcomingEvents,
+  searchUpcomingEvents,
 } from '@/lib/event';
 import { listHostableGroups } from '@/lib/server/event-host';
 import type { EventMode } from '@/lib/schema';
@@ -170,13 +171,29 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = (request.nextUrl ?? new URL(request.url)).searchParams;
-    const limit = parseInt(searchParams.get('limit') || '20', 10);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    const limit = Number(searchParams.get('limit') ?? '20');
+    const offset = Number(searchParams.get('offset') ?? '0');
+    const term = (searchParams.get('q') ?? '').trim();
+    if (
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > 100 ||
+      !Number.isSafeInteger(offset) ||
+      offset < 0 ||
+      term.length > 200
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid event search or pagination' },
+        { status: 400 }
+      );
+    }
 
-    const rows = await getUpcomingEvents({ limit, offset });
+    const rows = term
+      ? await searchUpcomingEvents({ term, limit: limit + 1, offset })
+      : await getUpcomingEvents({ limit: limit + 1, offset });
     return NextResponse.json({
       success: true,
-      data: { events: rows, hasMore: rows.length === limit },
+      data: { events: rows.slice(0, limit), hasMore: rows.length > limit },
     });
   } catch (error) {
     console.error('Error listing events:', error);

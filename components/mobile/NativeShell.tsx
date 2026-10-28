@@ -21,15 +21,21 @@
  * component does nothing and downloads nothing.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import {
+  hasOpenNativeOverlay,
   isNativeApp,
   NATIVE_APP_CLASS,
   NATIVE_BACK_BUTTON_EVENT,
 } from '@/lib/mobile/native';
 import { DEFAULT_ROOT_DOMAIN } from '@/lib/panaverse/surfaces';
+import { nativeDeepLinkTarget } from '@/lib/mobile/app-navigation';
 
 export function NativeShell() {
+  const router = useRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router;
   useEffect(() => {
     if (!isNativeApp()) return;
 
@@ -92,6 +98,17 @@ export function NativeShell() {
           ) {
             return;
           }
+          if (hasOpenNativeOverlay()) {
+            document.dispatchEvent(
+              new KeyboardEvent('keydown', {
+                key: 'Escape',
+                code: 'Escape',
+                bubbles: true,
+                cancelable: true,
+              })
+            );
+            return;
+          }
           if (canGoBack) {
             window.history.back();
           } else {
@@ -123,42 +140,70 @@ export function NativeShell() {
        * so an unexpected origin means something went wrong, and treating it as
        * a navigation instruction would turn a stray deep link into an open
        * redirect inside the WebView. */
+      const navigate = (url: string) => {
+        const target = nativeDeepLinkTarget(
+          url,
+          window.location.origin,
+          DEFAULT_ROOT_DOMAIN
+        );
+        if (!target) {
+          console.warn('Ignored an unsupported app link');
+          return;
+        }
+        // Auth API links must perform their HTTP redirect/cookie exchange.
+        if (target.startsWith('/') && !target.startsWith('/api/')) {
+          routerRef.current.push(target);
+        } else {
+          window.location.assign(target);
+        }
+      };
+      let receivedLaunch = false;
       pending.push(
         App.addListener('appUrlOpen', ({ url }) => {
-          let target: URL;
-          try {
-            target = new URL(url);
-          } catch {
-            return;
-          }
-
-          const root = DEFAULT_ROOT_DOMAIN;
-          const isOurs =
-            target.protocol === 'https:' &&
-            (target.hostname === root || target.hostname.endsWith(`.${root}`));
-
-          if (!isOurs) return;
-
-          /* Same origin keeps the URL relative so the WebView treats it as
-           * ordinary in-app navigation. A claimed host on a different origin
-           * is a surface crossing, which needs the absolute URL — and is
-           * allowed to stay in the app by the allowNavigation list in
-           * capacitor.config.ts. */
-          window.location.assign(
-            target.origin === window.location.origin
-              ? `${target.pathname}${target.search}${target.hash}`
-              : target.href
-          );
+          receivedLaunch = true;
+          navigate(url);
         })
       );
-    })();
+
+      const launch = await App.getLaunchUrl();
+      if (
+        cancelled ||
+        receivedLaunch ||
+        !launch?.url ||
+        window.location.pathname !== '/'
+      )
+        return;
+      const target = nativeDeepLinkTarget(
+        launch.url,
+        window.location.origin,
+        DEFAULT_ROOT_DOMAIN
+      );
+      if (!target) return;
+      // The native launch intent can outlive an auth/document navigation.
+      try {
+        if (sessionStorage.getItem('pana:consumed-launch-url') === launch.url)
+          return;
+        sessionStorage.setItem('pana:consumed-launch-url', launch.url);
+      } catch (error) {
+        console.error('Could not retain the app launch-link guard:', error);
+        return;
+      }
+      if (new URL(target, window.location.origin).href !== window.location.href)
+        navigate(launch.url);
+    })().catch((error: unknown) =>
+      console.error('Native app integration failed:', error)
+    );
 
     return () => {
       cancelled = true;
       /* Runs whether or not the async block got that far, because a promise
        * pushed before unmount still resolves to a live listener. */
       for (const handle of pending) {
-        void handle.then((h) => h.remove()).catch(() => {});
+        void handle
+          .then((h) => h.remove())
+          .catch((error: unknown) =>
+            console.error('Could not remove a native app listener:', error)
+          );
       }
     };
   }, []);

@@ -17,14 +17,16 @@ screen in `app/` into a second UI. The second UI is the expensive part: it does
 not fail loudly when it drifts, it just quietly becomes a worse version of the
 product, and the surface split (below) would be the first thing to rot.
 
-So the rule this roadmap enforces is: **the shell only owns what a browser tab
-cannot do.** Splash, offline, hardware back, deep links, store identity. Every
-screen has exactly one implementation, and it is the one already in `app/`.
+The native binary owns splash, offline launch, hardware back, deep links, and
+store identity. The deployed React app owns product UI, including a native-only
+composition of shared features: **Directory, Social, Community, Profile**.
+Browser visitors keep the existing website navigation.
 
 ### Design Philosophy
 
-1. **One implementation of every screen** — a fix shipped to the Worker is live
-   in both apps on next launch, with no store review.
+1. **Shared product core** — authentication, data, maps, social capture, and
+   profile/event/group detail pages are reused. The app-specific layout is web
+   code, so a Worker deployment updates it without a store review.
 2. **The shell is additive, never a fork** — it adds native capability around
    the web app. It must never become a place where product behaviour lives.
 3. **Native detection is client-side only** — the WebView sends the same request
@@ -50,16 +52,18 @@ screen has exactly one implementation, and it is the one already in `app/`.
 └──────────────────────────────────────────────┘
 ```
 
-| Concern                    | Lives in                                                                                 |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| App identity (bundle ID)   | `lib/mobile/app-identity.ts`                                                             |
-| Shell configuration        | `capacitor.config.ts`                                                                    |
-| Native-layer web behaviour | `components/mobile/NativeShell.tsx`                                                      |
-| Runtime "am I native?"     | `lib/mobile/native.ts`                                                                   |
-| Offline fallback           | `mobile/www/offline.html`                                                                |
-| Deep-link claims (site)    | `app/.well-known/assetlinks.json`, `app/.well-known/apple-app-site-association`          |
-| Deep-link claims (app)     | `mobile/android/app/src/main/AndroidManifest.xml`, `mobile/ios/App/App/App.entitlements` |
-| Generated native projects  | `mobile/android/`, `mobile/ios/`                                                         |
+| Concern                    | Lives in                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------ |
+| App identity (bundle ID)   | `lib/mobile/app-identity.ts`                                                                           |
+| Shell configuration        | `capacitor.config.ts`                                                                                  |
+| Native-layer web behaviour | `components/mobile/NativeShell.tsx`                                                                    |
+| Native layout and tab UI   | `components/mobile/NativeAppLayout.tsx`, `NativeApp.tsx`, `NativeDirectory.tsx`, `NativeCommunity.tsx` |
+| Native routes/view models  | `lib/mobile/app-navigation.ts`, `browse.ts`, `map-sheet.ts`                                            |
+| Runtime "am I native?"     | `lib/mobile/native.ts`                                                                                 |
+| Offline fallback           | `mobile/www/offline.html`                                                                              |
+| Deep-link claims (site)    | `app/.well-known/assetlinks.json`, `app/.well-known/apple-app-site-association`                        |
+| Deep-link claims (app)     | `mobile/android/app/src/main/AndroidManifest.xml`, `mobile/ios/App/App/App.entitlements`               |
+| Generated native projects  | `mobile/android/`, `mobile/ios/`                                                                       |
 
 ### Why the native projects are committed
 
@@ -100,7 +104,60 @@ in the system browser, outside the app's cookie store, and three things break:
 | CI builds both platforms                | Done, green (`.github/workflows/mobile-build.yml`) |
 | Signing, store listings                 | Android tooling ready; credentials/listing pending |
 | OAuth in WebView                        | Resolved — app is magic link only                  |
-| Story photo/video camera                | Implemented; device testing pending               |
+| Story photo/video camera                | Implemented; device testing pending                |
+| Directory-first native navigation       | Implemented in web code; device testing pending    |
+
+### Native-only navigation
+
+`NativeAppLayout` checks the injected Capacitor bridge after hydration. It
+preserves the original header, page, and footer for browsers (including mobile
+browsers and PWAs). Sign-in, information, admin, and mock routes remain outside
+the app frame.
+
+- **Directory** opens at the main site's `/` or `/d`. Its branded category
+  picker searches real listings, events, and groups. Directory and Events retain
+  separate maps/sheets; pins use actual listing or venue coordinates only.
+  Online and unlocated results stay in the list. Selecting a single pin fits
+  one card, and cards open the existing detail pages.
+- **Social** reuses the real feed, audience filters, stories, and post composer.
+  Leaving it disconnects effects, pauses playback, and resets capture widgets,
+  while the timeline/filter state stays mounted.
+- **Community** defaults to **Yours**: joined groups, separately labeled pending
+  requests, Hosting/Going/Interested plans, and private saved events. **Discover**
+  uses horizontal photo-led cards without arrows, existing event recommendations,
+  public group discovery, and community-recommended directory listings.
+- **Profile** links to the authenticated member's existing `/p/[screenname]`
+  page, not a mock profile or the currently selected business identity.
+
+Explicit social-host, calendar, event-discovery, group-discovery, and detail
+links keep their destinations. Visited browsing panes remain mounted behind
+detail pages so returning restores their state. Private queries are scoped to
+the active identity, and changing accounts clears the shared query cache.
+
+Event saves require `drizzle/0073_event_bookmarks.sql` **before deploying the
+updated Worker**. They are private, profile-scoped, idempotent bookmarks, not
+RSVPs: saving never changes attendance. Account deletion explicitly removes
+them even when the profile is retained for content attribution. No new native
+plugin or permission is needed for this layout; an already compatible app
+receives it from the deployed site.
+
+### Native regression checks
+
+The focused data suite uses an isolated PGlite database and the real bookmark
+migration; it never needs a production connection. Browser checks use real app
+components with fixture API responses, including identity changes and capture
+cleanup. They do not replace physical-device or live-service testing.
+
+```powershell
+node --import tsx --test tests-unit\native-app.test.ts tests-unit\events-lanes.test.ts
+node --experimental-test-module-mocks --import tsx --test tests-db\native-app-data.test.ts tests-db\feed-page.test.ts tests-db\post-composer.test.ts
+yarn test native-app.spec.ts --project=chromium
+```
+
+The browser command uses the repository's normal configured development server.
+It covers the native/browser gate, real detail URLs, measured card visibility,
+independent maps, Community, private saves, Back priority, and stopping camera
+and microphone tracks when Social becomes inactive.
 
 ---
 

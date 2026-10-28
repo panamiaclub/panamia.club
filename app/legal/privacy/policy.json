@@ -172,18 +172,18 @@
           "name": "event_preferences",
           "label": "Event Preferences",
           "module": "events",
-          "data": ["dismissed_events", "dismissal_reason"],
+          "data": ["saved_events", "dismissed_events", "dismissal_reason"],
           "source": "user_action",
           "purpose": "event_recommendations",
           "retention": "active_account_lifetime",
           "display": {
             "icon": "calendar",
             "source": "Your recorded choices",
-            "purpose": "Event recommendations",
+            "purpose": "Save events and tune recommendations",
             "retention": "Account lifetime",
             "sharedWith": "None",
-            "prose": "Events you've hidden, and the reason each was suggested",
-            "blurb": "The events you've marked 'not for me'. Only you see these — hosts are never told, and they're used to stop suggesting similar events."
+            "prose": "Events you've saved or hidden, and the reason hidden events were suggested",
+            "blurb": "Your private saved events and 'not for me' choices. Hosts are not told about these choices. Saving does not RSVP; dismissals improve future suggestions."
           }
         },
         {
