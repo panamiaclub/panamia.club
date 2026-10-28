@@ -32,19 +32,20 @@ Configure in GitHub → Repository Settings → Secrets and variables → Action
 
 **Variables** (non-sensitive):
 
-| Variable                         | Value                                      |
-| -------------------------------- | ------------------------------------------ |
-| `BETTER_AUTH_URL`                | `http://localhost:3000`                    |
-| `NEXT_PUBLIC_HOST_URL`           | `http://localhost:3000`                    |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Turnstile site key                         |
-| `NEXT_PUBLIC_GOOGLE_ENABLED`     | Enabled for native Google browser coverage |
-| `NEXT_PUBLIC_APPLE_ENABLED`      | `false`                                    |
-| `NEXT_PUBLIC_MASTODON_ENABLED`   | `false`                                    |
-| `NEXT_PUBLIC_WIKIMEDIA_ENABLED`  | `false`                                    |
-| `R2_BUCKET_NAME`                 | Test media bucket name                     |
-| `R2_PUBLIC_URL`                  | Test public media URL                      |
+| Variable                         | Value                   |
+| -------------------------------- | ----------------------- |
+| `BETTER_AUTH_URL`                | `http://localhost:3000` |
+| `NEXT_PUBLIC_HOST_URL`           | `http://localhost:3000` |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Turnstile site key      |
+| `NEXT_PUBLIC_APPLE_ENABLED`      | `false`                 |
+| `NEXT_PUBLIC_MASTODON_ENABLED`   | `false`                 |
+| `NEXT_PUBLIC_WIKIMEDIA_ENABLED`  | `false`                 |
+| `R2_BUCKET_NAME`                 | Test media bucket name  |
+| `R2_PUBLIC_URL`                  | Test public media URL   |
 
 > **Important**: The test workflow sets `POSTGRES_URL` to runner-local PostgreSQL. Do not replace it with a production secret. Production migration and deployment workflows use their own database configuration.
+
+The browser-test build explicitly enables Google so native sign-in coverage does not depend on deployment feature flags. This must be set at build time, not just when starting the built Worker.
 
 ### Workflow File
 
