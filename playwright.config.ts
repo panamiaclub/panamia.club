@@ -16,8 +16,8 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
 
   /*
-   * The suite runs against `vinext dev` (see webServer below), not a production
-   * build, so the first request to each route pays an on-demand compile. Under
+   * Local runs use `vinext dev` (see webServer below), so the first request to
+   * each route pays an on-demand compile. Under
    * vinext 1.0.0-beta.5 that cold-start cost exceeds Playwright's defaults —
    * routes resolve correctly, just not within 30s/5s. Raised rather than papered
    * over with retries so a genuine hang still fails instead of being retried away.
@@ -28,8 +28,11 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
 
+  /* Finish with failure artifacts instead of losing diagnostics to the job timeout. */
+  maxFailures: process.env.CI ? 5 : undefined,
+
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  reporter: process.env.CI ? [['line'], ['html']] : 'html',
 
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
@@ -82,12 +85,16 @@ export default defineConfig({
    * 127.0.0.1 probe was refused), not a safeguard.
    *
    * Consequence: `vinext dev` is single-instance per project directory, so
-   * stop your own dev server in THIS worktree before running the suite. A
+   * stop your own dev server in THIS worktree before running locally. A
    * loud "Another vinext dev server is already running" is the good failure —
    * it is the one that cannot be mistaken for a pass.
    */
   webServer: {
-    command: 'npm run dev:http',
+    // CI already builds the app. Exercise the actual Worker: vinext dev skips
+    // worker/index.ts, including route/chrome headers and request-scoped DB setup.
+    command: process.env.CI
+      ? 'yarn wrangler dev --config dist/server/wrangler.json --env-file .dev.vars --local --ip 127.0.0.1 --port 3000 --inspector-port 0'
+      : 'npm run dev:http',
     // Native Google coverage must not depend on deployment feature flags.
     env: { NEXT_PUBLIC_GOOGLE_ENABLED: 'true' },
     url: 'http://127.0.0.1:3000',

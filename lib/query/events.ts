@@ -15,6 +15,8 @@ export interface UpcomingEventVenue {
   city: string | null;
   state: string | null;
   slug: string | null;
+  lat?: string | null;
+  lng?: string | null;
 }
 
 export interface UpcomingEvent {

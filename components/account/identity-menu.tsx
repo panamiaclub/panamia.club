@@ -179,7 +179,7 @@ function MenuGroups({ onNavigate }: { onNavigate: () => void }) {
  * MenuSurface, which the signed-out menu wears too, so the control a visitor
  * meets before they have an account is the one they keep afterwards.
  */
-export function IdentityMenu() {
+export function IdentityMenu({ compact = false }: { compact?: boolean } = {}) {
   const { t } = useTranslation(['common', 'toast']);
   const identity = useIdentity();
   const [copyingReferral, setCopyingReferral] = useState(false);
@@ -218,7 +218,7 @@ export function IdentityMenu() {
           ? `${t('identity.switchAccount')} — ${active.name}`
           : t('identity.switchAccount')
       }
-      triggerClassName={styles.trigger}
+      triggerClassName={cn(styles.trigger, compact && styles.triggerCompact)}
       trigger={
         <>
           {active ? (
@@ -228,7 +228,7 @@ export function IdentityMenu() {
               ?
             </span>
           )}
-          {active && (
+          {active && !compact && (
             <span className={styles.triggerName}>
               {firstNameOf(active.name ?? '')}
             </span>

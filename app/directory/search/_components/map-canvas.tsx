@@ -62,16 +62,11 @@ export default function MapCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const [map, setMap] = useState<MapLibreMap | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
-  /**
-   * Whether the move in flight is one we asked for.
-   *
-   * The map is a controlled component over an uncontrolled library: the parent
-   * owns `view`, but the user can also pan. Without this flag the two fight —
-   * our own `easeTo` fires `moveend`, which reports a view, which re-renders,
-   * which eases again.
-   */
-  const programmaticMove = useRef(false);
+  const viewRef = useRef(view);
+  viewRef.current = view;
 
   // Latest callback without re-subscribing: the map is created once, but
   // `onViewChange` is a new function on every render of the parent.
@@ -83,21 +78,39 @@ export default function MapCanvas({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const instance = new MapLibreMap({
-      container: containerRef.current,
-      style: panaMapStyle(),
-      center: [view.center[1], view.center[0]],
-      zoom: view.zoom,
-      minZoom: 3,
-      // Past the archive's z15 MapLibre scales the geometry it already has,
-      // which stays sharp — so the viewer is not stopped at the data's limit.
-      maxZoom: 18,
-      attributionControl: { compact: true },
-      // The directory map answers "what is near here". Tilting and spinning it
-      // only makes that harder to read, and makes the pins' maths harder too.
-      pitchWithRotate: false,
-      dragRotate: false,
-      touchZoomRotate: false,
+    setFailed(false);
+    let instance: MapLibreMap;
+    try {
+      instance = new MapLibreMap({
+        container: containerRef.current,
+        style: panaMapStyle(),
+        center: [view.center[1], view.center[0]],
+        zoom: view.zoom,
+        minZoom: 3,
+        // Past the archive's z15 MapLibre scales the geometry it already has,
+        // which stays sharp — so the viewer is not stopped at the data's limit.
+        maxZoom: 18,
+        attributionControl: { compact: true },
+        // The directory map answers "what is near here". Tilting and spinning it
+        // only makes that harder to read, and makes the pins' maths harder too.
+        pitchWithRotate: false,
+        dragRotate: false,
+        touchZoomRotate: false,
+      });
+    } catch (error) {
+      console.error('Could not create the directory map:', error);
+      containerRef.current.replaceChildren();
+      setFailed(true);
+      return;
+    }
+
+    let reportedFailure = false;
+    instance.on('error', (event) => {
+      if (!reportedFailure) {
+        console.error('Could not load the directory map:', event.error);
+        reportedFailure = true;
+      }
+      setFailed(true);
     });
 
     instance.addControl(
@@ -105,11 +118,8 @@ export default function MapCanvas({
       'top-left'
     );
 
-    instance.on('moveend', () => {
-      if (programmaticMove.current) {
-        programmaticMove.current = false;
-        return;
-      }
+    instance.on('moveend', (event) => {
+      if (!event.originalEvent) return;
       const centre = instance.getCenter();
       onViewChangeRef.current({
         center: [centre.lat, centre.lng],
@@ -125,8 +135,8 @@ export default function MapCanvas({
       mapRef.current = null;
       setMap(null);
     };
-    // Mount only: later `view` changes are handled by the effect below.
-  }, []);
+    // Recreate only on an explicit retry; later views use the effect below.
+  }, [attempt]);
 
   // Follow the parent's frame when it changes for a reason other than the user
   // having just moved the map themselves.
@@ -141,13 +151,12 @@ export default function MapCanvas({
       Math.abs(instance.getZoom() - view.zoom) < SAME_VIEW_ZOOM;
     if (settled) return;
 
-    programmaticMove.current = true;
     instance.easeTo({
       center: [view.center[1], view.center[0]],
       zoom: view.zoom,
       duration: 420,
     });
-  }, [view]);
+  }, [view, map]);
 
   /**
    * Keep the canvas the size of its box.
@@ -161,13 +170,40 @@ export default function MapCanvas({
     const instance = mapRef.current;
     if (!element || !instance) return;
 
-    const observer = new ResizeObserver(() => instance.resize());
+    const observer = new ResizeObserver(() => {
+      if (!element.clientWidth || !element.clientHeight) return;
+      instance.resize();
+      const frame = viewRef.current;
+      // Resizing can interrupt easeTo; restore the requested frame, not its
+      // intermediate camera position.
+      instance.jumpTo({
+        center: [frame.center[1], frame.center[0]],
+        zoom: frame.zoom,
+      });
+    });
     observer.observe(element);
     return () => observer.disconnect();
   }, [map]);
 
   return (
-    <div ref={containerRef} className="dirsearch-mapcanvas">
+    <div className="dirsearch-mapcanvas">
+      <div ref={containerRef} className="h-full w-full" />
+      {failed && (
+        <div
+          className="bg-pana-cream text-pana-ink absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 p-5 text-center text-sm"
+          role="alert"
+        >
+          <strong>Map unavailable</strong>
+          <p>You can still browse the results list.</p>
+          <button
+            type="button"
+            className="rounded-full border border-current px-4 py-2 font-bold"
+            onClick={() => setAttempt((current) => current + 1)}
+          >
+            Retry map
+          </button>
+        </div>
+      )}
       {map && viewer && (
         <MapMarker map={map} lat={viewer.lat} lng={viewer.lng}>
           <span className="dirsearch-viewerdot" aria-hidden="true" />

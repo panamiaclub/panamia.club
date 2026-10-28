@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Globe, MapPin } from 'lucide-react';
+import { projectMockCoordinates } from '../../_data/map';
 import { formatDistance, type ScoredResult } from '../_data';
 
 interface MapPanelProps {
@@ -12,26 +13,6 @@ interface MapPanelProps {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
-}
-
-/**
- * Bounding box for the three counties the directory covers.
- *
- * Hard-coded because the mock has no tile provider — the real page would hand
- * these markers to a map library and delete all of this. What is being
- * reviewed here is the *layout*: a list that stays readable beside a map, and
- * markers that carry enough identity to be worth clicking.
- */
-const BOUNDS = { minLat: 25.6, maxLat: 26.85, minLng: -80.5, maxLng: -80.0 };
-
-function project({ lat, lng }: { lat: number; lng: number }) {
-  const x = ((lng - BOUNDS.minLng) / (BOUNDS.maxLng - BOUNDS.minLng)) * 100;
-  const y = ((BOUNDS.maxLat - lat) / (BOUNDS.maxLat - BOUNDS.minLat)) * 100;
-  // Inset so a marker on the edge of the range is not clipped by the frame.
-  return {
-    left: `${6 + x * 0.88}%`,
-    top: `${6 + y * 0.88}%`,
-  };
 }
 
 export function MapPanel({
@@ -62,7 +43,7 @@ export function MapPanel({
       {locationShared && (
         <span
           className="dirmock-you"
-          style={project({ lat: 25.801, lng: -80.199 })}
+          style={projectMockCoordinates({ lat: 25.801, lng: -80.199 })}
           title={`You — ${viewerPlace}`}
         >
           <span />
@@ -79,7 +60,7 @@ export function MapPanel({
             type="button"
             className="dirmock-pin"
             data-on={on}
-            style={project(result.coords!)}
+            style={projectMockCoordinates(result.coords!)}
             onClick={() => onSelect(result.id)}
             onMouseEnter={() => onHover(result.id)}
             onMouseLeave={() => onHover(null)}

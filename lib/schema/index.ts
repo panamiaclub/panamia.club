@@ -2531,6 +2531,34 @@ export const eventAttendees = pgTable(
   })
 );
 
+export const eventBookmarks = pgTable(
+  'event_bookmarks',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    eventId: text('event_id')
+      .notNull()
+      .references(() => events.id, { onDelete: 'cascade' }),
+  },
+  (table) => ({
+    profileEventUnique: uniqueIndex('event_bookmarks_profile_event_unique').on(
+      table.profileId,
+      table.eventId
+    ),
+    profileCreatedIdx: index('event_bookmarks_profile_created_idx').on(
+      table.profileId,
+      table.createdAt
+    ),
+  })
+);
+
 /**
  * "Not for me", kept.
  *
@@ -3429,7 +3457,19 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
     references: [socialGroups.id],
   }),
   attendees: many(eventAttendees),
+  bookmarks: many(eventBookmarks),
   socialStatuses: many(socialStatuses),
+}));
+
+export const eventBookmarksRelations = relations(eventBookmarks, ({ one }) => ({
+  event: one(events, {
+    fields: [eventBookmarks.eventId],
+    references: [events.id],
+  }),
+  profile: one(profiles, {
+    fields: [eventBookmarks.profileId],
+    references: [profiles.id],
+  }),
 }));
 
 export const eventAttendeesRelations = relations(eventAttendees, ({ one }) => ({

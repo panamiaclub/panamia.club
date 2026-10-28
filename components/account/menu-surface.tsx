@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -10,6 +11,7 @@ import {
 
 import styles from './identity.module.css';
 import { cn } from '@/lib/utils';
+import { NATIVE_BACK_BUTTON_EVENT } from '@/lib/mobile/native';
 
 /**
  * The masthead popup frame.
@@ -102,7 +104,7 @@ export function MenuSurface({
 
   // Escape closes from anywhere; click-outside only applies to the desktop
   // dropdown, since the sheet has its own scrim.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
 
     const onKey = (e: KeyboardEvent) => {
@@ -111,12 +113,19 @@ export function MenuSurface({
     const onClick = (e: MouseEvent) => {
       if (!anchorRef.current?.contains(e.target as Node)) setOpen(false);
     };
+    const onNativeBack = (event: Event) => {
+      if (event.defaultPrevented) return;
+      event.preventDefault();
+      close();
+    };
 
     document.addEventListener('keydown', onKey);
     document.addEventListener('mousedown', onClick);
+    window.addEventListener(NATIVE_BACK_BUTTON_EVENT, onNativeBack, true);
     return () => {
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('mousedown', onClick);
+      window.removeEventListener(NATIVE_BACK_BUTTON_EVENT, onNativeBack, true);
     };
   }, [open, close]);
 
@@ -130,7 +139,7 @@ export function MenuSurface({
     };
   }, [open, isMobile]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     const first = listRef.current?.querySelector<HTMLElement>(`[${MENU_ROW}]`);
     first?.focus();
@@ -166,6 +175,7 @@ export function MenuSurface({
       ref={listRef}
       onKeyDown={onListKeyDown}
       role="menu"
+      data-state={open ? 'open' : 'closed'}
       className={isMobile ? styles.sheetRows : undefined}
     >
       {isMobile ? (

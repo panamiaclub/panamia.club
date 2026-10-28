@@ -9,6 +9,7 @@ import MainHeader from '@/components/MainHeader';
 import MainFooter from '@/components/MainFooter';
 import ScreennameGate from '@/components/ScreennameGate';
 import { NativeShell } from '@/components/mobile/NativeShell';
+import { NativeAppLayout } from '@/components/mobile/NativeAppLayout';
 import {
   resolveSurface,
   originForFrom,
@@ -335,29 +336,46 @@ export default async function RootLayout({
                   MainHeader on the main site and SurfaceIdentity on a
                   surface, and it needs the same resolved tiles either way. */}
               <PanaSitesProvider sites={panaSites}>
-                {wearsMainChrome && (
-                  <MainHeader isProductionSite={isProductionSite} />
-                )}
-                {guest && pathname && (
-                  <SurfaceGuestHeader
-                    surface={chromeSurface}
-                    host={host}
-                    pathname={pathname}
-                    owner={surfaceForPath(pathname)}
-                  />
-                )}
-                {ownSurface && pathname && (
-                  <SurfaceMemberHeader surface={chromeSurface} host={host} />
-                )}
-                <div id="layout-main">{children}</div>
-                {wearsMainChrome && <MainFooter />}
-                {guest && pathname && (
-                  <SurfaceGuestFooter
-                    surface={chromeSurface}
-                    owner={surfaceForPath(pathname)}
-                  />
-                )}
-                {ownSurface && <SurfaceMemberFooter surface={chromeSurface} />}
+                <NativeAppLayout
+                  surfaceId={surface.id}
+                  header={
+                    <>
+                      {wearsMainChrome && (
+                        <MainHeader isProductionSite={isProductionSite} />
+                      )}
+                      {guest && pathname && (
+                        <SurfaceGuestHeader
+                          surface={chromeSurface}
+                          host={host}
+                          pathname={pathname}
+                          owner={surfaceForPath(pathname)}
+                        />
+                      )}
+                      {ownSurface && pathname && (
+                        <SurfaceMemberHeader
+                          surface={chromeSurface}
+                          host={host}
+                        />
+                      )}
+                    </>
+                  }
+                  footer={
+                    <>
+                      {wearsMainChrome && <MainFooter />}
+                      {guest && pathname && (
+                        <SurfaceGuestFooter
+                          surface={chromeSurface}
+                          owner={surfaceForPath(pathname)}
+                        />
+                      )}
+                      {ownSurface && (
+                        <SurfaceMemberFooter surface={chromeSurface} />
+                      )}
+                    </>
+                  }
+                >
+                  {children}
+                </NativeAppLayout>
                 <BugReportDialog />
                 <ScreennameGate />
                 {/* Renders nothing, and nothing in a browser. Mounted here

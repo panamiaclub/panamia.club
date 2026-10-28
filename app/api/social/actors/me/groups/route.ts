@@ -14,7 +14,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getActiveProfileWithActor } from '@/lib/server/active-profile';
-import { listMyGroups } from '@/lib/federation';
+import { listMyGroups, listMyGroupRequests } from '@/lib/federation';
 
 export async function GET() {
   const session = await auth();
@@ -31,10 +31,22 @@ export async function GET() {
   // error -- the menu and the rail both render this as "no groups yet",
   // which is true, and a 403 would make them show an error state instead.
   if (!profile?.socialActor) {
-    return NextResponse.json({ success: true, data: { groups: [] } });
+    return NextResponse.json(
+      {
+        success: true,
+        data: { groups: [], pending: [] },
+      },
+      { headers: { 'Cache-Control': 'private, no-store' } }
+    );
   }
 
-  const groups = await listMyGroups(profile.socialActor.id);
+  const [groups, pending] = await Promise.all([
+    listMyGroups(profile.socialActor.id),
+    listMyGroupRequests(profile.socialActor.id),
+  ]);
 
-  return NextResponse.json({ success: true, data: { groups } });
+  return NextResponse.json(
+    { success: true, data: { groups, pending } },
+    { headers: { 'Cache-Control': 'private, no-store' } }
+  );
 }

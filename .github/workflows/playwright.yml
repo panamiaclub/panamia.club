@@ -268,7 +268,8 @@ jobs:
           BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
           NEXT_PUBLIC_HOST_URL: ${{ vars.NEXT_PUBLIC_HOST_URL }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
-          NEXT_PUBLIC_GOOGLE_ENABLED: ${{ vars.NEXT_PUBLIC_GOOGLE_ENABLED }}
+          # Public flags are baked into the bundle; startup overrides are too late.
+          NEXT_PUBLIC_GOOGLE_ENABLED: 'true'
           NEXT_PUBLIC_APPLE_ENABLED: ${{ vars.NEXT_PUBLIC_APPLE_ENABLED }}
           NEXT_PUBLIC_MASTODON_ENABLED: ${{ vars.NEXT_PUBLIC_MASTODON_ENABLED }}
           NEXT_PUBLIC_WIKIMEDIA_ENABLED: ${{ vars.NEXT_PUBLIC_WIKIMEDIA_ENABLED }}
@@ -278,6 +279,15 @@ jobs:
           R2_BUCKET_NAME: ${{ vars.R2_BUCKET_NAME }}
           R2_PUBLIC_URL: ${{ vars.R2_PUBLIC_URL }}
 
+      - name: Seed native profile destination
+        run: |
+          psql "$POSTGRES_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO profiles
+            (id, created_at, updated_at, email, name, screenname, active)
+          VALUES
+            ('cafe', now(), now(), 'bay-cafe@example.invalid', 'Bay Cafe', 'bay-cafe', true);
+          SQL
+
       - name: Run Playwright tests
         run: yarn test
         env:
@@ -285,7 +295,7 @@ jobs:
           BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
           NEXT_PUBLIC_HOST_URL: ${{ vars.NEXT_PUBLIC_HOST_URL }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
-          NEXT_PUBLIC_GOOGLE_ENABLED: ${{ vars.NEXT_PUBLIC_GOOGLE_ENABLED }}
+          NEXT_PUBLIC_GOOGLE_ENABLED: 'true'
           NEXT_PUBLIC_APPLE_ENABLED: ${{ vars.NEXT_PUBLIC_APPLE_ENABLED }}
           NEXT_PUBLIC_MASTODON_ENABLED: ${{ vars.NEXT_PUBLIC_MASTODON_ENABLED }}
           NEXT_PUBLIC_WIKIMEDIA_ENABLED: ${{ vars.NEXT_PUBLIC_WIKIMEDIA_ENABLED }}

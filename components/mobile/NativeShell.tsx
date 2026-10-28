@@ -21,8 +21,10 @@
  * component does nothing and downloads nothing.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import {
+  hasOpenNativeOverlay,
   isNativeApp,
   NATIVE_APP_CLASS,
   NATIVE_BACK_BUTTON_EVENT,
@@ -34,6 +36,9 @@ import {
 } from '@/lib/mobile/auth-links';
 
 export function NativeShell() {
+  const router = useRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router;
   useEffect(() => {
     if (!isNativeApp()) return;
 
@@ -73,7 +78,18 @@ export function NativeShell() {
       }
       sessionStorage.setItem(NATIVE_LAUNCH_URL_KEY, fingerprint);
       if (target.href !== window.location.href) {
-        window.location.assign(target.href);
+        if (
+          target.origin === window.location.origin &&
+          !target.pathname.startsWith('/api/') &&
+          !target.pathname.startsWith('/signin')
+        ) {
+          routerRef.current.push(
+            `${target.pathname}${target.search}${target.hash}`
+          );
+        } else {
+          // Auth links need their existing document navigation and cookie exchange.
+          window.location.assign(target.href);
+        }
       }
     };
 
@@ -124,6 +140,17 @@ export function NativeShell() {
           ) {
             return;
           }
+          if (hasOpenNativeOverlay()) {
+            document.dispatchEvent(
+              new KeyboardEvent('keydown', {
+                key: 'Escape',
+                code: 'Escape',
+                bubbles: true,
+                cancelable: true,
+              })
+            );
+            return;
+          }
           if (canGoBack) {
             window.history.back();
           } else {
@@ -135,13 +162,15 @@ export function NativeShell() {
       // HTTPS App/Universal Links and the narrowly scoped email-auth scheme
       // share the same origin validation. Register before reading the cold
       // launch URL so a link arriving during startup cannot be missed.
+      let receivedLaunch = false;
       pending.push(
         App.addListener('appUrlOpen', ({ url }) => {
+          receivedLaunch = true;
           void openUrl(url).catch(reportLinkError);
         })
       );
       const launch = await App.getLaunchUrl();
-      if (launch?.url) await openUrl(launch.url, true);
+      if (!receivedLaunch && launch?.url) await openUrl(launch.url, true);
     })().catch((error: unknown) => {
       console.error('[mobile] native shell setup failed', error);
     });

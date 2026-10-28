@@ -2,14 +2,16 @@
 
 import Link from 'next/link';
 import {
+  type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
-  useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
 import { ArrowRight, ChevronDown, Lock } from 'lucide-react';
 import { KIND_ICON } from '@/components/kind-icon';
+import { NATIVE_BACK_BUTTON_EVENT } from '@/lib/mobile/native';
 import {
   countFor,
   SCOPE_BLURB,
@@ -61,6 +63,10 @@ interface ScopeMenuProps {
    * drift.
    */
   compact?: boolean;
+  /** Embedded search surfaces can offer only the kinds they support. */
+  scopes?: readonly Scope[];
+  showDestinations?: boolean;
+  panelStyle?: CSSProperties;
 }
 
 /**
@@ -87,11 +93,15 @@ export function ScopeMenu({
   signedIn,
   onSelect,
   compact = false,
+  scopes = SCOPES,
+  showDestinations = true,
+  panelStyle,
 }: ScopeMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
+  const initialFocus = useRef(0);
   const menuId = useId();
 
   // Gated scopes are skipped by the arrow keys rather than merely dimmed; a
@@ -101,17 +111,32 @@ export function ScopeMenu({
   // documented as the single place the members-only rule is applied to a list
   // of scopes — and this was the list that had quietly grown its own copy of
   // it. The two agreed, which is the only reason the drift was invisible.
-  const reachable = visibleScopes(signedIn);
+  const allowedScopes = visibleScopes(signedIn);
+  const reachable = scopes.filter((option) => allowedScopes.includes(option));
+  if (reachable.length === 0) {
+    throw new Error('The scope menu needs at least one reachable category');
+  }
 
   const CurrentIcon = KIND_ICON[scope];
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
+    itemRefs.current[initialFocus.current]?.focus();
     function onPointerDown(event: MouseEvent) {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     }
     document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
+    const onNativeBack = (event: Event) => {
+      if (event.defaultPrevented) return;
+      event.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+    window.addEventListener(NATIVE_BACK_BUTTON_EVENT, onNativeBack, true);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener(NATIVE_BACK_BUTTON_EVENT, onNativeBack, true);
+    };
   }, [open]);
 
   const focusItem = (index: number) => {
@@ -120,9 +145,8 @@ export function ScopeMenu({
   };
 
   const openWith = (index: number) => {
+    initialFocus.current = index;
     setOpen(true);
-    // Focus after paint — the items do not exist until the panel renders.
-    window.requestAnimationFrame(() => focusItem(index));
   };
 
   const close = (refocus: boolean) => {
@@ -185,7 +209,9 @@ export function ScopeMenu({
       <button
         ref={triggerRef}
         type="button"
-        className={compact ? 'surface-pill surface-pill-compact' : 'surface-pill'}
+        className={
+          compact ? 'surface-pill surface-pill-compact' : 'surface-pill'
+        }
         data-tone={SCOPE_TONE[scope]}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -213,6 +239,7 @@ export function ScopeMenu({
         <div
           id={menuId}
           role="menu"
+          data-state="open"
           aria-label="Search scope"
           /* `directory-suggest-scopemenu` carries no styling of its own. It is
              a hook for the hero's `:has()` un-clip rule in globals.css, and it
@@ -236,12 +263,13 @@ export function ScopeMenu({
             width: '23rem',
             maxWidth: 'calc(100vw - 2rem)',
             textAlign: 'left',
+            ...panelStyle,
           }}
         >
           <p className="surface-panel-label">Search for</p>
 
           <div className="flex flex-col gap-1">
-            {SCOPES.map((option) => {
+            {scopes.map((option) => {
               const gated = SCOPE_REQUIRES_PANA[option] && !signedIn;
               const Icon = KIND_ICON[option];
               const isCurrent = option === scope;
@@ -300,13 +328,15 @@ export function ScopeMenu({
                         a control that changes which one you land in should say
                         so before Enter. Shown on the gated row too: knowing the
                         page exists is most of why anyone would sign in for it. */}
-                    <span className="mt-1 flex items-center gap-1 font-mono text-[0.68rem] font-bold tracking-tight opacity-55">
-                      <ArrowRight
-                        className="h-3 w-3 flex-none"
-                        aria-hidden="true"
-                      />
-                      {SCOPE_DESTINATION[option]}
-                    </span>
+                    {showDestinations && (
+                      <span className="mt-1 flex items-center gap-1 font-mono text-[0.68rem] font-bold tracking-tight opacity-55">
+                        <ArrowRight
+                          className="h-3 w-3 flex-none"
+                          aria-hidden="true"
+                        />
+                        {SCOPE_DESTINATION[option]}
+                      </span>
+                    )}
                   </span>
                 </>
               );
