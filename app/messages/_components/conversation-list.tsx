@@ -1,9 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, UserPlus } from 'lucide-react';
-import { useDebounce } from '@/hooks/use-debounce';
-import { usePanaSearch, type MessageableActor } from '@/lib/query/social';
+import type { RefObject } from 'react';
+import {
+  Clock3,
+  MessageCircle,
+  Search,
+  ShieldCheck,
+  SquarePen,
+} from 'lucide-react';
+import { DialogTrigger } from '@/components/ui/dialog';
+import { MessageFolders, type MessageFolder } from './message-folders';
+import styles from '@/components/messages/workspace.module.css';
+import type { SocialStatusDisplay } from '@/lib/interfaces';
 import { ChatAvatar, ChatName, type ChatActor } from './chat-primitives';
 import {
   conversationSnippet,
@@ -11,47 +19,15 @@ import {
   lastActiveLabel,
   remoteHost,
 } from '../_lib/format';
-import {
-  filterConversations,
-  newConversationCandidates,
-  normalizeSearchTerm,
-} from '../_lib/search';
-import type { SocialStatusDisplay } from '@/lib/interfaces';
+import { filterConversations, normalizeSearchTerm } from '../_lib/search';
+import type { MessageDraft, OutgoingMessage } from '../_lib/workspace';
 
-/* The conversation list.
- *
- * One line per thread, because a chat list is for recognising a person rather
- * than triaging content -- you open the thread.
- *
- * Three things differ from an ordinary messenger, and all three come from the
- * substrate rather than from taste.
- *
- * No presence dots. Presence is out of scope, and a list that implies
- * availability is the most expensive thing a messaging UI can imply, because
- * it turns "no reply" into "they saw you and ignored you".
- *
- * No unread counts. Read state is not in the schema -- nothing records that a
- * DM was seen -- so a number here would have to be invented, and an invented
- * one is how a list ends up permanently claiming one unread message that
- * cannot be cleared.
- *
- * Requests is a view, not a badge. dm-gate.ts holds a stranger's message and
- * must not notify, and a badge is a notification with a smaller hitbox; the
- * count renders as plain text, which you see when you look and not before.
- * Keeping requests here rather than linking out to /updates also matters for
- * a duller reason: getDirectConversations excludes held threads, so without
- * this tab a request would have nowhere in the chat view to be read.
- *
- * The search box searches two things at once -- the threads below it, and the
- * membership. That is not a flourish: a conversation list can only show people
- * you have already written to, so without the second half this page is a room
- * with no door, and the empty state has to send members somewhere else to
- * begin. See ../_lib/search.ts.
- */
+export type { MessageFolder } from './message-folders';
 
 export interface ListEntry {
   actor: ChatActor;
-  lastMessage: SocialStatusDisplay;
+  lastMessage: SocialStatusDisplay | null;
+  requestedAt?: string;
 }
 
 export function ConversationList({
@@ -61,294 +37,240 @@ export function ConversationList({
   viewerActorId,
   localDomain,
   activeActorId,
+  activeRowRef,
   requestCount,
   onSelect,
   isLoading,
+  error,
+  onRetry,
+  detailOpen,
+  drafts,
+  outgoing,
+  query,
+  onQueryChange,
 }: {
   entries: ListEntry[];
-  view: 'inbox' | 'requests';
-  onChangeView: (view: 'inbox' | 'requests') => void;
+  view: MessageFolder;
+  onChangeView: (view: MessageFolder) => void;
   viewerActorId: string | null;
   localDomain: string | null;
   activeActorId: string | null;
+  activeRowRef: RefObject<HTMLButtonElement | null>;
   requestCount: number;
   onSelect: (actorId: string) => void;
   isLoading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  detailOpen: boolean;
+  drafts: Record<string, MessageDraft>;
+  outgoing: OutgoingMessage[];
+  query: string;
+  onQueryChange: (value: string) => void;
 }) {
-  const [query, setQuery] = useState('');
   const term = normalizeSearchTerm(query);
-
-  // Threads filter locally and instantly; people cost a request, so only that
-  // half waits for a pause in typing.
-  const debouncedTerm = useDebounce(term, 200);
-
   const visible = filterConversations(entries, term);
-
-  /**
-   * Offering new people is an Inbox behaviour only.
-   *
-   * Requests is a triage folder -- it answers "who wrote to me that I have
-   * not accepted", and a row inviting you to start writing to a stranger is
-   * not an answer to that question. Passing an empty term also keeps the
-   * query disabled there rather than merely hiding what it returned.
-   */
-  const composing = view === 'inbox' && term.length > 0;
-  const panas = usePanaSearch(composing ? debouncedTerm : '');
-  const candidates = newConversationCandidates(panas.data ?? [], {
-    existing: entries,
-    viewerActorId,
-  });
-
-  // Computed from the same rows the list renders rather than from a separate
-  // count, so the banner cannot advertise a number the list does not show.
-  // The expiry is otherwise invisible, which is how you lose a conversation
-  // and file it as a bug.
-  const expiring = visible.filter((entry) =>
-    expiresToday(entry.lastMessage.expiresAt)
+  const latestOutgoing = new Map(
+    outgoing.map((message) => [message.recipientActorId, message])
   );
-
-  /**
-   * Picking anyone clears the box.
-   *
-   * Leaving the term in place would leave the list filtered to the search
-   * that found the thread, so the one conversation you just opened would sit
-   * alone above a "start a new conversation" heading offering the person you
-   * are now talking to. Worse for a brand-new thread, which matches no filter
-   * at all and would therefore vanish from the list at the moment it opened.
-   */
-  const choose = (actorId: string) => {
-    setQuery('');
-    onSelect(actorId);
-  };
+  const expiring = visible.filter(
+    (entry) => entry.lastMessage && expiresToday(entry.lastMessage.expiresAt)
+  ).length;
 
   return (
-    <aside className="border-pana-ink/14 flex flex-col border-b-2 lg:border-r-2 lg:border-b-0">
-      <div className="border-pana-ink/10 border-b p-3">
-        {/* A real input, which it was not before: this shipped as a div
-            wrapping a span, carried over from the mock it was promoted from.
-            It had the exact silhouette of a search field -- pill, magnifier,
-            placeholder-grey label -- and could not be focused or typed into,
-            so the only way to discover it was decorative was to try to use
-            it. A control that looks interactive and is not is worse than no
-            control, because it absorbs the attempt and reports nothing. */}
-        <label className="bg-pana-butter-2/70 border-pana-ink/10 focus-within:border-pana-indigo flex items-center gap-2 rounded-full border px-3 py-2 transition-colors">
-          <Search
-            className="text-pana-ink/40 h-4 w-4 flex-none"
-            aria-hidden="true"
-          />
-          <span className="sr-only">Search messages or find a pana</span>
+    <aside
+      className={styles.sidebar}
+      data-mobile-hidden={detailOpen}
+      aria-label="Your messages"
+    >
+      <div className="px-5 pt-6 pb-4">
+        <p className="text-pana-ink/55 text-[10px] font-extrabold tracking-[0.16em] uppercase">
+          A little closer
+        </p>
+        <h1 className="text-pana-ink mt-1 text-[28px] leading-tight font-black tracking-tight">
+          Messages<span className="text-pana-burnt">.</span>
+        </h1>
+        <p className="text-pana-ink/60 mt-1 text-xs font-medium">
+          Good conversations start here.
+        </p>
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            className={styles.newMessage}
+            disabled={!viewerActorId}
+          >
+            <SquarePen className="h-4 w-4" aria-hidden="true" />
+            New message
+          </button>
+        </DialogTrigger>
+        <label className={styles.search}>
+          <Search className="h-4 w-4 flex-none" aria-hidden="true" />
           <input
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search messages or find a pana"
-            className="text-pana-ink placeholder:text-pana-ink/45 min-w-0 flex-1 bg-transparent text-sm font-bold outline-none"
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Find a conversation"
+            aria-label="Find a conversation by name or handle"
+            className="min-w-0 flex-1 bg-transparent text-xs font-medium outline-none"
           />
         </label>
       </div>
 
-      <div
-        className="border-pana-ink/10 flex border-b"
-        role="tablist"
-        aria-label="Message folders"
-      >
-        <FolderTab
-          label="Messages"
-          active={view === 'inbox'}
-          onClick={() => onChangeView('inbox')}
-        />
-        <FolderTab
-          label="Requests"
-          count={requestCount}
-          active={view === 'requests'}
-          onClick={() => onChangeView('requests')}
-        />
-      </div>
+      <MessageFolders
+        view={view}
+        requestCount={requestCount}
+        onChange={onChangeView}
+      />
 
-      {expiring.length > 0 && (
-        <div className="bg-pana-butter border-pana-ink/10 border-b px-3 py-2">
-          <p className="text-pana-ink text-[11px] leading-snug font-bold">
-            {expiring.length === 1
-              ? '1 conversation has messages disappearing today.'
-              : `${expiring.length} conversations have messages disappearing today.`}
+      <div className={styles.threadList}>
+        {error && (
+          <div className={styles.inlineError} role="alert">
+            {error}
+            <button type="button" onClick={onRetry}>
+              Try again
+            </button>
+          </div>
+        )}
+        {view === 'requests' && (
+          <p className="text-pana-ink/65 flex gap-2 px-4 pt-4 pb-2 text-xs leading-relaxed">
+            <ShieldCheck
+              className="text-pana-indigo mt-0.5 h-4 w-4 flex-none"
+              aria-hidden="true"
+            />
+            Your space, your choice. Read a request before deciding to accept
+            it.
           </p>
-        </div>
-      )}
-
-      {isLoading && (
-        <p className="text-pana-ink/45 px-3 py-6 text-center text-sm font-bold">
-          Loading…
-        </p>
-      )}
-
-      {!isLoading && visible.length === 0 && !term && (
-        <p className="text-pana-ink/45 px-4 py-8 text-center text-sm font-medium">
-          {view === 'requests'
-            ? 'No message requests.'
-            : 'No conversations yet. Search for a pana above to start one.'}
-        </p>
-      )}
-
-      {/* Requests is the one folder where a search can come back empty and
-          have nothing underneath it to explain itself: the people results
-          below are Inbox-only, so without this the panel would simply go
-          blank and look like the box had failed again. */}
-      {!isLoading && visible.length === 0 && term.length > 0 && !composing && (
-        <p className="text-pana-ink/45 px-4 py-8 text-center text-sm font-medium">
-          No requests match that.
-        </p>
-      )}
-
-      <ul>
-        {visible.map((entry) => {
-          const actor = entry.actor;
-          const isActive = actor.id === activeActorId;
-          return (
-            <li key={actor.id}>
-              <button
-                type="button"
-                onClick={() => choose(actor.id)}
-                className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                  isActive ? 'bg-pana-butter-2' : 'hover:bg-pana-butter-2/50'
-                }`}
-              >
-                <ChatAvatar actor={actor} size={40} />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline justify-between gap-2">
-                    <ChatName
-                      actor={actor}
-                      remoteHost={remoteHost(actor, localDomain)}
-                    />
-                    <span className="text-pana-ink/45 flex-none text-[11px] font-bold">
-                      {lastActiveLabel(entry.lastMessage.published)}
+        )}
+        {expiring > 0 && (
+          <p className="bg-pana-butter text-pana-ink mx-1 mb-2 rounded-lg px-3 py-2 text-[11px] leading-relaxed">
+            {expiring === 1
+              ? '1 conversation has messages disappearing today.'
+              : `${expiring} conversations have messages disappearing today.`}
+          </p>
+        )}
+        {isLoading && (
+          <p
+            className="text-pana-ink/60 px-5 py-8 text-center text-sm"
+            role="status"
+          >
+            Loading conversations...
+          </p>
+        )}
+        {!isLoading && !error && visible.length === 0 && (
+          <div className="px-6 py-10 text-center">
+            <MessageCircle
+              className="text-pana-ink/30 mx-auto mb-3 h-7 w-7"
+              aria-hidden="true"
+            />
+            <p className="text-pana-ink/75 text-sm font-bold">
+              {term
+                ? 'No matching conversations.'
+                : view === 'requests'
+                  ? 'All quiet here.'
+                  : 'Your conversations will live here.'}
+            </p>
+            <p className="text-pana-ink/60 mt-1 text-xs leading-relaxed">
+              {term
+                ? 'Try a name or @handle, or choose New message to find someone new.'
+                : view === 'requests'
+                  ? 'New message requests will appear in this folder.'
+                  : 'Choose New message to say hello to a pana.'}
+            </p>
+          </div>
+        )}
+        <ul
+          aria-label={
+            view === 'requests' ? 'Message requests' : 'Conversations'
+          }
+        >
+          {visible.map((entry) => {
+            const actor = entry.actor;
+            const draft = drafts[actor.id];
+            const hasDraft = !!(
+              draft?.text.trim() ||
+              draft?.gif ||
+              draft?.isMirroring ||
+              draft?.gifError
+            );
+            const latest = latestOutgoing.get(actor.id);
+            // Acknowledged local bubbles must not hide a newer server reply.
+            const localMessage =
+              latest?.delivery === 'sent' && entry.lastMessage
+                ? undefined
+                : latest;
+            return (
+              <li key={actor.id}>
+                <button
+                  type="button"
+                  className={styles.threadRow}
+                  ref={actor.id === activeActorId ? activeRowRef : undefined}
+                  data-active={actor.id === activeActorId}
+                  aria-current={actor.id === activeActorId ? 'true' : undefined}
+                  onClick={() => onSelect(actor.id)}
+                >
+                  <ChatAvatar actor={actor} size={44} />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <ChatName
+                        actor={actor}
+                        remoteHost={remoteHost(actor, localDomain)}
+                        className="text-[13px]"
+                      />
+                      <span className="text-pana-ink/50 flex-none text-[10px] font-medium">
+                        {lastActiveLabel(
+                          entry.lastMessage?.published ??
+                            entry.requestedAt ??
+                            null
+                        ) || 'New'}
+                      </span>
+                    </span>
+                    <span className="text-pana-ink/60 mt-1 block truncate text-xs leading-relaxed">
+                      {hasDraft ? (
+                        <>
+                          <span className="text-pana-red-deep font-bold">
+                            Draft:{' '}
+                          </span>
+                          {draft.text ||
+                            (draft.isMirroring
+                              ? 'Saving GIF...'
+                              : draft.gifError
+                                ? 'GIF not saved'
+                                : 'GIF')}
+                        </>
+                      ) : localMessage ? (
+                        <span
+                          className={
+                            localMessage.delivery === 'failed'
+                              ? 'text-pana-red-deep'
+                              : undefined
+                          }
+                        >
+                          {localMessage.delivery === 'failed'
+                            ? 'Not sent: '
+                            : localMessage.delivery === 'sending'
+                              ? 'Sending: '
+                              : 'You: '}
+                          {localMessage.content || 'GIF'}
+                        </span>
+                      ) : entry.lastMessage ? (
+                        conversationSnippet(entry.lastMessage, viewerActorId)
+                      ) : view === 'requests' ? (
+                        'No messages remaining in the 30-day window.'
+                      ) : (
+                        'Say a little hello.'
+                      )}
                     </span>
                   </span>
-                  <span className="text-pana-ink/60 mt-0.5 block truncate text-[13px] font-medium">
-                    {conversationSnippet(entry.lastMessage, viewerActorId)}
-                  </span>
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-
-      {composing && (
-        <div className="border-pana-ink/10 border-t">
-          <p className="text-pana-ink/45 px-3 pt-3 pb-1 text-[11px] font-extrabold tracking-wide uppercase">
-            Start a new conversation
-          </p>
-
-          {panas.isLoading && (
-            <p className="text-pana-ink/45 px-4 pt-1 pb-4 text-sm font-bold">
-              Searching…
-            </p>
-          )}
-
-          {!panas.isLoading && candidates.length === 0 && (
-            <p className="text-pana-ink/45 px-4 pt-1 pb-4 text-sm font-medium">
-              {visible.length > 0
-                ? 'No other panas match that.'
-                : 'No panas match that.'}
-            </p>
-          )}
-
-          <ul>
-            {candidates.map((pana) => (
-              <li key={pana.id}>
-                <NewConversationRow
-                  pana={pana}
-                  localDomain={localDomain}
-                  onChoose={choose}
-                />
+                </button>
               </li>
-            ))}
-          </ul>
-        </div>
-      )}
+            );
+          })}
+        </ul>
+      </div>
+
+      <p className="text-pana-ink/60 border-pana-ink/8 flex flex-none items-center gap-2 border-t px-5 py-4 text-[11px] leading-relaxed">
+        <Clock3 className="h-3.5 w-3.5 flex-none" aria-hidden="true" />A 30-day
+        window for your conversations.
+      </p>
     </aside>
-  );
-}
-
-/**
- * Someone the viewer has never written to.
- *
- * Opens an empty thread rather than a compose dialog, which needs no new
- * endpoint: the conversation route resolves any actor the viewer may see and
- * answers with an empty transcript, and the composer below it already knows
- * how to send the first message. A separate "new message" modal would be a
- * second way to reach the same send path, and only one of them would stay in
- * step with the gate.
- */
-function NewConversationRow({
-  pana,
-  localDomain,
-  onChoose,
-}: {
-  pana: MessageableActor;
-  localDomain: string | null;
-  onChoose: (actorId: string) => void;
-}) {
-  const actor: ChatActor = {
-    id: pana.id,
-    username: pana.username,
-    // Every row here is local -- the endpoint only returns actors with a
-    // profile on this server -- so there is no federation mark to draw.
-    domain: localDomain ?? '',
-    name: pana.displayName,
-    iconUrl: pana.avatarUrl,
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={() => onChoose(pana.id)}
-      className="hover:bg-pana-butter-2/50 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
-    >
-      <ChatAvatar actor={actor} size={36} />
-      <span className="min-w-0 flex-1">
-        <ChatName actor={actor} remoteHost={null} />
-        <span className="text-pana-ink/55 mt-0.5 block truncate text-[13px] font-medium">
-          @{pana.username}
-        </span>
-      </span>
-      <UserPlus
-        className="text-pana-ink/35 h-4 w-4 flex-none"
-        aria-hidden="true"
-      />
-    </button>
-  );
-}
-
-function FolderTab({
-  label,
-  count,
-  active,
-  onClick,
-}: {
-  label: string;
-  count?: number;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={`flex-1 px-3 py-2.5 text-[13px] font-extrabold tracking-wide uppercase transition-colors ${
-        active
-          ? 'border-pana-indigo text-pana-ink border-b-2'
-          : 'text-pana-ink/45 hover:text-pana-ink/70'
-      }`}
-    >
-      {label}
-      {count !== undefined && (
-        <span className="text-pana-ink/40 ml-1.5 text-[11px] font-bold normal-case">
-          {count}
-        </span>
-      )}
-    </button>
   );
 }

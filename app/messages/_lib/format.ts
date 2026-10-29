@@ -19,6 +19,7 @@ import {
   isYesterday,
 } from 'date-fns';
 import type { SocialActorDisplay, SocialStatusDisplay } from '@/lib/interfaces';
+import type { ChatMessage } from '@/lib/chat';
 
 export function toDate(value: string | Date | null | undefined): Date | null {
   if (!value) return null;
@@ -164,7 +165,7 @@ export function attachmentLabel(
 }
 
 export function conversationSnippet(
-  message: SocialStatusDisplay,
+  message: ChatMessage,
   viewerActorId: string | null
 ): string {
   const mine = !!viewerActorId && message.actor.id === viewerActorId;
@@ -180,10 +181,8 @@ export function conversationSnippet(
  * separator, which would put the separator inside a bubble group and print the
  * group's single timestamp under the wrong date.
  */
-export function groupMessages(
-  messages: SocialStatusDisplay[]
-): SocialStatusDisplay[][] {
-  const groups: SocialStatusDisplay[][] = [];
+export function groupMessages<T extends ChatMessage>(messages: T[]): T[][] {
+  const groups: T[][] = [];
 
   for (const message of messages) {
     const current = groups[groups.length - 1];

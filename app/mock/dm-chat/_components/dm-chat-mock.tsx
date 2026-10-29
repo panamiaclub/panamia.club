@@ -1,313 +1,467 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Lock, Sparkles } from 'lucide-react';
-import type { MockSurface } from '../../_data/panaverse';
-import { SurfaceMasthead } from '../../_components/surface-masthead';
-import { ConversationList } from './conversation-list';
+import {
+  ArrowDownToLine,
+  Bell,
+  CircleAlert,
+  MessageCircle,
+  RotateCcw,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
+import { Dialog } from '@/components/ui/dialog';
+import { ConversationList, type MessageFolder } from './conversation-list';
 import { Transcript, RefusedComposer } from './transcript';
 import { Composer } from './composer';
+import { NewMessageDialog } from './new-message-dialog';
 import {
   MOCK_CHAT_THREADS,
   MOCK_CHAT_REQUESTS,
+  MOCK_CHAT_VIEWER,
   INCOMING_LIVE_MESSAGE,
+  type MockChatContact,
+  type MockChatDraft,
   type MockChatMessage,
+  type MockChatThread,
 } from '../_data/mock-dm-chat';
+import styles from '@/components/messages/workspace.module.css';
 
-/* The DM chat view, as decided.
- *
- * /mock/dms asked mail or chat and the answer was chat on the direct-status
- * substrate, recorded in docs/CHAT-ROADMAP.md. This route draws the thing
- * that answer implies, and it exists now rather than later because Path A in
- * that roadmap is blocked on it: live delivery has nothing to deliver into
- * until a conversation view exists. /updates is four tabs of lists.
- *
- * The toolbar has one switch and it is not a design variant. It drops the
- * socket, because the interesting question about a realtime UI is not how it
- * looks connected - everything looks fine connected - but whether it tells
- * the truth when it is not. Dropping the socket here is the review. */
-export function DmChatMock({ surfaces }: { surfaces: MockSurface[] }) {
-  const router = useRouter();
-  const current =
-    surfaces.find((surface) => surface.id === 'social') ?? surfaces[0];
+const EMPTY_DRAFT: MockChatDraft = { text: '', gif: null };
 
-  const [activeId, setActiveId] = useState(MOCK_CHAT_THREADS[0].id);
-  const [showRequests, setShowRequests] = useState(false);
-  const [socketDown, setSocketDown] = useState(false);
-  const [liveArrived, setLiveArrived] = useState(false);
-  const [sentByThread, setSentByThread] = useState<
-    Record<string, MockChatMessage[]>
-  >({});
+function initialThreads(): MockChatThread[] {
+  return [...MOCK_CHAT_THREADS, ...MOCK_CHAT_REQUESTS].map((thread) => ({
+    ...thread,
+    messages: [...thread.messages],
+  }));
+}
 
-  const pool = showRequests ? MOCK_CHAT_REQUESTS : MOCK_CHAT_THREADS;
-  const active = pool.find((thread) => thread.id === activeId) ?? pool[0];
+function clockTime(): string {
+  return new Date().toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
 
-  /* One inbound message, a few seconds in. The whole proposal is that a reply
-     lands without a refresh, and that claim cannot be reviewed from a static
-     render - a transcript that updates looks identical to one that does not
-     until something moves. It does not fire while the socket is down, which
-     is the point of having a socket at all. */
+export function DmChatMock() {
+  const [threads, setThreads] = useState(initialThreads);
+  const [folder, setFolder] = useState<MessageFolder>('messages');
+  const [activeId, setActiveId] = useState<string | null>('jdowns');
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [drafts, setDrafts] = useState<Record<string, MockChatDraft>>({});
+  const [newMessageOpen, setNewMessageOpen] = useState(false);
+  const [failNext, setFailNext] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
+  const [revision, setRevision] = useState(0);
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const activeRowRef = useRef<HTMLButtonElement>(null);
+  const conversationRef = useRef<HTMLElement>(null);
+  const focusComposerOnClose = useRef(false);
+
+  const active = threads.find((thread) => thread.id === activeId);
+  const requests = threads.filter((thread) => thread.gate === 'hold');
+  const visible = threads.filter((thread) =>
+    folder === 'requests' ? thread.gate === 'hold' : thread.gate !== 'hold'
+  );
+  const draft = activeId ? (drafts[activeId] ?? EMPTY_DRAFT) : EMPTY_DRAFT;
+  const isSending =
+    active?.messages.some((message) => message.delivery === 'sending') ?? false;
+
   useEffect(() => {
-    if (liveArrived || socketDown) return;
-    const timer = setTimeout(() => setLiveArrived(true), 3500);
-    return () => clearTimeout(timer);
-  }, [liveArrived, socketDown]);
-
-  const settle = useCallback((threadId: string, messageId: string) => {
-    setSentByThread((prev) => ({
-      ...prev,
-      [threadId]: (prev[threadId] ?? []).map((message) =>
-        message.id === messageId ? { ...message, delivery: 'sent' } : message
-      ),
-    }));
+    const pending = timers.current;
+    return () => {
+      pending.forEach(clearTimeout);
+      pending.clear();
+    };
   }, []);
 
-  /* Send is real so the delivery states can be read rather than described.
-     With the socket down the message is labelled queued and stays that way -
-     it is NOT optimistically ticked, because a tick that appears before the
-     row exists is the one lie this UI must not tell. */
-  const handleSend = useCallback(
-    (body: string) => {
-      const threadId = active.id;
-      const messageId = `sent-${Date.now()}`;
-      const message: MockChatMessage = {
-        id: messageId,
-        from: 'me',
-        body,
-        day: 'Today',
-        time: new Date().toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-        }),
-        delivery: socketDown ? 'queued' : 'sending',
-      };
-
-      setSentByThread((prev) => ({
-        ...prev,
-        [threadId]: [...(prev[threadId] ?? []), message],
-      }));
-
-      if (!socketDown) {
-        setTimeout(() => settle(threadId, messageId), 900);
-      }
-    },
-    [active.id, socketDown, settle]
-  );
-
-  /* Reconnecting flushes what was queued. The recovery path is the half of a
-     realtime feature that never gets designed, and it is the half a pana in a
-     parking garage actually experiences. */
-  useEffect(() => {
-    if (socketDown) return;
-    setSentByThread((prev) => {
-      let changed = false;
-      const next: Record<string, MockChatMessage[]> = {};
-      for (const [threadId, messages] of Object.entries(prev)) {
-        next[threadId] = messages.map((message) => {
-          if (message.delivery !== 'queued') return message;
-          changed = true;
-          return { ...message, delivery: 'sent' as const };
-        });
-      }
-      return changed ? next : prev;
+  const appendMessage = (threadId: string, message: MockChatMessage) => {
+    setThreads((current) => {
+      const thread = current.find((entry) => entry.id === threadId);
+      if (!thread) return current;
+      return [
+        {
+          ...thread,
+          lastActive: 'Now',
+          messages: [...thread.messages, message],
+        },
+        ...current.filter((entry) => entry.id !== threadId),
+      ];
     });
-  }, [socketDown]);
+  };
 
-  const { messages, animatedIds } = useMemo(() => {
-    const live =
-      liveArrived && active.id === 'jdowns' ? [INCOMING_LIVE_MESSAGE] : [];
-    const sent = sentByThread[active.id] ?? [];
-    return {
-      messages: [...active.messages, ...live, ...sent],
-      animatedIds: [
-        ...live.map((message) => message.id),
-        ...sent.map((message) => message.id),
-      ],
+  const settleMessage = (
+    threadId: string,
+    messageId: string,
+    shouldFail: boolean
+  ) => {
+    const timer = setTimeout(() => {
+      timers.current.delete(messageId);
+      setThreads((current) =>
+        current.map((thread) =>
+          thread.id !== threadId
+            ? thread
+            : {
+                ...thread,
+                messages: thread.messages.map((message) =>
+                  message.id === messageId
+                    ? { ...message, delivery: shouldFail ? 'failed' : 'sent' }
+                    : message
+                ),
+              }
+        )
+      );
+      setAnnouncement(
+        shouldFail
+          ? 'Message not sent. Your message is kept in the conversation. Choose Retry to send it again.'
+          : 'Sample message sent.'
+      );
+    }, 900);
+    timers.current.set(messageId, timer);
+  };
+
+  const handleSend = () => {
+    if (
+      !active ||
+      active.gate !== 'allow' ||
+      isSending ||
+      (!draft.text.trim() && !draft.gif)
+    )
+      return;
+    const message: MockChatMessage = {
+      id: crypto.randomUUID(),
+      from: 'me',
+      body: draft.text.trim(),
+      ...(draft.gif ? { gif: draft.gif } : {}),
+      day: 'Today',
+      time: clockTime(),
+      expiresIn: '30 days',
+      delivery: 'sending',
     };
-  }, [active, liveArrived, sentByThread]);
+    const shouldFail = failNext;
+    setFailNext(false);
+    setDrafts((current) => ({ ...current, [active.id]: EMPTY_DRAFT }));
+    appendMessage(active.id, message);
+    settleMessage(active.id, message.id, shouldFail);
+  };
+
+  const handleRetry = (messageId: string) => {
+    if (!active) return;
+    const shouldFail = failNext;
+    setFailNext(false);
+    setThreads((current) =>
+      current.map((thread) =>
+        thread.id !== active.id
+          ? thread
+          : {
+              ...thread,
+              messages: thread.messages.map((message) =>
+                message.id === messageId
+                  ? { ...message, delivery: 'sending' }
+                  : message
+              ),
+            }
+      )
+    );
+    settleMessage(active.id, messageId, shouldFail);
+  };
+
+  const receiveMessage = () => {
+    if (!active || active.gate !== 'allow') return;
+    appendMessage(active.id, {
+      ...INCOMING_LIVE_MESSAGE,
+      id: crypto.randomUUID(),
+      body:
+        active.id === 'jdowns'
+          ? INCOMING_LIVE_MESSAGE.body
+          : 'Thanks, that sounds good! A little update from the other side.',
+      time: clockTime(),
+      expiresIn: '30 days',
+    });
+    setAnnouncement(`A sample message arrived from ${active.person.name}.`);
+  };
+
+  const changeFolder = (next: MessageFolder) => {
+    setFolder(next);
+    setActiveId(
+      threads.find((thread) =>
+        next === 'requests' ? thread.gate === 'hold' : thread.gate !== 'hold'
+      )?.id ?? null
+    );
+    setDetailOpen(false);
+  };
+
+  const choosePerson = (contact: MockChatContact) => {
+    const existing = threads.find((thread) => thread.id === contact.id);
+    if (!existing) {
+      setThreads((current) => [
+        {
+          id: contact.id,
+          person: contact.person,
+          gate: 'allow',
+          messages: [],
+          lastActive: 'New',
+          unreadCount: 0,
+        },
+        ...current,
+      ]);
+    }
+    setFolder(existing?.gate === 'hold' ? 'requests' : 'messages');
+    setActiveId(contact.id);
+    setDetailOpen(true);
+    setRevision((value) => value + 1);
+    focusComposerOnClose.current = true;
+    setNewMessageOpen(false);
+  };
+
+  const acceptRequest = () => {
+    if (!active) return;
+    setThreads((current) =>
+      current.map((thread) =>
+        thread.id === active.id ? { ...thread, gate: 'allow' } : thread
+      )
+    );
+    setFolder('messages');
+    setAnnouncement(
+      `Request from ${active.person.name} accepted in this preview.`
+    );
+  };
+
+  const deleteRequest = () => {
+    if (!active) return;
+    setThreads((current) =>
+      current.filter((thread) => thread.id !== active.id)
+    );
+    setActiveId(requests.find((thread) => thread.id !== active.id)?.id ?? null);
+    setDetailOpen(false);
+    setAnnouncement('Message request deleted in this preview.');
+  };
+
+  const reset = () => {
+    timers.current.forEach(clearTimeout);
+    timers.current.clear();
+    setThreads(initialThreads());
+    setFolder('messages');
+    setActiveId('jdowns');
+    setDetailOpen(false);
+    setDrafts({});
+    setFailNext(false);
+    setAnnouncement('Preview reset.');
+    setRevision((value) => value + 1);
+  };
 
   return (
-    <main className="surface-cream min-h-screen pb-20">
-      <div className="mock-toolbar">
-        <span className="mock-toolbar-badge">
-          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          Mock
-        </span>
-
-        <span className="mock-toolbar-host">
-          <Lock className="h-3 w-3 flex-none" aria-hidden="true" />
-          {current.hostname}
-        </span>
-
-        <div className="mock-switch ml-auto">
-          <button
-            type="button"
-            data-active={!socketDown}
-            onClick={() => setSocketDown(false)}
-          >
-            Socket up
-          </button>
-          <button
-            type="button"
-            data-active={socketDown}
-            onClick={() => setSocketDown(true)}
-          >
-            Socket down
-          </button>
-        </div>
-
-        <Link href="/mock/dms" className="mock-toolbar-link">
-          Mail vs chat
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
-      </div>
-
-      <SurfaceMasthead
-        surfaces={surfaces}
-        current={current}
-        onSelect={(id) => {
-          if (id !== current.id) router.push('/mock/panaverse');
-        }}
-        sticky
-        contained
-      />
-
-      <div className="container mx-auto max-w-6xl px-4 pt-8">
-        <header className="mb-6">
-          <h1 className="text-pana-ink text-3xl font-black tracking-tight">
-            Messages
-          </h1>
-          <p className="text-pana-ink/65 mt-1 max-w-3xl text-sm leading-snug font-medium">
-            The conversation view Pana Social does not have yet. Chat shape,
-            live delivery, running on the direct statuses we already store — so
-            it still federates, still carries voice memos, and still answers to
-            the DM gate.
-          </p>
-        </header>
-
-        <div className="profile-card overflow-hidden">
-          <div className="grid lg:grid-cols-[19rem_minmax(0,1fr)]">
-            <ConversationList
-              threads={MOCK_CHAT_THREADS}
-              requests={MOCK_CHAT_REQUESTS}
-              activeId={active.id}
-              showRequests={showRequests}
-              onSelect={setActiveId}
-              onToggleRequests={() => {
-                const next = !showRequests;
-                setShowRequests(next);
-                setActiveId(
-                  next ? MOCK_CHAT_REQUESTS[0].id : MOCK_CHAT_THREADS[0].id
-                );
-              }}
-            />
-
-            <div className="flex min-w-0 flex-col">
-              <Transcript
-                thread={active}
-                messages={messages}
-                animatedIds={animatedIds}
-                socketDown={socketDown}
-              />
-              {active.gate === 'refuse' ? (
-                <RefusedComposer />
-              ) : (
-                <Composer
-                  onSend={handleSend}
-                  socketDown={socketDown}
-                  heldThread={active.gate === 'hold'}
-                />
-              )}
-            </div>
+    <Dialog open={newMessageOpen} onOpenChange={setNewMessageOpen}>
+      <div className={styles.page}>
+        <div className={styles.toolbar} aria-label="Design preview controls">
+          <span className="flex flex-none items-center gap-1.5 font-extrabold">
+            <Sparkles className="h-3 w-3" aria-hidden="true" />
+            <span className="hidden sm:inline">Design </span>preview
+          </span>
+          <span className="text-pana-ink/60 hidden lg:inline">
+            Try the conversation, not just the screenshot.
+          </span>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={receiveMessage}
+              disabled={active?.gate !== 'allow'}
+              aria-label="Receive a sample message"
+            >
+              <ArrowDownToLine className="h-3 w-3" aria-hidden="true" />
+              <span className="hidden sm:inline">Receive message</span>
+              <span className="sm:hidden">Receive</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFailNext((value) => !value)}
+              aria-pressed={failNext}
+            >
+              <CircleAlert className="h-3 w-3" aria-hidden="true" />
+              Fail next send
+            </button>
+            <button type="button" onClick={reset} aria-label="Reset preview">
+              <RotateCcw className="h-3 w-3" aria-hidden="true" />
+              <span className="hidden sm:inline">Reset</span>
+            </button>
           </div>
         </div>
 
-        <DesignNotes />
-
-        <p className="text-pana-ink/45 mt-8 text-center text-xs font-bold">
-          /mock/dm-chat — design fixture, not a real inbox.
-        </p>
-      </div>
-    </main>
-  );
-}
-
-/* What this design commits to and what it still owes, written next to the
-   thing rather than in a doc nobody opens during a review.
- *
-   The second column is the important one. /mock/dms could end with a tidy
-   comparison because it was choosing; this route has already chosen, so the
-   only honest thing left to render is the bill. */
-function DesignNotes() {
-  return (
-    <section className="mt-10 grid gap-4 md:grid-cols-2">
-      <NoteCard
-        title="What it commits to"
-        tone="keep"
-        items={[
-          'Live delivery — a reply lands without a refresh. One socket, one message type.',
-          'The substrate stays. Direct statuses, recipientTo, inReplyToId: nothing new to store for DMs.',
-          'It still federates. The Mastodon thread works because this is how Mastodon DMs already work.',
-          'Voice memos keep working, since they already send as direct statuses.',
-          'dm-gate keeps deciding. allow, hold and refuse are all rendered, including the identical refusal string.',
-          'Block filtering, moderation and the request flow are inherited rather than rebuilt.',
-        ]}
-      />
-      <NoteCard
-        title="What it still owes"
-        tone="owe"
-        items={[
-          'Expiry still erodes a thread. Thirty days replaced seven, which was the urgent part, but the stamp is per row — a conversation running longer than a month still loses its opening while it is live.',
-          'No presence, no typing, no read receipts. Deliberate — they are the expensive half of realtime — but it is a gap people will name.',
-          'Reconnect behaviour has to be real. Queued-offline is drawn here; it still has to be built.',
-          'Remote threads cannot be live inbound. A federated reply arrives when their server sends it.',
-          'Group and event rooms are a separate store (chat_rooms, chat_messages) behind the same UI.',
-          'Retiring /updates means moving @-mentions and Pana Updates somewhere, since only two of its four tabs are DMs.',
-        ]}
-      />
-    </section>
-  );
-}
-
-function NoteCard({
-  title,
-  tone,
-  items,
-}: {
-  title: string;
-  tone: 'keep' | 'owe';
-  items: string[];
-}) {
-  const keep = tone === 'keep';
-  return (
-    <div
-      className={`rounded-[1.125rem] border-2 bg-white p-5 ${
-        keep ? 'border-pana-indigo/35' : 'border-pana-ink/14'
-      }`}
-    >
-      <h2 className="text-pana-ink text-[13px] font-extrabold tracking-[0.1em] uppercase">
-        {title}
-      </h2>
-      <ul className="mt-3 space-y-1.5">
-        {items.map((item) => (
-          <li
-            key={item}
-            className="text-pana-ink/80 flex gap-2 text-[13px] leading-snug font-medium"
+        <header className={styles.masthead}>
+          <Link href="/mock/compact-feed" aria-label="Pana Social home">
+            <Image
+              src="/logos/pana_social_long_orange.png"
+              alt="Pana Social"
+              width={190}
+              height={52}
+              className="h-7 w-auto sm:h-8"
+            />
+          </Link>
+          <nav
+            className="hidden items-center gap-1 sm:flex"
+            aria-label="Preview navigation"
           >
-            <span
-              aria-hidden="true"
-              className={`flex-none font-black ${
-                keep ? 'text-pana-indigo' : 'text-pana-red'
-              }`}
+            <Link
+              href="/mock/compact-feed"
+              className="text-pana-ink/60 rounded-lg px-3 py-2 text-xs font-bold"
             >
-              {keep ? '+' : '−'}
-            </span>
-            {item}
-          </li>
-        ))}
-      </ul>
-    </div>
+              Community
+            </Link>
+            <Link
+              href="/mock/dm-chat"
+              aria-current="page"
+              className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-extrabold"
+            >
+              <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+              Messages
+            </Link>
+          </nav>
+          <div className="ml-auto flex items-center gap-2 sm:gap-4">
+            <Link
+              href="/mock/community-notifications"
+              aria-label="Example notifications"
+              className={styles.iconButton}
+            >
+              <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
+            </Link>
+            <Link
+              href="/mock/profile"
+              aria-label="Example profile"
+              className="flex items-center gap-2"
+            >
+              <Image
+                src={MOCK_CHAT_VIEWER.avatar}
+                alt=""
+                width={34}
+                height={34}
+                className="h-8.5 w-8.5 rounded-full object-cover"
+              />
+              <span className="text-pana-ink/70 hidden text-xs font-bold lg:inline">
+                Claribel
+              </span>
+            </Link>
+          </div>
+        </header>
+
+        <main className={styles.body}>
+          <div className={`profile-card ${styles.workspace}`}>
+            <ConversationList
+              key={revision}
+              threads={visible}
+              folder={folder}
+              activeId={activeId}
+              activeRowRef={activeRowRef}
+              drafts={drafts}
+              requestCount={requests.length}
+              detailOpen={detailOpen}
+              onSelect={(id) => {
+                setActiveId(id);
+                setDetailOpen(true);
+                requestAnimationFrame(() =>
+                  conversationRef.current?.focus({ preventScroll: true })
+                );
+              }}
+              onFolderChange={changeFolder}
+            />
+            <section
+              ref={conversationRef}
+              tabIndex={-1}
+              className={styles.conversation}
+              data-mobile-hidden={!detailOpen}
+              aria-label="Open conversation"
+            >
+              {active ? (
+                <>
+                  <Transcript
+                    key={`transcript-${revision}-${active.id}`}
+                    thread={active}
+                    detailOpen={detailOpen}
+                    onBack={() => {
+                      setDetailOpen(false);
+                      requestAnimationFrame(() =>
+                        activeRowRef.current?.focus()
+                      );
+                    }}
+                    onAccept={acceptRequest}
+                    onDelete={deleteRequest}
+                    onRetry={handleRetry}
+                  />
+                  {active.gate === 'refuse' ? (
+                    <RefusedComposer />
+                  ) : active.gate === 'hold' ? (
+                    <footer className="border-pana-ink/8 text-pana-ink/60 flex flex-none items-center justify-center gap-2 border-t px-5 py-5 text-xs">
+                      <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                      Accept this request to reply.
+                    </footer>
+                  ) : (
+                    <Composer
+                      key={`composer-${revision}-${active.id}`}
+                      draft={draft}
+                      onChange={(next) =>
+                        setDrafts((current) => ({
+                          ...current,
+                          [active.id]: next,
+                        }))
+                      }
+                      onSend={handleSend}
+                      isSending={isSending}
+                      recipientName={active.person.name}
+                      inputRef={inputRef}
+                    />
+                  )}
+                </>
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
+                  <span className="bg-pana-butter-2 grid h-16 w-16 place-items-center rounded-3xl">
+                    <MessageCircle
+                      className="text-pana-indigo h-7 w-7"
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <h2 className="mt-2 text-xl font-black tracking-tight">
+                    {folder === 'requests'
+                      ? 'All caught up.'
+                      : 'Good conversations live here.'}
+                  </h2>
+                  <p className="text-pana-ink/60 max-w-64 text-sm leading-relaxed">
+                    {folder === 'requests'
+                      ? 'No message requests waiting for you.'
+                      : 'Choose a conversation or start something new with a pana.'}
+                  </p>
+                </div>
+              )}
+            </section>
+          </div>
+        </main>
+
+        <p className="text-pana-ink/55 flex-none px-3 py-2.5 text-center text-[9px] font-medium">
+          /mock/dm-chat · Sample conversations only. Nothing is sent or saved.
+        </p>
+        <span role="status" className="sr-only">
+          {announcement}
+        </span>
+      </div>
+
+      {newMessageOpen && (
+        <NewMessageDialog
+          threads={threads}
+          onChoose={choosePerson}
+          onCloseAutoFocus={(event) => {
+            if (focusComposerOnClose.current) {
+              event.preventDefault();
+              focusComposerOnClose.current = false;
+              requestAnimationFrame(() =>
+                (inputRef.current ?? conversationRef.current)?.focus({
+                  preventScroll: true,
+                })
+              );
+            }
+          }}
+        />
+      )}
+    </Dialog>
   );
 }

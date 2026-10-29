@@ -64,25 +64,15 @@
  *   Server → Client:
  *     { type: "ready" }
  *     { type: "dm", conversationActorId: string | null, statusId: string, at: number }
+ *     { type: "group", groupId: string, kind: "message" | "membership", messageId?: string, at: number }
  *   Client → Server:
  *     "ping"  → "pong", answered by the runtime without waking this object
  */
 
-/** What a mailbox broadcast tells the client. Deliberately not the message. */
-interface DmNotification {
-  /**
-   * The *other* party in the thread this belongs to, from the perspective of
-   * the actor whose mailbox this is — so the client knows which conversation
-   * to refetch without being told who it is talking to.
-   *
-   * Computed per mailbox by the sender, because the answer differs by
-   * recipient: the message I send you belongs to your thread with *me* and to
-   * my thread with *you*. Null for a multi-recipient DM, which has no 1:1
-   * thread to name; the client falls back to refreshing the list.
-   */
-  conversationActorId: string | null;
-  statusId: string;
-  at: number;
+interface MailboxState {
+  setWebSocketAutoResponse(pair: WebSocketRequestResponsePair): void;
+  acceptWebSocket(socket: WebSocket): void;
+  getWebSockets(): { send(message: string): void }[];
 }
 
 /** Pinned to each socket at accept time, readable after a wake. */
@@ -91,9 +81,9 @@ interface SocketMeta {
 }
 
 export class DmStream {
-  private state: DurableObjectState;
+  private state: MailboxState;
 
-  constructor(state: DurableObjectState, _env: unknown) {
+  constructor(state: MailboxState, _env: unknown) {
     this.state = state;
 
     // Answer keepalives in the runtime rather than in this class. Browser JS
@@ -151,9 +141,9 @@ export class DmStream {
    * no socket architecture solves — but this object is the thing that knows.
    */
   private async handleNotify(request: Request): Promise<Response> {
-    let payload: DmNotification;
+    let payload: unknown;
     try {
-      payload = (await request.json()) as DmNotification;
+      payload = await request.json();
     } catch {
       return Response.json(
         { delivered: 0, error: 'Invalid JSON' },
@@ -165,9 +155,9 @@ export class DmStream {
 
     // A notification that cannot name a status is meaningless — the client's
     // only job on receipt is to refetch, and it needs to know what arrived.
-    if (!payload?.statusId) {
+    if (!payload || typeof payload !== 'object') {
       return Response.json(
-        { delivered: 0, error: 'Missing statusId' },
+        { delivered: 0, error: 'Invalid notification' },
         { status: 400 }
       );
     }
@@ -175,12 +165,49 @@ export class DmStream {
     // Rebuilt field by field rather than spread, so the wire format is fixed
     // here and cannot be widened — or have `type` overwritten — by whatever the
     // caller happened to post.
-    const message = JSON.stringify({
-      type: 'dm',
-      conversationActorId: payload.conversationActorId ?? null,
-      statusId: payload.statusId,
-      at: payload.at ?? Date.now(),
-    });
+    const value = payload as Record<string, unknown>;
+    const at =
+      typeof value.at === 'number' && Number.isFinite(value.at)
+        ? value.at
+        : Date.now();
+    let message: string;
+    if (value.type === 'group') {
+      if (
+        typeof value.groupId !== 'string' ||
+        !value.groupId ||
+        (value.kind !== 'membership' && value.kind !== 'message') ||
+        (value.kind === 'message' &&
+          (typeof value.messageId !== 'string' || !value.messageId))
+      ) {
+        return Response.json(
+          { delivered: 0, error: 'Invalid group notification' },
+          { status: 400 }
+        );
+      }
+      message = JSON.stringify({
+        type: 'group',
+        groupId: value.groupId,
+        kind: value.kind,
+        at,
+        ...(value.kind === 'message' ? { messageId: value.messageId } : {}),
+      });
+    } else {
+      if (typeof value.statusId !== 'string' || !value.statusId) {
+        return Response.json(
+          { delivered: 0, error: 'Missing statusId' },
+          { status: 400 }
+        );
+      }
+      message = JSON.stringify({
+        type: 'dm',
+        conversationActorId:
+          typeof value.conversationActorId === 'string'
+            ? value.conversationActorId
+            : null,
+        statusId: value.statusId,
+        at,
+      });
+    }
     const sockets = this.state.getWebSockets();
 
     let delivered = 0;

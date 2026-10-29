@@ -141,7 +141,7 @@ export const SURFACES: readonly PanaverseSurface[] = [
     // scope was asked for, so it never renders social chrome and claiming it
     // here would only be stale documentation. Searching from this surface
     // uses the category selected in components/panaverse/SocialSearch.tsx.
-    paths: ['/s', '/p', '/g', '/groups', '/timeline', '/inbox'],
+    paths: ['/s', '/p', '/g', '/groups', '/timeline', '/inbox', '/messages'],
   },
   {
     id: 'events',
@@ -175,7 +175,7 @@ export const SURFACES: readonly PanaverseSurface[] = [
     tagline: 'Headquarters for the Community Connectors programme.',
     subdomain: 'connectors',
     rootPath: '/connectors',
-    // One prefix, unlike social's six. Connectors is a new surface with no
+    // One prefix, unlike Social's multiple routes. Connectors is a new surface with no
     // history, so everything it owns was built under `/connectors` from the
     // start and there are no older top-level routes to keep claiming. The
     // rooms inside it -- `/connectors/hq`, `/connectors/join` -- are covered

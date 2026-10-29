@@ -1,7 +1,9 @@
 # Chat — Design & Roadmap
 
-> **STATUS**: **Proposal. Nothing here is implemented.** No migration, table, route, Durable Object,
-> or component described below exists yet.
+> **STATUS**: **DM and native group chat are implemented in the repository.** DMs use the existing
+> direct-status store. Groups use `social_group_chat_messages` and existing active memberships.
+> Both use the authenticated actor mailbox at `/ws/dm`. Apply migration `0074_social_group_chat`
+> before deploying group chat. Event chat and the generic room/socket design below remain proposals.
 >
 > **Decided (2026-10), by the product owner:** chat replaces the mail experience, and it is scoped
 > to **three** room types — direct messages between panas, rooms inside **groups**, and rooms inside
@@ -21,11 +23,13 @@
 > arguing for a cleaner teardown.
 >
 > This material was extracted from `docs/GROUPS-ROADMAP.md`, where it was originally phase 5. Groups
-> ship without it.
+> originally shipped without it; native group chat is now described below.
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Current Messages workspace](#current-messages-workspace)
+- [Current group chats](#current-group-chats)
 - [The three scopes](#the-three-scopes)
 - [What replacing mail costs](#what-replacing-mail-costs)
 - [DMs expire after thirty days](#dms-expire-after-thirty-days)
@@ -52,12 +56,13 @@ that decides most of what follows was stated by the product owner:
 > _"I don't want users to leave the pana system, so I'd rather build the chat and groups in our
 > site."_
 
-Today there is **no chat UI anywhere in this repo.** The closest thing that ships is
-`/r/groups`, which hands panas a deeplink to a third-party Nostr client —
+Direct-message chat lives at **`/messages`**, with HTTP reads/writes and live invalidations over
+`/ws/dm`. Group and event rooms are not implemented. Separately, `/r/groups` still hands panas a
+deeplink to a third-party Nostr client —
 `components/relay/ImportInstructions.tsx:7` hardcodes
 `https://web.nostrord.com/?relay=relay.pana.social&group=panamia-test`. Nostrord, Amethyst, and
 0xchat are where the talking currently happens, which is precisely the outcome the constraint rules
-out.
+out for group and event conversations.
 
 ### Goals
 
@@ -75,6 +80,85 @@ out.
   [Storage](#storage--one-transport-two-stores)
 - Replacing `/r/groups`. Relay groups stay as a separate bring-your-own-client feature for panas who
   want censorship-resistant Nostr rooms
+
+---
+
+## Current Messages workspace
+
+The approved `/mock/dm-chat` layout is applied to `/messages`, sharing
+`components/messages/workspace.module.css` but no mock data or simulated send controls.
+Messages belongs to Pana Social's route registry and retains the real masthead and account menu.
+The workspace fills the remaining viewport, with legal links kept below it.
+The chat uses a warm, lightly textured cream/butter canvas, distinct sender bubbles, shared
+photo/initial avatars, clearer timestamps, and 44px primary touch controls. The desktop and
+mobile workspace avoid a redundant outer scrollbar; only their content panes scroll.
+The GIF picker stays inside the visible conversation, including when a multiline draft and
+an existing attachment leave too little room above the composer.
+
+- Desktop conversation and transcript panes scroll independently; the composer stays in view.
+  Mobile uses a list/detail flow with Back navigation, including during loading and errors.
+- Conversation filtering is local. **New message** searches the existing actor API by name or
+  handle, excludes the viewer, and opens the same gated conversation endpoint as an existing chat.
+- Text and mirrored-GIF drafts are held per conversation in component memory. Reloading, unmounting
+  the workspace, signing out, or switching the active profile clears them; browser storage is not used.
+- Each submitted message retains its recipient, text, and attachments while sending or failed.
+  **Retry** reuses that local bubble. A server acknowledgement is matched to its refetched row by
+  status ID, never by message text. No message is labelled queued because a socket disconnected.
+- Reading older messages is not interrupted by incoming messages. A local jump-to-latest control
+  reports messages arriving while that thread is open; this is not persisted unread tracking.
+- Requests require explicit acceptance before replying, including requests whose messages have
+  expired. Accept/Delete errors remain visible. Refusals keep the shared, deliberately ambiguous
+  wording. Expiry notices, federation notes, safe HTML rendering, GIPHY attribution, and existing
+  attachment/voice players are retained.
+
+The DM API, consent gate, 30-day visibility window, and socket/polling fallback are unchanged.
+Event rooms, floating chat, presence, read receipts, and typing indicators are not added.
+Retry is an explicit new HTTP attempt, not a server-side idempotency guarantee: a lost
+acknowledgement after persistence can still result in a duplicate message.
+
+---
+
+## Current group chats
+
+Each native group has one members-only chat, available from its **Chat** navigation at
+`/g/[handle]/chat` and from the **Groups** folder in `/messages`. The group page links back to
+Messages with `/messages?group=[handle]`. Text, mirrored GIFs, sender identities, failed-send
+recovery, older-message pagination, and the approved desktop/mobile presentation are shared
+with the messaging workspace. Drafts remain in component memory, not browser storage.
+
+- `social_group_members.status = 'active'` is the authorization for **both** public and private
+  groups. Public group posts do not make group chat public. Pending, banned, removed, and
+  signed-out viewers cannot read or send. The active profile's actor is resolved server-side.
+- The group's ID is the room key. No `chat_rooms` provisioning row or parallel membership table
+  is needed for exactly one room per group. Messages never become `socialStatuses`, enter feeds
+  or discovery activity counts, or federate.
+- The product-owner decision is a **30-day visibility window**, matching DMs.
+  `GROUP_CHAT_EXPIRY_DAYS = 30`; expiry is checked on room reads and sidebar previews.
+  It is not a permanent-erasure policy, and the story purge does not silently delete chat.
+- The author, an active moderator, or an active admin can remove a message for everyone.
+  Removal is a soft delete with `deletedAt` and `deletedByActorId`; ordinary reads omit it.
+  Group deletion cascades to its chat and includes chat counts in the confirmation preview.
+  Author deletion cascades to their messages.
+- Group writes use `(group_id, actor_id, client_id)` uniqueness. Retry reuses the same nonce,
+  so a lost acknowledgement cannot create a second group message. A different payload cannot
+  reuse that nonce, and retry cannot revive a moderated or expired message. Other members are
+  not given the sender's nonce.
+- Group and membership invalidations contain IDs and timestamps only, never text or media.
+  Recipients are current active members, read after commit. Membership changes additionally
+  invalidate the affected member, including on removal, leave, role change, and group deletion.
+  The existing authenticated APIs remain authoritative; a cached room is hidden on 401/403/404.
+- Fan-out uses at most eight concurrent mailbox requests with the existing two-second deadline.
+  No new room-member cap is imposed. Reconnect, focus refresh, and 15-second polling remain
+  the fallback. There is one actor mailbox connection, not a connection per group.
+
+The endpoints are `GET /api/social/messages/groups`,
+`GET|POST /api/social/groups/[handle]/chat`, and
+`DELETE /api/social/groups/[handle]/chat/[messageId]`.
+Reads and writes recheck membership in the storage layer; chat operations lock the parent and
+membership through the transaction. Responses are private/no-store. The table enables RLS with
+no direct-client policies, preventing a Supabase API grant from bypassing the application gate.
+The isolated PGlite suite in `tests-db/group-chat.test.ts` exercises the migration, SQL, HTTP
+handlers, membership lifecycle, moderation, expiry, retry uniqueness, and RLS without secrets.
 
 ---
 
@@ -184,8 +268,8 @@ of that backfill are deliberate and worth keeping if it is ever revisited:
 ### What the UI still owes
 
 The number changed; the obligation did not. A transcript that drops messages without saying so is
-still the one option not available. `/mock/dm-chat` renders the remaining time per message, and
-whatever ships has to do the same or better.
+still the one option not available. `/messages` renders the remaining time per message and keeps
+the 30-day window visible in the sidebar and conversation details.
 
 ---
 
@@ -196,9 +280,10 @@ This is the central design call, and it follows directly from the table above.
 **DM rooms read and write `socialStatuses` (direct).** They keep federation, the consent gate, voice
 memos, block filtering, moderation, and the existing tests — none of which have to be touched.
 
-**Group and event rooms read and write a new `chat_messages` table.** Neither has anything to
-inherit: there is no federated group-chat story, no event-chat substrate, and no existing consent
-model for either. They are local-only by design, which the [Non-Goals](#non-goals) already assume.
+**Groups read and write `social_group_chat_messages`.** Their existing membership is the gate;
+no private chat row is mirrored into the public/federated status store. The generic
+`chat_rooms` / `chat_messages` proposal later in this document remains a possible design for
+event rooms, not the schema native groups currently use.
 
 ### Why not one store for all three
 
@@ -221,7 +306,13 @@ pana there is one Messages surface, which is the entire point of the product cha
 
 ## The authorization gate
 
-One function, three branches, each delegating to the table that already owns the answer. Follows the
+The implemented group gate is in `lib/server/group-chat.ts`; both public and private groups
+require an active membership. HTTP identity is resolved in `group-chat-request.ts`.
+The shared actor socket carries only invalidations; authorization is rechecked when actual data
+is fetched. A socket connection never grants membership in a group.
+
+The following unified-room gate is the **remaining event-room proposal**, not a second group
+endpoint. It delegates to the table that already owns the answer and follows the
 rule in [Do Not Copy The Signaling Auth Model](#do-not-copy-the-signaling-auth-model): identity is
 resolved in the Worker and set on the inner `stub.fetch`, and the DO ignores any identity in the
 payload.
@@ -402,8 +493,8 @@ later; a cold DM thread does not.
 One Durable Object **per recipient actor**, not per thread. A thread DO would need the member to
 have the thread open to receive anything, which is the one case where they do not need the socket.
 An actor-scoped DO is a mailbox: the member holds one connection, and anything addressed to them
-arrives on it regardless of which thread is on screen — which is also what makes an unread badge
-live, for free.
+arrives on it regardless of which thread is on screen. This refreshes conversations and Requests;
+it does not create read state or an unread badge.
 
 ```
 POST /api/social/statuses (visibility: 'direct')
@@ -551,16 +642,17 @@ where a pana cannot reach a conversation.
 
 ### How this relates to group and event rooms
 
-Path A is the DM half. Group and event rooms use the same transport pattern but a different DO
-scope — a **room** DO rather than an actor mailbox — because their membership is a set that the
-server already knows, and a room broadcast is O(members) once rather than N mailbox hops.
+The implemented group path reuses the actor mailbox rather than introducing a second socket
+or a membership cache in a room DO. The server reads current recipients after commit and emits
+metadata-only `group` frames. This also refreshes the group list while another conversation is
+open. The future event-room design may still use room-scoped fan-out if its workload warrants it.
 
-|           | DM                        | Group / event         |
-| --------- | ------------------------- | --------------------- |
-| DO scope  | per recipient actor       | per room              |
-| DO stores | nothing                   | recent history buffer |
-| Store     | `socialStatuses` (direct) | `chat_messages`       |
-| Federates | yes                       | no                    |
+|           | DM                        | Native group chat            |
+| --------- | ------------------------- | ---------------------------- |
+| DO scope  | per recipient actor       | same actor mailbox           |
+| DO stores | nothing                   | nothing                      |
+| Store     | `socialStatuses` (direct) | `social_group_chat_messages` |
+| Federates | yes                       | no                           |
 
 Neither blocks the other, and nothing in the DM path is thrown away or migrated when rooms land,
 because the DM DO never owns any data.
@@ -644,6 +736,10 @@ a chat room. Chat history survives an empty room.
 ---
 
 ## Schema
+
+**Historical generic-room proposal.** Native groups now use the smaller, group-keyed schema in
+`drizzle/0074_social_group_chat.sql` and `lib/schema/index.ts`. The proposal below is retained for
+event-room planning; do not create a second group membership or message store alongside it.
 
 **Group and event rooms only.** DM rooms do not appear here — they read and write `socialStatuses`
 with `visibility: 'direct'`, per [Storage](#storage--one-transport-two-stores).
@@ -787,7 +883,9 @@ surfaces. Neither blocks the other.
 > delivery~~ → **retire the `/updates` mail tabs** ← next. The first two have shipped; the tabs
 > retire only once the view reaches parity with them.
 
-The steps below are the **group and event rooms** track.
+The native group track is implemented: one room per group, storage-layer membership gates,
+actor-mailbox invalidations, persistence, moderation, and both UI entry points.
+The generic-room steps below remain planning material for **event rooms**.
 
 ### Step 1 — Room provisioning and the gate
 
@@ -795,7 +893,7 @@ The scope question is answered, so this replaces it. Create `chat_rooms` / `chat
 write the three-branch gate **first** — before any transport — because it is the thing every other
 step depends on being right, and it is testable without a socket.
 
-- Group rooms: auto-provision on group creation, or lazily on first open
+- Group rooms are already keyed directly by the existing group ID; no provisioning step is required
 - Event rooms: provisioned for every event; the gate excludes attendees without accounts per
   [signed-in attendees only](#event-rooms-admit-signed-in-attendees-only)
 - No chat tab until a room has a floor of signed-in attendees — an absent tab reads better than an
@@ -861,8 +959,9 @@ excludes stories.
 
 ### Member cap per room
 
-`SignalingRoom` caps at `MAX_PARTICIPANTS = 3`. A chat room needs a real number, and the DO
-broadcast loop is O(members) per message.
+Native group chat uses existing group membership without a new participant cap. Its mailbox
+fan-out is concurrency- and time-bounded, with polling as a fallback. Event-room participant
+limits remain an open design question; `SignalingRoom`'s three-person cap is not inherited.
 
 ### Other open questions
 

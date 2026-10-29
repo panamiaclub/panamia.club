@@ -66,6 +66,20 @@ even for the author or a named recipient.
 The separate `Status Visibility` workflow runs only this suite on fork PRs
 without secrets or the Playwright job's database setup.
 
+### Native group chat (no secrets)
+
+```
+yarn node --experimental-test-module-mocks --import tsx --test tests-db/group-chat.test.ts
+```
+
+This suite also runs in `test:db:visibility`. It applies the real group and chat migrations
+in isolated PGlite, then exercises the production storage and HTTP handlers. Both public
+and private group chats require active membership; pending, banned, removed, and anonymous
+viewers cannot read or send. It covers the 30-day visibility filter, bounded keyset pagination,
+block/mute filtering, nonce-based idempotency, mirrored-media metadata, moderation, actual
+leave/remove/rejoin/demotion paths, author/group deletion cascades, private response headers,
+and RLS denying direct-client reads. No connection string or external database is used.
+
 ### Existing database-backed suites
 
 ```

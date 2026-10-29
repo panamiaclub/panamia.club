@@ -1,6 +1,6 @@
 # Design Mocks (`/mock/*`)
 
-Static, hardcoded design mocks used to agree on a surface before it is built
+Fixture-backed design mocks used to agree on a surface before it is built
 against real data. Nothing here queries the database, and every route is
 `noindex` so the mocks never reach search results.
 
@@ -9,24 +9,24 @@ design, written in the real design system so the argument is honest: if a
 layout only works with invented spacing or colours that are not in
 `app/globals.css`, that shows up here rather than in review.
 
-| Route                     | Description                                                       |
-| ------------------------- | ----------------------------------------------------------------- |
-| `/mock/home`              | Homepage cut to four cards, built from the Connectors deck        |
-| `/mock/profile`           | Personal profile page (pana page) redesign                        |
-| `/mock/profile-next`      | Pana page, second pass: identity rail left, tabbed content right  |
-| `/mock/feed`              | Pana Social feed redesign, including the empty feed               |
-| `/mock/app`               | Mobile app navigation: Directory, Social, Community, and Profile  |
-| `/mock/composer`          | Friendly social card: inline local media, Everyone/Panas audience |
-| `/mock/panaverse`         | Panaverse chrome: masthead, surface switcher, identity            |
-| `/mock/settings`          | Account settings — one page, either masthead                      |
-| `/mock/directory`         | Directory search results, pre-map                                 |
-| `/mock/directory-unified` | One directory theme across businesses, panas, groups and events   |
-| `/mock/explore`           | Scope moved into the search bar; directory narrowed to businesses |
-| `/mock/groups`            | Groups landing and discover, as two steps of one flow             |
-| `/mock/dms`               | Direct messages, as two competing models behind one switch        |
-| `/mock/dm-chat`           | The DM conversation view, drawn after that comparison was decided |
-| `/mock/events`            | Events discovery: lanes that say why, not facets to narrow with   |
-| `/mock/events/host`       | Host an event: the form, answering to the page it feeds           |
+| Route                     | Description                                                                       |
+| ------------------------- | --------------------------------------------------------------------------------- |
+| `/mock/home`              | Homepage cut to four cards, built from the Connectors deck                        |
+| `/mock/profile`           | Personal profile page (pana page) redesign                                        |
+| `/mock/profile-next`      | Pana page, second pass: identity rail left, tabbed content right                  |
+| `/mock/feed`              | Pana Social feed redesign, including the empty feed                               |
+| `/mock/app`               | Mobile app navigation: Directory, Social, Community, and Profile                  |
+| `/mock/composer`          | Friendly social card: inline local media, Everyone/Panas audience                 |
+| `/mock/panaverse`         | Panaverse chrome: masthead, surface switcher, identity                            |
+| `/mock/settings`          | Account settings — one page, either masthead                                      |
+| `/mock/directory`         | Directory search results, pre-map                                                 |
+| `/mock/directory-unified` | One directory theme across businesses, panas, groups and events                   |
+| `/mock/explore`           | Scope moved into the search bar; directory narrowed to businesses                 |
+| `/mock/groups`            | Groups landing and discover, as two steps of one flow                             |
+| `/mock/dms`               | Direct messages, as two competing models behind one switch                        |
+| `/mock/dm-chat`           | Interactive Messages workspace: desktop panes, mobile list/chat, drafts and retry |
+| `/mock/events`            | Events discovery: lanes that say why, not facets to narrow with                   |
+| `/mock/events/host`       | Host an event: the form, answering to the page it feeds                           |
 
 ## Viewing the Pana Social surface
 
@@ -49,6 +49,29 @@ pickers, file drop target, and image paste handling create browser-local preview
 only. No files are uploaded and no posts are published. Removing an attachment
 or leaving the page releases its local preview; the sample-photo button needs
 no personal files.
+
+`/mock/dm-chat` supplies its own masthead on every hostname so the workspace
+can occupy the viewport. The conversation list and transcript scroll
+independently on desktop; narrow screens show one or the other with a Back
+button. New message opens a sample-person picker. Text and sample-animation
+drafts stay with their conversation until the page is reloaded or reset.
+
+The real `/messages` page now shares `components/messages/workspace.module.css`
+and `MessageAvatar` with this mock, including the warmer canvas and touch-friendly
+controls. Only the presentation is shared: the real page uses its
+authenticated message APIs and DM socket, while this mock stays fixture-only.
+
+Use **Receive message** while reading older messages to try the jump-to-latest
+control, or **Fail next send** followed by a message to try failure and Retry.
+Requests can be accepted or deleted, and the sample remote and refused threads
+retain their distinct states. GIF tiles are original CSS animations, not live
+GIPHY results; the voice memo is a visual sample without audio. No messaging API,
+WebSocket, upload, or browser storage is used by this mock. **Reset** restores
+the fixtures and clears pending simulated sends.
+
+This mock stays focused on direct messages. Native member-only group chats live
+at `/g/[handle]/chat` and in Messages' Groups folder; `tests/e2e/group-chat.spec.ts`
+exercises those actual components with HTTP/session/mailbox boundary fixtures.
 
 ## Conventions
 

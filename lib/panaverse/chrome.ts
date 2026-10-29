@@ -27,6 +27,7 @@ export const STANDALONE_ROUTES: readonly string[] = [
   '/info',
   '/mock/app',
   '/mock/compact-feed',
+  '/mock/dm-chat',
 ];
 
 /**

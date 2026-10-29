@@ -1,8 +1,5 @@
 /**
- * Searching the message list.
- *
- * One box asks two questions, which is why these helpers live apart from the
- * component that calls them.
+ * Searching existing conversations and the New message person picker.
  *
  * "Which of my conversations is this?" is answered locally and instantly --
  * the threads are already in memory, so going to the network to re-filter an
@@ -13,10 +10,8 @@
  * pana the viewer has never messaged appears in no list this page has loaded.
  * That half goes to /api/social/actors/search.
  *
- * The box asks both because a member who opens Messages in order to write to
- * someone does not know -- and should not have to care -- which of the two
- * they are doing. Splitting them into two controls would mean picking the
- * wrong one is possible, and the wrong one looks empty rather than wrong.
+ * The sidebar filters existing threads. The explicit New message dialog
+ * offers existing matches alongside people from the same actor-search API.
  *
  * @see docs/CHAT-ROADMAP.md
  */
