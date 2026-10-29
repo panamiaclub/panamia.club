@@ -1,92 +1,177 @@
 'use client';
 
-import { useState } from 'react';
-import { ArrowUp, Mic, Plus } from 'lucide-react';
+import { useId, useLayoutEffect, useState, type RefObject } from 'react';
+import { ArrowUp, LoaderCircle, X } from 'lucide-react';
+import { ComposerPopover } from '@/components/messages/composer-popover';
+import { MOCK_CHAT_GIFS, type MockChatDraft } from '../_data/mock-dm-chat';
+import { GifArt } from './chat-primitives';
+import styles from '@/components/messages/workspace.module.css';
 
-/* The composer.
- *
- * One line, because the shape of the input is a promise about the length of
- * the reply, and this design is asking for short ones.
- *
- * It actually sends. That is a deliberate exception to "mocks are static":
- * the thing being proposed is a delivery state machine, and sending → sent is
- * not something a screenshot can argue. Clicking the button is the shortest
- * path to seeing whether the states read correctly, including the awkward one
- * where the socket is down and the message is honestly labelled queued rather
- * than optimistically ticked.
- *
- * The microphone is not decoration either - voice memos are the only DM Pana
- * Social can send in production today, so they are the one composer affordance
- * that is already real. */
 export function Composer({
+  draft,
+  onChange,
   onSend,
-  socketDown,
-  heldThread,
+  isSending,
+  recipientName,
+  inputRef,
 }: {
-  onSend: (body: string) => void;
-  socketDown: boolean;
-  /** Replying to a held request is what accepts it, so say so. */
-  heldThread: boolean;
+  draft: MockChatDraft;
+  onChange: (draft: MockChatDraft) => void;
+  onSend: () => void;
+  isSending: boolean;
+  recipientName: string;
+  inputRef: RefObject<HTMLTextAreaElement | null>;
 }) {
-  const [draft, setDraft] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const hintId = useId();
+  const canSend = !!(draft.text.trim() || draft.gif) && !isSending;
 
-  function submit() {
-    const body = draft.trim();
-    if (!body) return;
-    onSend(body);
-    setDraft('');
-  }
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    input.style.height = 'auto';
+    input.style.height = `${Math.min(input.scrollHeight, 128)}px`;
+  }, [draft.text, inputRef]);
+
+  const submit = () => {
+    if (!canSend) return;
+    setPickerOpen(false);
+    onSend();
+  };
 
   return (
-    <footer className="border-pana-ink/14 border-t-2 p-3">
-      {heldThread && (
-        <p className="text-pana-ink/55 px-1 pb-2 text-[11px] font-bold">
-          Replying accepts this request and opens your inbox to them.
-        </p>
+    <footer className={styles.composer}>
+      {pickerOpen && (
+        <ComposerPopover
+          label="Sample GIF picker"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setPickerOpen(false);
+              inputRef.current?.focus();
+            }
+          }}
+        >
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div>
+              <p className="text-pana-ink text-xs font-extrabold">
+                A little more you.
+              </p>
+              <p className="text-pana-ink/60 mt-0.5 text-[10px]">
+                Sample animations, not a live GIF search.
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label="Close GIF picker"
+              className={styles.iconButton}
+              onClick={() => setPickerOpen(false)}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {MOCK_CHAT_GIFS.map((gif) => (
+              <button
+                key={gif.id}
+                type="button"
+                aria-label={`Choose ${gif.label} GIF`}
+                className="overflow-hidden rounded-xl"
+                onClick={() => {
+                  onChange({ ...draft, gif });
+                  setPickerOpen(false);
+                  inputRef.current?.focus();
+                }}
+              >
+                <GifArt gif={gif} />
+              </button>
+            ))}
+          </div>
+        </ComposerPopover>
       )}
-
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="text-pana-ink/50 hover:bg-pana-butter-2 flex h-9 w-9 flex-none items-center justify-center rounded-full"
-          aria-label="Add attachment"
-        >
-          <Plus className="h-5 w-5" />
-        </button>
-
-        <div className="bg-pana-butter-2/70 border-pana-ink/10 flex flex-1 items-center rounded-full border px-4 py-2">
-          <input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                submit();
-              }
-            }}
-            placeholder={socketDown ? 'Message (offline)' : 'Message'}
-            aria-label="Message"
-            className="text-pana-ink placeholder:text-pana-ink/45 w-full bg-transparent text-sm font-bold outline-none"
-          />
+      {draft.gif && (
+        <div className="mb-3 flex items-center gap-3">
+          <span className="block w-24 overflow-hidden rounded-xl">
+            <GifArt gif={draft.gif} />
+          </span>
+          <span className="text-pana-ink/65 text-xs font-medium">
+            Ready to send
+          </span>
+          <button
+            type="button"
+            aria-label="Remove GIF"
+            className={styles.iconButton}
+            onClick={() => onChange({ ...draft, gif: null })}
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
-
-        <button
-          type="button"
-          className="text-pana-ink/50 hover:bg-pana-butter-2 flex h-9 w-9 flex-none items-center justify-center rounded-full"
-          aria-label="Record voice memo"
-        >
-          <Mic className="h-5 w-5" />
-        </button>
-
-        <button
-          type="button"
-          onClick={submit}
-          disabled={!draft.trim()}
-          className="bg-pana-indigo text-pana-cream flex h-9 w-9 flex-none items-center justify-center rounded-full disabled:opacity-35"
-          aria-label="Send"
-        >
-          <ArrowUp className="h-5 w-5" />
-        </button>
+      )}
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+        className={styles.composeBox}
+      >
+        <textarea
+          ref={inputRef}
+          value={draft.text}
+          onChange={(event) => onChange({ ...draft, text: event.target.value })}
+          onKeyDown={(event) => {
+            if (
+              event.key === 'Enter' &&
+              !event.shiftKey &&
+              !event.nativeEvent.isComposing
+            ) {
+              event.preventDefault();
+              submit();
+            }
+          }}
+          rows={1}
+          placeholder="Write a little hello..."
+          aria-label={`Message ${recipientName}`}
+          aria-describedby={hintId}
+          className={styles.messageInput}
+        />
+        <div className="flex items-center justify-between gap-3 px-2 pb-2">
+          <button
+            type="button"
+            className={styles.gifButton}
+            aria-label="Add a GIF"
+            aria-expanded={pickerOpen}
+            onClick={() => setPickerOpen((open) => !open)}
+          >
+            GIF
+          </button>
+          <button
+            type="submit"
+            className={styles.sendButton}
+            disabled={!canSend}
+            aria-label="Send message"
+          >
+            {isSending ? (
+              <LoaderCircle
+                className="h-4 w-4 motion-safe:animate-spin"
+                aria-hidden="true"
+              />
+            ) : (
+              <ArrowUp className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
+        </div>
+      </form>
+      <div
+        id={hintId}
+        className="text-pana-ink/55 mt-2 flex min-h-4 items-center justify-between gap-2 text-[10px] leading-relaxed"
+      >
+        <span>
+          {draft.text || draft.gif
+            ? 'Your draft stays with this conversation.'
+            : 'Make yourself at home. Say hello.'}
+        </span>
+        <span className="hidden flex-none lg:inline">
+          Enter to send · Shift + Enter for a new line
+        </span>
       </div>
     </footer>
   );

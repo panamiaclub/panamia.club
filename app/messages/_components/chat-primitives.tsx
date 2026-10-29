@@ -1,7 +1,8 @@
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Check, Clock3, Globe, ShieldAlert } from 'lucide-react';
+import { MessageAvatar } from '@/components/messages/message-avatar';
+import styles from '@/components/messages/workspace.module.css';
+import { Check, CircleAlert, Clock3, Globe, ShieldAlert } from 'lucide-react';
 import type { SocialActorDisplay } from '@/lib/interfaces';
 import { DIRECT_THREAD_REFUSED } from '@/lib/dm-refusal';
 
@@ -49,15 +50,13 @@ export function ChatAvatar({
   actor: ChatActor;
   size?: number;
 }) {
-  const initial = (actor.name || actor.username || '?').charAt(0).toUpperCase();
-
   return (
-    <Avatar className="flex-none" style={{ width: size, height: size }}>
-      <AvatarImage src={actor.iconUrl || undefined} alt="" />
-      <AvatarFallback className="bg-pana-butter-2 text-pana-ink text-xs font-extrabold">
-        {initial}
-      </AvatarFallback>
-    </Avatar>
+    <MessageAvatar
+      identity={actor.id}
+      name={actor.name || actor.username || '?'}
+      imageUrl={actor.iconUrl}
+      size={size}
+    />
   );
 }
 
@@ -96,20 +95,35 @@ export function ChatName({
    need a second message per message per reader, and once shown they cannot be
    withdrawn without looking like a bug. CHAT-ROADMAP scopes this release to
    delivery, and delivery is something the server actually knows. */
-export function DeliveryMark({ state }: { state: 'sent' | 'sending' }) {
+export function DeliveryMark({
+  state,
+}: {
+  state: 'sent' | 'sending' | 'failed';
+}) {
+  if (state === 'failed') {
+    return (
+      <span className={styles.deliveryMark} data-state="failed">
+        <CircleAlert className="h-3 w-3" aria-hidden="true" />
+        Not sent
+      </span>
+    );
+  }
   if (state === 'sending') {
     return (
-      <span className="text-pana-ink/35 inline-flex items-center gap-1 text-[11px] font-bold">
-        <Clock3 className="h-3 w-3 animate-pulse" aria-hidden="true" />
+      <span className={styles.deliveryMark} data-state="sending">
+        <Clock3
+          className="h-3 w-3 motion-safe:animate-pulse"
+          aria-hidden="true"
+        />
         Sending
       </span>
     );
   }
 
   return (
-    <span className="text-pana-ink/40 inline-flex items-center gap-0.5">
+    <span className={styles.deliveryMark} data-state="sent">
       <Check className="h-3 w-3" aria-hidden="true" />
-      <span className="sr-only">Sent</span>
+      Sent
     </span>
   );
 }
@@ -129,12 +143,9 @@ export function ExpiryChip({ expiresIn }: { expiresIn: string }) {
   const urgent = expiresIn.includes('hour');
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
-        urgent
-          ? 'bg-pana-red/12 text-pana-red-deep'
-          : 'bg-pana-ink/6 text-pana-ink/50'
-      }`}
-      title="Direct messages are hidden 30 days after they are sent"
+      className={styles.expiryChip}
+      data-urgent={urgent}
+      title="Messages are hidden 30 days after they are sent"
     >
       <Clock3 className="h-2.5 w-2.5" aria-hidden="true" />
       Disappears in {expiresIn}
@@ -154,7 +165,7 @@ export function ExpiryChip({ expiresIn }: { expiresIn: string }) {
  * improvement here and it is the one that breaks the safety property. */
 export function RefusedComposer() {
   return (
-    <footer className="border-pana-ink/14 bg-pana-ink/4 border-t-2 px-5 py-4">
+    <footer className="border-pana-ink/10 bg-pana-cream flex-none border-t px-5 py-4">
       <p className="text-pana-ink/70 flex items-center justify-center gap-2 text-center text-sm font-bold">
         <ShieldAlert className="h-4 w-4 flex-none" aria-hidden="true" />
         {DIRECT_THREAD_REFUSED}

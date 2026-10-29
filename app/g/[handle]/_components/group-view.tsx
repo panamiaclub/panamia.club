@@ -34,11 +34,9 @@ import {
  * Follows app/mock/group: cover, square avatar, identity block with a privacy
  * pill, summary, topics, join action, house rules, events, roster and posts.
  *
- * Stacked rather than tabbed, which is where it still departs from the mock.
- * Tabs were rejected in phase 1 because two of the three would have been
- * empty; now that all three are wired the reason has changed rather than
- * disappeared -- a tab hides two thirds of a group from someone deciding
- * whether to join it, and this page's whole job is helping them decide.
+ * The overview stays stacked so prospective members can see what the group
+ * offers. Chat is a separate, member-only surface rather than hiding the
+ * overview's events, roster and posts behind empty tabs.
  *
  * The mock's stat rail stays dropped. It earned its weight there by being
  * three controls; here the counts it would carry are already in the line
@@ -203,6 +201,25 @@ function GroupBody({
       </header>
 
       <div className="container mx-auto max-w-4xl px-4 pt-8">
+        <nav
+          className="mb-5 flex items-center gap-2"
+          aria-label="Group sections"
+        >
+          <Link
+            href={`/g/${encodeURIComponent(handle)}`}
+            aria-current="page"
+            className="bg-pana-indigo text-pana-cream inline-flex min-h-11 items-center rounded-xl px-5 text-sm font-extrabold"
+          >
+            Overview
+          </Link>
+          <Link
+            href={`/g/${encodeURIComponent(handle)}/chat`}
+            className="border-pana-indigo/15 text-pana-indigo inline-flex min-h-11 items-center gap-2 rounded-xl border bg-white px-5 text-sm font-extrabold"
+          >
+            Chat <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="sr-only">Members only</span>
+          </Link>
+        </nav>
         {viewer.canRead ? (
           <div className="space-y-4">
             {rules.length > 0 && (

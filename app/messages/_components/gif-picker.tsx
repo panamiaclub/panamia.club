@@ -3,7 +3,10 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { X } from 'lucide-react';
+import { ComposerPopover } from '@/components/messages/composer-popover';
 import { useDebounce } from '@/hooks/use-debounce';
+import styles from '@/components/messages/workspace.module.css';
+import { messageError } from '../_lib/workspace';
 import {
   useGifSearch,
   type GifResult,
@@ -27,10 +30,12 @@ export function GifPicker({
   onPick,
   onClose,
   isSaving,
+  error,
 }: {
   onPick: (gif: GifResult) => void;
   onClose: () => void;
   isSaving: boolean;
+  error: string | null;
 }) {
   const [query, setQuery] = useState('');
   /* Half a second, not the 350ms used for the pana search next door. A GIPHY
@@ -45,7 +50,16 @@ export function GifPicker({
   const results = gifs.data?.results ?? [];
 
   return (
-    <div className="border-pana-ink/10 bg-pana-cream border-b">
+    <ComposerPopover
+      label="GIF picker"
+      live
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.stopPropagation();
+          onClose();
+        }
+      }}
+    >
       <div className="flex items-center gap-2 px-3 pt-3">
         <input
           type="search"
@@ -54,22 +68,24 @@ export function GifPicker({
           onChange={(event) => setQuery(event.target.value)}
           placeholder={GIPHY_SEARCH_PLACEHOLDER}
           aria-label={GIPHY_SEARCH_PLACEHOLDER}
-          className="border-pana-ink/10 focus:border-pana-indigo text-pana-ink placeholder:text-pana-ink/45 min-w-0 flex-1 rounded-full border bg-white px-3 py-2 text-sm font-bold transition-colors outline-none"
+          className="border-pana-ink/10 focus:border-pana-indigo text-pana-ink placeholder:text-pana-ink/45 min-w-0 flex-1 rounded-full border bg-white px-3 py-2 text-base font-bold transition-colors outline-none"
         />
         <button
           type="button"
           onClick={onClose}
           aria-label="Close GIF picker"
-          className="text-pana-ink/55 hover:bg-pana-butter-2 hover:text-pana-ink flex-none rounded-full p-2 transition-colors"
+          className={styles.iconButton}
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
 
-      {/* Fixed height, not max-height: a grid that resizes as results arrive
-          would shove the conversation up and down the screen while someone is
-          reading it. */}
-      <div className="h-56 overflow-y-auto px-3 py-3">
+      {error && (
+        <p className={styles.inlineError} role="alert">
+          {error}
+        </p>
+      )}
+      <div className={styles.gifResults}>
         {gifs.isLoading && (
           <p className="text-pana-ink/45 py-8 text-center text-sm font-bold">
             Loading GIFs…
@@ -81,9 +97,17 @@ export function GifPicker({
             {/* The server distinguishes "too many searches at once" from
                 "GIPHY is down", and so should this -- the first is worth
                 waiting a second for, the second is not. */}
-            {(gifs.error as { response?: { data?: { error?: string } } })
-              ?.response?.data?.error ??
-              'GIF search is having a moment. Try again shortly.'}
+            {messageError(
+              gifs.error,
+              'GIF search is having a moment. Try again shortly.'
+            )}{' '}
+            <button
+              type="button"
+              className="font-bold underline"
+              onClick={() => gifs.refetch()}
+            >
+              Try again
+            </button>
           </p>
         )}
 
@@ -151,7 +175,7 @@ export function GifPicker({
           className="h-[21px] w-auto"
         />
       </div>
-    </div>
+    </ComposerPopover>
   );
 }
 
@@ -180,7 +204,7 @@ export function GifPreview({
         type="button"
         onClick={onRemove}
         aria-label="Remove GIF"
-        className="text-pana-ink/55 hover:bg-pana-butter-2 hover:text-pana-ink rounded-full p-2 transition-colors"
+        className={styles.iconButton}
       >
         <X className="h-4 w-4" aria-hidden="true" />
       </button>

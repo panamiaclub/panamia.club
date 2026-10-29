@@ -59,13 +59,15 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { socialQueryKey } from '@/lib/query/social';
 
-/** What the mailbox broadcasts. Mirrors DmNotification in worker/dm-stream.ts. */
+/** Metadata-only DM and group mailbox broadcasts. */
 interface DmSocketMessage {
-  type: 'dm' | 'ready' | 'error';
+  type: 'dm' | 'group' | 'ready' | 'error';
   conversationActorId?: string | null;
   statusId?: string;
   at?: number;
   message?: string;
+  groupId?: string;
+  kind?: 'message' | 'membership';
 }
 
 /**
@@ -198,6 +200,24 @@ export function useDmSocket(enabled: boolean) {
           return;
         }
 
+        if (payload.type === 'group') {
+          if (typeof payload.groupId !== 'string' || !payload.groupId) return;
+          queryClient.invalidateQueries({
+            queryKey: [socialQueryKey, 'messages', 'groups'],
+          });
+          if (payload.kind === 'membership') {
+            queryClient.invalidateQueries({
+              queryKey: [socialQueryKey, 'group'],
+            });
+            queryClient.invalidateQueries({
+              queryKey: [socialQueryKey, 'me', 'groups'],
+            });
+            queryClient.invalidateQueries({
+              queryKey: [socialQueryKey, 'groups'],
+            });
+          }
+          return;
+        }
         if (payload.type !== 'dm') return;
 
         // The list always changes: a new message moves a conversation to the

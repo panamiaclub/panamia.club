@@ -1,14 +1,9 @@
 /* Fixture data for the DM chat view at /mock/dm-chat.
  *
- * /mock/dms asked a question - mail or chat - and it has been answered: chat
- * UX, on the direct-status substrate we already have, with live delivery.
- * docs/CHAT-ROADMAP.md records that decision. This route is the next thing
- * that has to exist, because the roadmap's own Path A is blocked on it: a
- * socket has nothing to update until there is a thread for it to update.
- *
- * So this is not a comparison. It is one design, drawn against the substrate
- * it actually has to run on, and the fixtures are chosen to put the awkward
- * parts of that substrate on screen rather than crop them out.
+ * The existing DM feature now has a dedicated workspace study: independent
+ * desktop panes, mobile list/detail navigation, drafts, and send recovery.
+ * These are sample conversations only. No fixture opens a socket, calls the
+ * messaging APIs, or persists anything outside component state.
  *
  * THE CONSTRAINTS THIS SET EXISTS TO MAKE VISIBLE
  *
@@ -77,19 +72,35 @@ export interface MockChatPerson {
 }
 
 /**
- * Delivery state for a message the viewer sent.
- *
- * Not decoration. The socket can be down while the write succeeds, so these
- * three states are the difference between a UI that reports what happened and
- * one that animates a guess.
+ * Simulated HTTP send states. A disconnected delivery socket does not prevent
+ * sending, so this preview deliberately does not invent an offline queue.
  */
 export type MockDeliveryState =
-  /** Written to Postgres, not yet acknowledged. */
+  /** Awaiting the simulated server acknowledgement. */
   | 'sending'
-  /** Row committed. The only state that means anything durable. */
+  /** Acknowledged, not a read receipt. */
   | 'sent'
-  /** Composed while the socket was down. Queued client-side, not yet written. */
-  | 'queued';
+  /** Kept in the transcript so the exact message can be retried. */
+  | 'failed';
+
+export interface MockGif {
+  id: string;
+  label: string;
+  word: string;
+  tone: 'butter' | 'indigo' | 'flame';
+}
+
+/** Original CSS animations stand in for GIFs without calling a media service. */
+export const MOCK_CHAT_GIFS: MockGif[] = [
+  { id: 'yay', label: 'A little celebration', word: 'yay!', tone: 'butter' },
+  { id: 'hola', label: 'A friendly hello', word: 'hola!', tone: 'flame' },
+  { id: 'thanks', label: 'A big thank you', word: 'gracias', tone: 'indigo' },
+];
+
+export interface MockChatDraft {
+  text: string;
+  gif: MockGif | null;
+}
 
 export interface MockChatMessage {
   id: string;
@@ -97,7 +108,9 @@ export interface MockChatMessage {
   from: 'me' | 'them';
   /** socialStatuses.content. Plain text here; the real column holds HTML. */
   body?: string;
-  /** socialAttachments with mediaType audio/*. The only DM that ships today. */
+  /** A browser-only stand-in for a selected GIF attachment. */
+  gif?: MockGif;
+  /** socialAttachments with mediaType audio/*. Visual sample only. */
   voice?: {
     duration: string;
     /** Peak heights 0-1. Sixteen samples reads as a waveform at this width. */
@@ -201,6 +214,73 @@ const THREAD_JDOWNS: MockChatThread = {
   unreadCount: 0,
   gate: 'allow',
   messages: [
+    {
+      id: 'jd-history-1',
+      from: 'them',
+      day: 'Yesterday',
+      time: '5:02 PM',
+      body: 'little update on saturday: we got the back room!',
+    },
+    {
+      id: 'jd-history-2',
+      from: 'me',
+      day: 'Yesterday',
+      time: '5:06 PM',
+      body: 'The one with the big windows? That is perfect.',
+      delivery: 'sent',
+    },
+    {
+      id: 'jd-history-3',
+      from: 'them',
+      day: 'Yesterday',
+      time: '5:08 PM',
+      body: 'yes! tables on one side, prints on the other. keeping it simple.',
+    },
+    {
+      id: 'jd-history-4',
+      from: 'me',
+      day: 'Yesterday',
+      time: '5:09 PM',
+      body: 'I can come early to help set up. Are we bringing our own coffee?',
+      delivery: 'sent',
+    },
+    {
+      id: 'jd-history-5',
+      from: 'them',
+      day: 'Yesterday',
+      time: '5:11 PM',
+      body: 'Bee is handling coffee. I think we are in very good hands.',
+    },
+    {
+      id: 'jd-history-6',
+      from: 'me',
+      day: 'Yesterday',
+      time: '5:12 PM',
+      body: 'Then all the important things are covered.',
+      delivery: 'sent',
+    },
+    {
+      id: 'jd-history-7',
+      from: 'them',
+      day: 'Yesterday',
+      time: '5:14 PM',
+      body: 'one more thing - we can hang a few prints by the door if you want to bring yours',
+    },
+    {
+      id: 'jd-history-8',
+      from: 'me',
+      day: 'Yesterday',
+      time: '5:18 PM',
+      body: 'Yes please. I have three left from the canal series. I will wrap them tonight.',
+      delivery: 'sent',
+    },
+    {
+      id: 'jd-history-9',
+      from: 'them',
+      day: 'Yesterday',
+      time: '5:19 PM',
+      body: 'love those. this is coming together.',
+    },
     {
       id: 'jd-1',
       from: 'them',
@@ -436,21 +516,37 @@ export const MOCK_CHAT_THREADS: MockChatThread[] = [
 
 export const MOCK_CHAT_REQUESTS: MockChatThread[] = [THREAD_ANETTE];
 
-/**
- * The one string dm-gate.ts returns for every refusal.
- *
- * Identical for a block and for a closed inbox, deliberately. See
- * THREAD_REFUSED above.
- */
-export const REFUSAL_COPY =
-  'You can’t send messages to this account right now.';
+export interface MockChatContact {
+  id: string;
+  person: MockChatPerson;
+}
+
+export const MOCK_CHAT_CONTACTS: MockChatContact[] = [
+  ...MOCK_CHAT_THREADS.map(({ id, person }) => ({ id, person })),
+  {
+    id: 'sofia',
+    person: {
+      name: 'Sofia Morales',
+      handle: 'sofim',
+      avatar: '',
+      isPana: true,
+    },
+  },
+  {
+    id: 'mateo',
+    person: {
+      name: 'Mateo Rivera',
+      handle: 'mateor',
+      avatar: '',
+      isPana: true,
+    },
+  },
+];
+
+export { DIRECT_THREAD_REFUSED as REFUSAL_COPY } from '@/lib/dm-refusal';
 
 /**
- * The message that arrives over the socket while the mock is open.
- *
- * Live delivery is the entire feature being proposed, and a still screenshot
- * cannot show it — a transcript that updates and a transcript that does not
- * look identical until something moves. So the mock actually delivers one.
+ * Appended locally by the Receive message control, never by a real socket.
  */
 export const INCOMING_LIVE_MESSAGE: MockChatMessage = {
   id: 'jd-live',
@@ -466,6 +562,7 @@ export function threadSnippet(thread: MockChatThread): string {
   if (!last) return '';
   const prefix = last.from === 'me' ? 'You: ' : '';
   if (last.voice) return `${prefix}Voice memo (${last.voice.duration})`;
+  if (last.gif) return `${prefix}GIF${last.body ? ` - ${last.body}` : ''}`;
   return prefix + (last.body ?? '');
 }
 
@@ -479,7 +576,9 @@ export function groupMessages(
     if (
       current &&
       current[0].from === message.from &&
-      current[0].day === message.day
+      current[0].day === message.day &&
+      current[0].delivery === message.delivery &&
+      message.delivery !== 'failed'
     ) {
       current.push(message);
     } else {

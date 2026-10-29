@@ -13,6 +13,8 @@
  * swallowed and logged, and `notifyDirectMessage` never rejects.
  */
 
+import type { GroupChatEvent } from '@/lib/chat';
+
 interface DurableObjectStubLike {
   fetch(input: string, init?: RequestInit): Promise<Response>;
 }
@@ -83,14 +85,41 @@ export async function notifyDirectMessage(
   targets: DmFanoutTarget[],
   statusId: string
 ): Promise<number> {
+  const at = Date.now();
+  return fanoutMailboxes(
+    targets.map((target) => ({
+      actorId: target.actorId,
+      payload: {
+        conversationActorId: target.conversationActorId,
+        statusId,
+        at,
+      },
+    })),
+    statusId
+  );
+}
+
+export async function notifyGroupChatEvent(
+  actorIds: string[],
+  event: Omit<GroupChatEvent, 'type' | 'at'>
+): Promise<number> {
+  const payload: GroupChatEvent = { type: 'group', ...event, at: Date.now() };
+  return fanoutMailboxes(
+    [...new Set(actorIds)].map((actorId) => ({ actorId, payload })),
+    event.groupId
+  );
+}
+
+async function fanoutMailboxes(
+  targets: { actorId: string; payload: object }[],
+  notificationId: string
+): Promise<number> {
   const namespace = getDmStream();
 
   // Unbound in plain-Node dev and in any environment without the binding. Not
   // an error: live delivery is an enhancement over the read path, so its
   // absence degrades to "refresh to see it" rather than failing the send.
   if (!namespace || targets.length === 0) return 0;
-
-  const at = Date.now();
 
   // Cancels the in-flight subrequests where the runtime honours it, so a hung
   // mailbox is not left occupying a connection after we have stopped caring.
@@ -103,38 +132,56 @@ export async function notifyDirectMessage(
     }, FANOUT_TIMEOUT_MS);
   });
 
+  let nextTarget = 0;
+  // Group membership is not capped like a DM's eight recipients. Bound the
+  // concurrent subrequests without imposing a new limit on group membership.
   const fanout = Promise.all(
-    targets.map(async (target) => {
-      try {
-        const stub = namespace.get(namespace.idFromName(target.actorId));
-
-        // The hostname is ignored — a DO stub fetch is routed by the stub, not
-        // by DNS — but Request requires an absolute URL, so this names the
-        // object it is addressing rather than inventing a host.
-        const response = await stub.fetch('https://dm-stream/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({
-            conversationActorId: target.conversationActorId,
-            statusId,
-            at,
-          }),
-        });
-
-        if (!response.ok) return 0;
-        const body = (await response.json()) as { delivered?: number };
-        return body.delivered ?? 0;
-      } catch (error) {
-        // Logged rather than rethrown: see the module docblock. The caller is
-        // mid-send on a row that is already committed.
-        console.error(
-          '[dm-stream] notify failed',
-          target.actorId,
-          error instanceof Error ? error.message : error
-        );
-        return 0;
+    Array.from({ length: Math.min(8, targets.length) }, async () => {
+      let delivered = 0;
+      while (!controller.signal.aborted) {
+        const target = targets[nextTarget++];
+        if (!target) break;
+        try {
+          const stub = namespace.get(namespace.idFromName(target.actorId));
+          const response = await stub.fetch('https://dm-stream/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify(target.payload),
+          });
+          if (!response.ok) {
+            console.error(
+              '[dm-stream] notify rejected',
+              target.actorId,
+              response.status
+            );
+            continue;
+          }
+          const body: unknown = await response.json();
+          if (
+            body &&
+            typeof body === 'object' &&
+            'delivered' in body &&
+            typeof body.delivered === 'number' &&
+            Number.isFinite(body.delivered) &&
+            body.delivered >= 0
+          ) {
+            delivered += body.delivered;
+          } else {
+            console.error(
+              '[dm-stream] invalid notification acknowledgement',
+              target.actorId
+            );
+          }
+        } catch (error) {
+          console.error(
+            '[dm-stream] notify failed',
+            target.actorId,
+            error instanceof Error ? error.message : error
+          );
+        }
       }
+      return delivered;
     })
   );
 
@@ -142,7 +189,11 @@ export async function notifyDirectMessage(
     const results = await Promise.race([fanout, expired]);
 
     if (results === null) {
-      console.error('[dm-stream] notify timed out', targets.length, statusId);
+      console.error(
+        '[dm-stream] notify timed out',
+        targets.length,
+        notificationId
+      );
       return 0;
     }
 

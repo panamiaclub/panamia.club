@@ -1,9 +1,11 @@
 # Groups — Design & Roadmap
 
-> **STATUS**: **Proposal. Nothing here is implemented.** No migration, table, route, or component
-> described below exists yet. The next free migration number is `0043`.
+> **STATUS**: **Native groups are implemented.** Membership, discovery, posts, events, settings,
+> moderation, and group deletion are recorded in the shipped phases below. Each group now also
+> has a members-only native chat at `/g/[handle]/chat` and in Messages' Groups folder; this requires
+> migration `0073_social_group_chat`. Chat uses a 30-day visibility window and existing membership.
 >
-> Two group-shaped systems already ship in this repo and **neither one is this feature**:
+> The original design inventory below describes two earlier group-shaped systems:
 > NIP-29 relay groups under `/r/groups`, and the `Groups` stat already rendered next to Panas in
 > the Pana Social feed rail. Both are inventoried in
 > [What Already Exists](#what-already-exists) — read that before writing any code, because one of
@@ -39,9 +41,10 @@ decides several arguments below:
 That single constraint is what rules out the existing relay-group approach, which works by handing
 people a deeplink to a third-party Nostr client.
 
-> **Real-time chat is out of scope for this document.** It is its own feature on its own surface —
-> see `docs/CHAT-ROADMAP.md`. Groups ship without it. A group page is a slow surface: posts, events,
-> roster.
+> **Chat remains separate from group posts.** The overview still presents posts, events, and the
+> roster. Its Chat link opens the native members-only room, also available in Messages.
+> Storage, authorization, delivery, moderation, and the 30-day window are documented in
+> `docs/CHAT-ROADMAP.md`.
 
 ### Goals
 
@@ -57,11 +60,14 @@ people a deeplink to a third-party Nostr client.
   for panas who want censorship-resistant Nostr rooms. This feature does not depend on Nostr at all.
 - Federated group membership in v1. Remote actors can _follow_ a group actor and receive its public
   posts, but joining is local-only until the visibility rules have proven themselves.
-- Real-time chat of any kind. Tracked separately in `docs/CHAT-ROADMAP.md`.
+- Chat implementation details are tracked separately in `docs/CHAT-ROADMAP.md`.
 
 ---
 
 ## What Already Exists
+
+This is the historical starting-point inventory, not the current implementation state.
+The phases below record how native groups replaced the placeholder social-group surfaces.
 
 ### 1. NIP-29 relay groups — `/r/groups`
 
@@ -130,12 +136,13 @@ Model a group as an **ActivityPub `Group` actor**. This is not an invention; `Gr
 handle, an inbox, an outbox, followers, and an avatar for free, because `socialActors` already
 provides all of it.
 
-A group then exposes **one surface gated by one membership table**:
+A group exposes **two separate surfaces using the same membership source**:
 
 ```mermaid
 graph TB
     M["social_group_members<br/>one membership, one gate"]
-    M --> P["POSTS surface<br/>Postgres + ActivityPub"]
+    M --> P["POSTS surface<br/>Postgres + feeds"]
+    M --> C["CHAT surface<br/>Member-only native messages"]
     P --> F["Home feed · events<br/>federation · search"]
 ```
 
@@ -146,9 +153,9 @@ not belong in a timeline, cannot be liked or replied to three days later, and do
 Building chat first would satisfy the "don't leave the site" constraint while leaving every original
 requirement unmet.
 
-**Chat is now scoped to groups — decided 2026-10.** It reads `social_group_members` like everything
-else here does, which was the only coupling this document ever assumed. Nothing here changes: chat
-rooms hang off the membership table rather than altering it. See `docs/CHAT-ROADMAP.md`.
+**Native group chat is implemented.** It reads `social_group_members` rather than copying the
+roster, stores messages outside `socialStatuses`, and never publishes chat into the overview's
+feed or federation. Public-group chat is still members-only. See `docs/CHAT-ROADMAP.md`.
 
 ---
 

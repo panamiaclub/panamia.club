@@ -30,6 +30,7 @@ import { db } from '@/lib/db';
 import { socialGroupMembers, socialGroups } from '@/lib/schema';
 import type { SocialGroupMember, SocialGroupRole } from '@/lib/schema';
 import { and, eq, ne, sql } from 'drizzle-orm';
+import { notifyGroupChat } from '@/lib/group-chat-notify';
 import {
   notifyBanned,
   notifyRemoved,
@@ -118,7 +119,7 @@ async function applyChange(
         joinedAt?: Date | null;
       }
 ): Promise<SocialGroupMember | null> {
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     let row: SocialGroupMember | null = null;
 
     if ('delete' in change) {
@@ -149,6 +150,10 @@ async function applyChange(
 
     return row;
   });
+  await notifyGroupChat(membership.groupId, { kind: 'membership' }, [
+    membership.actorId,
+  ]);
+  return result;
 }
 
 /** The acting member, or a refusal if they have no standing to act at all. */

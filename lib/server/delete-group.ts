@@ -52,6 +52,7 @@ import {
   socialActors,
   socialGroups,
   socialGroupMembers,
+  socialGroupChatMessages,
   socialStatuses,
   socialFollows,
   socialLikes,
@@ -62,6 +63,7 @@ import {
   events,
 } from '@/lib/schema';
 import { signedHeaders } from '@/lib/federation/crypto/sign';
+import { notifyGroupChat } from '@/lib/group-chat-notify';
 
 export interface GroupDeletionSummary {
   groupId: string;
@@ -71,6 +73,7 @@ export interface GroupDeletionSummary {
   memberPosts: number;
   /** How many distinct panas wrote them -- the human cost, not the row count. */
   memberPostAuthors: number;
+  chatMessages: number;
   activeMembers: number;
   upcomingEvents: number;
   pastEvents: number;
@@ -133,6 +136,10 @@ export async function getGroupDeletionSummary(
     .where(eq(events.hostGroupId, groupId));
 
   const upcomingCount = upcoming?.total ?? 0;
+  const [chat] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(socialGroupChatMessages)
+    .where(eq(socialGroupChatMessages.groupId, groupId));
 
   return {
     groupId: group.id,
@@ -140,6 +147,7 @@ export async function getGroupDeletionSummary(
     name: group.actor?.name ?? '',
     memberPosts: posts?.total ?? 0,
     memberPostAuthors: posts?.authors ?? 0,
+    chatMessages: chat?.total ?? 0,
     activeMembers: members?.total ?? 0,
     upcomingEvents: upcomingCount,
     pastEvents: (all?.total ?? 0) - upcomingCount,
@@ -183,6 +191,15 @@ export async function deleteGroup(groupId: string): Promise<DeleteGroupResult> {
   }
 
   const actor = group.actor;
+  const chatMembers = await db
+    .select({ actorId: socialGroupMembers.actorId })
+    .from(socialGroupMembers)
+    .where(
+      and(
+        eq(socialGroupMembers.groupId, groupId),
+        eq(socialGroupMembers.status, 'active')
+      )
+    );
 
   // Captured before the delete, because after it there is no actor to sign
   // with and no follower rows to read.
@@ -195,6 +212,11 @@ export async function deleteGroup(groupId: string): Promise<DeleteGroupResult> {
 
   try {
     await db.transaction(async (tx) => {
+      const [chat] = await tx
+        .select({ total: sql<number>`count(*)::int` })
+        .from(socialGroupChatMessages)
+        .where(eq(socialGroupChatMessages.groupId, groupId));
+      deleted.chatMessages = chat?.total ?? 0;
       // 1. Events. RESTRICT means these must go before the group, and the
       //    single-host CHECK means they cannot be orphaned instead. Attendees
       //    cascade from here; statuses about an event SET NULL and survive.
@@ -266,6 +288,12 @@ export async function deleteGroup(groupId: string): Promise<DeleteGroupResult> {
       warnings,
     };
   }
+
+  await notifyGroupChat(
+    groupId,
+    { kind: 'membership' },
+    chatMembers.map((member) => member.actorId)
+  );
 
   // Federation, best-effort and after the fact. A group that only ever had
   // local members has no inboxes here and this is a no-op.

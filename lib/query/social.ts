@@ -1388,8 +1388,12 @@ export const useDmRequests = (enabled: boolean = true) =>
 function invalidateAfterRequestTriage(
   queryClient: ReturnType<typeof useQueryClient>
 ) {
-  queryClient.invalidateQueries({ queryKey: [socialQueryKey, 'dm-requests'] });
-  queryClient.invalidateQueries({ queryKey: [socialQueryKey, 'messages'] });
+  return Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: [socialQueryKey, 'dm-requests'],
+    }),
+    queryClient.invalidateQueries({ queryKey: [socialQueryKey, 'messages'] }),
+  ]);
 }
 
 export const useAcceptDmRequest = () => {
@@ -1586,44 +1590,53 @@ export const useMirrorGif = () =>
  * would be a second door into the same room, and only one of them would have
  * the lock on it.
  *
- * No optimistic insert. A tick beside a message that does not exist on the
- * server yet is the single lie this interface refuses to tell, so the message
- * appears when the refetch confirms it -- see the mock's "Queued" treatment.
+ * The recipient travels with each mutation, so changing threads cannot redirect
+ * a send or invalidate the wrong conversation. The response acknowledges a
+ * server ID; the workspace keeps its local bubble until that ID is refetched.
  */
-export const useSendDirectMessage = (counterpartyActorId: string | null) => {
+export const useSendDirectMessage = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: string | DirectMessageDraft) => {
-      // Accepts a bare string so the many existing call sites that only ever
-      // send text do not have to learn about attachments.
-      const draft: DirectMessageDraft =
-        typeof input === 'string' ? { content: input } : input;
-
-      // Defensive: the composer only renders with a thread open, but a null id
-      // would POST `recipientActorIds: [null]`, which the statuses route would
-      // reject with a validation error that reads like a bug rather than one.
-      if (!counterpartyActorId) throw new Error('No conversation selected');
-      const { data } = await axios.post('/api/social/statuses', {
-        content: draft.content,
+    mutationFn: async ({
+      recipientActorId,
+      content,
+      attachments,
+    }: DirectMessageDraft & { recipientActorId: string }) => {
+      if (!recipientActorId) throw new Error('No conversation selected');
+      const { data } = await axios.post<
+        ApiEnvelope<{ status: { id: string } }>
+      >('/api/social/statuses', {
+        content,
         visibility: 'direct',
-        recipientActorIds: [counterpartyActorId],
-        ...(draft.attachments?.length
-          ? { attachments: draft.attachments }
-          : {}),
+        recipientActorIds: [recipientActorId],
+        ...(attachments?.length ? { attachments } : {}),
       });
-      return data;
+      if (!data.success || !data.data?.status?.id) {
+        throw new Error(data.error ?? 'Could not confirm message delivery.');
+      }
+      return data.data.status;
     },
-    onSuccess: () => {
+    onSuccess: (_status, { recipientActorId }) => {
       queryClient.invalidateQueries({
         queryKey: [
           socialQueryKey,
           'messages',
           'conversation',
-          counterpartyActorId,
+          recipientActorId,
         ],
       });
       queryClient.invalidateQueries({
         queryKey: [socialQueryKey, 'messages', 'conversations'],
+      });
+    },
+    onError: (_error, { recipientActorId }) => {
+      queryClient.invalidateQueries({
+        queryKey: [
+          socialQueryKey,
+          'messages',
+          'conversation',
+          recipientActorId,
+        ],
       });
     },
   });

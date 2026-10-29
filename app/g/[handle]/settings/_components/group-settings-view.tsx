@@ -32,6 +32,7 @@ interface DeletionPreview {
   name: string;
   memberPosts: number;
   memberPostAuthors: number;
+  chatMessages: number;
   activeMembers: number;
   upcomingEvents: number;
   pastEvents: number;
@@ -168,6 +169,13 @@ function DangerZone({ handle }: { handle: string }) {
               </strong>{' '}
               {preview.activeMembers === 1 ? 'member' : 'members'} will lose
               access.
+            </li>
+            <li>
+              <strong className="text-pana-ink font-black">
+                {preview.chatMessages.toLocaleString('en-US')}
+              </strong>{' '}
+              group chat messages and their moderation records will be
+              permanently deleted.
             </li>
             {preview.upcomingEvents > 0 && (
               <li className="text-red-700">

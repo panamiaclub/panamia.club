@@ -1,8 +1,22 @@
 'use client';
 
-import Image from 'next/image';
-import { BadgeCheck, Check, Clock3, Globe, Play, Store } from 'lucide-react';
-import type { MockChatPerson, MockDeliveryState } from '../_data/mock-dm-chat';
+import { MessageAvatar } from '@/components/messages/message-avatar';
+import {
+  AlertCircle,
+  AudioLines,
+  BadgeCheck,
+  Check,
+  Clock3,
+  Globe,
+  Sparkles,
+  Store,
+} from 'lucide-react';
+import type {
+  MockChatPerson,
+  MockDeliveryState,
+  MockGif,
+} from '../_data/mock-dm-chat';
+import styles from '@/components/messages/workspace.module.css';
 
 /* Primitives for the DM chat view.
  *
@@ -27,13 +41,11 @@ export function ChatAvatar({
   size?: number;
 }) {
   return (
-    <Image
-      src={person.avatar}
-      alt={person.name}
-      width={size}
-      height={size}
-      className="chrome-avatar flex-none"
-      style={{ width: size, height: size }}
+    <MessageAvatar
+      identity={person.handle}
+      name={person.name}
+      imageUrl={person.avatar}
+      size={size}
     />
   );
 }
@@ -101,7 +113,7 @@ export function ChatWaveform({
         className={`flex h-8 w-8 flex-none items-center justify-center rounded-full ${buttonColor}`}
         aria-hidden="true"
       >
-        <Play className="h-3.5 w-3.5 translate-x-px" />
+        <AudioLines className="h-4 w-4" />
       </span>
       <span className="flex flex-1 items-center gap-[3px]" aria-hidden="true">
         {peaks.map((peak, index) => (
@@ -119,16 +131,6 @@ export function ChatWaveform({
   );
 }
 
-/** Unread count pill. */
-export function UnreadBadge({ count }: { count: number }) {
-  if (count < 1) return null;
-  return (
-    <span className="bg-pana-flame text-pana-ink flex h-5 min-w-5 flex-none items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold">
-      {count}
-    </span>
-  );
-}
-
 /* Delivery state, rendered next to the timestamp of the viewer's own bubble
    group.
  *
@@ -140,29 +142,29 @@ export function UnreadBadge({ count }: { count: number }) {
 export function DeliveryMark({ state }: { state: MockDeliveryState }) {
   if (state === 'sent') {
     return (
-      <span className="text-pana-ink/40 inline-flex items-center gap-0.5">
+      <span className={styles.deliveryMark} data-state="sent">
         <Check className="h-3 w-3" aria-hidden="true" />
-        <span className="sr-only">Sent</span>
+        Sent
       </span>
     );
   }
 
   if (state === 'sending') {
     return (
-      <span className="text-pana-ink/35 inline-flex items-center gap-1 text-[11px] font-bold">
-        <Clock3 className="h-3 w-3 animate-pulse" aria-hidden="true" />
+      <span className={styles.deliveryMark} data-state="sending">
+        <Clock3
+          className="h-3 w-3 motion-safe:animate-pulse"
+          aria-hidden="true"
+        />
         Sending
       </span>
     );
   }
 
-  /* Queued, i.e. composed with the socket down. Named for what it is - the
-     write has not happened yet - rather than shown as sent, because a tick
-     that appears before the row exists is the one lie this UI must not tell. */
   return (
-    <span className="text-pana-burnt inline-flex items-center gap-1 text-[11px] font-bold">
-      <Clock3 className="h-3 w-3" aria-hidden="true" />
-      Queued — offline
+    <span className={styles.deliveryMark} data-state="failed">
+      <AlertCircle className="h-3 w-3" aria-hidden="true" />
+      Not sent
     </span>
   );
 }
@@ -185,15 +187,27 @@ export function ExpiryChip({ expiresIn }: { expiresIn: string }) {
   const urgent = expiresIn.includes('hour');
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
-        urgent
-          ? 'bg-pana-red/12 text-pana-red-deep'
-          : 'bg-pana-ink/6 text-pana-ink/50'
-      }`}
-      title="Direct messages are hidden 30 days after they are sent (status.ts)"
+      className={styles.expiryChip}
+      data-urgent={urgent}
+      title="Messages disappear from view 30 days after they are sent."
     >
       <Clock3 className="h-2.5 w-2.5" aria-hidden="true" />
       Disappears in {expiresIn}
+    </span>
+  );
+}
+
+export function GifArt({ gif }: { gif: MockGif }) {
+  return (
+    <span
+      className={styles.gifArt}
+      data-tone={gif.tone}
+      role="img"
+      aria-label={gif.label}
+    >
+      <Sparkles className={styles.gifSparkle} aria-hidden="true" />
+      <span>{gif.word}</span>
+      <Sparkles className={styles.gifSparkle} aria-hidden="true" />
     </span>
   );
 }

@@ -170,6 +170,9 @@ export const inventory: Record<TableExport, Classification> = {
   // Which groups a pana belongs to, and in what role. Opaque ids, but the
   // association is a map of someone's interests and affiliations.
   socialGroupMembers: ['social_graph'],
+  // Native, member-only correspondence and media metadata. Never federated.
+  // Author/group deletion cascades; expiry is a 30-day visibility window.
+  socialGroupChatMessages: ['social_posts', 'social_graph', 'uploads'],
   socialAttachments: ['uploads', 'social_posts'],
   // Who watched whose story. An interaction record between two actors, same
   // shape as a like, and surfaced to the story's author as a viewer list --

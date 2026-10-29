@@ -32,6 +32,7 @@ import { and, asc, eq, ne, sql } from 'drizzle-orm';
 import { ACTIVITY_WINDOW_DAYS } from '@/lib/server/group-search';
 import { generateActorKeyPair } from '../crypto/keys';
 import { notifyJoinRequested } from './group-notify';
+import { notifyGroupChat } from '@/lib/group-chat-notify';
 import { validateScreennameFull } from '@/lib/screenname';
 import {
   socialConfig,
@@ -300,6 +301,7 @@ export async function createGroup(
     return { group, actor };
   });
 
+  await notifyGroupChat(created.group.id, { kind: 'membership' });
   return {
     success: true,
     group: created.group,
@@ -416,6 +418,7 @@ export async function updateGroup(
     return { success: false, error: 'Group actor not found' };
   }
 
+  await notifyGroupChat(groupId, { kind: 'membership' });
   return {
     success: true,
     group: updated.group,
@@ -500,6 +503,7 @@ export async function joinGroup(
   if (pending) {
     await notifyJoinRequested(groupId, actorId);
   }
+  await notifyGroupChat(groupId, { kind: 'membership' }, [actorId]);
 
   return { success: true, membership, pending };
 }
@@ -571,6 +575,7 @@ export async function leaveGroup(
     }
   });
 
+  await notifyGroupChat(groupId, { kind: 'membership' }, [actorId]);
   return { success: true, left: true };
 }
 

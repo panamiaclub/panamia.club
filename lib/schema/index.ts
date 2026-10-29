@@ -19,10 +19,12 @@ import {
   jsonb,
   uniqueIndex,
   index,
+  check,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
+import type { ChatAttachment } from '@/lib/chat';
 
 // =============================================================================
 // Enums
@@ -2201,6 +2203,74 @@ export const socialGroupMembers = pgTable(
   })
 );
 
+/**
+ * One native chat per existing group. Membership is never copied: every read
+ * and write checks social_group_members. These rows never enter public feeds
+ * or federation, and the 30-day expiry is a visibility filter, like DMs.
+ */
+export const socialGroupChatMessages = pgTable(
+  'social_group_chat_messages',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    groupId: text('group_id')
+      .notNull()
+      .references(() => socialGroups.id, { onDelete: 'cascade' }),
+    actorId: text('actor_id')
+      .notNull()
+      .references(() => socialActors.id, { onDelete: 'cascade' }),
+    clientId: text('client_id').notNull(),
+    body: text('body').notNull(),
+    attachments: jsonb('attachments')
+      .$type<ChatAttachment[]>()
+      .notNull()
+      .default([]),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    deletedByActorId: text('deleted_by_actor_id').references(
+      () => socialActors.id,
+      { onDelete: 'set null' }
+    ),
+  },
+  (table) => ({
+    clientUnique: uniqueIndex('social_group_chat_client_unique').on(
+      table.groupId,
+      table.actorId,
+      table.clientId
+    ),
+    historyIdx: index('social_group_chat_history_idx').on(
+      table.groupId,
+      table.createdAt,
+      table.id
+    ),
+    actorIdx: index('social_group_chat_actor_idx').on(table.actorId),
+    deletedByIdx: index('social_group_chat_deleted_by_idx').on(
+      table.deletedByActorId
+    ),
+    expiryIdx: index('social_group_chat_expiry_idx').on(table.expiresAt),
+    bodyLength: check(
+      'social_group_chat_body_length',
+      sql`char_length(${table.body}) <= 5000`
+    ),
+    clientLength: check(
+      'social_group_chat_client_length',
+      sql`char_length(${table.clientId}) BETWEEN 1 AND 128`
+    ),
+    attachmentLimit: check(
+      'social_group_chat_attachment_limit',
+      sql`jsonb_typeof(${table.attachments}) = 'array' AND jsonb_array_length(${table.attachments}) <= 4`
+    ),
+    notEmpty: check(
+      'social_group_chat_not_empty',
+      sql`char_length(btrim(${table.body})) > 0 OR jsonb_array_length(${table.attachments}) > 0`
+    ),
+  })
+).enableRLS();
+
 export const socialAttachments = pgTable(
   'social_attachments',
   {
@@ -3878,6 +3948,8 @@ export type SocialBlock = typeof socialBlocks.$inferSelect;
 export type SocialBlockKind = (typeof socialBlockKind.enumValues)[number];
 export type SocialGroup = typeof socialGroups.$inferSelect;
 export type SocialGroupMember = typeof socialGroupMembers.$inferSelect;
+export type SocialGroupChatMessage =
+  typeof socialGroupChatMessages.$inferSelect;
 export type SocialLike = typeof socialLikes.$inferSelect;
 export type SocialAttachment = typeof socialAttachments.$inferSelect;
 export type SocialStoryView = typeof socialStoryViews.$inferSelect;
