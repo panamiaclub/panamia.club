@@ -145,7 +145,7 @@
     "@vinext/cloudflare": "1.2.0",
     "@vitejs/plugin-react": "^6.1.2",
     "@vitejs/plugin-rsc": "0.5.38",
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.9",
     "eslint": "10.13.0",
     "husky": "^9.1.7",
     "lint-staged": "17.6.0",
