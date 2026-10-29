@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type MouseEvent,
 } from 'react';
@@ -185,9 +186,35 @@ export default function MainHeader({
   const isShopRoute = pathname === '/shop' || pathname.startsWith('/shop/');
   const showDirectoryJoin = pathname === '/' || pathname === '/mock/home';
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+  const mastheadRef = useRef<HTMLDivElement>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+
+  useEffect(() => {
+    const masthead = mastheadRef.current;
+    if (!masthead) return;
+
+    const root = document.documentElement;
+    const publishOffset = () => {
+      const top = parseFloat(getComputedStyle(masthead).top);
+      root.style.setProperty(
+        '--main-masthead-offset',
+        `${masthead.getBoundingClientRect().height + top}px`
+      );
+    };
+
+    publishOffset();
+    const observer = new ResizeObserver(publishOffset);
+    observer.observe(masthead, { box: 'border-box' });
+    window.addEventListener('resize', publishOffset);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', publishOffset);
+      root.style.removeProperty('--main-masthead-offset');
+    };
+  }, []);
 
   // The public site menu is identical for every visitor. Account destinations
   // remain in the identity menu rather than changing this list after sign-in.
@@ -262,7 +289,7 @@ export default function MainHeader({
             </div>
           )}
         {/* Centered masthead: menu (left) · logo (center) · actions (right) */}
-        <div className={styles.masthead}>
+        <div ref={mastheadRef} className={styles.masthead}>
           <div className={styles.mastheadInner}>
             <div className={styles.mastheadLeft}>
               <button

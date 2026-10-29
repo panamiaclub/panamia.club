@@ -64,6 +64,14 @@ Page-level utilities:
 | `FullPage.tsx`               | Full-page layout wrapper |
 | `Status401_Unauthorized.tsx` | Unauthorized error page  |
 
+## Site Navigation
+
+`MainHeader.tsx` measures the sticky masthead with `ResizeObserver` and publishes
+its height plus sticky top inset as `--main-masthead-offset`. The shared section
+navigation in `app/about-us/AboutUsPage.module.css` uses this offset so it stays
+flush below the masthead as screen size, text size, or identity reminders change.
+The custom property is removed when the main header unmounts.
+
 ## Flower Power (`flower-power/`)
 
 Pana MIA brand animations and effects:

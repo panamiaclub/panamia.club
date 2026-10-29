@@ -83,7 +83,7 @@
 
 .pageNav {
   position: sticky;
-  top: 83px;
+  top: var(--main-masthead-offset, 83px);
   z-index: 20;
   overflow-x: auto;
   border-bottom: 1px solid rgb(17 13 13 / 0.12);
@@ -580,7 +580,7 @@
 
 @media (max-width: 719px) {
   .pageNav {
-    top: 71px;
+    top: var(--main-masthead-offset, 71px);
   }
 
   .pageNavInner {
