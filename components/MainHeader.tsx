@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEvent,
+} from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useSession } from '@/lib/auth-client';
 import Link from 'next/link';
@@ -33,13 +39,13 @@ const NAV_ITEMS: NavItemDefinition[] = [
     labelKey: 'nav.siteMenu.aboutPana',
     href: '/about-us',
     children: [
-      { labelKey: 'nav.siteMenu.ourStory', href: '/about-us#our-story' },
+      { labelKey: 'nav.siteMenu.ourStory', href: '/about-us/our-story' },
       {
         labelKey: 'nav.siteMenu.meetTheTeam',
-        href: '/about-us#meet-the-team',
+        href: '/about-us/meet-the-team',
       },
-      { labelKey: 'nav.siteMenu.whyLocal', href: '/about-us#why-local' },
-      { labelKey: 'nav.siteMenu.pillars', href: '/about-us#pillars' },
+      { labelKey: 'nav.siteMenu.whyLocal', href: '/about-us/why-local' },
+      { labelKey: 'nav.siteMenu.pillars', href: '/about-us/pillars' },
     ],
   },
   {
@@ -148,6 +154,25 @@ const NAV_ITEMS: NavItemDefinition[] = [
   { labelKey: 'nav.siteMenu.shop', href: '/shop' },
 ];
 
+function scrollToCurrentAboutSection(event: MouseEvent<HTMLAnchorElement>) {
+  const { pathname } = event.currentTarget;
+  if (
+    pathname !== window.location.pathname ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  document
+    .getElementById(pathname.slice('/about-us/'.length))
+    ?.scrollIntoView({ behavior: 'instant', block: 'start' });
+}
+
 export default function MainHeader({
   isProductionSite,
 }: {
@@ -177,6 +202,9 @@ export default function MainHeader({
         collapseLabel: t('nav.collapseSubmenu', {
           label: t(item.labelKey),
         }),
+        onSelect: item.href.startsWith('/about-us/')
+          ? scrollToCurrentAboutSection
+          : undefined,
         children: item.children?.map(translateItem),
       });
 

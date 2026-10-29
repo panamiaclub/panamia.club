@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent,
 } from 'react';
 import Image from 'next/image';
 import { ChevronDown } from 'lucide-react';
@@ -23,7 +24,7 @@ export type NavDrawerItem = {
   collapseLabel?: string;
   /** Runs alongside the drawer close, on the same click. Used for permission
       prompts that browsers only grant from a user gesture. */
-  onSelect?: () => void;
+  onSelect?: (event: MouseEvent<HTMLAnchorElement>) => void;
 };
 
 /** The main site's wordmark, and the default so its call site stays unchanged. */
@@ -210,8 +211,8 @@ function NavDrawerEntry({
             hasChildren && styles.parentLink
           )}
           data-depth={depth}
-          onClick={() => {
-            item.onSelect?.();
+          onClick={(event) => {
+            item.onSelect?.(event);
             onClose();
           }}
           style={{ '--d': `${0.1 + index * 0.05}s` } as CSSProperties}

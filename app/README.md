@@ -10,6 +10,7 @@ Next.js 16 App Router directory containing all pages, layouts, and API routes.
 | ------------------- | -------------------------------------------- |
 | `/`                 | Homepage with featured profiles and articles |
 | `/about-us`         | About Pana MIA page                          |
+| `/about-us/[section]` | Open the About page at a specific section  |
 | `/directory`        | Browse business directory                    |
 | `/directory/search` | Search directory with filters                |
 | `/directorio`       | Spanish alias for directory                  |
@@ -25,6 +26,12 @@ Next.js 16 App Router directory containing all pages, layouts, and API routes.
 | `/links`            | Link tree style page                         |
 | `/podcasts`         | Podcast listings                             |
 | `/donate`           | Donation page                                |
+
+About section URLs keep the complete page and scroll to the requested section:
+`/about-us/our-story`, `/about-us/why-local`, `/about-us/pillars`,
+`/about-us/meet-the-team`, and `/about-us/collaborative-projects`. Existing
+fragment links such as `/about-us#our-story` still work. Unknown section names
+return 404.
 
 ### Account Pages (`/account/*`)
 
