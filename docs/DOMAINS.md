@@ -76,6 +76,13 @@ rollout followed this order:
    its final canonical URL. The global `PANAVERSE_SUBDOMAINS` flag remains
    off, and `FEDERATION_DOMAIN` remains `pana.social`.
 
+**Printed zine QR compatibility:** The "Explore the Panaverse" zine QR code
+encodes `https://info.panamia.club/linkedin-bio` with a `fbclid` query parameter.
+Keep the permanent 308 redirect from `/linkedin-bio` to `/info` in
+`next.config.js`, preserving query parameters, so already-printed codes reach
+the current info page. This legacy path is now handled by the app, not
+GoHighLevel; do not replace the QR artwork or repoint the domain to repair it.
+
 **Rollback:** Restore the info surface's pending flag and deploy before
 changing DNS, so its canonical returns to `https://panamia.club/info`.
 Then remove only the info Worker Custom Domain and restore the proxied

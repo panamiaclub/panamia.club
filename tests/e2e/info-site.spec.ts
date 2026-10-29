@@ -102,6 +102,25 @@ test('the info hostname serves the same page at its root', async ({
   await expect(page.getByRole('contentinfo')).toHaveCount(1);
 });
 
+test('the printed zine QR URL reaches the info page and preserves tracking', async ({
+  page,
+}, testInfo) => {
+  const url = new URL(
+    '/linkedin-bio?fbclid=printed-zine&utm_source=zine',
+    testInfo.project.use.baseURL
+  );
+  url.hostname = 'info.localhost';
+  const response = await page.goto(url.href);
+  const redirect = await response?.request().redirectedFrom()?.response();
+  expect(redirect?.status()).toBe(308);
+  expect(await redirect?.headerValue('location')).toBe(`/info${url.search}`);
+  expect(response?.status()).toBe(200);
+  await expect(page).toHaveURL(new URL(`/info${url.search}`, url).href);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'The future is local.'
+  );
+});
+
 test('the old newsletter URL reaches the new signup section', async ({
   page,
 }) => {
