@@ -24,6 +24,7 @@ interface FixtureOptions {
   url?: string;
   role?: GroupChatRoom['role'];
   signedIn?: boolean;
+  native?: boolean;
   failSends?: number;
   failDeletes?: number;
   pageSize?: number;
@@ -37,6 +38,15 @@ interface FixtureOptions {
 // Production /messages and /g/[handle]/chat components, with only session,
 // HTTP and actor-mailbox boundaries replaced. No real group data is changed.
 async function openGroupChat(page: Page, options: FixtureOptions = {}) {
+  if (options.native) {
+    await page.addInitScript(() => {
+      window.Capacitor = {
+        isNativePlatform: () => true,
+        getPlatform: () => 'android',
+      };
+      Object.assign(window, { androidBridge: { postMessage: () => {} } });
+    });
+  }
   const person = (id: string, name: string): ChatMessage['actor'] => ({
     id,
     username: id,
@@ -469,7 +479,12 @@ async function openGroupChat(page: Page, options: FixtureOptions = {}) {
     ).toBeVisible();
   } else {
     await expect(compose(page)).toBeVisible();
-    await expect.poll(() => mailboxes.length).toBe(1);
+    if (options.native) {
+      await expect(page.locator('[data-native-app]')).toBeVisible();
+      await expect.poll(() => mailboxes.length).toBeGreaterThan(0);
+    } else {
+      await expect.poll(() => mailboxes.length).toBe(1);
+    }
   }
   return {
     viewer,
@@ -819,4 +834,37 @@ test('does not request group content or open a mailbox while signed out', async 
     fixture.calls.some((call) => /\/api\/social\/groups\/.+\/chat/.test(call))
   ).toBe(false);
   expect(fixture.mailboxes).toHaveLength(0);
+});
+
+test('fits group chat inside the native app chrome without covering its composer', async ({
+  page,
+}) => {
+  await openGroupChat(page, { native: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const navigation = page.getByRole('navigation', { name: 'App navigation' });
+  await expect(navigation).toBeVisible();
+  await expect(compose(page)).toBeVisible();
+  const nav = await navigation.boundingBox();
+  const send = await page
+    .getByRole('button', { name: 'Send message', exact: true })
+    .boundingBox();
+  expect(send!.y + send!.height).toBeLessThanOrEqual(nav!.y);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    390
+  );
+  await page.setViewportSize({ width: 390, height: 520 });
+  await compose(page).fill(
+    'Saturday works.\nI can bring coffee.\nAnd a few prints.\nSee you there!'
+  );
+  await page.getByRole('button', { name: 'Add a GIF' }).click();
+  await page
+    .getByRole('group', { name: 'GIF picker' })
+    .getByRole('button', { name: /A little celebration/ })
+    .click();
+  await expect(page.getByRole('button', { name: 'Remove GIF' })).toBeVisible();
+  const shortNav = await navigation.boundingBox();
+  const shortSend = await page
+    .getByRole('button', { name: 'Send message', exact: true })
+    .boundingBox();
+  expect(shortSend!.y + shortSend!.height).toBeLessThanOrEqual(shortNav!.y);
 });

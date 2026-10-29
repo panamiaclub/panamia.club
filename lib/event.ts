@@ -82,6 +82,15 @@ export async function getEventBySlug(slug: string) {
   });
 }
 
+export const PUBLIC_EVENT_VENUE_COLUMNS = {
+  name: true,
+  city: true,
+  state: true,
+  slug: true,
+  lat: true,
+  lng: true,
+} as const;
+
 export async function getUpcomingEvents(
   options: { limit?: number; offset?: number } = {}
 ) {
@@ -93,11 +102,11 @@ export async function getUpcomingEvents(
       eq(events.visibility, 'public'),
       gte(events.startsAt, now)
     ),
-    orderBy: [asc(events.startsAt)],
+    orderBy: [asc(events.startsAt), asc(events.id)],
     offset,
     limit,
     with: {
-      venue: { columns: { name: true, city: true, state: true, slug: true } },
+      venue: { columns: PUBLIC_EVENT_VENUE_COLUMNS },
     },
   });
 }
@@ -138,11 +147,11 @@ export async function searchUpcomingEvents(options: {
       gte(events.startsAt, now),
       sql`"events"."search_vector" @@ ${searchTsQuery(trimmed)}`
     ),
-    orderBy: [asc(events.startsAt)],
+    orderBy: [asc(events.startsAt), asc(events.id)],
     offset,
     limit,
     with: {
-      venue: { columns: { name: true, city: true, state: true, slug: true } },
+      venue: { columns: PUBLIC_EVENT_VENUE_COLUMNS },
     },
   });
 }

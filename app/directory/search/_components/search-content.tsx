@@ -12,62 +12,26 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { useSearch, type DirectorySort } from '@/lib/query/directory';
-import { forceInt } from '@/lib/standardized';
 import { searchPath } from '@/lib/directory-search-path';
 import {
   DEFAULT_DIRECTORY_RADIUS,
   effectiveDirectoryRadius,
   isDirectoryRadius,
-  parseDirectoryRadius,
   type DirectoryRadius,
 } from '@/lib/directory-radius';
 import { useViewerLocation } from '@/app/p/[user]/_lib/use-viewer-location';
 import { DirectoryViewerProvider } from './directory-viewer';
 import { SearchBand } from './search-band';
-import { FilterBar, type FilterState, type ResultView } from './filter-bar';
+import { FilterBar, type FilterState } from './filter-bar';
 import { ResultCard } from './result-card';
 import { MapPanel } from './map-panel';
 import { EmptyState } from './empty-state';
 import { SearchPagination } from './search-pagination';
-
-const SORTS: DirectorySort[] = ['relevance', 'nearest', 'recommended', 'name'];
-
-function toSort(raw: string | null): DirectorySort | null {
-  return SORTS.includes(raw as DirectorySort) ? (raw as DirectorySort) : null;
-}
+import { getDirectorySearchParams } from '../_lib/search-params';
 
 /** `a+b+c` is the directory's existing multi-value encoding. Kept as-is. */
 function splitList(raw: string): string[] {
   return raw ? raw.split('+').filter(Boolean) : [];
-}
-
-function getSearchParams(searchParams: URLSearchParams, pathTerm?: string) {
-  const pageNum = forceInt(searchParams.get('p') || '', 1);
-  const pageLimit = forceInt(searchParams.get('l') || '', 20);
-  // A term in the path wins over ?q=. Both forms stay readable so existing
-  // links and bookmarks keep working; the path form is the canonical one.
-  const searchTerm = pathTerm || searchParams.get('q') || '';
-  const filterCategories = searchParams.get('fcat') || '';
-  const mentorsOnly = searchParams.get('mentors') === 'true';
-  const expertise = searchParams.get('expertise') || '';
-  const languages = searchParams.get('lang') || '';
-  const freeOnly = searchParams.get('free') === 'true';
-
-  return {
-    pageNum,
-    pageLimit,
-    searchTerm,
-    filterCategories,
-    mentorsOnly,
-    expertise,
-    languages,
-    freeOnly,
-    sort: toSort(searchParams.get('sort')),
-    radius: parseDirectoryRadius(searchParams.get('radius')),
-    certifiedOnly: searchParams.get('certified') === 'true',
-    withEventsOnly: searchParams.get('events') === 'true',
-    view: (searchParams.get('view') === 'map' ? 'map' : 'list') as ResultView,
-  };
 }
 
 interface DirectorySearchContentProps {
@@ -80,7 +44,7 @@ export function DirectorySearchContent({
 }: DirectorySearchContentProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const params = getSearchParams(
+  const params = getDirectorySearchParams(
     searchParams || new URLSearchParams(),
     initialTerm
   );

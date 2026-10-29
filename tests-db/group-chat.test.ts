@@ -124,7 +124,7 @@ before(async () => {
   );
   await pg.exec(
     await readFile(
-      new URL('../drizzle/0073_social_group_chat.sql', import.meta.url),
+      new URL('../drizzle/0074_social_group_chat.sql', import.meta.url),
       'utf8'
     )
   );

@@ -523,8 +523,15 @@
     {
       "idx": 74,
       "version": "7",
+      "when": 1793116800000,
+      "tag": "0073_event_bookmarks",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
       "when": 1793203200000,
-      "tag": "0073_social_group_chat",
+      "tag": "0074_social_group_chat",
       "breakpoints": true
     }
   ]

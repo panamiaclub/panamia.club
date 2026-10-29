@@ -793,3 +793,24 @@ export async function listMyGroups(
     nextEvent: row.nextEvent ?? null,
   }));
 }
+
+export async function listMyGroupRequests(actorId: string) {
+  const rows = await db
+    .select({
+      id: socialGroups.id,
+      handle: socialActors.username,
+      name: socialActors.name,
+      iconUrl: socialActors.iconUrl,
+    })
+    .from(socialGroupMembers)
+    .innerJoin(socialGroups, eq(socialGroups.id, socialGroupMembers.groupId))
+    .innerJoin(socialActors, eq(socialActors.id, socialGroups.actorId))
+    .where(
+      and(
+        eq(socialGroupMembers.actorId, actorId),
+        eq(socialGroupMembers.status, 'pending')
+      )
+    )
+    .orderBy(asc(socialActors.name));
+  return rows.map((row) => ({ ...row, name: row.name ?? row.handle }));
+}

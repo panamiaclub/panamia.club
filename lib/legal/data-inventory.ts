@@ -193,6 +193,7 @@ export const inventory: Record<TableExport, Classification> = {
   // nobody but its author. Telling a member in the privacy centre that their
   // "not for me" taps go to hosts would be worse than not listing them.
   eventDismissals: ['event_preferences'],
+  eventBookmarks: ['event_preferences'],
 
   // --- Community Connectors (the volunteer programme) ---
   // What a connector said they would do, plus anything staff put on their

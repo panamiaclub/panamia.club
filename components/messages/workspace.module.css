@@ -28,6 +28,18 @@
   display: none;
 }
 
+:global([data-native-app]:has([data-messages-workspace])) {
+  bottom: auto;
+  height: var(--messages-viewport-height, 100dvh);
+}
+
+:global([data-native-app]:has([data-messages-workspace]) #layout-main) {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .page {
   display: flex;
   height: 100dvh;

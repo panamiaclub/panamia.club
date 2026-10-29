@@ -39,6 +39,7 @@ import {
   deletionLogs,
   events,
   eventAttendees,
+  eventBookmarks,
   venues,
   relayGroupMembers,
   relayGroupJoinPending,
@@ -777,6 +778,16 @@ export async function deleteAccount(
     // Remaining event attendee rows for this profile (organizer/note tables
     // were dropped in the Nostr event-model merge).
     if (profile) {
+      await safeDelete(
+        'eventBookmarks',
+        () =>
+          db
+            .delete(eventBookmarks)
+            .where(eq(eventBookmarks.profileId, profile.id))
+            .returning({ id: eventBookmarks.id }),
+        deletedTables,
+        warnings
+      );
       await safeDelete(
         'eventAttendees',
         () =>

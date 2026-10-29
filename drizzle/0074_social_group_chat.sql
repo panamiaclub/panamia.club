@@ -1,3 +1,8 @@
+-- Migration: 0074_social_group_chat
+-- Purpose: Add native, members-only group chat with 30-day visible history.
+-- Ticket: N/A
+-- Reversible: Yes. Drop only the new social_group_chat_messages table.
+--
 -- Native member-only group chat. Group membership remains authoritative; no
 -- room-members table or public/federated status is created.
 -- Expiry hides messages after 30 days, like DMs. Moderation is a soft delete.

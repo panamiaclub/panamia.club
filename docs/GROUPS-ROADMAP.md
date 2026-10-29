@@ -3,7 +3,7 @@
 > **STATUS**: **Native groups are implemented.** Membership, discovery, posts, events, settings,
 > moderation, and group deletion are recorded in the shipped phases below. Each group now also
 > has a members-only native chat at `/g/[handle]/chat` and in Messages' Groups folder; this requires
-> migration `0073_social_group_chat`. Chat uses a 30-day visibility window and existing membership.
+> migration `0074_social_group_chat`. Chat uses a 30-day visibility window and existing membership.
 >
 > The original design inventory below describes two earlier group-shaped systems:
 > NIP-29 relay groups under `/r/groups`, and the `Groups` stat already rendered next to Panas in

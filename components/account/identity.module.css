@@ -88,6 +88,13 @@
   background-color: rgb(17 13 13 / 0.04);
 }
 
+.triggerCompact {
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 3px;
+}
+
 .trigger:focus-visible {
   outline: 2px solid var(--color-pana-indigo);
   outline-offset: 2px;

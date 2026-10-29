@@ -353,7 +353,7 @@ test.describe('story camera', () => {
   test('switching, retaking, Escape, and Android back release streams and previews', async ({
     page,
   }) => {
-    await openStory(page);
+    const { dialog } = await openStory(page);
     const camera = await openStoryCamera(page);
     await camera.getByRole('button', { name: 'Switch camera' }).click();
     await expect(
@@ -391,9 +391,8 @@ test.describe('story camera', () => {
       )
     ).toContain(url);
     await page.keyboard.press('Escape');
-    await expect(
-      page.getByRole('dialog', { name: 'Post a story', exact: true })
-    ).toBeVisible();
+    await expect(dialog).toBeVisible();
+    await expect(camera).toHaveCount(0);
     await expectDevicesStopped(page);
     expect(
       await page.evaluate(() =>
@@ -402,7 +401,7 @@ test.describe('story camera', () => {
         )
       )
     ).toBe(false);
-    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(dialog).toHaveCount(0);
     expect(
       await page.evaluate(() =>
         window.dispatchEvent(

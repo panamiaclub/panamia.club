@@ -2,7 +2,7 @@
 
 > **STATUS**: **DM and native group chat are implemented in the repository.** DMs use the existing
 > direct-status store. Groups use `social_group_chat_messages` and existing active memberships.
-> Both use the authenticated actor mailbox at `/ws/dm`. Apply migration `0073_social_group_chat`
+> Both use the authenticated actor mailbox at `/ws/dm`. Apply migration `0074_social_group_chat`
 > before deploying group chat. Event chat and the generic room/socket design below remain proposals.
 >
 > **Decided (2026-10), by the product owner:** chat replaces the mail experience, and it is scoped
@@ -738,7 +738,7 @@ a chat room. Chat history survives an empty room.
 ## Schema
 
 **Historical generic-room proposal.** Native groups now use the smaller, group-keyed schema in
-`drizzle/0073_social_group_chat.sql` and `lib/schema/index.ts`. The proposal below is retained for
+`drizzle/0074_social_group_chat.sql` and `lib/schema/index.ts`. The proposal below is retained for
 event-room planning; do not create a second group membership or message store alongside it.
 
 **Group and event rooms only.** DM rooms do not appear here — they read and write `socialStatuses`
