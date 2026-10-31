@@ -103,7 +103,17 @@ export function ProfileHero({
         <div className="-mt-16 flex flex-col gap-6 md:-mt-24 md:flex-row md:items-end md:gap-8">
           {profile.logo && (
             <div className="bizprofile-logo">
-              <StoryRing username={profile.handle} size="lg">
+              {profile.handle ? (
+                <StoryRing username={profile.handle} size="lg">
+                  <Image
+                    src={profile.logo}
+                    alt={`${profile.name} logo`}
+                    width={220}
+                    height={220}
+                    unoptimized={isUnoptimizableImageSrc(profile.logo)}
+                  />
+                </StoryRing>
+              ) : (
                 <Image
                   src={profile.logo}
                   alt={`${profile.name} logo`}
@@ -111,7 +121,7 @@ export function ProfileHero({
                   height={220}
                   unoptimized={isUnoptimizableImageSrc(profile.logo)}
                 />
-              </StoryRing>
+              )}
             </div>
           )}
 

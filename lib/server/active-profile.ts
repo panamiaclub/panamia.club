@@ -20,8 +20,22 @@ import { profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { ensureActorForProfile } from '@/lib/federation/wrappers/actor';
 import { canAdministerProfile } from './profile-owners';
+import type { NextResponse } from 'next/server';
 
 export const ACTIVE_PROFILE_COOKIE = 'pana_active_profile';
+
+export function selectActiveProfile(
+  response: NextResponse,
+  profileId: string
+): void {
+  response.cookies.set(ACTIVE_PROFILE_COOKIE, profileId, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30,
+  });
+}
 
 /**
  * Resolve the profile this user is currently acting as.

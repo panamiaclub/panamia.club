@@ -1,8 +1,10 @@
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import { sendTemplateEmail } from '@/lib/email';
+import { sendListingNotification } from './listing-notifications';
 import { profiles } from '@/lib/schema';
+import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
+import { listingPublicPath } from '@/lib/listing-url';
 
 /**
  * The one place a directory listing is approved or declined.
@@ -75,6 +77,8 @@ export type DecisionOutcome =
       email: string;
       mailed: boolean;
       mailFailed: boolean;
+      publicPath: string | null;
+      screenname: string | null;
     }
   | { ok: false; reason: 'not-found' | 'already-decided' };
 
@@ -95,6 +99,7 @@ export async function decideListing({
 }): Promise<DecisionOutcome> {
   const profile = await db.query.profiles.findFirst({
     where: eq(profiles.id, profileId),
+    with: { user: { columns: { screenname: true, accountType: true } } },
   });
 
   if (!profile) return { ok: false, reason: 'not-found' };
@@ -125,16 +130,36 @@ export async function decideListing({
     .update(profiles)
     .set({ active: decision === 'approve', status: nextStatus })
     .where(eq(profiles.id, profileId));
+  const screenname = profile.screenname ?? profile.user?.screenname;
 
   let mailed = false;
   let mailFailed = false;
+  const publicPath =
+    decision === 'approve' &&
+    (screenname ||
+      profile.userId === null ||
+      DIRECTORY_ACCOUNT_TYPES.some(
+        (type) => type === profile.user?.accountType
+      ))
+      ? listingPublicPath({ id: profile.id, screenname })
+      : null;
 
   if (firstTime) {
     try {
-      await sendTemplateEmail(
+      await sendListingNotification(
+        profile,
         decision === 'approve' ? 'profile.published' : 'profile.not_published',
-        { name: profile.name },
-        profile.email
+        {
+          name: profile.name,
+          ...(publicPath
+            ? {
+                profileUrl: new URL(
+                  publicPath,
+                  process.env.NEXT_PUBLIC_HOST_URL || 'https://panamia.club'
+                ).toString(),
+              }
+            : {}),
+        }
       );
       mailed = true;
     } catch (error) {
@@ -153,5 +178,7 @@ export async function decideListing({
     email: profile.email,
     mailed,
     mailFailed,
+    publicPath,
+    screenname: screenname ?? null,
   };
 }

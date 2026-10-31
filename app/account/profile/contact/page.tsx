@@ -120,7 +120,7 @@ export default function AccountProfileContact() {
               )}
               <p className="text-sm text-gray-500">
                 {isListing
-                  ? 'Only used for this listing, not displayed publicly. Changing it does not change your Pana account email.'
+                  ? 'Application emails go to the owner account email, with a copy here when different. Sign-in links stay with the account email. This contact is not public, and changing it does not change your Pana login.'
                   : 'Change your sign-in email in account settings. Listing contact emails are edited separately.'}
               </p>
             </div>

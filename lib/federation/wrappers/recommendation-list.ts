@@ -34,6 +34,7 @@ import {
 import type { RecommendationListVisibility } from '@/lib/schema';
 import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
 import { BUSINESS_INTAKE_SOURCE } from '@/lib/server/profile-owners';
+import { listingPublicPath } from '@/lib/listing-url';
 import { socialConfig } from '@/lib/federation';
 import {
   MAX_ITEMS_PER_LIST,
@@ -304,9 +305,16 @@ export async function getListItems(listId: string) {
       // and the whole point is that it reads like a person vouching.
       profileImage: profiles.primaryImageCdn,
       profileCategories: profiles.categories,
+      profileActive: profiles.active,
     })
     .from(recommendationListItems)
-    .leftJoin(profiles, eq(recommendationListItems.profileId, profiles.id))
+    .leftJoin(
+      profiles,
+      and(
+        eq(recommendationListItems.profileId, profiles.id),
+        eq(profiles.active, true)
+      )
+    )
     .where(eq(recommendationListItems.listId, listId))
     .orderBy(
       asc(recommendationListItems.position),
@@ -659,13 +667,14 @@ export function serializeList(list: RecommendationList, items?: ListItemRow[]) {
 }
 
 export function serializeListItem(item: ListItemRow) {
+  const unavailable = item.profileId === null || item.profileActive !== true;
   return {
     id: item.id,
     position: item.position,
     note: item.note,
     // Null once the listing is gone. The UI renders this as a tombstone: the
     // author's note and its place in the sequence survive, the link does not.
-    profileId: item.profileId,
+    profileId: unavailable ? null : item.profileId,
     profileScreenname: item.profileScreenname,
     // The live name when the listing still exists, the snapshot otherwise —
     // so a removed business still reads as a place rather than a blank.
@@ -676,7 +685,7 @@ export function serializeListItem(item: ListItemRow) {
     // that left the directory should not keep rendering its old storefront.
     profileImage: item.profileImage ?? null,
     profileCategory: firstCategory(item.profileCategories),
-    isUnavailable: item.profileId === null,
+    isUnavailable: unavailable,
     createdAt: item.createdAt.toISOString(),
   };
 }
@@ -737,15 +746,19 @@ export function serializeListAsCollection(
       // Position is 1-based here only because AS2 consumers render this as a
       // human-facing ordinal; the database stays 0-based.
       name: `${index + 1}. ${item.profileName ?? item.profileNameAtAdd}`,
-      tag: item.profileScreenname
-        ? [
-            {
-              type: 'Link',
-              href: `https://${socialConfig.domain}/p/${item.profileScreenname}`,
-              name: item.profileName ?? item.profileNameAtAdd,
-            },
-          ]
-        : [],
+      tag:
+        item.profileId && item.profileActive === true
+          ? [
+              {
+                type: 'Link',
+                href: `https://${socialConfig.domain}${listingPublicPath({
+                  id: item.profileId,
+                  screenname: item.profileScreenname,
+                })}`,
+                name: item.profileName ?? item.profileNameAtAdd,
+              },
+            ]
+          : [],
     })),
   };
 }

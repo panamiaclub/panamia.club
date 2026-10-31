@@ -44,8 +44,8 @@ function listing(
 const results = [
   listing('miami-one', miami),
   listing('ships-anywhere', miami),
-  listing('broward-one', broward),
-  listing('missing-zip', null),
+  { ...listing('broward-one', broward), screenname: null, claimed: true },
+  { ...listing('missing-zip', null), screenname: null, claimed: false },
   {
     ...listing('public-storefront', null),
     online_only: false,
@@ -138,4 +138,29 @@ test('a ZIP tap switches the narrow map view to matching results without droppin
   await expect(page.locator('[id^="dirsearch-result-"]')).toHaveCount(2);
   await expect(page.locator('#dirsearch-result-miami-one')).toBeVisible();
   expect(observed.requests()).toBe(1);
+});
+
+test('owned and ownerless handleless businesses open public pages instead of a claim screen', async ({
+  page,
+}) => {
+  await fixtures(page);
+  await page.goto('/directory/search?radius=all');
+  const unclaimed = page.locator('#dirsearch-result-missing-zip');
+  await expect(
+    unclaimed.getByRole('heading').getByRole('link')
+  ).toHaveAttribute('href', '/listings/missing-zip');
+  await expect(
+    unclaimed.getByRole('link', { name: 'View profile', exact: true })
+  ).toHaveAttribute('href', '/listings/missing-zip');
+  await expect(
+    unclaimed.getByRole('link', { name: 'Is this your business?' })
+  ).toHaveAttribute('href', '/listings/claim/start?id=missing-zip');
+  const owned = page.locator('#dirsearch-result-broward-one');
+  await expect(owned.getByRole('heading').getByRole('link')).toHaveAttribute(
+    'href',
+    '/listings/broward-one'
+  );
+  await expect(
+    owned.getByRole('link', { name: 'Is this your business?' })
+  ).toHaveCount(0);
 });

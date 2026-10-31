@@ -24,12 +24,13 @@ import { useTranslation } from 'react-i18next';
 import { profileCategoryList } from '@/lib/lists';
 import { useSession } from '@/lib/auth-client';
 import { normalizeUsZip } from '@/lib/online-zip';
+import { listingSetupPath } from '@/lib/listing-url';
 
 /**
  * Public directory intake. No auth gate on purpose — see the rationale in
  * app/api/listings/intake/route.ts. A shop, band, co-op or non-profit can get
- * into the directory before it has an account, and claims the listing
- * afterwards.
+ * into the directory before finishing account setup. The one-email owner flow
+ * connects signed-in applicants immediately and sends guests a setup link.
  *
  * Laid out as seven steps rather than one scroll because the directory is only
  * as good as the answers in it, and a wall of twenty fields gets skimmed. One
@@ -44,17 +45,14 @@ function ListYourBusinessForm() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');
-  // Separate from `personalEmail` so the success screen keeps describing what
-  // was actually submitted even after resetForm clears the inputs.
-  const [submittedPersonalEmail, setSubmittedPersonalEmail] = useState('');
+  const [submittedAccountEmail, setSubmittedAccountEmail] = useState('');
+  const [submittedSetupPath, setSubmittedSetupPath] = useState('');
   const [submittedManaged, setSubmittedManaged] = useState(false);
   const [submittedInvitationSent, setSubmittedInvitationSent] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
-  const [usePanaEmail, setUsePanaEmail] = useState(true);
-  const [manageWithPana, setManageWithPana] = useState(true);
   const [confirmedContact, setConfirmedContact] = useState<{
     email: string;
-    personalEmail: string;
+    accountEmail: string;
     managerId: string | null;
   } | null>(null);
 
@@ -66,15 +64,11 @@ function ListYourBusinessForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  // A personal address requests an invitation, not an ownership grant.
-  const [personalEmail, setPersonalEmail] = useState('');
-  // Kept inline rather than in a toast: the only way to resolve it is to edit
-  // or empty this one field, so the message belongs next to it.
-  const [personalEmailError, setPersonalEmailError] = useState('');
+  const [separateContact, setSeparateContact] = useState(false);
+  const [contactEmail, setContactEmail] = useState('');
   const panaEmail = session?.user?.email ?? '';
-  const usingPanaEmail = Boolean(panaEmail && usePanaEmail);
-  const listingEmail = usingPanaEmail ? panaEmail : email;
-  const managesWithPana = Boolean(session?.user?.id && manageWithPana);
+  const accountEmail = panaEmail || email;
+  const listingEmail = separateContact ? contactEmail : accountEmail;
 
   // Step 4 — pronouns
   const [pronouns, setPronouns] = useState('');
@@ -160,23 +154,17 @@ function ListYourBusinessForm() {
       refuse(t('errName'));
       return;
     }
-    if (!EMAIL_PATTERN.test(listingEmail.trim())) {
+    if (
+      !EMAIL_PATTERN.test(accountEmail.trim()) ||
+      !EMAIL_PATTERN.test(listingEmail.trim())
+    ) {
       refuse(t('errEmail'));
       return;
     }
-    // An optional field must stay cheap to abandon. Both of these are shown
-    // against the field and clear the moment it is emptied, so nobody can get
-    // stuck behind something they never had to fill in.
-    const personal = managesWithPana ? '' : personalEmail.trim();
-    if (personal && !EMAIL_PATTERN.test(personal)) {
-      setPersonalEmailError(t('errPersonalEmail'));
-      return;
-    }
-    setPersonalEmailError('');
     setConfirmedContact({
       email: listingEmail.trim(),
-      personalEmail: personal,
-      managerId: managesWithPana ? (session?.user?.id ?? null) : null,
+      accountEmail: accountEmail.trim().toLowerCase(),
+      managerId: session?.user?.id ?? null,
     });
     goTo(4);
   }
@@ -230,8 +218,9 @@ function ListYourBusinessForm() {
 
     if (
       !confirmedContact ||
+      confirmedContact.managerId !== (session?.user?.id ?? null) ||
       (confirmedContact.managerId &&
-        confirmedContact.managerId !== session?.user?.id)
+        confirmedContact.accountEmail !== panaEmail.trim().toLowerCase())
     ) {
       refuse(t('errReviewContact'));
       goTo(3);
@@ -261,10 +250,10 @@ function ListYourBusinessForm() {
         '/api/listings/intake',
         {
           name,
-          email: confirmedContact.email,
-          personalEmail: confirmedContact.personalEmail,
-          manageWithPana: Boolean(confirmedContact.managerId),
-          expectedManagerId: confirmedContact.managerId,
+          onboardingMode: 'owner',
+          contactEmail: confirmedContact.email,
+          accountEmail: confirmedContact.accountEmail,
+          expectedOwnerId: confirmedContact.managerId,
           fiveWords,
           instagram,
           website,
@@ -290,10 +279,15 @@ function ListYourBusinessForm() {
         { validateStatus: () => true }
       );
 
-      if (response.data?.success) {
+      if (
+        response.data?.success &&
+        typeof response.data.profileId === 'string' &&
+        response.data.profileId
+      ) {
         setSubmittedEmail(confirmedContact.email.toLowerCase());
         setSubmittedManaged(response.data.management === 'account');
-        setSubmittedPersonalEmail(response.data.invitationEmail || '');
+        setSubmittedAccountEmail(confirmedContact.accountEmail);
+        setSubmittedSetupPath(listingSetupPath(response.data.profileId));
         setSubmittedInvitationSent(response.data.invitationSent === true);
         if (typeof window !== 'undefined') {
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -330,12 +324,10 @@ function ListYourBusinessForm() {
     setLocallyBased('');
     setName('');
     setEmail('');
-    setUsePanaEmail(true);
-    setManageWithPana(true);
+    setSeparateContact(false);
+    setContactEmail('');
     setConfirmedContact(null);
     setPhoneNumber('');
-    setPersonalEmail('');
-    setPersonalEmailError('');
     setPronouns('');
     setPronounsOther('');
     setDetails('');
@@ -353,7 +345,8 @@ function ListYourBusinessForm() {
     setHearAboutUs('');
     setAgreeTos(false);
     setSubmittedEmail('');
-    setSubmittedPersonalEmail('');
+    setSubmittedAccountEmail('');
+    setSubmittedSetupPath('');
     setSubmittedManaged(false);
     setSubmittedInvitationSent(false);
     resetTurnstile();
@@ -374,9 +367,14 @@ function ListYourBusinessForm() {
                   {t('successTitle')}
                 </h1>
                 <p className="text-pana-ink/75 dark:text-muted-foreground text-lg">
-                  {t('successBody', { email: submittedEmail })}
+                  {t('successBody', { email: submittedAccountEmail })}
                 </p>
-                {(submittedManaged || submittedPersonalEmail) && (
+                {submittedEmail !== submittedAccountEmail && (
+                  <p className="text-muted-foreground text-sm">
+                    {t('successCopy', { email: submittedEmail })}
+                  </p>
+                )}
+                {(submittedManaged || submittedAccountEmail) && (
                   <div className="border-pana-indigo/20 bg-pana-blue/15 mt-5 flex gap-3 rounded-xl border p-4 text-left">
                     <UserPlus
                       className="text-pana-indigo mt-0.5 h-5 w-5 shrink-0"
@@ -387,7 +385,7 @@ function ListYourBusinessForm() {
                         {t(
                           submittedManaged
                             ? 'successManagedTitle'
-                            : 'successAccountTitle'
+                            : 'ownerSetupTitle'
                         )}
                       </p>
                       <p className="text-pana-ink/75 dark:text-muted-foreground mt-1 text-sm">
@@ -395,9 +393,9 @@ function ListYourBusinessForm() {
                           ? t('successManagedBody')
                           : t(
                               submittedInvitationSent
-                                ? 'successPersonalEmail'
-                                : 'successInvitationPending',
-                              { email: submittedPersonalEmail }
+                                ? 'ownerSetupSent'
+                                : 'ownerSetupPending',
+                              { email: submittedAccountEmail }
                             )}
                       </p>
                     </div>
@@ -412,13 +410,11 @@ function ListYourBusinessForm() {
                   <li>
                     {submittedManaged
                       ? t('successNextManaged')
-                      : submittedPersonalEmail
-                        ? t(
-                            submittedInvitationSent
-                              ? 'successNextAccount'
-                              : 'successNextInvitationPending'
-                          )
-                        : t('successNextNoAccount')}
+                      : t(
+                          submittedInvitationSent
+                            ? 'ownerSetupNext'
+                            : 'ownerSetupNextPending'
+                        )}
                   </li>
                   <li>{t('successNext2')}</li>
                 </ol>
@@ -432,9 +428,13 @@ function ListYourBusinessForm() {
                   asChild
                   className="bg-pana-flame text-pana-ink hover:bg-pana-burnt font-extrabold"
                 >
-                  <Link href={submittedManaged ? '/account' : '/'}>
-                    {t(submittedManaged ? 'successManage' : 'successHome')}
-                  </Link>
+                  {submittedManaged ? (
+                    <a href="/account/profile/edit">{t('successManage')}</a>
+                  ) : (
+                    <Link href={submittedSetupPath}>
+                      {t('ownerSetupContinue')}
+                    </Link>
+                  )}
                 </Button>
               </div>
             </CardContent>
@@ -661,41 +661,8 @@ function ListYourBusinessForm() {
                 </div>
 
                 <div className="space-y-2">
-                  {panaEmail && (
-                    <fieldset className="mb-4 space-y-3">
-                      <legend className="text-base font-bold">
-                        {t('emailChoiceTitle')}
-                      </legend>
-                      <RadioGroup
-                        value={usingPanaEmail ? 'pana' : 'different'}
-                        onValueChange={(value) =>
-                          setUsePanaEmail(value === 'pana')
-                        }
-                        disabled={isSubmitting}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="pana" id="email-use-pana" />
-                          <Label htmlFor="email-use-pana">
-                            {t('emailUsePana', { email: panaEmail })}
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem
-                            value="different"
-                            id="email-use-different"
-                          />
-                          <Label htmlFor="email-use-different">
-                            {t('emailUseDifferent')}
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                      <p className="text-muted-foreground text-sm">
-                        {t('emailCopyNote')}
-                      </p>
-                    </fieldset>
-                  )}
                   <Label htmlFor="business-email">
-                    {t('emailLabel')}{' '}
+                    {t('accountEmailLabel')}{' '}
                     <span className="text-destructive">*</span>
                   </Label>
                   <Input
@@ -705,13 +672,17 @@ function ListYourBusinessForm() {
                     maxLength={100}
                     required
                     placeholder={t('emailPlaceholder')}
-                    value={listingEmail}
-                    readOnly={usingPanaEmail}
+                    value={accountEmail}
+                    readOnly={Boolean(panaEmail)}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isSubmitting}
                   />
                   <p className="text-muted-foreground text-sm">
-                    {t('emailNote')}
+                    {t(
+                      panaEmail
+                        ? 'ownerExistingAccountNote'
+                        : 'accountEmailNote'
+                    )}
                   </p>
                 </div>
 
@@ -721,88 +692,42 @@ function ListYourBusinessForm() {
                   </p>
                 )}
 
-                {session?.user?.id && (
-                  <div className="border-pana-indigo/20 bg-pana-blue/10 space-y-2 rounded-xl border p-4 sm:p-5">
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        id="manage-with-pana"
-                        checked={manageWithPana}
-                        onCheckedChange={(checked) =>
-                          setManageWithPana(checked === true)
-                        }
-                        disabled={isSubmitting}
-                      />
-                      <Label htmlFor="manage-with-pana">
-                        {t('manageWithPana', { email: panaEmail })}
-                      </Label>
-                    </div>
-                    <p className="text-muted-foreground text-sm">
-                      {t('manageWithPanaNote')}
-                    </p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="separate-contact-email"
+                      checked={separateContact}
+                      onCheckedChange={(checked) =>
+                        setSeparateContact(checked === true)
+                      }
+                      disabled={isSubmitting}
+                    />
+                    <Label htmlFor="separate-contact-email">
+                      {t('ownerSeparateContact')}
+                    </Label>
                   </div>
-                )}
-
-                {sessionStatus !== 'loading' && !managesWithPana && (
-                  <div className="border-pana-indigo/20 bg-pana-blue/10 space-y-4 rounded-xl border p-4 sm:p-5">
-                    <div className="flex gap-3">
-                      <UserPlus
-                        className="text-pana-indigo mt-0.5 h-5 w-5 shrink-0"
-                        aria-hidden="true"
-                      />
-                      <div>
-                        <p className="font-extrabold">
-                          {t('accountOptionTitle')}
-                        </p>
-                        <p className="text-muted-foreground mt-1 text-sm">
-                          {t('accountOptionBody')}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="personal-email">
-                        {t('personalEmailLabel')}
+                  {separateContact && (
+                    <>
+                      <Label htmlFor="listing-contact-email">
+                        {t('ownerContactLabel')}
                       </Label>
                       <Input
-                        id="personal-email"
-                        name="personalEmail"
+                        id="listing-contact-email"
                         type="email"
+                        required
                         maxLength={100}
-                        placeholder={t('personalEmailPlaceholder')}
-                        value={personalEmail}
-                        onChange={(e) => {
-                          setPersonalEmail(e.target.value);
-                          if (personalEmailError) setPersonalEmailError('');
-                        }}
-                        disabled={isSubmitting}
-                        aria-invalid={personalEmailError ? true : undefined}
-                        aria-describedby={
-                          personalEmailError
-                            ? 'personal-email-error'
-                            : 'personal-email-note'
+                        value={contactEmail}
+                        onChange={(event) =>
+                          setContactEmail(event.target.value)
                         }
+                        disabled={isSubmitting}
                       />
-                      {personalEmailError ? (
-                        <p
-                          id="personal-email-error"
-                          role="alert"
-                          className="text-destructive text-sm"
-                        >
-                          {personalEmailError}
-                        </p>
-                      ) : (
-                        <p
-                          id="personal-email-note"
-                          className="text-muted-foreground text-sm"
-                        >
-                          {personalEmail
-                            ? t('personalEmailReady', { email: personalEmail })
-                            : t('personalEmailNote')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
+                    </>
+                  )}
+                  <p className="text-muted-foreground text-sm">
+                    {t('ownerContactNote')}
+                  </p>
+                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="business-phone">{t('phoneLabel')}</Label>

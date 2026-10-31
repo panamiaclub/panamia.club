@@ -28,6 +28,7 @@ import {
 import { envConfig } from '@/lib/env.config';
 import { signInPath } from '@/lib/signin-redirect';
 import { mobileMagicLinkUrl } from '@/lib/mobile/auth-links';
+import { listingSetupPath } from '@/lib/listing-url';
 
 const MAGIC_LINK_EXPIRY_MINUTES = 30;
 
@@ -1129,6 +1130,30 @@ function getBetterAuth(): BetterAuthInstance {
       magicLink({
         expiresIn: MAGIC_LINK_EXPIRY_MINUTES * 60,
         sendMagicLink: async ({ email, url, metadata }) => {
+          if (metadata?.listingSetupId !== undefined) {
+            if (typeof metadata.listingSetupId !== 'string') {
+              throw new Error('Invalid business setup request.');
+            }
+            const { listingSetupEmailContext } =
+              await import('@/lib/server/listing-setup');
+            const listing = await listingSetupEmailContext(
+              email,
+              metadata.listingSetupId
+            );
+            if (!listing)
+              throw new Error('No matching business setup invitation.');
+            const { sendTemplateEmail } = await import('@/lib/email');
+            await sendTemplateEmail(
+              'listing.setup',
+              {
+                businessName: listing.name,
+                signInUrl: url,
+                setupUrl: new URL(listingSetupPath(listing.id), url).toString(),
+              },
+              email
+            );
+            return;
+          }
           const signInUrl =
             metadata?.nativeApp === true ? mobileMagicLinkUrl(url) : url;
           const { host } = new URL(signInUrl);
@@ -1428,7 +1453,11 @@ export async function resolveUserIdFromHeaders(
  */
 type MagicLinkApi = {
   signInMagicLink: (args: {
-    body: { email: string; callbackURL?: string };
+    body: {
+      email: string;
+      callbackURL?: string;
+      metadata?: { listingSetupId: string };
+    };
     headers: Headers;
   }) => Promise<unknown>;
 };
@@ -1438,8 +1467,8 @@ type MagicLinkApi = {
  *
  * better-auth's magic-link flow is findUserByEmail -> createUser ->
  * createSession, so for a new address this creates the account as a side
- * effect — which is exactly what lets the listing intake form turn an optional
- * personal email into a usable Pana account without ever asking anyone to
+ * effect — which is exactly what lets the listing intake form turn an account
+ * email into a usable Pana account without ever asking anyone to
  * register first.
  *
  * Throws if the plugin is gone, rather than quietly resolving: a silent no-op
@@ -1448,14 +1477,15 @@ type MagicLinkApi = {
 export async function sendMagicLinkTo(
   email: string,
   requestHeaders: Headers,
-  callbackURL?: string
+  callbackURL?: string,
+  metadata?: { listingSetupId: string }
 ): Promise<void> {
   const api = getBetterAuth().api as unknown as MagicLinkApi;
   if (typeof api.signInMagicLink !== 'function') {
     throw new Error('magicLink plugin is not configured');
   }
   await api.signInMagicLink({
-    body: { email, callbackURL },
+    body: { email, callbackURL, ...(metadata ? { metadata } : {}) },
     headers: requestHeaders,
   });
 }

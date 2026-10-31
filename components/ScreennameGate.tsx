@@ -83,7 +83,12 @@ export default function ScreennameGate() {
           return;
         }
         const payload = await response.json();
-        if (!payload?.success || payload.data?.screenname?.trim()) {
+        // Managing a business does not require a personal social profile.
+        if (
+          !payload?.success ||
+          payload.data?.screenname?.trim() ||
+          payload.data?.hasManagedListings === true
+        ) {
           return;
         }
 
@@ -120,7 +125,7 @@ export default function ScreennameGate() {
     setOpen(false);
   }, []);
 
-  if (status !== 'authenticated') {
+  if (status !== 'authenticated' || isOnboardingRoute(pathname)) {
     return null;
   }
 

@@ -62,6 +62,7 @@ function listing(overrides: Partial<QueueListing> = {}): QueueListing {
     website: 'https://tallerlucia.example',
     phoneNumber: '',
     pendingOwnerEmail: 'lucia@example.com',
+    claimed: false,
     accountType: 'directory',
     locallyBased: 'yes',
     flags: [],
@@ -146,9 +147,10 @@ describe('computeFlags', () => {
   });
 
   test('"no" and "other" are different answers and get different notes', () => {
-    assert.deepEqual(computeFlags({ ...CLEAN, locallyBased: 'no' }, NO_OTHERS), [
-      'outside-area',
-    ]);
+    assert.deepEqual(
+      computeFlags({ ...CLEAN, locallyBased: 'no' }, NO_OTHERS),
+      ['outside-area']
+    );
     assert.deepEqual(
       computeFlags({ ...CLEAN, locallyBased: 'other' }, NO_OTHERS),
       ['locality-unclear']
@@ -167,7 +169,10 @@ describe('computeFlags', () => {
       'whitespace is not a description'
     );
     assert.deepEqual(
-      computeFlags({ ...CLEAN, details: 'x'.repeat(THIN_DETAILS_CHARS) }, NO_OTHERS),
+      computeFlags(
+        { ...CLEAN, details: 'x'.repeat(THIN_DETAILS_CHARS) },
+        NO_OTHERS
+      ),
       [],
       'exactly at the threshold is long enough'
     );
@@ -245,14 +250,18 @@ describe('listingStats', () => {
     const overdue = listingStats(rows).find((stat) =>
       stat.label.startsWith('Over')
     );
-    assert.equal(overdue?.value, '1', 'exactly at the window is not yet over it');
+    assert.equal(
+      overdue?.value,
+      '1',
+      'exactly at the window is not yet over it'
+    );
   });
 
-  test('unclaimed means no pending owner asked for it', () => {
+  test('unclaimed means no manager, regardless of whether a setup invitation exists', () => {
     const rows = [
-      listing({ pendingOwnerEmail: '' }),
-      listing({ pendingOwnerEmail: '' }),
-      listing({ pendingOwnerEmail: 'lucia@example.com' }),
+      listing({ pendingOwnerEmail: '', claimed: false }),
+      listing({ pendingOwnerEmail: 'lucia@example.com', claimed: false }),
+      listing({ pendingOwnerEmail: '', claimed: true }),
     ];
     const needALook = listingStats(rows).find(
       (stat) => stat.label === 'Need a look'

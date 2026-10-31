@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { Globe, Link2Off, Lock, Store, Users } from 'lucide-react';
 import { isUnoptimizableImageSrc } from '@/lib/image-src';
+import { listingPublicPath } from '@/lib/listing-url';
 import type {
   ProfileEventSummary,
   ProfileGroupSummary,
@@ -299,7 +300,13 @@ export function RecommendListCard({
  * renumbering somebody's list underneath them. */
 function RecommendRow({ item }: { item: RecommendationListItemSummary }) {
   const name = item.profileName ?? item.profileNameAtAdd ?? 'A place';
-  const canLink = !item.isUnavailable && Boolean(item.profileScreenname);
+  const href =
+    !item.isUnavailable && item.profileId
+      ? listingPublicPath({
+          id: item.profileId,
+          screenname: item.profileScreenname,
+        })
+      : null;
 
   return (
     <li className="flex items-start gap-3" data-gone={item.isUnavailable}>
@@ -322,11 +329,8 @@ function RecommendRow({ item }: { item: RecommendationListItemSummary }) {
 
       <div className="min-w-0 flex-1">
         <p className="text-[14px] leading-tight font-extrabold">
-          {canLink ? (
-            <Link
-              href={`/p/${item.profileScreenname}`}
-              className="hover:underline"
-            >
+          {href ? (
+            <Link href={href} className="hover:underline">
               {name}
             </Link>
           ) : (

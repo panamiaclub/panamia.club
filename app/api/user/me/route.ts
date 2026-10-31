@@ -9,6 +9,7 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { users } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
+import { administersOtherProfile } from '@/lib/server/profile-owners';
 
 export async function GET() {
   try {
@@ -20,23 +21,26 @@ export async function GET() {
       );
     }
 
-    const currentUser = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
-      columns: {
-        id: true,
-        screenname: true,
-        accountType: true,
-        notificationPreferences: true,
-        createdAt: true,
-      },
-      with: {
-        profile: {
-          columns: {
-            name: true,
+    const [currentUser, hasManagedListings] = await Promise.all([
+      db.query.users.findFirst({
+        where: eq(users.id, session.user.id),
+        columns: {
+          id: true,
+          screenname: true,
+          accountType: true,
+          notificationPreferences: true,
+          createdAt: true,
+        },
+        with: {
+          profile: {
+            columns: {
+              name: true,
+            },
           },
         },
-      },
-    });
+      }),
+      administersOtherProfile(session.user.id),
+    ]);
 
     if (!currentUser) {
       return NextResponse.json(
@@ -53,6 +57,7 @@ export async function GET() {
         name: currentUser.profile?.name,
         accountType: currentUser.accountType,
         notificationPreferences: currentUser.notificationPreferences,
+        hasManagedListings,
         // Lets the client tell a first-run account from one that has existed
         // for years without ever claiming a handle. The two want different
         // treatment: a welcome page for the former, a quiet nudge for the

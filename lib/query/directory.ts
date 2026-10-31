@@ -59,7 +59,7 @@ export interface SearchResultsInterface {
   counties?: string[];
   /** Awarded by Pana Mia, not self-declared. */
   certified?: boolean;
-  /** Has a handle, so it has a profile page. Otherwise it gets a claim CTA. */
+  /** Someone administers the listing, independent of whether it has a handle. */
   claimed?: boolean;
   saves?: number;
   recommends?: number;
