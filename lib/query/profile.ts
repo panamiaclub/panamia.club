@@ -4,6 +4,7 @@ import { toast } from '@/hooks/use-toast';
 import i18n from '@/lib/i18n';
 
 import { ProfileInterface } from '@/lib/interfaces';
+import { directorySearchKey } from '@/lib/query/directory';
 
 export const profileQueryKey = ['profile'];
 export const profilePublicQueryKey = 'publicProfile';
@@ -201,23 +202,39 @@ export const useMutateProfileSocial = () => {
 export const useMutateProfileAddress = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (updates: unknown) => {
-      return axios.post('/api/profile/saveAddress', updates);
+    mutationFn: async (updates: unknown) => {
+      const response = await axios.post<{ success: boolean; error?: string }>(
+        '/api/profile/saveAddress',
+        updates
+      );
+      if (!response.data.success) {
+        throw new Error(
+          response.data.error || i18n.t('profileUpdateFailed', { ns: 'toast' })
+        );
+      }
+      return response;
     },
     onSuccess: () => {
       toast({
         title: i18n.t('success', { ns: 'toast' }),
         description: i18n.t('profileUpdated', { ns: 'toast' }),
       });
-      return queryClient.invalidateQueries({
-        queryKey: profileQueryKey,
-        exact: true,
-      });
+      return Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: profileQueryKey,
+          exact: true,
+        }),
+        queryClient.invalidateQueries({ queryKey: [directorySearchKey] }),
+        queryClient.invalidateQueries({ queryKey: [profilePublicQueryKey] }),
+      ]);
     },
-    onError: () => {
+    onError: (error) => {
+      const message = axios.isAxiosError<{ error?: string }>(error)
+        ? error.response?.data?.error
+        : error.message;
       toast({
         title: i18n.t('error', { ns: 'toast' }),
-        description: i18n.t('profileUpdateFailed', { ns: 'toast' }),
+        description: message || i18n.t('profileUpdateFailed', { ns: 'toast' }),
         variant: 'destructive',
       });
     },

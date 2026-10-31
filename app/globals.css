@@ -6853,6 +6853,86 @@ body {
 /* Pins on real tiles. Distinct from .dirsearch-map-pin because pigeon-maps
    positions its own overlay wrapper — a pin that also positions itself would
    fight it and land in the wrong place. */
+.dirsearch-zip-bubble {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.4rem 0.75rem;
+  border: 2px solid var(--color-pana-indigo);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--color-pana-indigo);
+  box-shadow: 0 4px 14px rgb(17 13 13 / 0.12);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.dirsearch-zip-bubble strong {
+  display: grid;
+  place-items: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.6875rem;
+}
+
+.dirsearch-zip-bubble[data-on='true'],
+.dirsearch-zip-bubble:focus-visible {
+  outline: 3px solid var(--color-pana-indigo);
+  outline-offset: 3px;
+}
+
+.dirsearch-zip-focus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 0.75rem;
+  padding: 0.4rem 1rem;
+  border-block: 1px solid rgb(48 62 140 / 0.15);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.dirsearch-zip-focus button {
+  min-height: 44px;
+  color: var(--color-pana-indigo);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.dirsearch-zip-attribution {
+  position: absolute;
+  left: 0.3rem;
+  bottom: 0.3rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.2rem;
+  background: rgb(255 255 255 / 0.9);
+  color: var(--color-pana-ink);
+  font-size: 0.625rem;
+  text-decoration: underline;
+}
+
+.dirsearch-map-card {
+  padding-right: 2.8rem;
+}
+
+.dirsearch-map-close {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--color-pana-cream);
+  cursor: pointer;
+}
+
 .dirsearch-pin {
   position: relative;
   display: block;

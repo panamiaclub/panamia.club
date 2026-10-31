@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import type { DirectoryRadius } from '@/lib/directory-radius';
+import type { OnlineZipArea } from '@/lib/online-zip';
 
 export type DirectorySort = 'relevance' | 'nearest' | 'recommended' | 'name';
 
@@ -43,15 +44,17 @@ export interface SearchResultsInterface {
   five_words: string;
   geo: {
     coordinates?: number[];
-  };
+  } | null;
   images: {
     primaryCDN: string;
   };
   /** First gallery photo, standing in for a cover. Null when there are none. */
   coverImage?: string | null;
-  primary_address?: { city?: string };
+  primary_address?: { city?: string | null; zipcode?: string | null };
   /** True when the business has nowhere to visit, so distance does not apply. */
   online_only?: boolean;
+  /** Approximate base ZIP area, never the business's street coordinates. */
+  online_zip?: OnlineZipArea | null;
   categories?: string[];
   counties?: string[];
   /** Awarded by Pana Mia, not self-declared. */

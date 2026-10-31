@@ -131,9 +131,9 @@ export interface ProfileInterface {
   nostrPubkey?: string;
   active?: boolean;
   /**
-   * True when the business has no location to visit. Suppresses distance on
-   * the public profile and in directory search. Owner-set; never inferred
-   * from a missing address.
+   * True for an online business without a public storefront. Suppresses exact
+   * distance and directions; the directory may show its approximate base ZIP.
+   * Owner-set, never inferred from a missing street address.
    */
   online_only?: boolean;
   /** Drizzle/raw schema name — present when the API returns the unmapped row. */

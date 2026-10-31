@@ -47,6 +47,7 @@ interface MapCanvasProps {
   onViewChange: (frame: MapFrame) => void;
   pins: MapCanvasPin[];
   viewer: { lat: number; lng: number } | null;
+  hasZipAreas?: boolean;
 }
 
 /** Below this the two frames are the same view, and moving would be a jitter. */
@@ -58,6 +59,7 @@ export default function MapCanvas({
   onViewChange,
   pins,
   viewer,
+  hasZipAreas = false,
 }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -188,6 +190,16 @@ export default function MapCanvas({
   return (
     <div className="dirsearch-mapcanvas">
       <div ref={containerRef} className="h-full w-full" />
+      {hasZipAreas && (
+        <a
+          className="dirsearch-zip-attribution"
+          href="https://www.geonames.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          ZIP areas: GeoNames (via Zippopotam.us)
+        </a>
+      )}
       {failed && (
         <div
           className="bg-pana-cream text-pana-ink absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 p-5 text-center text-sm"

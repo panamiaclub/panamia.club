@@ -44,15 +44,16 @@ describe('directory radius filtering', () => {
     assert.equal(matchesDirectoryRadius(5.001, '5'), false);
   });
 
-  it('excludes missing and online-only locations from finite radii', () => {
+  it('excludes missing locations but includes usable ZIP-area distances', () => {
     assert.equal(matchesDirectoryRadius(null, '5'), false);
-    assert.equal(matchesDirectoryRadius(1, '5', true), false);
+    assert.equal(matchesDirectoryRadius(1, '5'), true);
+    assert.equal(matchesDirectoryRadius(NaN, '5'), false);
   });
 
   it('keeps every listing in All South Florida mode', () => {
     assert.equal(matchesDirectoryRadius(null, 'all'), true);
     assert.equal(matchesDirectoryRadius(500, 'all'), true);
-    assert.equal(matchesDirectoryRadius(null, 'all', true), true);
+    assert.equal(matchesDirectoryRadius(null, 'all'), true);
   });
 });
 

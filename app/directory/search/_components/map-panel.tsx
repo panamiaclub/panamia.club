@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { ArrowRight, Globe, MapPin } from 'lucide-react';
+import { ArrowRight, Globe, MapPin, X } from 'lucide-react';
 import type { SearchResultsInterface } from '@/lib/query/directory';
+import { groupOnlineZipListings } from '@/lib/online-zip';
 import { isUnoptimizableImageSrc } from '@/lib/image-src';
 import { distanceInMiles, type Coords } from '@/app/p/[user]/_lib/profile-view';
 import {
@@ -42,7 +43,9 @@ interface MapPanelProps {
    */
   highlightId?: string | null;
   /** Called when a pin is chosen, so the list can scroll to the same result. */
-  onPinSelect?: (id: string) => void;
+  onPinSelect?: (id: string | null) => void;
+  selectedZip?: string | null;
+  onZipSelect?: (zip: string) => void;
 }
 
 interface Pin {
@@ -51,9 +54,6 @@ interface Pin {
   distance: number | null;
   index: number;
 }
-
-/** The pins' coordinates, which are all the framing maths needs. */
-const pointsOf = (pins: Pin[]) => pins.map((pin) => pin.coords);
 
 /**
  * Results on a map.
@@ -76,6 +76,8 @@ export function MapPanel({
   radius,
   highlightId = null,
   onPinSelect,
+  selectedZip = null,
+  onZipSelect,
 }: MapPanelProps) {
   const pins = useMemo<Pin[]>(
     () =>
@@ -97,16 +99,36 @@ export function MapPanel({
     [results, viewerCoords]
   );
 
-  const offMapCount = results.length - pins.length;
+  const zipGroups = useMemo(
+    () =>
+      groupOnlineZipListings(results, (result) =>
+        result.online_only ? result.online_zip : null
+      ),
+    [results]
+  );
+  const points = useMemo(
+    () => [
+      ...pins.map((pin) => pin.coords),
+      ...zipGroups.map((group) => ({
+        lat: group.area.lat,
+        lng: group.area.lng,
+      })),
+    ],
+    [pins, zipGroups]
+  );
+  const offMapCount =
+    results.length -
+    pins.length -
+    zipGroups.reduce((total, group) => total + group.items.length, 0);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [view, setView] = useState(() => frameForPoints(pointsOf(pins)));
+  const [view, setView] = useState(() => frameForPoints(points));
 
   // Read without subscribing: a re-frame should be triggered by the result set
   // or by a new location, not by every render in between — and `pins` changes
   // identity whenever either of those moves.
-  const pinsRef = useRef(pins);
-  pinsRef.current = pins;
+  const pointsRef = useRef(points);
+  pointsRef.current = points;
 
   const mapRef = useRef<HTMLDivElement>(null);
 
@@ -128,19 +150,25 @@ export function MapPanel({
   // Re-frame when the result set changes, not on every render: panning the map
   // must survive a re-render, but a new search should not leave the viewer
   // looking at the old neighbourhood.
-  const pinKey = pins
-    .map((pin) => pin.result._id)
+  const pinKey = [
+    ...pins.map(
+      (pin) => `${pin.result._id}:${pin.coords.lat},${pin.coords.lng}`
+    ),
+    ...zipGroups.map(
+      (group) => `${group.id}:${group.area.lat},${group.area.lng}`
+    ),
+  ]
     .sort()
     .join(',');
   useEffect(() => {
     const decision = onResultsArrived(
       viewerFramePending.current,
-      pinsRef.current.length
+      pointsRef.current.length
     );
     viewerFramePending.current = decision.viewerFramePending;
     if (!decision.reframe) return;
 
-    setView(frameForPoints(pointsOf(pinsRef.current)));
+    setView(frameForPoints(pointsRef.current));
     setSelectedId(null);
   }, [pinKey]);
 
@@ -156,7 +184,7 @@ export function MapPanel({
   useEffect(() => {
     if (viewerLat === null || viewerLng === null || radiusMiles === null) {
       viewerFramePending.current = false;
-      setView(frameForPoints(pointsOf(pinsRef.current)));
+      setView(frameForPoints(pointsRef.current));
       setSelectedId(null);
       return;
     }
@@ -169,25 +197,28 @@ export function MapPanel({
 
   const selected = pins.find((pin) => pin.result._id === selectedId) ?? null;
 
-  const select = (id: string) => {
-    setSelectedId(id);
-    onPinSelect?.(id);
-    const pin = pins.find((item) => item.result._id === id);
-    if (pin) {
-      // Centre on the choice rather than only highlighting it — a selection
-      // off the edge of the viewport reads as a click that did nothing.
-      setView((current) => ({
-        center: [pin.coords.lat, pin.coords.lng],
-        zoom: Math.max(current.zoom, 12),
-      }));
-    }
-  };
+  const select = useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      onPinSelect?.(id);
+      const pin = pins.find((item) => item.result._id === id);
+      if (pin) {
+        // Centre on the choice rather than only highlighting it — a selection
+        // off the edge of the viewport reads as a click that did nothing.
+        setView((current) => ({
+          center: [pin.coords.lat, pin.coords.lng],
+          zoom: Math.max(current.zoom, 12),
+        }));
+      }
+    },
+    [onPinSelect, pins]
+  );
 
   // The pins' markup lives here, not in the canvas: the canvas should know how
   // to place a node on the map, and nothing about what a result looks like.
   const canvasPins = useMemo<MapCanvasPin[]>(
-    () =>
-      pins.map(({ result, coords, index }) => ({
+    () => [
+      ...pins.map(({ result, coords, index }) => ({
         id: result._id,
         lat: coords.lat,
         lng: coords.lng,
@@ -211,9 +242,37 @@ export function MapPanel({
           </button>
         ),
       })),
+      ...zipGroups.map((group) => ({
+        id: group.id,
+        lat: group.area.lat,
+        lng: group.area.lng,
+        content: (
+          <button
+            type="button"
+            className="dirsearch-zip-bubble"
+            data-online-zip={group.area.postalCode}
+            data-on={
+              selectedZip === group.area.postalCode ||
+              group.items.some((result) => result._id === highlightId)
+            }
+            aria-pressed={selectedZip === group.area.postalCode}
+            aria-label={`${group.items.length} online ${group.items.length === 1 ? 'business' : 'businesses'} based near ZIP ${group.area.postalCode}`}
+            title="Approximate base ZIP, not a visiting address or delivery zone"
+            onClick={() => {
+              setSelectedId(null);
+              onZipSelect?.(group.area.postalCode);
+            }}
+          >
+            <Globe size={18} aria-hidden="true" />
+            <span>{group.area.postalCode}</span>
+            <strong>{group.items.length}</strong>
+          </button>
+        ),
+      })),
+    ],
     // Rebuilt when the pins or the two highlight ids change — not when
     // `select` is recreated, which is every render.
-    [pins, selectedId, highlightId]
+    [pins, zipGroups, selectedId, selectedZip, highlightId, select, onZipSelect]
   );
 
   return (
@@ -223,23 +282,32 @@ export function MapPanel({
         onViewChange={setView}
         pins={canvasPins}
         viewer={viewerCoords}
+        hasZipAreas={zipGroups.length > 0}
       />
 
-      {/* Online-only businesses match the search but cannot be plotted.
-          Dropping them silently would make the map quietly lossy, so the count
-          sits on the map itself — the only place left to say it now that the
-          map has no list of its own. */}
+      {/* A missing ZIP or failed lookup must not quietly remove a listing. */}
       {offMapCount > 0 && (
         <p className="dirsearch-mapoffmap">
           <Globe className="h-4 w-4 shrink-0" aria-hidden="true" />
           {offMapCount === 1
-            ? '1 result has no address to plot.'
-            : `${offMapCount} results have no address to plot.`}
+            ? '1 result has no usable map location.'
+            : `${offMapCount} results have no usable map location.`}
         </p>
       )}
 
       {selected && (
         <div className="dirsearch-map-card">
+          <button
+            type="button"
+            className="dirsearch-map-close"
+            aria-label="Close map preview"
+            onClick={() => {
+              setSelectedId(null);
+              onPinSelect?.(null);
+            }}
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
           <Image
             src={selected.result.images?.primaryCDN || FALLBACK_LOGO}
             alt=""

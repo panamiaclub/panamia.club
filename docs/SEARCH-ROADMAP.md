@@ -12,6 +12,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Online base ZIPs](#online-base-zips)
 - [How Search Works Today](#how-search-works-today)
 - [Measured Failures](#measured-failures)
 - [Why It Is Like This](#why-it-is-like-this)
@@ -50,6 +51,26 @@ The required extensions are already available on the database — they are simpl
 - Searching events, articles, or pana social posts — profiles only, for now
 
 ---
+
+## Online base ZIPs
+
+Online listings declare a required five-digit US **base ZIP**, independently
+of any delivery, shipping, or service area. Intake and location editing resolve
+an approximate ZIP point and store it in `profiles.geo.zipArea`; exact street
+coordinates are never used for an online map marker.
+
+`getSearch()` includes online listings in finite-radius and nearest discovery
+using that coarse ZIP point. An older online listing can resolve an existing
+valid ZIP, but never falls back to its old address coordinates. Missing or
+unavailable ZIP locations remain discoverable in All-areas mode with explicit
+map-unavailable messaging.
+
+Web and native maps group matching online results into one globe bubble per
+ZIP, with no empty ZIP markers. Counts refer to the currently loaded result
+page, just like storefront pins. Selecting a ZIP focuses those businesses in
+the existing results list; it does not generate directions or imply that
+delivery or pickup is offered. Postal coordinates come from GeoNames through
+Zippopotam.us, are attributed under CC BY 4.0, and are cached for 30 days.
 
 ## How Search Worked Before Phase 1
 

@@ -6,6 +6,8 @@ import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
 import { ProfileDescriptions, ProfileMentoring } from '@/lib/interfaces';
 import { extractCoordinates } from './profile';
 import { calcDistance } from '@/lib/geolocation';
+import { normalizeUsZip, type OnlineZipArea } from '@/lib/online-zip';
+import { getOnlineZipAreasForProfiles } from './online-zip';
 import { countyList, profileCategoryList } from '@/lib/lists';
 import {
   effectiveDirectoryRadius,
@@ -378,6 +380,8 @@ export const getSearch = async ({
       userId: true,
       primaryImageCdn: true,
       addressLocality: true,
+      addressPostalCode: true,
+      addressCountry: true,
       // extractCoordinates reads the columns first and falls back to the
       // legacy `geo` blob, so it needs all three.
       addressLat: true,
@@ -449,23 +453,22 @@ export const getSearch = async ({
     filtered = filtered.filter((p) => p.panaCertifiedAt != null);
   }
 
-  // A finite radius describes places the viewer can visit. Online-only
-  // listings and listings without coordinates therefore do not match it.
+  // Online businesses use their coarse base ZIP, never a private street point.
+  const zipAreas = await getOnlineZipAreasForProfiles(filtered);
+  // A finite radius includes public storefronts and approximate online ZIP
+  // areas. An online listing without a usable ZIP remains All-areas-only.
   // Without usable viewer coordinates the public fallback is the full South
   // Florida directory, even if a stale client asks for a finite radius.
   const locationContext = {
     hasViewerLocation,
     viewerLat,
     viewerLng,
+    zipAreas,
   };
   const effectiveRadius = effectiveDirectoryRadius(radius, hasViewerLocation);
   if (effectiveRadius !== 'all') {
     filtered = filtered.filter((p) =>
-      matchesDirectoryRadius(
-        distanceFor(p, locationContext),
-        effectiveRadius,
-        p.onlineOnly === true
-      )
+      matchesDirectoryRadius(distanceFor(p, locationContext), effectiveRadius)
     );
   }
 
@@ -499,7 +502,8 @@ export const getSearch = async ({
   const skip = pageNum > 1 ? (pageNum - 1) * pageLimit : 0;
   const data = await enrichPage(
     ordered.slice(skip, skip + pageLimit),
-    countsForSort
+    countsForSort,
+    zipAreas
   );
 
   return {
@@ -524,6 +528,7 @@ interface LocationContext {
   hasViewerLocation: boolean;
   viewerLat: number;
   viewerLng: number;
+  zipAreas: Map<string, OnlineZipArea | null>;
 }
 
 /**
@@ -536,13 +541,17 @@ interface LocationContext {
  * decimal places, about a kilometre — which is plenty to order a list and not
  * enough to place somebody's home.
  *
- * Online-only businesses are excluded deliberately rather than by accident:
- * the address on file for one is usually the owner's home, so measuring to it
- * is both misleading and a privacy leak.
+ * Online listings use only a verified ZIP area. An older address or geo point
+ * is never substituted, since it may identify the owner's home.
  */
 function distanceFor(p: ProfileRow, ctx: LocationContext): number | null {
   if (!ctx.hasViewerLocation) return null;
-  if (p.onlineOnly === true) return null;
+  if (p.onlineOnly === true) {
+    const area = ctx.zipAreas.get(p.id);
+    return area
+      ? calcDistance(ctx.viewerLat, ctx.viewerLng, area.lat, area.lng)
+      : null;
+  }
 
   const coordinates = extractCoordinates(p);
   if (!coordinates) return null;
@@ -618,7 +627,8 @@ function sortProfiles(
  */
 async function enrichPage(
   rows: ProfileRow[],
-  precomputedCounts: Map<string, DirectorySignalCounts> | null = null
+  precomputedCounts: Map<string, DirectorySignalCounts> | null = null,
+  zipAreas: Map<string, OnlineZipArea | null> = new Map()
 ) {
   if (rows.length === 0) return [];
 
@@ -636,6 +646,7 @@ async function enrichPage(
       counts: counts.get(row.id) ?? { saves: 0, recommends: 0 },
       recommenderAvatars: avatars.get(row.id) ?? [],
       nextEvent: nextEvents.get(row.id) ?? null,
+      zipArea: zipAreas.get(row.id) ?? null,
     })
   );
 }
@@ -652,6 +663,7 @@ function transformProfile(
     counts: DirectorySignalCounts;
     recommenderAvatars: string[];
     nextEvent: DirectoryEvent | null;
+    zipArea: OnlineZipArea | null;
   }
 ) {
   const descriptions = p.descriptions as ProfileDescriptions | null;
@@ -665,7 +677,8 @@ function transformProfile(
   const screenname =
     (p.screenname as string | null) || p.user?.screenname || null;
 
-  const coordinates = extractCoordinates(p);
+  const online = p.onlineOnly === true;
+  const coordinates = online ? null : extractCoordinates(p);
 
   return {
     _id: p.id,
@@ -683,14 +696,18 @@ function transformProfile(
     // both places.
     coverImage: gallery.gallery1CDN ?? null,
     primary_address: {
-      city: p.addressLocality,
+      city: online ? (extra.zipArea?.city ?? null) : p.addressLocality,
+      zipcode: online
+        ? normalizeUsZip(p.addressPostalCode)
+        : p.addressPostalCode,
     },
     geo: coordinates ? { type: 'Point', coordinates } : null,
     // Carried into search results so a card can suppress "x miles away". An
     // online-only business has no location to visit, and its address on file
     // is typically the owner's home — measuring a distance to it is both
     // wrong and a privacy leak.
-    online_only: p.onlineOnly === true,
+    online_only: online,
+    online_zip: online ? extra.zipArea : null,
     categories: categoryKeys(p.categories),
     counties: countyKeys(p.counties),
     certified: p.panaCertifiedAt != null,

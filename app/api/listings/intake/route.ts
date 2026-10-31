@@ -10,6 +10,11 @@ import { sendListingSubmissionEmails } from '@/lib/server/listing-submission';
 import { auth, sendMagicLinkTo } from '@/auth';
 import { profileCategoryList } from '@/lib/lists';
 import type { ProfileDescriptions } from '@/lib/interfaces';
+import { normalizeUsZip } from '@/lib/online-zip';
+import {
+  getOnlineZipArea,
+  ZipLookupUnavailableError,
+} from '@/lib/server/online-zip';
 import { REFERRAL_COOKIE } from '@/lib/referrals';
 import {
   attachReferralToUser,
@@ -148,10 +153,10 @@ export async function POST(request: NextRequest) {
   const locallyBased = LOCALLY_BASED.has(body.locallyBased as string)
     ? (body.locallyBased as string)
     : '';
-  // Address is only meaningful when they said they have a storefront; ignoring
-  // it otherwise keeps a stale half-filled address from riding along if someone
-  // ticks the box, types, then unticks it.
+  // Street fields belong only to a public storefront. Online businesses retain
+  // their base ZIP without carrying along a stale or private street address.
   const hasStorefront = body.hasStorefront === true;
+  const onlineOnly = body.onlineOnly === true;
   const addressLine1 = hasStorefront
     ? asTrimmedString(body.addressLine1, 120)
     : '';
@@ -164,9 +169,11 @@ export async function POST(request: NextRequest) {
   const addressRegion = hasStorefront
     ? asTrimmedString(body.addressRegion, 2).toUpperCase()
     : '';
-  const addressPostalCode = hasStorefront
-    ? asTrimmedString(body.addressPostalCode, 10)
-    : '';
+  const addressPostalCode =
+    hasStorefront || onlineOnly
+      ? asTrimmedString(body.addressPostalCode, 10)
+      : '';
+  const baseZip = onlineOnly ? normalizeUsZip(addressPostalCode) : null;
   const addressHours = hasStorefront
     ? asTrimmedString(body.addressHours, 300)
     : '';
@@ -233,6 +240,25 @@ export async function POST(request: NextRequest) {
         error:
           'Please include the street address and city for your storefront.',
       },
+      { status: 400 }
+    );
+  }
+
+  if (body.onlineOnly !== undefined && typeof body.onlineOnly !== 'boolean') {
+    return NextResponse.json(
+      { error: 'Please choose whether this is an online business.' },
+      { status: 400 }
+    );
+  }
+  if (onlineOnly && hasStorefront) {
+    return NextResponse.json(
+      { error: 'Choose an online business or a public storefront, not both.' },
+      { status: 400 }
+    );
+  }
+  if (onlineOnly && !baseZip) {
+    return NextResponse.json(
+      { error: 'Online businesses require a valid five-digit base ZIP code.' },
       { status: 400 }
     );
   }
@@ -305,6 +331,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const zipArea =
+      onlineOnly && baseZip ? await getOnlineZipArea(baseZip) : null;
+    if (onlineOnly && !zipArea) {
+      return NextResponse.json(
+        {
+          error:
+            'We could not find a map location for that ZIP. Check the code or contact us.',
+        },
+        { status: 400 }
+      );
+    }
+
     const descriptions: ProfileDescriptions = {
       fiveWords,
       details,
@@ -339,11 +377,13 @@ export async function POST(request: NextRequest) {
           pronouns: pronouns || null,
           addressLine1: addressLine1 || null,
           addressLine2: addressLine2 || null,
-          addressLocality: addressLocality || null,
-          addressRegion: addressRegion || null,
-          addressPostalCode: addressPostalCode || null,
-          addressCountry: hasStorefront ? 'US' : null,
+          addressLocality: zipArea?.city ?? (addressLocality || null),
+          addressRegion: zipArea?.region ?? (addressRegion || null),
+          addressPostalCode: zipArea?.postalCode ?? (addressPostalCode || null),
+          addressCountry: hasStorefront || onlineOnly ? 'US' : null,
           addressHours: addressHours || null,
+          onlineOnly,
+          geo: zipArea ? { zipArea } : null,
           active: false,
           descriptions,
           socials: { instagram, website },
@@ -448,6 +488,15 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('[listings/intake] submission failed', error);
+    if (error instanceof ZipLookupUnavailableError) {
+      return NextResponse.json(
+        {
+          error:
+            'ZIP location lookup is temporarily unavailable. Please try again.',
+        },
+        { status: 503 }
+      );
+    }
     const details = describeDbError(error);
     if (
       details.code === '23505' &&

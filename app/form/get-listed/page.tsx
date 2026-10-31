@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
 import { profileCategoryList } from '@/lib/lists';
 import { useSession } from '@/lib/auth-client';
+import { normalizeUsZip } from '@/lib/online-zip';
 
 /**
  * Public directory intake. No auth gate on purpose — see the rationale in
@@ -87,7 +88,11 @@ function ListYourBusinessForm() {
   // Step 6 — where to find them
   const [website, setWebsite] = useState('');
   const [instagram, setInstagram] = useState('');
-  const [hasStorefront, setHasStorefront] = useState(false);
+  const [locationMode, setLocationMode] = useState<
+    'storefront' | 'online' | 'mobile' | ''
+  >('');
+  const hasStorefront = locationMode === 'storefront';
+  const onlineOnly = locationMode === 'online';
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
   const [addressLocality, setAddressLocality] = useState('');
@@ -191,6 +196,14 @@ function ListYourBusinessForm() {
 
   function submitStep6(e: FormEvent) {
     e.preventDefault();
+    if (!locationMode) {
+      refuse(t('errLocationMode'));
+      return;
+    }
+    if (onlineOnly && !normalizeUsZip(addressPostalCode)) {
+      refuse(t('errOnlineZip'));
+      return;
+    }
     // The server enforces this too — it is the only thing a reviewer can use
     // to confirm a submission is a real business rather than noise.
     if (!website.trim() && !instagram.trim()) {
@@ -265,6 +278,7 @@ function ListYourBusinessForm() {
           hearAboutUs,
           agreeTos,
           hasStorefront,
+          onlineOnly,
           addressLine1,
           addressLine2,
           addressLocality,
@@ -329,7 +343,7 @@ function ListYourBusinessForm() {
     setTags([]);
     setWebsite('');
     setInstagram('');
-    setHasStorefront(false);
+    setLocationMode('');
     setAddressLine1('');
     setAddressLine2('');
     setAddressLocality('');
@@ -1014,27 +1028,85 @@ function ListYourBusinessForm() {
                 </fieldset>
 
                 <div className="border-pana-ink/10 space-y-4 border-t pt-6 dark:border-white/10">
-                  <div className="flex items-start space-x-2">
-                    <Checkbox
-                      id="has-storefront"
-                      checked={hasStorefront}
-                      onCheckedChange={(checked) =>
-                        setHasStorefront(checked === true)
-                      }
+                  <fieldset className="space-y-3">
+                    <legend className="font-bold">
+                      {t('locationModeLabel')}{' '}
+                      <span className="text-destructive">*</span>
+                    </legend>
+                    <RadioGroup
+                      value={locationMode}
+                      onValueChange={(value) => {
+                        if (
+                          value === 'storefront' ||
+                          value === 'online' ||
+                          value === 'mobile'
+                        ) {
+                          setLocationMode(value);
+                        }
+                      }}
                       disabled={isSubmitting}
-                    />
-                    <div className="space-y-1">
-                      <Label htmlFor="has-storefront" className="font-bold">
-                        {t('storefrontLabel')}
+                      className="space-y-3"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem
+                          value="storefront"
+                          id="location-storefront"
+                        />
+                        <Label htmlFor="location-storefront">
+                          {t('storefrontLabel')}
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="online" id="location-online" />
+                        <Label htmlFor="location-online">
+                          {t('onlineBusinessLabel')}
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="mobile" id="location-mobile" />
+                        <Label htmlFor="location-mobile">
+                          {t('mobileBusinessLabel')}
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </fieldset>
+
+                  {onlineOnly && (
+                    <div className="space-y-2">
+                      <Label htmlFor="online-base-zip">
+                        {t('onlineZipLabel')}{' '}
+                        <span className="text-destructive">*</span>
                       </Label>
-                      <p className="text-muted-foreground text-sm">
-                        {t('storefrontNote')}
+                      <Input
+                        id="online-base-zip"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="postal-code"
+                        maxLength={10}
+                        pattern="[0-9]{5}(-[0-9]{4})?"
+                        required
+                        placeholder="33138"
+                        value={addressPostalCode}
+                        onChange={(event) =>
+                          setAddressPostalCode(event.target.value)
+                        }
+                        disabled={isSubmitting}
+                        aria-describedby="online-base-zip-note"
+                      />
+                      <p
+                        id="online-base-zip-note"
+                        className="text-muted-foreground text-sm"
+                      >
+                        {t('onlineZipNote')}
                       </p>
                     </div>
-                  </div>
+                  )}
 
                   {hasStorefront && (
                     <div className="space-y-4 pl-6">
+                      <p className="text-muted-foreground text-sm">
+                        {t('storefrontNote')}
+                      </p>
                       <div className="space-y-2">
                         <Label htmlFor="address-line1">
                           {t('addressLine1Label')}{' '}
