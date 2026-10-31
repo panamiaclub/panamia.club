@@ -9,7 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
 
 import PageMeta from '@/components/PageMeta';
-import { ProfileInterface } from '@/lib/interfaces';
+import { normalizeUsZip } from '@/lib/online-zip';
 import Status401_Unauthorized from '@/components/Page/Status401_Unauthorized';
 import { useProfile, useMutateProfileAddress } from '@/lib/query/profile';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,9 +23,19 @@ export default function AccountProfileAddress() {
   const { data: session, status } = useSession();
   const mutation = useMutateProfileAddress();
   const { data, isLoading } = useProfile();
-  const profile = data as ProfileInterface;
+  const profile = data;
   const [gettingCoords, setGettingCoords] = useState(false);
   const { t } = useTranslation('toast');
+  const { t: tProfile } = useTranslation('profile');
+  const profileId = profile?.id ?? profile?._id;
+  const [onlineChoice, setOnlineChoice] = useState<{
+    id: string | undefined;
+    value: boolean;
+  } | null>(null);
+  const onlineOnly =
+    onlineChoice && onlineChoice.id === profileId
+      ? onlineChoice.value
+      : profile?.onlineOnly === true || profile?.online_only === true;
 
   // /api/getProfile returns the raw Drizzle row, which carries flat
   // addressLine1/addressLocality/... columns rather than the nested
@@ -108,6 +118,14 @@ export default function AccountProfileAddress() {
   const submitForm = (e: FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
+    if (onlineOnly && !normalizeUsZip(formData.get('zipcode'))) {
+      toast({
+        title: t('missingFields'),
+        description: tProfile('locationForm.invalidZip'),
+        variant: 'destructive',
+      });
+      return;
+    }
 
     const updates = {
       primary_address: {
@@ -125,7 +143,7 @@ export default function AccountProfileAddress() {
         broward: formData.get('county_broward') ? true : false,
         miami_dade: formData.get('county_miamidade') ? true : false,
       },
-      online_only: formData.get('online_only') ? true : false,
+      online_only: onlineOnly,
     };
 
     mutation.mutate(updates);
@@ -161,7 +179,12 @@ export default function AccountProfileAddress() {
 
       <Card>
         <CardContent className="pt-6">
-          <form id="address_form" onSubmit={submitForm} className="space-y-6">
+          <form
+            key={profileId}
+            id="address_form"
+            onSubmit={submitForm}
+            className="space-y-6"
+          >
             <div className="mb-6 flex justify-between gap-4">
               <Button variant="outline" asChild>
                 <Link href="/account/profile/edit">
@@ -176,10 +199,7 @@ export default function AccountProfileAddress() {
             </div>
 
             <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-900">
-              Your Primary Address is your physical location and used for
-              providing directions on your profile. You don't need to provide
-              this information if your business is digital only or does not
-              require patrons to visit a set address.
+              {tProfile('locationForm.addressNote')}
             </div>
 
             {/* Declared rather than inferred from a blank address. Leaving the
@@ -192,139 +212,155 @@ export default function AccountProfileAddress() {
               <Checkbox
                 id="online_only"
                 name="online_only"
-                defaultChecked={
-                  // /api/getProfile returns the raw Drizzle row (camelCase),
-                  // while other profile endpoints return the legacy mapped
-                  // shape. Accept either so the box reflects the saved value
-                  // whichever one fed this page.
-                  profile.onlineOnly === true || profile.online_only === true
+                checked={onlineOnly}
+                onCheckedChange={(checked) =>
+                  setOnlineChoice({ id: profileId, value: checked === true })
                 }
               />
               <div className="space-y-1">
                 <Label htmlFor="online_only">
-                  This business operates online only
+                  {tProfile('locationForm.onlineLabel')}
                 </Label>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Your profile will show &ldquo;Online business&rdquo; instead
-                  of how far away you are, and panas will not be given
-                  directions to your address.
+                  {tProfile('locationForm.onlineNote')}
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="street1">Street 1</Label>
-              <Input
-                id="street1"
-                name="street1"
-                type="text"
-                defaultValue={address.street1}
-                placeholder="123 Main Street"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="street2">Street 2</Label>
-              <Input
-                id="street2"
-                name="street2"
-                type="text"
-                defaultValue={address.street2}
-                placeholder="Suite 100 (optional)"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                name="city"
-                type="text"
-                defaultValue={address.city}
-                placeholder="Miami"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="state">State</Label>
-              <Input
-                id="state"
-                name="state"
-                type="text"
-                defaultValue={address.state}
-                placeholder="FL"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="zipcode">Zip Code</Label>
+              <Label htmlFor="zipcode">
+                {onlineOnly ? tProfile('locationForm.baseZip') : 'ZIP code'}
+                {onlineOnly && <span className="text-destructive"> *</span>}
+              </Label>
               <Input
                 id="zipcode"
                 name="zipcode"
                 type="text"
                 defaultValue={address.zipcode}
-                placeholder="33101"
+                placeholder="33138"
+                autoComplete="postal-code"
+                inputMode={onlineOnly ? 'numeric' : undefined}
+                required={onlineOnly}
+                maxLength={onlineOnly ? 10 : undefined}
+                pattern={onlineOnly ? '[0-9]{5}(-[0-9]{4})?' : undefined}
+                aria-describedby={onlineOnly ? 'base-zip-note' : undefined}
               />
+              {onlineOnly && (
+                <p
+                  id="base-zip-note"
+                  className="text-sm text-gray-600 dark:text-gray-400"
+                >
+                  {tProfile('locationForm.baseZipNote')}
+                </p>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="hours">Hours</Label>
-              <Textarea
-                id="hours"
-                name="hours"
-                rows={4}
-                maxLength={500}
-                defaultValue={address.hours}
-                placeholder="Mon-Fri: 9am-5pm"
-              />
-            </div>
-
-            <div className="border-t pt-6">
-              <div className="mb-4 rounded-md bg-blue-50 p-4 text-sm text-blue-900">
-                Your GeoLocation is used for mapping and showing users their
-                distance away from you. If you operate out of multiple areas,
-                choose a central point among those areas.
+            <fieldset
+              disabled={onlineOnly}
+              hidden={onlineOnly}
+              className="space-y-6"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="street1">Street 1</Label>
+                <Input
+                  id="street1"
+                  name="street1"
+                  type="text"
+                  defaultValue={address.street1}
+                  placeholder="123 Main Street"
+                />
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clickSetCoordsFromAddress}
-                disabled={gettingCoords}
-                className="mb-4"
-              >
-                {gettingCoords
-                  ? 'Getting coordinates...'
-                  : 'Get GeoLocation using my address'}
-              </Button>
+              <div className="space-y-2">
+                <Label htmlFor="street2">Street 2</Label>
+                <Input
+                  id="street2"
+                  name="street2"
+                  type="text"
+                  defaultValue={address.street2}
+                  placeholder="Suite 100 (optional)"
+                />
+              </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="geo_lat">Latitude</Label>
-                  <Input
-                    id="geo_lat"
-                    name="lat"
-                    type="text"
-                    defaultValue={address.lat}
-                    placeholder="26.122582"
-                  />
-                  <p className="text-sm text-gray-500">Example: 26.122582</p>
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  name="city"
+                  type="text"
+                  defaultValue={address.city}
+                  placeholder="Miami"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="state">State</Label>
+                <Input
+                  id="state"
+                  name="state"
+                  type="text"
+                  defaultValue={address.state}
+                  placeholder="FL"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="hours">Hours</Label>
+                <Textarea
+                  id="hours"
+                  name="hours"
+                  rows={4}
+                  maxLength={500}
+                  defaultValue={address.hours}
+                  placeholder="Mon-Fri: 9am-5pm"
+                />
+              </div>
+              <div className="border-t pt-6">
+                <div className="mb-4 rounded-md bg-blue-50 p-4 text-sm text-blue-900">
+                  Your GeoLocation is used for mapping and showing users their
+                  distance away from you. If you operate out of multiple areas,
+                  choose a central point among those areas.
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="geo_lng">Longitude</Label>
-                  <Input
-                    id="geo_lng"
-                    name="lng"
-                    type="text"
-                    defaultValue={address.lng}
-                    placeholder="-80.137139"
-                  />
-                  <p className="text-sm text-gray-500">Example: -80.137139</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={clickSetCoordsFromAddress}
+                  disabled={gettingCoords}
+                  className="mb-4"
+                >
+                  {gettingCoords
+                    ? 'Getting coordinates...'
+                    : 'Get GeoLocation using my address'}
+                </Button>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="geo_lat">Latitude</Label>
+                    <Input
+                      id="geo_lat"
+                      name="lat"
+                      type="text"
+                      defaultValue={address.lat}
+                      placeholder="26.122582"
+                    />
+                    <p className="text-sm text-gray-500">Example: 26.122582</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="geo_lng">Longitude</Label>
+                    <Input
+                      id="geo_lng"
+                      name="lng"
+                      type="text"
+                      defaultValue={address.lng}
+                      placeholder="-80.137139"
+                    />
+                    <p className="text-sm text-gray-500">Example: -80.137139</p>
+                  </div>
                 </div>
               </div>
-            </div>
-
+            </fieldset>
             <div className="border-t pt-6">
               <div className="mb-4 rounded-md bg-blue-50 p-4 text-sm text-blue-900">
                 Counties can be selected if you operate or service inside of
@@ -386,7 +422,10 @@ export default function AccountProfileAddress() {
 
             {mutation.isError && (
               <div className="rounded-md bg-red-50 p-4 text-red-600">
-                Failed to update profile. Please try again.
+                {axios.isAxiosError<{ error?: string }>(mutation.error)
+                  ? mutation.error.response?.data?.error ||
+                    t('profileUpdateFailed')
+                  : mutation.error.message}
               </div>
             )}
 

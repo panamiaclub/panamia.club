@@ -110,6 +110,36 @@ Community articles feature:
 | `/api/getFeaturedPanas`   | GET    | Get featured profiles |
 | `/api/getProfile`         | GET    | Get public profile    |
 
+### Online business base ZIPs
+
+`POST /api/listings/intake` accepts an explicit `onlineOnly` business choice.
+Online businesses must provide a valid US ZIP in `addressPostalCode`; ZIP+4 is
+normalized to five digits. A missing or unlocatable ZIP returns `400`, and a
+temporary lookup failure returns `503` before a listing is created.
+Storefront ZIPs remain optional and mobile/appointment-based listings are not
+silently classified as online.
+
+`POST /api/profile/saveAddress` enforces the same rule for `online_only: true`
+or an already-online profile, accepting both `zipcode` and `postalCode` address
+aliases. Online saves store only the base ZIP and its approximate locality,
+clearing street-address and exact-coordinate fields. The resolved location is
+kept in the existing `profiles.geo.zipArea` JSONB field; no migration is needed.
+
+Directory results expose this approximate location as `online_zip`, while
+`geo` is `null` for online businesses. Nearby searches use the ZIP area, not an
+old home coordinate. Web and native maps create nonempty ZIP groups from their
+current result page; a ZIP bubble is not a delivery-zone or pickup promise.
+Older online listings with a usable ZIP can resolve it without trusting their
+old street coordinates. Missing/unavailable locations stay discoverable in
+All-areas searches and are visibly reported as unplottable.
+
+ZIP lookup sends only the public five-digit code to
+[Zippopotam.us](https://api.zippopotam.us), not names, contact details, or street
+addresses. GeoNames data is attributed under
+[CC BY 4.0](https://www.geonames.org/about.html); lookups are cached for 30 days.
+The directory's existing five-minute public-response cache still applies to
+location edits.
+
 ## Map Tiles (`/api/map/*`)
 
 | Endpoint                     | Method | Description                                |

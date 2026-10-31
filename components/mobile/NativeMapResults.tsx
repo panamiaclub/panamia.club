@@ -75,10 +75,12 @@ export default function NativeMapResults({
   const [previewHeight, setPreviewHeight] = useState<number | null>(null);
   const [dragHeight, setDragHeight] = useState<number | null>(null);
   const [view, setView] = useState<MapFrame>(() =>
-    frameForPoints(items.flatMap((item) => (item.coords ? [item.coords] : [])))
+    frameForPoints(nativeMapPins(items).map((pin) => pin.coords))
   );
   const pins = useMemo(() => nativeMapPins(items), [items]);
-  const pinKey = pins.map((pin) => pin.id).join('|');
+  const pinKey = pins
+    .map((pin) => `${pin.id}:${pin.coords.lat},${pin.coords.lng}`)
+    .join('|');
   const latestPins = useRef(pins);
   latestPins.current = pins;
   const cluster = pins.find((pin) => pin.id === clusterId);
@@ -203,16 +205,32 @@ export default function NativeMapResults({
         type="button"
         className={styles.pin}
         data-kind={pin.items[0].kind}
+        data-online-zip={pin.zipArea?.postalCode}
         aria-label={
-          pin.items.length > 1
-            ? `${pin.items.length} ${label.toLowerCase()} results at ${pin.items[0].location}`
-            : pin.items[0].title
+          pin.zipArea
+            ? `${pin.items.length} online ${pin.items.length === 1 ? 'business' : 'businesses'} based near ZIP ${pin.zipArea.postalCode}`
+            : pin.items.length > 1
+              ? `${pin.items.length} ${label.toLowerCase()} results at ${pin.items[0].location}`
+              : pin.items[0].title
+        }
+        title={
+          pin.zipArea
+            ? 'Approximate base ZIP, not a visiting address or delivery zone'
+            : undefined
         }
         aria-pressed={
           clusterId === pin.id ||
           pin.items.some((item) => item.id === selectedId)
         }
         onClick={() => {
+          if (pin.zipArea) {
+            setClusterId(pin.id);
+            setSelectedId(null);
+            setPreviewKey(null);
+            setStop('half');
+            scroller.current?.scrollTo({ top: 0 });
+            return;
+          }
           setView((current) => ({
             center: [pin.coords.lat, pin.coords.lng],
             zoom: Math.max(12, current.zoom),
@@ -231,12 +249,20 @@ export default function NativeMapResults({
           }
         }}
       >
-        {pin.items[0].image ? (
+        {pin.zipArea ? (
+          <>
+            <Globe size={18} aria-hidden="true" />
+            <b>{pin.zipArea.postalCode}</b>
+            <strong>{pin.items.length}</strong>
+          </>
+        ) : pin.items[0].image ? (
           <img src={pin.items[0].image} alt="" />
         ) : (
           <MapPin size={20} aria-hidden="true" />
         )}
-        {pin.items.length > 1 && <span>{pin.items.length}</span>}
+        {!pin.zipArea && pin.items.length > 1 && (
+          <span>{pin.items.length}</span>
+        )}
       </button>
     ),
   }));
@@ -266,7 +292,8 @@ export default function NativeMapResults({
     setDragHeight(null);
   };
 
-  const unpinned = items.filter((item) => !item.coords).length;
+  const unpinned =
+    items.length - pins.reduce((total, pin) => total + pin.items.length, 0);
   return (
     <div
       className={styles.mapResults}
@@ -284,6 +311,7 @@ export default function NativeMapResults({
           onViewChange={setView}
           pins={canvasPins}
           viewer={viewer}
+          hasZipAreas={pins.some((pin) => Boolean(pin.zipArea))}
         />
         {unpinned > 0 && (
           <p className={styles.offMap}>
@@ -365,7 +393,13 @@ export default function NativeMapResults({
             <span aria-hidden="true" />
           </button>
           <div className={styles.sheetHeading}>
-            <h2>{cluster ? `${results.length} at this location` : count}</h2>
+            <h2>
+              {cluster?.zipArea
+                ? `${results.length} online near ZIP ${cluster.zipArea.postalCode}`
+                : cluster
+                  ? `${results.length} at this location`
+                  : count}
+            </h2>
             <button
               type="button"
               onClick={() => {

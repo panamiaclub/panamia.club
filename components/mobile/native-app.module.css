@@ -289,6 +289,31 @@
   border-color: var(--color-pana-pink);
 }
 
+.pin[data-online-zip] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  min-width: 112px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 2px solid var(--color-pana-indigo);
+  border-radius: 999px;
+  background: white;
+  color: var(--color-pana-indigo);
+  font-size: 12px;
+}
+
+.pin[data-online-zip] strong {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 11px;
+}
+
 .pin[aria-pressed='true'] {
   outline: 3px solid var(--color-pana-ink);
   outline-offset: 2px;

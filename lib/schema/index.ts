@@ -904,13 +904,15 @@ export const profiles = pgTable(
      */
     panaCertifiedAt: timestamp('pana_certified_at', { withTimezone: true }),
     /**
-     * This business has nowhere to visit — it operates online.
+     * This business operates online without a public storefront.
      *
      * Suppresses distance and directions on the public profile. A flag rather
      * than an inference from a missing address, because an absent address
      * already means something else: a storefront mid-onboarding, or one whose
      * address failed to geocode. Those should still read as physical and
-     * should start showing distance once the address lands. Set by the owner;
+     * should start showing distance once the address lands. Online listings
+     * require a base ZIP; its approximate area is stored in geo.zipArea rather
+     * than in the exact street-coordinate columns. Set by the owner;
      * see drizzle/0038_profile_online_only.sql.
      */
     onlineOnly: boolean('online_only').notNull().default(false),

@@ -12,6 +12,7 @@ import {
   Store,
 } from 'lucide-react';
 import type { SearchResultsInterface } from '@/lib/query/directory';
+import { normalizeUsZip, onlineBusinessLocation } from '@/lib/online-zip';
 import { isUnoptimizableImageSrc } from '@/lib/image-src';
 import { distanceInMiles, type Coords } from '@/app/p/[user]/_lib/profile-view';
 import { useDirectoryViewer } from './directory-viewer';
@@ -133,7 +134,15 @@ export function ResultCard({ result, index, viewerCoords }: ResultCardProps) {
             {result.online_only ? (
               <>
                 <Globe className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>Online only — serves all of South Florida</span>
+                <span>
+                  {onlineBusinessLocation(result.primary_address?.zipcode)}
+                </span>
+                {normalizeUsZip(result.primary_address?.zipcode) &&
+                  !result.online_zip && (
+                    <span className="dirsearch-card-distance-off">
+                      Map position unavailable
+                    </span>
+                  )}
               </>
             ) : (
               <>

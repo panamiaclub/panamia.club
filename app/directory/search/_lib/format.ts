@@ -62,6 +62,7 @@ export function formatWhen(startsAt: string): string {
 
 /** Coordinates of a result, or null when it has never been geocoded. */
 export function resultCoords(result: SearchResultsInterface): Coords | null {
+  if (result.online_only) return null;
   const coordinates = result.geo?.coordinates as unknown;
   if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
 

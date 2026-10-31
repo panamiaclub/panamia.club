@@ -12,6 +12,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { useSearch, type DirectorySort } from '@/lib/query/directory';
+import { groupOnlineZipListings } from '@/lib/online-zip';
 import { searchPath } from '@/lib/directory-search-path';
 import {
   DEFAULT_DIRECTORY_RADIUS,
@@ -73,8 +74,10 @@ export function DirectorySearchContent({
       ? 'relevance'
       : (params.sort ?? defaultSort);
 
+  // Pane switching is UI state, not a new search; it must preserve ZIP focus.
+  const { view: _view, ...searchFilters } = params;
   const { data: searchResult, isLoading } = useSearch({
-    ...params,
+    ...searchFilters,
     sort,
     geolat: coords?.lat ?? 0,
     geolng: coords?.lng ?? 0,
@@ -82,6 +85,18 @@ export function DirectorySearchContent({
   });
 
   const results = useMemo(() => searchResult?.data ?? [], [searchResult]);
+  const [focusedZip, setFocusedZip] = useState<string | null>(null);
+  const zipGroups = useMemo(
+    () =>
+      groupOnlineZipListings(results, (result) =>
+        result.online_only ? result.online_zip : null
+      ),
+    [results]
+  );
+  const zipGroup = zipGroups.find(
+    (group) => group.area.postalCode === focusedZip
+  );
+  const visibleResults = zipGroup?.items ?? results;
   const totalResults = searchResult?.pagination?.total ?? 0;
   const totalPages = searchResult?.pagination?.totalPages ?? 1;
 
@@ -239,6 +254,7 @@ export function DirectorySearchContent({
     listRef.current?.scrollTo({ top: 0 });
     setHoveredId(null);
     setSelectedId(null);
+    setFocusedZip(null);
   }, [searchResult]);
 
   // The map drops its own selection the moment the viewer's location arrives,
@@ -261,11 +277,28 @@ export function DirectorySearchContent({
   // is already on screen from jumping — but on its own it parks the card hard
   // against whichever edge it came from. The breathing room is CSS's job:
   // `.dirsearch-grid > li` carries a `scroll-margin-block` that this honours.
-  const handlePinSelect = useCallback((id: string) => {
+  const handlePinSelect = useCallback((id: string | null) => {
+    setFocusedZip(null);
     setSelectedId(id);
-    const card = document.getElementById(`dirsearch-result-${id}`);
-    card?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, []);
+  useEffect(() => {
+    if (!selectedId) return;
+    const card = document.getElementById(`dirsearch-result-${selectedId}`);
+    card?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [selectedId, focusedZip]);
+
+  const handleZipSelect = (zip: string) => {
+    setFocusedZip((current) => (current === zip ? null : zip));
+    setSelectedId(null);
+    setHoveredId(null);
+    listRef.current?.scrollTo({ top: 0 });
+    if (
+      params.view === 'map' &&
+      window.matchMedia('(max-width: 71.999rem)').matches
+    ) {
+      patch({ view: null });
+    }
+  };
 
   return (
     <DirectoryViewerProvider profileIds={profileIds}>
@@ -282,7 +315,7 @@ export function DirectorySearchContent({
             <div className="dirsearch-listhead">
               <SearchBand
                 term={params.searchTerm}
-                resultCount={results.length}
+                resultCount={visibleResults.length}
                 totalCount={totalResults}
                 loading={busy}
                 locationStatus={locationStatus}
@@ -301,6 +334,23 @@ export function DirectorySearchContent({
                 }
                 locationShared={locationShared}
               />
+              {zipGroup && (
+                <div className="dirsearch-zip-focus" role="status">
+                  <span>
+                    On this page: online businesses based near ZIP{' '}
+                    {zipGroup.area.postalCode}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFocusedZip(null);
+                      setSelectedId(null);
+                    }}
+                  >
+                    Show all results
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="dirsearch-listscroll" ref={listRef}>
@@ -324,7 +374,7 @@ export function DirectorySearchContent({
                 ) : (
                   <div className="dirsearch-results">
                     <ul className="dirsearch-grid">
-                      {results.map((result, index) => (
+                      {visibleResults.map((result) => (
                         <li
                           key={result._id}
                           id={`dirsearch-result-${result._id}`}
@@ -337,14 +387,14 @@ export function DirectorySearchContent({
                         >
                           <ResultCard
                             result={result}
-                            index={index + 1}
+                            index={results.indexOf(result) + 1}
                             viewerCoords={coords}
                           />
                         </li>
                       ))}
                     </ul>
 
-                    {totalPages > 1 && (
+                    {totalPages > 1 && !zipGroup && (
                       <SearchPagination
                         currentPage={params.pageNum}
                         totalPages={totalPages}
@@ -419,6 +469,8 @@ export function DirectorySearchContent({
               radius={effectiveRadius}
               highlightId={hoveredId}
               onPinSelect={handlePinSelect}
+              selectedZip={focusedZip}
+              onZipSelect={handleZipSelect}
             />
           </aside>
         </div>

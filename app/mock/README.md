@@ -21,12 +21,36 @@ layout only works with invented spacing or colours that are not in
 | `/mock/settings`          | Account settings — one page, either masthead                                      |
 | `/mock/directory`         | Directory search results, pre-map                                                 |
 | `/mock/directory-unified` | One directory theme across businesses, panas, groups and events                   |
+| `/mock/directory-online`  | Online base-ZIP map bubbles, grouped results, and public-location choices          |
 | `/mock/explore`           | Scope moved into the search bar; directory narrowed to businesses                 |
 | `/mock/groups`            | Groups landing and discover, as two steps of one flow                             |
 | `/mock/dms`               | Direct messages, as two competing models behind one switch                        |
 | `/mock/dm-chat`           | Interactive Messages workspace: desktop panes, mobile list/chat, drafts and retry |
 | `/mock/events`            | Events discovery: lanes that say why, not facets to narrow with                   |
 | `/mock/events/host`       | Host an event: the form, answering to the page it feeds                           |
+
+## Online businesses on the map
+
+`/mock/directory-online` is an interactive, fixture-only location proposal.
+Hollow globe bubbles group online businesses by their required base ZIP,
+not storefront coordinates or delivery zones. Tap **33138 (2)** or **33301 (1)**
+to show that ZIP's matches in the existing results list; on phones,
+the view moves to those results. **Show all** restores the search, and storefront
+pins remain on the map while a ZIP group is focused. Choosing a business
+expands its existing result card without inventing a visiting address, delivery
+coverage, or distance. No business preview floats over the map, and there
+is no separate online panel or permanent preview card.
+
+**Sello Press** serves anywhere but still has a base in ZIP **33138**, sharing
+that bubble with Casa Digital. The search, area, and connection-type filters update bubble membership
+and counts from the same fixtures; an online-only search works with zero
+storefront pins. Each online business has one base ZIP, independent of the
+counties it serves. Mobile/appointment-based and
+location-not-provided fixtures stay distinct from online businesses.
+**View profile** opens a local fixture preview, not an invented live profile
+URL. The backdrop and businesses are illustrative; ZIP points come from
+GeoNames through Zippopotam.us and are attributed under CC BY 4.0. Nothing in
+this mock writes to the real directory.
 
 ## Viewing the Pana Social surface
 

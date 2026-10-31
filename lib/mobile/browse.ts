@@ -1,4 +1,10 @@
 import type { SearchResultsInterface } from '@/lib/query/directory';
+import {
+  groupOnlineZipListings,
+  isOnlineZipArea,
+  onlineBusinessLocation,
+  type OnlineZipArea,
+} from '@/lib/online-zip';
 import type { UpcomingEvent } from '@/lib/query/events';
 import type {
   CalendarEntry,
@@ -23,6 +29,7 @@ export interface NativeResult {
   location: string;
   meta: string;
   coords: { lat: number; lng: number } | null;
+  zipArea?: OnlineZipArea | null;
   slug?: string;
   when?: string;
   annotation?: string;
@@ -57,7 +64,7 @@ export function nativeBusiness(result: SearchResultsInterface): NativeResult {
     image: result.coverImage || result.images?.primaryCDN || null,
     description: result.five_words || result.details || '',
     location: result.online_only
-      ? 'Online'
+      ? onlineBusinessLocation(result.primary_address?.zipcode)
       : result.primary_address?.city || 'Location not listed',
     meta: (result.categories ?? [])
       .map((category) => CATEGORY_LABEL[category] ?? category)
@@ -68,6 +75,7 @@ export function nativeBusiness(result: SearchResultsInterface): NativeResult {
           result.geo?.coordinates?.[1],
           result.geo?.coordinates?.[0]
         ),
+    zipArea: result.online_only ? (result.online_zip ?? null) : null,
     annotation: result.certified ? 'Pana certified' : undefined,
   };
 }
@@ -182,7 +190,14 @@ export function nativeJoinedGroup(group: MyGroupSummary): NativeResult {
   };
 }
 
-export function nativeMapPins(items: NativeResult[]) {
+export interface NativeMapPin {
+  id: string;
+  coords: NonNullable<NativeResult['coords']>;
+  items: NativeResult[];
+  zipArea?: OnlineZipArea;
+}
+
+export function nativeMapPins(items: NativeResult[]): NativeMapPin[] {
   const pins = new Map<
     string,
     {
@@ -192,11 +207,23 @@ export function nativeMapPins(items: NativeResult[]) {
     }
   >();
   for (const item of items) {
-    if (!item.coords) continue;
+    if (
+      !item.coords ||
+      (item.kind === 'directory' && isOnlineZipArea(item.zipArea))
+    )
+      continue;
     const id = `${item.coords.lat},${item.coords.lng}`;
     const pin = pins.get(id);
     if (pin) pin.items.push(item);
     else pins.set(id, { id, coords: item.coords, items: [item] });
   }
-  return [...pins.values()];
+  const zipPins = groupOnlineZipListings(items, (item) =>
+    item.kind === 'directory' ? item.zipArea : null
+  ).map((group) => ({
+    id: group.id,
+    coords: { lat: group.area.lat, lng: group.area.lng },
+    items: group.items,
+    zipArea: group.area,
+  }));
+  return [...pins.values(), ...zipPins];
 }

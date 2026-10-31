@@ -10,10 +10,14 @@ async function fixtures(
     invitationSent?: boolean;
     editing?: boolean;
     managerChanged?: boolean;
+    online?: boolean;
+    addressFailure?: boolean;
   } = {}
 ) {
   const submissions: Record<string, unknown>[] = [];
   const contactUpdates: Record<string, unknown>[] = [];
+  const addressUpdates: Record<string, unknown>[] = [];
+  let baseZip = '';
   let contactEmail = 'hello@bakery.test';
   let signedIn = Boolean(options.signedIn);
   let accountEmail = panaEmail;
@@ -72,6 +76,11 @@ async function fixtures(
             name: options.editing ? 'Ana Bakery' : 'Ana Person',
             screenname: 'anaperson',
             images: {},
+            onlineOnly: Boolean(options.online),
+            addressPostalCode: baseZip,
+            addressLine1: options.online ? 'A private old address' : null,
+            addressLat: options.online ? '37.8' : null,
+            addressLng: options.online ? '-122.4' : null,
           },
         },
       });
@@ -106,6 +115,22 @@ async function fixtures(
           invitationSent: Boolean(personal) && options.invitationSent !== false,
         },
       });
+    } else if (path === '/api/profile/saveAddress') {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      addressUpdates.push(body);
+      if (options.addressFailure) {
+        await route.fulfill({
+          status: 503,
+          json: {
+            success: false,
+            error: 'ZIP location lookup is temporarily unavailable.',
+          },
+        });
+      } else {
+        const address = body.primary_address as Record<string, unknown>;
+        baseZip = String(address.zipcode);
+        await route.fulfill({ json: { success: true } });
+      }
     } else if (path === '/api/profile/saveContact') {
       const body = route.request().postDataJSON() as Record<string, unknown>;
       contactUpdates.push(body);
@@ -121,6 +146,7 @@ async function fixtures(
   return {
     submissions,
     contactUpdates,
+    addressUpdates,
     async changeSession(next: { signedIn: boolean; email?: string }) {
       signedIn = next.signedIn;
       accountEmail = next.email ?? panaEmail;
@@ -151,7 +177,7 @@ async function openBasics(page: Page) {
   await page.locator('#business-name').fill('Ana Bakery');
 }
 
-async function openFinalStep(page: Page) {
+async function openLocationStep(page: Page) {
   await page.getByRole('button', { name: copy.nextSkip, exact: true }).click();
   await page
     .locator('#business-details')
@@ -159,6 +185,11 @@ async function openFinalStep(page: Page) {
   await page.locator('#business-five-words').fill('Fresh bread and pastries');
   await page.getByRole('button', { name: copy.next, exact: true }).click();
   await page.locator('#business-website').fill('https://bakery.test');
+}
+
+async function openFinalStep(page: Page) {
+  await openLocationStep(page);
+  await page.locator('#location-mobile').click();
   await page.getByRole('button', { name: copy.next, exact: true }).click();
 }
 
@@ -177,6 +208,108 @@ async function finish(page: Page) {
   await openFinalStep(page);
   await submitListing(page);
 }
+
+test('online signup asks for a mandatory base ZIP without collecting a visiting address', async ({
+  page,
+}) => {
+  const { submissions } = await fixtures(page);
+  await openBasics(page);
+  await page.locator('#business-email').fill('hello@bakery.test');
+  await page.getByRole('button', { name: copy.next, exact: true }).click();
+  await openLocationStep(page);
+  await page.locator('#location-online').click();
+  const zip = page.locator('#online-base-zip');
+  await expect(zip).toHaveAttribute('required', '');
+  await expect(page.locator('#address-line1')).toHaveCount(0);
+  await page.getByRole('button', { name: copy.next, exact: true }).click();
+  await expect(zip).toBeVisible();
+  await expect(page.getByText(copy.step7Heading, { exact: true })).toHaveCount(
+    0
+  );
+  expect(
+    await zip.evaluate(
+      (element: HTMLInputElement) => element.validity.valueMissing
+    )
+  ).toBe(true);
+  await zip.fill('3313');
+  await page.getByRole('button', { name: copy.next, exact: true }).click();
+  expect(
+    await zip.evaluate(
+      (element: HTMLInputElement) => element.validity.patternMismatch
+    )
+  ).toBe(true);
+  await zip.fill('33138');
+  await page.getByRole('button', { name: copy.next, exact: true }).click();
+  await submitListing(page);
+  expect(submissions[0]).toMatchObject({
+    onlineOnly: true,
+    hasStorefront: false,
+    addressPostalCode: '33138',
+  });
+});
+
+test('storefront signup still permits an omitted ZIP when street and city are provided', async ({
+  page,
+}) => {
+  const { submissions } = await fixtures(page);
+  await openBasics(page);
+  await page.locator('#business-email').fill('hello@bakery.test');
+  await page.getByRole('button', { name: copy.next, exact: true }).click();
+  await openLocationStep(page);
+  await page.locator('#location-storefront').click();
+  await page.locator('#address-line1').fill('A public street');
+  await page.locator('#address-city').fill('Miami');
+  await page.getByRole('button', { name: copy.next, exact: true }).click();
+  await submitListing(page);
+  expect(submissions[0]).toMatchObject({
+    onlineOnly: false,
+    hasStorefront: true,
+    addressPostalCode: '',
+  });
+});
+
+test('online location editing requires a base ZIP and does not expose or submit exact-address controls', async ({
+  page,
+}) => {
+  const observed = await fixtures(page, {
+    signedIn: true,
+    editing: true,
+    online: true,
+  });
+  await page.goto('/account/profile/address');
+  const zip = page.locator('#zipcode');
+  await expect(zip).toHaveAttribute('required', '');
+  await expect(page.locator('#street1')).toBeHidden();
+  await expect(page.locator('#geo_lat')).toBeHidden();
+  await expect(page.locator('#geo_lat')).toBeDisabled();
+  await page.getByRole('button', { name: 'Save Changes' }).click();
+  expect(observed.addressUpdates).toHaveLength(0);
+  await zip.fill('33138');
+  await page.getByRole('button', { name: 'Save Changes' }).click();
+  await expect(page.getByText('Profile updated successfully!')).toBeVisible();
+  expect(observed.addressUpdates[0]).toMatchObject({
+    online_only: true,
+    primary_address: { zipcode: '33138', street1: null, lat: null, lng: null },
+  });
+});
+
+test('a ZIP save failure shows the server message rather than a success notification', async ({
+  page,
+}) => {
+  await fixtures(page, {
+    signedIn: true,
+    editing: true,
+    online: true,
+    addressFailure: true,
+  });
+  await page.goto('/account/profile/address');
+  await page.locator('#zipcode').fill('33138');
+  await page.getByRole('button', { name: 'Save Changes' }).click();
+  await expect(
+    page.getByText('ZIP location lookup is temporarily unavailable.').first()
+  ).toBeVisible();
+  await expect(page.getByText('Profile updated successfully!')).toHaveCount(0);
+});
 
 test('a signed-in pana can copy their inbox and manage the listing without another sign-in', async ({
   page,

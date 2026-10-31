@@ -7,6 +7,7 @@ import { db } from '@/lib/db';
 import { profiles, users } from '@/lib/schema';
 import type { AccountType } from '@/lib/schema';
 import { and, eq, isNull, sql } from 'drizzle-orm';
+import { normalizeUsZip, readOnlineZipArea } from '@/lib/online-zip';
 import {
   ProfileDescriptions,
   ProfileMentoring,
@@ -23,7 +24,7 @@ export interface LegacyProfile {
   phone_number: unknown;
   /** Set by Pana Mia staff; null means not certified. */
   panaCertifiedAt: Date | null;
-  /** True when the business has no location to visit. */
+  /** Online business without a public storefront; its ZIP may still be local. */
   onlineOnly: boolean;
   primary_address: {
     name: string | undefined;
@@ -100,9 +101,26 @@ function transformToLegacyFormat(
 ): LegacyProfile {
   const descriptions = profile.descriptions as ProfileDescriptions | null;
   const mentoring = profile.mentoring as ProfileMentoring | null;
+  const online = profile.onlineOnly === true;
+  const zipArea = online
+    ? readOnlineZipArea(profile.geo, profile.addressPostalCode)
+    : null;
 
   return {
     ...profile,
+    ...(online
+      ? {
+          addressName: null,
+          addressLine1: null,
+          addressLine2: null,
+          addressLine3: null,
+          addressLat: null,
+          addressLng: null,
+          addressGooglePlaceId: null,
+          addressHours: null,
+          addressPostalCode: normalizeUsZip(profile.addressPostalCode),
+        }
+      : {}),
     // Explicit typed fields (cast from Record<string, unknown>)
     id: profile.id as string,
     name: profile.name as string,
@@ -110,7 +128,7 @@ function transformToLegacyFormat(
     // Declared explicitly rather than left to the spread so it survives the
     // Record<string, unknown> cast with a real boolean type. Defaults to
     // false: a row that predates the column is a physical business.
-    onlineOnly: (profile.onlineOnly as boolean | null) ?? false,
+    onlineOnly: online,
     // Legacy field mappings
     details: descriptions?.details,
     five_words: descriptions?.fiveWords,
@@ -119,12 +137,18 @@ function transformToLegacyFormat(
     phone_number: profile.phoneNumber,
     // Legacy address format
     primary_address: {
-      name: profile.addressName as string | undefined,
-      street1: profile.addressLine1 as string | undefined,
-      street2: profile.addressLine2 as string | undefined,
-      city: profile.addressLocality as string | undefined,
-      state: profile.addressRegion as string | undefined,
-      zipcode: profile.addressPostalCode as string | undefined,
+      name: online ? undefined : (profile.addressName as string | undefined),
+      street1: online
+        ? undefined
+        : (profile.addressLine1 as string | undefined),
+      street2: online
+        ? undefined
+        : (profile.addressLine2 as string | undefined),
+      city: zipArea?.city ?? (profile.addressLocality as string | undefined),
+      state: zipArea?.region ?? (profile.addressRegion as string | undefined),
+      zipcode: online
+        ? (normalizeUsZip(profile.addressPostalCode) ?? undefined)
+        : (profile.addressPostalCode as string | undefined),
       country: profile.addressCountry as string | undefined,
     },
     // Legacy image format. Gallery slots live inside the gallery_images JSONB
@@ -149,6 +173,7 @@ function transformToLegacyFormat(
     // not columns on this table, so geo was unconditionally null and the map
     // and distance never rendered.
     geo: (() => {
+      if (online) return null;
       const coordinates = extractCoordinates(profile);
       return coordinates ? { type: 'Point', coordinates } : null;
     })(),

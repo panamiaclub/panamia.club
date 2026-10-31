@@ -40,18 +40,17 @@ export function effectiveDirectoryRadius(
 /**
  * Whether a listing survives the directory's radius filter.
  *
- * "All South Florida" is deliberately non-geographic: online-only listings
- * and listings without coordinates remain discoverable. A finite radius is
- * visitable-distance discovery, so both are excluded.
+ * "All South Florida" keeps listings without a map location discoverable.
+ * Finite radii use a public storefront or an approximate online base ZIP.
+ * Callers must never supply private street coordinates for online businesses.
  */
 export function matchesDirectoryRadius(
   distanceMiles: number | null,
-  radius: DirectoryRadius,
-  onlineOnly = false
+  radius: DirectoryRadius
 ): boolean {
   const limit = directoryRadiusMiles(radius);
   if (limit === null) return true;
-  if (onlineOnly || distanceMiles === null || !Number.isFinite(distanceMiles)) {
+  if (distanceMiles === null || !Number.isFinite(distanceMiles)) {
     return false;
   }
   return distanceMiles <= limit;

@@ -22,7 +22,7 @@
   "step5Heading": "A qué te dedicas",
   "step5Desc": "Esta es tu presentación ante la comunidad.",
   "step6Heading": "Dónde encontrarte",
-  "step6Desc": "Enlaces, y una dirección si la gente puede visitarte.",
+  "step6Desc": "Enlaces y dónde tiene su base tu negocio o se puede visitar.",
   "step7Heading": "Lo último",
   "step7Desc": "Y listo.",
 
@@ -100,7 +100,12 @@
   "instagramPlaceholder": "@tuusuario",
 
   "storefrontLabel": "Tengo una dirección física que la gente puede visitar",
-  "storefrontNote": "Déjalo sin marcar si eres solo en línea, móvil, o por cita. Marca esto solo para una dirección pública — nunca tu casa.",
+  "storefrontNote": "Comparte solo una dirección pública para visitas — nunca tu casa.",
+  "locationModeLabel": "¿Cómo encuentran los clientes tu negocio?",
+  "onlineBusinessLabel": "Negocio en línea, sin un local público",
+  "mobileBusinessLabel": "Móvil, por cita u otra modalidad",
+  "onlineZipLabel": "Código postal de la base del negocio",
+  "onlineZipNote": "Obligatorio para negocios en línea, incluso si ofrecen entrega o recogida acordada. El mapa público muestra solo la zona de tu código postal de cinco dígitos, no una dirección. Los detalles de entrega y recogida se deben confirmar con el negocio.",
 
   "addressLine1Label": "Dirección",
   "addressLine1Placeholder": "123 SW 8th St",
@@ -139,6 +144,8 @@
   "errDetails": "Por favor cuéntanos un poco más sobre tu proyecto.",
   "errFiveWords": "Por favor dinos a qué te dedicas en pocas palabras.",
   "errLinks": "Por favor agrega un sitio web o un Instagram para que podamos encontrarte.",
+  "errLocationMode": "Elige cómo encuentran los clientes tu negocio.",
+  "errOnlineZip": "Escribe un código postal válido de cinco dígitos para la base de tu negocio en línea.",
   "errAddress": "Por favor agrega la dirección de tu local.",
   "errCity": "Por favor agrega la ciudad de tu local.",
   "errTos": "Por favor acepta los Términos y Condiciones para enviar.",

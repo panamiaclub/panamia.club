@@ -6,6 +6,7 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { getTableConfig } from 'drizzle-orm/pg-core';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/lib/schema';
+import { groupOnlineZipListings, type OnlineZipArea } from '@/lib/online-zip';
 
 const pg = new PGlite();
 const db = drizzle(pg, { schema });
@@ -25,6 +26,55 @@ const emails: Array<{
   variables: Record<string, unknown>;
   recipient?: string;
 }> = [];
+const zipRequests: string[] = [];
+let zipUnavailable = false;
+const zipArea = (zip: string): OnlineZipArea =>
+  zip === '33301'
+    ? {
+        postalCode: zip,
+        country: 'US',
+        city: 'Fort Lauderdale',
+        region: 'FL',
+        lat: 26.1216,
+        lng: -80.1288,
+      }
+    : {
+        postalCode: zip,
+        country: 'US',
+        city: 'Miami',
+        region: 'FL',
+        lat: 25.8521,
+        lng: -80.1821,
+      };
+
+mock.module(import.meta.resolve('next/cache'), {
+  namedExports: {
+    unstable_cache: (fn: unknown) => fn,
+    revalidatePath: () => {},
+    revalidateTag: () => {},
+  },
+});
+mock.method(globalThis, 'fetch', async (input: RequestInfo | URL) => {
+  const url = String(input);
+  const match = /^https:\/\/api\.zippopotam\.us\/us\/(\d{5})$/.exec(url);
+  assert.ok(match, `Unexpected network request: ${url}`);
+  zipRequests.push(url);
+  if (zipUnavailable) return new Response('', { status: 503 });
+  if (match[1] === '00000') return new Response('', { status: 404 });
+  const area = zipArea(match[1]);
+  return Response.json({
+    'post code': area.postalCode,
+    'country abbreviation': 'US',
+    places: [
+      {
+        'place name': area.city,
+        'state abbreviation': area.region,
+        latitude: String(area.lat),
+        longitude: String(area.lng),
+      },
+    ],
+  });
+});
 
 mock.module(import.meta.resolve('../lib/db.ts'), { namedExports: { db } });
 mock.module(import.meta.resolve('../auth.ts'), {
@@ -80,6 +130,9 @@ const tables = [
   schema.mentorSessions,
   schema.emailMigrations,
   schema.sessions,
+  schema.profileSignals,
+  schema.venues,
+  schema.events,
 ];
 let intake: typeof import('../app/api/listings/intake/route');
 let decisions: typeof import('../app/api/admin/profile/action/route');
@@ -90,6 +143,9 @@ let booking: typeof import('../app/api/mentoring/sessions/route');
 let author: typeof import('../app/api/user/author/[id]/route');
 let migration: typeof import('../app/api/user/complete-email-migration/route');
 let pending: typeof import('../lib/server/pending-listing-owner');
+let addressUpdate: typeof import('../app/api/profile/saveAddress/route');
+let directory: typeof import('../lib/server/directory');
+let profileReader: typeof import('../lib/server/profile');
 let NextRequest: typeof import('next/server').NextRequest;
 const originalHost = process.env.NEXT_PUBLIC_HOST_URL;
 
@@ -127,6 +183,9 @@ before(async () => {
   author = await import('../app/api/user/author/[id]/route');
   migration = await import('../app/api/user/complete-email-migration/route');
   pending = await import('../lib/server/pending-listing-owner');
+  addressUpdate = await import('../app/api/profile/saveAddress/route');
+  directory = await import('../lib/server/directory');
+  profileReader = await import('../lib/server/profile');
   ({ NextRequest } = await import('next/server'));
 });
 
@@ -144,6 +203,7 @@ beforeEach(async () => {
     email,
     name: 'Ana Person',
     active: true,
+    onlineOnly: false,
   });
   session = { user: { id: userId, email, name: 'Ana Person' } };
   activeProfileId = undefined;
@@ -152,6 +212,8 @@ beforeEach(async () => {
   notificationFails = false;
   invitations.length = 0;
   emails.length = 0;
+  zipRequests.length = 0;
+  zipUnavailable = false;
 });
 
 after(async () => {
@@ -189,6 +251,260 @@ async function saved(profileId: string) {
   assert.ok(profile);
   return profile;
 }
+
+test('online intake requires a ZIP and rejects invalid or contradictory location choices before lookup', async () => {
+  for (const overrides of [
+    { onlineOnly: true },
+    { onlineOnly: true, addressPostalCode: '331380' },
+    { onlineOnly: true, addressPostalCode: 33138 },
+    { onlineOnly: 'true', addressPostalCode: '33138' },
+    {
+      onlineOnly: true,
+      hasStorefront: true,
+      addressPostalCode: '33138',
+      addressLine1: 'A public street',
+      addressLocality: 'Miami',
+    },
+  ]) {
+    const response = await submit(overrides);
+    assert.equal(response.status, 400);
+    assert.equal((await db.select().from(schema.profiles)).length, 1);
+  }
+  assert.deepEqual(zipRequests, []);
+});
+
+test('online intake persists a canonical ZIP area without storing a street address or exact point', async () => {
+  session = null;
+  const response = await submit({
+    onlineOnly: true,
+    addressPostalCode: ' 33138-1234 ',
+    addressLine1: '123 Private Home Road',
+    addressLocality: 'Private city',
+    lat: 37.8,
+    lng: -122.4,
+  });
+  assert.equal(response.status, 201);
+  const profile = await saved((await response.json()).profileId);
+  assert.equal(profile.onlineOnly, true);
+  assert.equal(profile.addressPostalCode, '33138');
+  assert.equal(profile.addressLocality, 'Miami');
+  assert.equal(profile.addressCountry, 'US');
+  assert.equal(profile.addressLine1, null);
+  assert.equal(profile.addressLat, null);
+  assert.equal(profile.addressLng, null);
+  assert.deepEqual(profile.geo, { zipArea: zipArea('33138') });
+  assert.deepEqual(zipRequests, ['https://api.zippopotam.us/us/33138']);
+  const publicResults = await directory.getSearch({
+    pageNum: 1,
+    pageLimit: 20,
+    searchTerm: '',
+    filterCategories: '',
+    geolat: '',
+    geolng: '',
+    radius: 'all',
+    resultsView: '',
+  });
+  assert.deepEqual(
+    publicResults.data,
+    [],
+    'A pending listing must not create a public ZIP bubble'
+  );
+});
+
+test('unknown ZIPs and lookup outages do not create partially located online listings', async () => {
+  assert.equal(
+    (await submit({ onlineOnly: true, addressPostalCode: '00000' })).status,
+    400
+  );
+  zipUnavailable = true;
+  assert.equal(
+    (await submit({ onlineOnly: true, addressPostalCode: '33138' })).status,
+    503
+  );
+  assert.equal((await db.select().from(schema.profiles)).length, 1);
+  assert.deepEqual(emails, []);
+});
+
+test('storefront and mobile intake keep their existing optional ZIP behavior', async () => {
+  const storefront = await submit({
+    hasStorefront: true,
+    addressLine1: 'A public street',
+    addressLocality: 'Miami',
+  });
+  assert.equal(storefront.status, 201);
+  const physical = await saved((await storefront.json()).profileId);
+  assert.equal(physical.onlineOnly, false);
+  assert.equal(physical.addressLine1, 'A public street');
+  assert.equal(physical.addressPostalCode, null);
+  const mobile = await submit({
+    name: 'Ana Mobile Services',
+    addressPostalCode: '33138',
+  });
+  assert.equal(mobile.status, 201);
+  assert.equal(
+    (await saved((await mobile.json()).profileId)).addressPostalCode,
+    null
+  );
+  assert.deepEqual(zipRequests, []);
+});
+
+test('address editing enforces online ZIPs, accepts either postal alias, and ignores private coordinates', async () => {
+  assert.equal(
+    (await addressUpdate.POST(request({ online_only: true }))).status,
+    400
+  );
+  assert.equal(
+    (
+      await addressUpdate.POST(
+        request({
+          online_only: true,
+          primary_address: { zipcode: '3313' },
+        })
+      )
+    ).status,
+    400
+  );
+  const response = await addressUpdate.POST(
+    request({
+      online_only: true,
+      primary_address: {
+        postalCode: '33138-1234',
+        line1: 'A private home',
+        lat: '37.8',
+        lng: '-122.4',
+      },
+    })
+  );
+  assert.equal(response.status, 200);
+  const profile = await saved(personalId);
+  assert.equal(profile.onlineOnly, true);
+  assert.equal(profile.addressPostalCode, '33138');
+  assert.equal(profile.addressLine1, null);
+  assert.equal(profile.addressLat, null);
+  assert.equal(profile.addressLng, null);
+  assert.deepEqual(profile.geo, { zipArea: zipArea('33138') });
+  assert.equal(
+    (
+      await addressUpdate.POST(
+        request({
+          primary_address: { zipcode: '' },
+        })
+      )
+    ).status,
+    400,
+    'An already-online listing cannot clear its required ZIP'
+  );
+});
+
+test('a failed ZIP edit preserves the previous location and online choice', async () => {
+  await db
+    .update(schema.profiles)
+    .set({
+      addressLine1: 'A public street',
+      addressLat: '25.76',
+      addressLng: '-80.19',
+    })
+    .where(eq(schema.profiles.id, personalId));
+  zipUnavailable = true;
+  assert.equal(
+    (
+      await addressUpdate.POST(
+        request({
+          online_only: true,
+          primary_address: { zipcode: '33138' },
+        })
+      )
+    ).status,
+    503
+  );
+  const profile = await saved(personalId);
+  assert.equal(profile.onlineOnly, false);
+  assert.equal(profile.addressLine1, 'A public street');
+  assert.equal(Number(profile.addressLat), 25.76);
+});
+
+test('public online profiles mask old exact points and street fields', async () => {
+  await db
+    .update(schema.profiles)
+    .set({
+      screenname: 'online-ana',
+      onlineOnly: true,
+      addressPostalCode: '33138-1234',
+      addressLine1: 'A private home',
+      addressLat: '37.8',
+      addressLng: '-122.4',
+      geo: { type: 'Point', coordinates: [-122.4, 37.8] },
+    })
+    .where(eq(schema.profiles.id, personalId));
+  const profile = await profileReader.getPublicProfile('online-ana');
+  assert.ok(profile);
+  assert.equal(profile.geo, null);
+  assert.equal(profile.addressLat, null);
+  assert.equal(profile.addressLng, null);
+  assert.equal(profile.addressLine1, null);
+  assert.equal(profile.primary_address.street1, undefined);
+  assert.equal(profile.primary_address.zipcode, '33138');
+});
+
+test('nearby online results use ZIP areas rather than old home coordinates and group only real matches', async () => {
+  await db.insert(schema.profiles).values([
+    {
+      id: 'zip-near',
+      email: 'near@test.invalid',
+      name: 'Nearby online shop',
+      onlineOnly: true,
+      active: true,
+      addressPostalCode: '33138',
+      addressCountry: 'US',
+      addressLat: '37.8',
+      addressLng: '-122.4',
+      geo: { type: 'Point', coordinates: [-122.4, 37.8] },
+    },
+    {
+      id: 'zip-far',
+      email: 'far@test.invalid',
+      name: 'Broward online shop',
+      onlineOnly: true,
+      active: true,
+      addressPostalCode: '33301',
+      addressCountry: 'US',
+      addressLat: '25.85',
+      addressLng: '-80.18',
+      geo: { type: 'Point', coordinates: [-80.18, 25.85] },
+    },
+    {
+      id: 'zip-pending',
+      email: 'pending@test.invalid',
+      name: 'Pending online shop',
+      onlineOnly: true,
+      active: false,
+      addressPostalCode: '33138',
+    },
+  ]);
+  const options = {
+    pageNum: 1,
+    pageLimit: 20,
+    searchTerm: '',
+    filterCategories: '',
+    geolat: '25.85',
+    geolng: '-80.18',
+    radius: '5' as const,
+    resultsView: '',
+  };
+  const nearby = await directory.getSearch(options);
+  assert.deepEqual(
+    nearby.data.map((row) => row.id),
+    ['zip-near']
+  );
+  assert.equal(nearby.data[0].geo, null);
+  assert.deepEqual(nearby.data[0].online_zip, zipArea('33138'));
+  const all = await directory.getSearch({ ...options, radius: 'all' });
+  assert.equal(all.data.length, 2);
+  const groups = groupOnlineZipListings(all.data, (row) => row.online_zip);
+  assert.equal(groups.length, 2);
+  assert.ok(groups.every((group) => group.items.length === 1));
+  assert.ok(all.data.every((row) => row.geo === null));
+});
 
 test('an existing pana can submit and manage a separate listing with the same email', async () => {
   const response = await submit({

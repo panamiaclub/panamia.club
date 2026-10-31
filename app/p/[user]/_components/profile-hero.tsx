@@ -172,6 +172,11 @@ export function ProfileHero({
                       <Globe className="h-4 w-4" aria-hidden="true" />
                       {t('hero.onlineOnly')}
                     </span>
+                    {profile.baseZip && (
+                      <span className="opacity-75">
+                        {t('hero.baseZip', { zip: profile.baseZip })}
+                      </span>
+                    )}
                   </>
                 ) : (
                   profile.coords && (

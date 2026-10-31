@@ -17,6 +17,7 @@ import {
 import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
 import { categoryKeys } from '@/lib/server/directory';
 import type { Scope, ScopeCounts } from '@/lib/directory-scopes';
+import { onlineBusinessLocation } from '@/lib/online-zip';
 
 /**
  * Full-page search for the scopes that are not the business directory.
@@ -525,6 +526,7 @@ export async function searchDirectory(
         categories: profiles.categories,
         addressLocality: profiles.addressLocality,
         onlineOnly: profiles.onlineOnly,
+        addressPostalCode: profiles.addressPostalCode,
         panaCertifiedAt: profiles.panaCertifiedAt,
         primaryImageCdn: profiles.primaryImageCdn,
       })
@@ -557,7 +559,7 @@ export async function searchDirectory(
       // The same sentence the business card uses, so a business reads the
       // same in the Everything scope as it does in the directory proper.
       where: row.onlineOnly
-        ? 'Online only — serves all of South Florida'
+        ? onlineBusinessLocation(row.addressPostalCode)
         : row.addressLocality,
       when: null,
       blurb: row.details,
