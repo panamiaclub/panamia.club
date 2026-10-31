@@ -71,10 +71,30 @@ export function iosSideloadBuildArgs(
     '-quiet',
     `DEVELOPMENT_TEAM=${options.teamId}`,
     'CODE_SIGN_STYLE=Automatic',
-    'CODE_SIGN_ENTITLEMENTS=',
+    `CODE_SIGN_ENTITLEMENTS=${join(root, 'mobile', 'ios', 'App', 'App', 'Personal.entitlements')}`,
     `PRODUCT_BUNDLE_IDENTIFIER=${iosSideloadBundleId(options.teamId)}`,
     'build',
   ];
+}
+
+export function assertIosSideloadEntitlements(entitlements: unknown): void {
+  if (
+    typeof entitlements !== 'object' ||
+    entitlements === null ||
+    Array.isArray(entitlements)
+  ) {
+    throw new Error('Could not read the signed development app entitlements.');
+  }
+  for (const capability of [
+    'com.apple.developer.associated-domains',
+    'com.apple.developer.applesignin',
+    'aps-environment',
+  ]) {
+    if (capability in entitlements)
+      throw new Error(
+        `Refusing to install a Personal Team build with an unsupported entitlement: ${capability}`
+      );
+  }
 }
 
 function main(): void {
@@ -103,7 +123,7 @@ function main(): void {
   const bundleId = iosSideloadBundleId(options.teamId);
   console.log(`Building a personal development copy: ${bundleId}`);
   console.log(
-    'Universal Links are disabled only for this build; App Store signing settings are unchanged.'
+    'Using personal-only entitlements; App Store signing settings are unchanged.'
   );
   execFileSync(
     process.execPath,
@@ -149,6 +169,19 @@ function main(): void {
     cwd: ROOT,
     stdio: 'inherit',
   });
+  const signedEntitlements = execFileSync(
+    'codesign',
+    ['-d', '--entitlements', '-', '--xml', app],
+    { cwd: ROOT, encoding: 'utf8' }
+  );
+  const entitlements: unknown = JSON.parse(
+    execFileSync('plutil', ['-convert', 'json', '-o', '-', '-'], {
+      cwd: ROOT,
+      input: signedEntitlements,
+      encoding: 'utf8',
+    })
+  );
+  assertIosSideloadEntitlements(entitlements);
   execFileSync(
     process.execPath,
     [nativeRun, 'ios', '--app', app, '--target', options.deviceId],

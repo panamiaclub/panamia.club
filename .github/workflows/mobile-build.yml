@@ -231,7 +231,9 @@ jobs:
       - name: Verify unsigned device release archive
         working-directory: mobile/ios/App
         run: |
-          plutil -lint App/Info.plist App/App.entitlements
+          plutil -lint App/Info.plist App/App.entitlements App/Personal.entitlements
+          plutil -convert json -o - App/Personal.entitlements |
+            python3 -c 'import json, sys; assert json.load(sys.stdin) == {}'
           xcodebuild \
             -project App.xcodeproj \
             -scheme App \

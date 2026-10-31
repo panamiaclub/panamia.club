@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import config from '../capacitor.config';
 import { MOBILE_APP_ID } from '@/lib/mobile/app-identity';
 import {
+  assertIosSideloadEntitlements,
   iosSideloadBuildArgs,
   iosSideloadBundleId,
   parseIosSideloadOptions,
@@ -59,7 +60,6 @@ test('personal signing uses a distinct bundle ID and disables paid capabilities 
   for (const flag of [
     `DEVELOPMENT_TEAM=${teamId}`,
     'CODE_SIGN_STYLE=Automatic',
-    'CODE_SIGN_ENTITLEMENTS=',
     `PRODUCT_BUNDLE_IDENTIFIER=${bundleId}`,
     '-allowProvisioningUpdates',
     '-allowProvisioningDeviceRegistration',
@@ -68,12 +68,51 @@ test('personal signing uses a distinct bundle ID and disables paid capabilities 
   }
   assert.ok(!build.includes('CODE_SIGNING_ALLOWED=NO'));
   assert.ok(!build.includes('archive'));
+  assert.ok(!build.includes('CODE_SIGN_ENTITLEMENTS='));
+  const entitlementsArg = build.find((flag) =>
+    flag.startsWith('CODE_SIGN_ENTITLEMENTS=')
+  );
+  assert.ok(entitlementsArg);
+  const personalEntitlements = readFileSync(
+    entitlementsArg.slice('CODE_SIGN_ENTITLEMENTS='.length),
+    'utf8'
+  );
+  assert.match(personalEntitlements, /<dict\s*\/>/);
+  assert.doesNotMatch(personalEntitlements, /<key>/);
   const entitlements = readFileSync(
     new URL('../mobile/ios/App/App/App.entitlements', import.meta.url),
     'utf8'
   );
   assert.match(entitlements, /com\.apple\.developer\.associated-domains/);
   assert.match(entitlements, /applinks:panamia\.club/);
+});
+
+test('signed development builds must not carry capabilities unavailable to a Personal Team', () => {
+  assert.doesNotThrow(() => assertIosSideloadEntitlements({}));
+  assert.doesNotThrow(() =>
+    assertIosSideloadEntitlements({
+      'application-identifier': `${teamId}.${iosSideloadBundleId(teamId)}`,
+      'com.apple.developer.team-identifier': teamId,
+      'get-task-allow': true,
+      'keychain-access-groups': [`${teamId}.*`],
+    })
+  );
+  for (const capability of [
+    'com.apple.developer.associated-domains',
+    'com.apple.developer.applesignin',
+    'aps-environment',
+  ]) {
+    assert.throws(
+      () => assertIosSideloadEntitlements({ [capability]: [] }),
+      /unsupported entitlement/
+    );
+  }
+  for (const malformed of [undefined, null, [], 'not a plist', 1]) {
+    assert.throws(
+      () => assertIosSideloadEntitlements(malformed),
+      /Could not read/
+    );
+  }
 });
 
 test('the sideload CLI provides help without attempting native signing', () => {

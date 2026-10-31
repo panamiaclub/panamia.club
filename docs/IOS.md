@@ -50,7 +50,8 @@ The minimum supported device OS remains iOS 15.
 ### Sideload before organization enrollment is approved
 
 A free Apple Account can provision a development build on your own iPhone.
-Sign into **Xcode -> Settings -> Accounts** with your personal Apple Account;
+Sign into **Xcode -> Settings -> Accounts** with an Apple Account that offers a
+**Personal Team**. This can be your personal-email or Panamia-email account;
 your iPhone's iCloud account does not need to change.
 
 1. Install full Xcode and finish its first-launch setup. Select its command-line
@@ -61,11 +62,13 @@ your iPhone's iCloud account does not need to change.
    pair it in **Xcode -> Window -> Devices and Simulators**. Enable **Settings ->
    Privacy & Security -> Developer Mode** on the iPhone when prompted, including
    the required restart.
-4. Obtain your 10-character **Personal Team ID** from Xcode's team/account details.
-   If it is not displayed there, select the team in a temporary empty Xcode
-   project with a unique bundle ID and inspect its **Development Team** build
-   setting. Do not select a Personal Team against this app's production bundle
-   ID to discover it; that could register Panamia's App ID under the wrong team.
+4. Obtain your 10-character **Personal Team ID** from the development certificate.
+   In Xcode's account settings, choose your Personal Team and **Manage Certificates**;
+   create an **Apple Development** certificate if none exists. In **Keychain Access ->
+   login -> My Certificates**, open that certificate's **Details** and copy
+   **Subject Name -> Organizational Unit (OU)**, not the Issuer's OU or the
+   identifier in parentheses in the certificate name. Do not select a Personal
+   Team against this app's production bundle ID just to find the team identifier.
    This is not Panamia's pending organization Team ID.
 5. Run the commands below, replacing the team and device placeholders:
 
@@ -77,12 +80,19 @@ yarn mobile:sideload:ios --team-id YOUR_PERSONAL_TEAM_ID --device YOUR_IPHONE_UD
 Use the hardware UDID from the device list or the **Identifier** in Xcode's
 Devices and Simulators window, not a simulator or CoreDevice UUID.
 
-The command syncs Capacitor, builds and signs Debug, verifies the app identity
-and signature, and installs/launches it using Capacitor's existing `native-run`
+The command syncs Capacitor, builds and signs Debug, verifies the app identity,
+signature, and signed entitlements, and installs/launches it using Capacitor's existing `native-run`
 tooling. It sets a separate bundle ID,
-`social.pana.app.personal.<lowercase-personal-team-id>`, and clears entitlements **only in that
-build command**. It does not edit the production bundle ID or release entitlements,
+`social.pana.app.personal.<lowercase-personal-team-id>`, and selects the empty
+`App/Personal.entitlements` file **only in that build command**. A blank
+`CODE_SIGN_ENTITLEMENTS=` setting is not sufficient for Xcode's automatic
+provisioning checks. It does not edit the production bundle ID or release entitlements,
 and does not require the organization's website Team ID or distribution certificate.
+
+If Xcode reports **missing Xcode-Token** or invalid saved credentials, reauthenticate
+the Apple Account that owns the selected Personal Team in **Xcode -> Settings ->
+Accounts**. Do not delete the keychain or production profiles to resolve this.
+If you use a different account, obtain that account's Personal Team ID instead.
 
 Free personal provisioning expires after **seven days**; rebuild/reinstall to
 renew it. Universal Links are unavailable in this personal build, so app-requested
