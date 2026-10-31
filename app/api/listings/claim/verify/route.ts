@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db } from '@/lib/db';
-import { profiles } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
 import { consumeClaimToken } from '@/lib/server/listing-claim';
-import { addProfileOwner, isProfileClaimed } from '@/lib/server/profile-owners';
+import { claimUnownedProfile } from '@/lib/server/profile-owners';
 import { createActorForProfile } from '@/lib/federation';
+import { revalidatePublicListing } from '@/lib/server/profile';
 
 /**
  * Redeem a claim token.
@@ -63,12 +61,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const profile = await db.query.profiles.findFirst({
-      where: eq(profiles.id, target.profileId),
-      columns: { id: true, name: true },
-    });
+    const result = await claimUnownedProfile(target.profileId, session.user.id);
 
-    if (!profile) {
+    if (result.outcome === 'not-found') {
       return NextResponse.json(
         { error: 'That listing no longer exists.' },
         { status: 404 }
@@ -78,7 +73,7 @@ export async function POST(request: NextRequest) {
     // Re-checked after redemption rather than before, because two people can
     // hold valid tokens for the same listing at once; whoever confirms first
     // wins and the loser gets told, instead of silently becoming a co-owner.
-    if (await isProfileClaimed(profile.id)) {
+    if (result.outcome === 'already-claimed') {
       return NextResponse.json(
         {
           error:
@@ -88,7 +83,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await addProfileOwner(profile.id, session.user.id, 'owner');
+    const profile = { id: target.profileId, name: result.name };
+    revalidatePublicListing(profile.id, result.screenname);
 
     // Prepare the listing's social identity at claim time, without waiting for
     // the owner to visit /s as the business. Claiming is the consent signal, and

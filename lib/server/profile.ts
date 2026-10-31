@@ -6,7 +6,10 @@ import {
 import { db } from '@/lib/db';
 import { profiles, users } from '@/lib/schema';
 import type { AccountType } from '@/lib/schema';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
+import { revalidatePath } from 'next/cache';
+import { listingPublicPath } from '@/lib/listing-url';
 import { normalizeUsZip, readOnlineZipArea } from '@/lib/online-zip';
 import {
   ProfileDescriptions,
@@ -200,11 +203,14 @@ export const getPublicProfile = async (handle: string) => {
   });
 
   if (profile) {
-    return transformToLegacyFormat({
+    const publicProfile = transformToLegacyFormat({
       ...profile,
       user: { screenname: profile.screenname ?? profile.user?.screenname },
       accountType: profile.user?.accountType ?? null,
     });
+    return !isPersonalProfile(publicProfile) && profile.active !== true
+      ? null
+      : publicProfile;
   }
 
   const user = await db.query.users.findFirst({
@@ -214,12 +220,53 @@ export const getPublicProfile = async (handle: string) => {
 
   if (!user?.profile) return null;
 
-  return transformToLegacyFormat({
+  const publicProfile = transformToLegacyFormat({
     ...user.profile,
     user: { screenname: user.screenname },
     accountType: user.accountType ?? null,
   });
+  return !isPersonalProfile(publicProfile) && user.profile.active !== true
+    ? null
+    : publicProfile;
 };
+
+/** Public ID routes are for approved directory listings, never personal profiles. */
+export async function getPublicListing(
+  profileId: string
+): Promise<LegacyProfile | null> {
+  const profile = await db.query.profiles.findFirst({
+    where: and(
+      eq(profiles.id, profileId),
+      eq(profiles.active, true),
+      or(
+        isNull(profiles.userId),
+        inArray(
+          profiles.userId,
+          db
+            .select({ id: users.id })
+            .from(users)
+            .where(inArray(users.accountType, DIRECTORY_ACCOUNT_TYPES))
+        )
+      )
+    ),
+    with: { user: { columns: { screenname: true, accountType: true } } },
+  });
+  if (!profile) return null;
+  return transformToLegacyFormat({
+    ...profile,
+    screenname: profile.screenname ?? profile.user?.screenname ?? null,
+    accountType: profile.user?.accountType ?? null,
+  });
+}
+
+export function revalidatePublicListing(
+  profileId: string,
+  screenname?: string | null
+) {
+  revalidatePath(listingPublicPath({ id: profileId }));
+  if (screenname)
+    revalidatePath(listingPublicPath({ id: profileId, screenname }));
+}
 
 /**
  * Is this handle a person, or a business listing?

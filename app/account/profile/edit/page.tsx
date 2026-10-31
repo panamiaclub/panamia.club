@@ -25,6 +25,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { NpubQr } from '@/components/relay/NpubQr';
 import { npubFromHex } from '@/lib/nostr/keys';
+import { useIdentity } from '@/components/account/identity-provider';
+import { listingPublicPath } from '@/lib/listing-url';
 
 const SpanBlank = () => {
   return <span className="text-gray-400 italic">blank</span>;
@@ -36,49 +38,46 @@ const SpanUnselected = () => {
 
 export default function AccountProfileEdit() {
   const { data: session, status } = useSession();
-  const [profileData, setProfileData] = useState({} as ProfileInterface);
-  const [profileStatus, setProfileStatus] = useState('');
-  const [profileStatusDate, setProfileStatusDate] = useState('');
+  const identity = useIdentity();
+  const activeId = identity?.activeId;
+  const [profileData, setProfileData] = useState<ProfileInterface | null>(null);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  async function loadProfile() {
-    try {
-      const profile = await axios.get('/api/getProfile', {
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
-      return profile;
-    } catch (error) {
-      console.log(error);
-      return null;
-    }
-  }
-
   useEffect(() => {
+    let cancelled = false;
+    setProfileData(null);
+    setError('');
     if (status === 'authenticated') {
-      loadProfile().then((resp) => {
-        const profile = resp?.data?.data as ProfileInterface;
-        if (profile) {
-          setProfileData(profile);
-          setProfileStatus('Submitted');
-          setProfileStatusDate(standardizeDateTime(profile?.status?.submitted));
-          if (profile?.status?.published && profile?.active) {
-            setProfileStatus('Published');
-            setProfileStatusDate(
-              standardizeDateTime(profile?.status?.published)
+      setLoading(true);
+      axios
+        .get<{ data?: ProfileInterface }>('/api/getProfile')
+        .then((response) => {
+          if (!response.data.data)
+            throw new Error(
+              'No profile was found. Select your business from the account menu.'
             );
-          }
-        }
-        setLoading(false);
-      });
+          if (!cancelled) setProfileData(response.data.data);
+        })
+        .catch((cause: unknown) => {
+          if (cancelled) return;
+          console.error('Could not load the business dashboard:', cause);
+          setError(
+            'Could not load your profile. Please refresh and try again.'
+          );
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
     } else if (status === 'unauthenticated') {
       // Without this, `loading` stays true forever for anonymous visitors and
       // the Status401_Unauthorized branch below is never reached.
       setLoading(false);
     }
-  }, [status]);
+    return () => {
+      cancelled = true;
+    };
+  }, [status, session?.user?.id, activeId]);
 
   if (status === 'loading' || loading) {
     return (
@@ -91,6 +90,59 @@ export default function AccountProfileEdit() {
   if (!session) {
     return <Status401_Unauthorized />;
   }
+  if (!profileData) {
+    return (
+      <main className="container mx-auto px-4 py-8">
+        <p role="alert">{error}</p>
+      </main>
+    );
+  }
+
+  const isBusiness =
+    profileData.userId === null ||
+    profileData.status?.source === 'business_intake';
+  const profileStatus = profileData.active
+    ? 'Published'
+    : profileData.status?.declined
+      ? 'Declined'
+      : isBusiness &&
+          !profileData.status?.approved &&
+          !profileData.status?.published
+        ? 'Under review'
+        : isBusiness
+          ? 'Inactive'
+          : 'Draft';
+  const statusDate = profileData.active
+    ? (profileData.status?.approved ?? profileData.status?.published)
+    : (profileData.status?.declined ?? profileData.status?.submitted);
+  const profileStatusDate = statusDate
+    ? standardizeDateTime(
+        statusDate instanceof Date ? statusDate : new Date(statusDate)
+      )
+    : '';
+  const publicPath = profileData.id
+    ? listingPublicPath({
+        id: profileData.id,
+        screenname: profileData.screenname,
+      })
+    : profileData.screenname
+      ? listingPublicPath({
+          id: profileData._id,
+          screenname: profileData.screenname,
+        })
+      : null;
+  const address = {
+    ...profileData.primary_address,
+    street1: profileData.addressLine1 ?? profileData.primary_address?.street1,
+    street2: profileData.addressLine2 ?? profileData.primary_address?.street2,
+    city: profileData.addressLocality ?? profileData.primary_address?.city,
+    state: profileData.addressRegion ?? profileData.primary_address?.state,
+    zipcode:
+      profileData.addressPostalCode ?? profileData.primary_address?.zipcode,
+    hours: profileData.addressHours ?? profileData.primary_address?.hours,
+    lat: profileData.addressLat ?? profileData.primary_address?.lat,
+    lng: profileData.addressLng ?? profileData.primary_address?.lng,
+  };
 
   // Relay-enrolled profiles have a hex nostr_pubkey; encode to npub for display
   // (we never render raw hex). null when not enrolled or the key is malformed.
@@ -105,9 +157,14 @@ export default function AccountProfileEdit() {
 
   return (
     <main className="container mx-auto max-w-5xl px-4 py-8">
-      <PageMeta title="Edit Profile" desc="" />
+      <PageMeta
+        title={isBusiness ? 'Manage my business' : 'Edit Profile'}
+        desc=""
+      />
 
-      <h2 className="mb-8 text-3xl font-bold">Your Pana Profile</h2>
+      <h2 className="mb-8 text-3xl font-bold">
+        {isBusiness ? `Manage ${profileData.name}` : 'Your Pana Profile'}
+      </h2>
 
       {/* Profile Status */}
       <Card className="mb-6">
@@ -117,14 +174,15 @@ export default function AccountProfileEdit() {
               <CheckSquare className="h-5 w-5" />
               Profile Status
             </CardTitle>
-            {profileData.screenname && (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/p/${profileData.screenname}`}>
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View
-                </Link>
-              </Button>
-            )}
+            {publicPath &&
+              (isBusiness ? profileData.active : profileData.screenname) && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={publicPath}>
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    View
+                  </Link>
+                </Button>
+              )}
           </div>
         </CardHeader>
         <CardContent>
@@ -193,19 +251,27 @@ export default function AccountProfileEdit() {
           </div>
           <div>
             <span className="font-medium">Five Words:</span>{' '}
-            <span>{profileData?.five_words}</span>
+            <span>
+              {profileData.descriptions?.fiveWords ?? profileData.five_words}
+            </span>
           </div>
           <div>
             <span className="font-medium">Details:</span>{' '}
-            <span>{profileData?.details}</span>
+            <span>
+              {profileData.descriptions?.details ?? profileData.details}
+            </span>
           </div>
           <div>
             <span className="font-medium">Background:</span>{' '}
-            <span>{profileData?.background}</span>
+            <span>
+              {profileData.descriptions?.background ?? profileData.background}
+            </span>
           </div>
           <div>
             <span className="font-medium">Tags:</span>{' '}
-            {(profileData?.tags && <span>{profileData?.tags}</span>) || (
+            {(profileData.descriptions?.tags ?? profileData.tags) ? (
+              <span>{profileData.descriptions?.tags ?? profileData.tags}</span>
+            ) : (
               <SpanBlank />
             )}
           </div>
@@ -355,39 +421,37 @@ export default function AccountProfileEdit() {
             <div className="space-y-1 text-sm">
               <div>
                 <span className="font-medium">Street 1:</span>{' '}
-                {(profileData?.primary_address?.street1 && (
-                  <span>{profileData?.primary_address?.street1}</span>
-                )) || <SpanBlank />}
+                {(address.street1 && <span>{address.street1}</span>) || (
+                  <SpanBlank />
+                )}
               </div>
               <div>
                 <span className="font-medium">Street 2:</span>{' '}
-                {(profileData?.primary_address?.street2 && (
-                  <span>{profileData?.primary_address?.street2}</span>
-                )) || <SpanBlank />}
+                {(address.street2 && <span>{address.street2}</span>) || (
+                  <SpanBlank />
+                )}
               </div>
               <div>
                 <span className="font-medium">City:</span>{' '}
-                {(profileData?.primary_address?.city && (
-                  <span>{profileData?.primary_address?.city}</span>
-                )) || <SpanBlank />}
+                {(address.city && <span>{address.city}</span>) || <SpanBlank />}
               </div>
               <div>
                 <span className="font-medium">State:</span>{' '}
-                {(profileData?.primary_address?.state && (
-                  <span>{profileData?.primary_address?.state}</span>
-                )) || <SpanBlank />}
+                {(address.state && <span>{address.state}</span>) || (
+                  <SpanBlank />
+                )}
               </div>
               <div>
                 <span className="font-medium">Zip Code:</span>{' '}
-                {(profileData?.primary_address?.zipcode && (
-                  <span>{profileData?.primary_address?.zipcode}</span>
-                )) || <SpanBlank />}
+                {(address.zipcode && <span>{address.zipcode}</span>) || (
+                  <SpanBlank />
+                )}
               </div>
               <div>
                 <span className="font-medium">Location Hours:</span>{' '}
-                {(profileData?.primary_address?.hours && (
-                  <span>{profileData?.primary_address?.hours}</span>
-                )) || <SpanBlank />}
+                {(address.hours && <span>{address.hours}</span>) || (
+                  <SpanBlank />
+                )}
               </div>
             </div>
           </div>
@@ -396,15 +460,11 @@ export default function AccountProfileEdit() {
             <div className="space-y-1 text-sm">
               <div>
                 <span className="font-medium">Latitude:</span>{' '}
-                {(profileData?.primary_address?.lat && (
-                  <span>{profileData?.primary_address?.lat}</span>
-                )) || <SpanBlank />}
+                {(address.lat && <span>{address.lat}</span>) || <SpanBlank />}
               </div>
               <div>
                 <span className="font-medium">Longitude:</span>{' '}
-                {(profileData?.primary_address?.lng && (
-                  <span>{profileData?.primary_address?.lng}</span>
-                )) || <SpanBlank />}
+                {(address.lng && <span>{address.lng}</span>) || <SpanBlank />}
               </div>
             </div>
           </div>

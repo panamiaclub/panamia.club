@@ -22,6 +22,7 @@ import {
   formatDistance,
   formatWhen,
   resultCoords,
+  resultHref,
 } from '../_lib/format';
 
 const FALLBACK_COVER = '/img/bg_coconut_blue.jpg';
@@ -48,13 +49,11 @@ interface ResultCardProps {
  * depends on. The count is shown; the button lives one click deeper.
  */
 export function ResultCard({ result, index, viewerCoords }: ResultCardProps) {
-  const { showsPanaActions, isSaved, toggleSave, saveCount } =
+  const { showsPanaActions, isSaved, isOwner, toggleSave, saveCount } =
     useDirectoryViewer();
 
-  const claimed = Boolean(result.screenname);
-  const href = claimed
-    ? `/p/${result.screenname}`
-    : `/listings/claim/start?id=${result._id}`;
+  const claimed = result.claimed ?? Boolean(result.screenname);
+  const href = resultHref(result);
 
   const logo = result.images?.primaryCDN || null;
   const cover = result.coverImage || logo || FALLBACK_COVER;
@@ -212,7 +211,7 @@ export function ResultCard({ result, index, viewerCoords }: ResultCardProps) {
                 business can act on that. */}
             {claimed ? (
               <>
-                {showsPanaActions && (
+                {showsPanaActions && !isOwner(result._id) && (
                   <button
                     type="button"
                     className="dirsearch-save"
@@ -231,17 +230,30 @@ export function ResultCard({ result, index, viewerCoords }: ResultCardProps) {
                     {saved ? 'Saved' : 'Save'}
                   </button>
                 )}
-                <DirectoryFollowButton screenname={result.screenname!} />
+                {result.screenname && (
+                  <DirectoryFollowButton screenname={result.screenname} />
+                )}
                 <Link href={href} className="dirsearch-view">
                   View profile
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
               </>
             ) : (
-              <Link href={href} className="dirsearch-claim">
-                <Store className="h-4 w-4" aria-hidden="true" />
-                Is this your business?
-              </Link>
+              <>
+                {!isOwner(result._id) && (
+                  <Link
+                    href={`/listings/claim/start?id=${encodeURIComponent(result._id)}`}
+                    className="dirsearch-claim"
+                  >
+                    <Store className="h-4 w-4" aria-hidden="true" />
+                    Is this your business?
+                  </Link>
+                )}
+                <Link href={href} className="dirsearch-view">
+                  View profile{' '}
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </>
             )}
           </div>
         </div>

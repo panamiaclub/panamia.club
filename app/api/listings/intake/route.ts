@@ -16,6 +16,8 @@ import {
   ZipLookupUnavailableError,
 } from '@/lib/server/online-zip';
 import { REFERRAL_COOKIE } from '@/lib/referrals';
+import { listingSetupPath } from '@/lib/listing-url';
+import { selectActiveProfile } from '@/lib/server/active-profile';
 import {
   attachReferralToUser,
   getActiveCookieAttribution,
@@ -27,10 +29,10 @@ import {
  *
  * Deliberately unauthenticated. Most South Florida businesses hear about Pana
  * from another Pana, not from the site, and making them create an account
- * before they can tell us they exist loses them. This writes an *unclaimed*
- * listing: `profiles.userId` stays null. A signed-in applicant can explicitly
- * manage it through profile_owners; guests can invite a personal address or
- * claim it later. The contact email never determines account ownership.
+ * before they can tell us they exist loses them. `profiles.userId` stays null:
+ * signed-in owners manage through profile_owners, while new owners confirm a
+ * setup email. Legacy payloads retain their explicit management choices.
+ * The contact email never determines account ownership.
  *
  * Unclaimed rows are already first-class in the directory — see
  * lib/server/directory.ts, which ORs `isNull(profiles.userId)` with the
@@ -123,7 +125,14 @@ const LOCALLY_BASED = new Set(['yes', 'no', 'other']);
 export async function POST(request: NextRequest) {
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    const parsed: unknown = await request.json();
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return NextResponse.json(
+        { error: 'Please provide a listing submission.' },
+        { status: 400 }
+      );
+    }
+    body = parsed as Record<string, unknown>;
   } catch {
     return NextResponse.json(
       { error: 'Could not read that submission. Please try again.' },
@@ -131,8 +140,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (body.onboardingMode !== undefined && body.onboardingMode !== 'owner') {
+    return NextResponse.json(
+      { error: 'Invalid listing signup flow.' },
+      { status: 400 }
+    );
+  }
+  const ownerSignup = body.onboardingMode === 'owner';
+  const accountEmail = asTrimmedString(body.accountEmail, 100).toLowerCase();
   const name = asTrimmedString(body.name, 100);
-  const email = asTrimmedString(body.email, 100).toLowerCase();
+  const email = ownerSignup
+    ? asTrimmedString(body.contactEmail ?? body.accountEmail, 100).toLowerCase()
+    : asTrimmedString(body.email, 100).toLowerCase();
   // Optional. The address of the human who should end up administering this
   // listing, which is often not the address the business publishes. It is
   // never required: someone listing a shop on its behalf has no personal
@@ -192,6 +211,28 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+  if (ownerSignup && !validateEmail(accountEmail)) {
+    return NextResponse.json(
+      { error: 'Please enter a valid account email.' },
+      { status: 400 }
+    );
+  }
+  if (
+    ownerSignup &&
+    body.expectedOwnerId !== null &&
+    typeof body.expectedOwnerId !== 'string'
+  ) {
+    return NextResponse.json(
+      { error: 'Confirm your account before submitting.' },
+      { status: 400 }
+    );
+  }
+  if (ownerSignup && body.manageWithPana === false) {
+    return NextResponse.json(
+      { error: 'This signup is for the person who will manage the business.' },
+      { status: 400 }
+    );
+  }
 
   // An optional field must never be able to cost someone their listing, so a
   // personal address that is unusable is dropped rather than rejected. The
@@ -202,8 +243,11 @@ export async function POST(request: NextRequest) {
   //
   // It may equal the business address. Asking for an account is an explicit
   // choice, independent of which inbox receives listing updates.
-  const pendingOwnerEmail =
-    personalEmail && validateEmail(personalEmail) ? personalEmail : null;
+  const pendingOwnerEmail = ownerSignup
+    ? accountEmail
+    : personalEmail && validateEmail(personalEmail)
+      ? personalEmail
+      : null;
 
   if (fiveWords.length < 3) {
     return NextResponse.json(
@@ -285,7 +329,24 @@ export async function POST(request: NextRequest) {
 
   try {
     const session = await auth();
-    const manageWithPana = body.manageWithPana === true;
+    if (
+      ownerSignup &&
+      (body.expectedOwnerId !== (session?.user?.id ?? null) ||
+        (session?.user?.id &&
+          session.user.email?.trim().toLowerCase() !== accountEmail))
+    ) {
+      return NextResponse.json(
+        {
+          code: 'manager_changed',
+          error:
+            'Your sign-in changed. Confirm your account and contact email again.',
+        },
+        { status: 409 }
+      );
+    }
+    const manageWithPana = ownerSignup
+      ? Boolean(session?.user?.id)
+      : body.manageWithPana === true;
     if (manageWithPana && !session?.user?.id) {
       return NextResponse.json(
         {
@@ -406,6 +467,7 @@ export async function POST(request: NextRequest) {
             // the person/business conflation the become-a-pana removal undid. See
             // app/api/listings/claim/verify/route.ts.
             accountType,
+            ...(ownerSignup ? { onboardingMode: 'owner' } : {}),
             locallyBased,
             agreedToTermsAt: submittedAt.toISOString(),
           },
@@ -439,17 +501,12 @@ export async function POST(request: NextRequest) {
       return createdProfile;
     });
 
-    try {
-      await sendListingSubmissionEmails(createdProfile);
-    } catch (error) {
-      // The application is committed; a mail outage must not invite a retry
-      // that can only report a duplicate. Staff can resend from the saved row.
-      console.error('[listings/intake] notification email failed', error);
-    }
-
     let invitationSent = false;
     if (!manageWithPana && pendingOwnerEmail) {
-      const callbackParams = new URLSearchParams({ next: '/account' });
+      const destination = ownerSignup
+        ? listingSetupPath(createdProfile.id)
+        : '/account';
+      const callbackParams = new URLSearchParams({ next: destination });
       if (referralAttribution) {
         callbackParams.set('attribution', referralAttribution.id);
       }
@@ -458,8 +515,20 @@ export async function POST(request: NextRequest) {
         request,
         referralAttribution
           ? `/referral/continue?${callbackParams.toString()}`
-          : '/account'
+          : destination,
+        ownerSignup ? createdProfile.id : undefined
       );
+    }
+    try {
+      await sendListingSubmissionEmails(createdProfile, {
+        // The named setup email already confirms submission to this account.
+        setupReceiptEmail:
+          ownerSignup && invitationSent ? accountEmail : undefined,
+      });
+    } catch (error) {
+      // The application is committed; a mail outage must not invite a retry
+      // that can only report a duplicate. Staff can resend from the saved row.
+      console.error('[listings/intake] notification email failed', error);
     }
 
     const response = NextResponse.json(
@@ -473,9 +542,18 @@ export async function POST(request: NextRequest) {
             : 'unclaimed',
         invitationEmail: manageWithPana ? null : pendingOwnerEmail,
         invitationSent,
+        ...(ownerSignup
+          ? {
+              accountEmail,
+              setupPath: listingSetupPath(createdProfile.id),
+              managementPath: '/account/profile/edit',
+            }
+          : {}),
       },
       { status: 201 }
     );
+    if (ownerSignup && manageWithPana)
+      selectActiveProfile(response, createdProfile.id);
     if (session?.user?.id && cookieAttribution) {
       response.cookies.set(REFERRAL_COOKIE, '', {
         httpOnly: true,
@@ -538,10 +616,16 @@ export async function POST(request: NextRequest) {
 async function sendOwnerMagicLink(
   email: string,
   request: NextRequest,
-  callbackUrl: string
+  callbackURL: string,
+  profileId?: string
 ): Promise<boolean> {
   try {
-    await sendMagicLinkTo(email, request.headers, callbackUrl);
+    await sendMagicLinkTo(
+      email,
+      request.headers,
+      callbackURL,
+      profileId ? { listingSetupId: profileId } : undefined
+    );
     return true;
   } catch (error) {
     console.error('[listings/intake] owner magic link failed', error);

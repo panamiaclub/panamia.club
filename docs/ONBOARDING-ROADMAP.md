@@ -47,6 +47,35 @@ default deployment offers the magic link alone.
 `callbackUrl` defaults to the **current surface's** `rootPath`, not the main
 site's, so signing in on Pana Social returns you to Pana Social.
 
+### Business-owner entry
+
+`/form/get-listed` is a single owner-focused application: one main account email,
+prefilled and read-only for signed-in applicants, with an optional separate
+business contact. There is no "helping someone else" or management opt-out branch.
+Signed-in applicants manage the business immediately. Guests receive one named
+"Confirm and manage [business]" email that signs them in or creates their account,
+then asks for one explicit confirmation at `/listings/setup`.
+
+The setup GET is read-only; only the authenticated confirmation POST assigns
+ownership. It selects the business and reloads `/account/profile/edit`, avoiding
+a separate invitation acceptance and manual identity-switching detour. Expired
+email links can be recovered through the permanent setup URL in the same email.
+Business intake/setup do not trigger personal screenname onboarding, and owners
+with managed listings are not required to create a social profile. The account
+menu still offers personal-profile setup when they want to participate socially.
+
+Staff review is independent of account setup. Approved listings have stable
+public `/listings/{id}` pages before an owner chooses a handle, and show a claim
+invitation only when no account administers them. Existing approved listings are
+not unpublished or assigned to anyone as part of this flow.
+
+The main account inbox always receives application decisions. An optional
+business inbox is an additional copy, not a replacement. Matching addresses get
+one message. A guest's named setup email also serves as their submission receipt;
+a different business contact gets a receipt without the sign-in link. Connected
+owners receive future decisions at their current account email. Sign-in and setup
+links stay private to that account.
+
 ### What happens on a first sign-in
 
 | Step                   | Where       | Effect                                                                                                      |

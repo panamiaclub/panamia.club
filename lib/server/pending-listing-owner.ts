@@ -1,15 +1,16 @@
 import { db } from '@/lib/db';
 import { profileOwners, profiles } from '@/lib/schema';
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import { BUSINESS_INTAKE_SOURCE, addProfileOwner } from './profile-owners';
+import { BUSINESS_INTAKE_SOURCE, claimUnownedProfile } from './profile-owners';
 import { maskEmail } from './listing-claim';
 
 /**
  * Listings that *say* a given person should run them, pending their answer.
  *
- * The public intake form optionally collects a personal address alongside the
- * business one, so a submitter can be handed the listing they just created
- * instead of waiting on a claim email sent to a shared shop inbox. There is no
+ * The public intake form collects the applicant's account address separately
+ * from an optional business inbox. Older forms made this account email optional.
+ * A submitter can manage the listing they created without a claim email to a
+ * shared shop inbox. There is no
  * account to attach it to at that moment — intake is unauthenticated by design
  * — so the address is parked on profiles.pending_owner_email.
  *
@@ -129,44 +130,8 @@ export async function acceptPendingInvitation(
   const normalized = email?.trim().toLowerCase();
   if (!normalized) return 'not-found';
 
-  const [listing] = await db
-    .select({ id: profiles.id })
-    .from(profiles)
-    .where(
-      and(
-        eq(profiles.id, profileId),
-        eq(profiles.pendingOwnerEmail, normalized),
-        sql`(${profiles.status}->>'source' = ${BUSINESS_INTAKE_SOURCE})`,
-        isNull(profiles.userId)
-      )
-    )
-    .limit(1);
-
-  if (!listing) return 'not-found';
-
-  // Re-checked at redemption rather than relying on the list query: two people
-  // can hold an invitation to the same listing, and whoever confirms first
-  // wins rather than the loser silently becoming a co-owner.
-  const [claimed] = await db
-    .select({ id: profileOwners.id })
-    .from(profileOwners)
-    .where(eq(profileOwners.profileId, profileId))
-    .limit(1);
-
-  if (claimed) {
-    // Close it anyway. The invitation can never succeed now, and leaving it
-    // open would re-offer a listing that is spoken for on every page load.
-    await clearPendingOwner(profileId);
-    return 'already-claimed';
-  }
-
-  await addProfileOwner(profileId, userId, 'owner');
-  // Cleared last, and separately: addProfileOwner is onConflictDoNothing and
-  // clearing an already-clear column is a no-op, so a failure between the two
-  // simply leaves the invitation to be accepted again, idempotently.
-  await clearPendingOwner(profileId);
-
-  return 'accepted';
+  const result = await claimUnownedProfile(profileId, userId, normalized);
+  return result.outcome;
 }
 
 /**
@@ -199,11 +164,4 @@ export async function declinePendingInvitation(
     .returning({ id: profiles.id });
 
   return result.length > 0 ? 'declined' : 'not-found';
-}
-
-async function clearPendingOwner(profileId: string): Promise<void> {
-  await db
-    .update(profiles)
-    .set({ pendingOwnerEmail: null })
-    .where(eq(profiles.id, profileId));
 }

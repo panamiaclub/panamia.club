@@ -40,7 +40,9 @@ function ProfileActionContent() {
           if (response?.data?.success) {
             const data = response.data.data[0];
             setActionResponse(data.message);
-            setProfileUrl(`/p/${data.handle}`);
+            setProfileUrl(
+              typeof data.publicPath === 'string' ? data.publicPath : ''
+            );
             setProfileName(data.name);
             setTotalProfiles(data.total);
           } else {

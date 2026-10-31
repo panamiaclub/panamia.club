@@ -219,14 +219,14 @@ describe('native data models', () => {
     }
   });
 
-  it('opens the real profile or existing unclaimed-listing flow', () => {
+  it('opens a public profile even before a business chooses a handle', () => {
     const item = nativeBusiness(business);
     assert.equal(item.href, '/p/local-cafe');
     assert.deepEqual(item.coords, { lat: 25.76, lng: -80.19 });
     assert.equal(item.location, 'Miami');
     assert.equal(
       nativeBusiness({ ...business, screenname: null }).href,
-      '/listings/claim/start?id=listing'
+      '/listings/listing'
     );
   });
 

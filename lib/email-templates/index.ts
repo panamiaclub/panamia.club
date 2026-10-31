@@ -8,6 +8,7 @@ import { eventRsvpConfirm } from './event-rsvp-confirm';
 import { contactReceived } from './contact-received';
 import { adminContact } from './admin-contact';
 import { listingClaim } from './listing-claim';
+import { listingSetup } from './listing-setup';
 import { shopOrder } from './shop-order';
 import { adminShopOrder } from './admin-shop-order';
 
@@ -22,6 +23,7 @@ export type TemplateId =
   | 'event.rsvp_confirm'
   | 'contact.received'
   | 'listing.claim'
+  | 'listing.setup'
   | 'shop.order'
   | 'admin.shop_order';
 
@@ -42,6 +44,7 @@ const templates: Record<TemplateId, TemplateRenderer> = {
   'event.rsvp_confirm': eventRsvpConfirm,
   'contact.received': contactReceived,
   'listing.claim': listingClaim,
+  'listing.setup': listingSetup,
   'shop.order': shopOrder,
   'admin.shop_order': adminShopOrder,
 };

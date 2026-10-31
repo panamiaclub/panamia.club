@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { profiles, users } from '@/lib/schema';
 import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
+import { revalidatePublicListing } from '@/lib/server/profile';
 import {
   decideListing,
   type ListingStatus,
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
           error: 'Profile Not Found',
         });
       }
+      revalidatePublicListing(existingProfile.id, result.screenname);
 
       return NextResponse.json(
         {
@@ -116,13 +118,14 @@ export async function POST(request: NextRequest) {
             {
               message: result.mailFailed
                 ? action === 'approve'
-                  ? 'Profile is active, but the notification email could not be sent'
-                  : 'Profile is declined, but the notification email could not be sent'
+                  ? 'Profile is active, but one or more notification emails could not be sent'
+                  : 'Profile is declined, but one or more notification emails could not be sent'
                 : action === 'approve'
                   ? 'Profile has been set active'
                   : 'Profile has been declined',
               name: result.name,
               handle: null,
+              publicPath: result.publicPath,
               total: totalProfiles,
             },
           ],

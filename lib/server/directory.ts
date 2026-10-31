@@ -8,6 +8,7 @@ import { extractCoordinates } from './profile';
 import { calcDistance } from '@/lib/geolocation';
 import { normalizeUsZip, type OnlineZipArea } from '@/lib/online-zip';
 import { getOnlineZipAreasForProfiles } from './online-zip';
+import { claimedProfileIds } from './profile-owners';
 import { countyList, profileCategoryList } from '@/lib/lists';
 import {
   effectiveDirectoryRadius,
@@ -633,12 +634,13 @@ async function enrichPage(
   if (rows.length === 0) return [];
 
   const ids = rows.map((row) => row.id);
-  const [counts, avatars, nextEvents] = await Promise.all([
+  const [counts, avatars, nextEvents, claimed] = await Promise.all([
     // Already in hand when sorting by recommendations — re-reading the same
     // rows a second time would be the only cost of that sort worth avoiding.
     precomputedCounts ?? getSignalCountsForProfiles(ids),
     getRecommenderAvatarsForProfiles(ids),
     getNextEventForHosts(ids),
+    claimedProfileIds(ids),
   ]);
 
   return rows.map((row) =>
@@ -647,6 +649,7 @@ async function enrichPage(
       recommenderAvatars: avatars.get(row.id) ?? [],
       nextEvent: nextEvents.get(row.id) ?? null,
       zipArea: zipAreas.get(row.id) ?? null,
+      claimed: claimed.has(row.id),
     })
   );
 }
@@ -664,6 +667,7 @@ function transformProfile(
     recommenderAvatars: string[];
     nextEvent: DirectoryEvent | null;
     zipArea: OnlineZipArea | null;
+    claimed: boolean;
   }
 ) {
   const descriptions = p.descriptions as ProfileDescriptions | null;
@@ -711,9 +715,8 @@ function transformProfile(
     categories: categoryKeys(p.categories),
     counties: countyKeys(p.counties),
     certified: p.panaCertifiedAt != null,
-    // A listing with a handle has been claimed and has a profile page; one
-    // without has neither, and gets the claim CTA instead.
-    claimed: screenname != null,
+    // Ownership and the public URL are separate: a handle is not proof of claim.
+    claimed: extra.claimed,
     saves: extra.counts.saves,
     recommends: extra.counts.recommends,
     recommenderAvatars: extra.recommenderAvatars,

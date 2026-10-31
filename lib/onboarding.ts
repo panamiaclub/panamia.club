@@ -69,7 +69,12 @@ export function isOnboardingRoute(
   pathname: string | null | undefined
 ): boolean {
   if (!pathname) return false;
-  return pathname.startsWith('/welcome') || pathname.startsWith('/signin');
+  return (
+    pathname.startsWith('/welcome') ||
+    pathname.startsWith('/signin') ||
+    pathname === '/form/get-listed' ||
+    pathname === '/listings/setup'
+  );
 }
 
 export interface BareIdentity {

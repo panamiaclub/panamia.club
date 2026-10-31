@@ -151,7 +151,7 @@ export default function AdminListingsPage() {
           setActionError(
             `${listing.name} was ${
               decision === 'approve' ? 'approved' : 'declined'
-            }, but the notification email could not be sent.`
+            }, but one or more notification emails could not be sent.`
           );
         }
       } catch (error) {
@@ -185,7 +185,7 @@ export default function AdminListingsPage() {
       if (tagFilter && !row.tags.includes(tagFilter)) return false;
       if (flagFilter === 'flagged' && row.flags.length === 0) return false;
       if (flagFilter === 'unflagged' && row.flags.length > 0) return false;
-      if (flagFilter === 'unclaimed' && row.pendingOwnerEmail) return false;
+      if (flagFilter === 'unclaimed' && row.claimed) return false;
       return true;
     });
   }, [pending, query, tagFilter, flagFilter]);
@@ -460,9 +460,11 @@ function ListingRow({
             {overdue ? ' · over the window' : ''}
           </p>
           <p className="text-pana-ink/50 mt-0.5 text-xs">
-            {listing.pendingOwnerEmail
-              ? `Claimed by ${listing.pendingOwnerEmail}`
-              : 'Nobody has claimed this listing'}
+            {listing.claimed
+              ? 'Connected to a Pana account'
+              : listing.pendingOwnerEmail
+                ? `Setup pending for ${listing.pendingOwnerEmail}`
+                : 'Nobody has claimed this listing'}
           </p>
         </div>
       </div>

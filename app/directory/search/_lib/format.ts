@@ -1,6 +1,7 @@
 import type { SearchResultsInterface } from '@/lib/query/directory';
 import type { Coords } from '@/app/p/[user]/_lib/profile-view';
 import { profileCategoryList } from '@/lib/lists';
+import { listingPublicPath } from '@/lib/listing-url';
 
 /**
  * Presentation helpers for the directory result card.
@@ -74,12 +75,9 @@ export function resultCoords(result: SearchResultsInterface): Coords | null {
 /**
  * Where a result should link.
  *
- * An unclaimed listing has no handle and therefore no profile page, so it gets
- * the claim flow instead — the only route into claiming that a visitor who
- * recognises the business will ever be shown.
+ * Approved listings have a public ID URL before an owner chooses a handle.
+ * Claiming is a separate owner action, never the browsing destination.
  */
 export function resultHref(result: SearchResultsInterface): string {
-  return result.screenname
-    ? `/p/${result.screenname}`
-    : `/listings/claim/start?id=${result._id}`;
+  return listingPublicPath({ id: result._id, screenname: result.screenname });
 }

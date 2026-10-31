@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { profileOwners, profiles } from '@/lib/schema';
-import { and, eq, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
 
 /**
  * Marker written into profiles.status.source by the public intake form
@@ -171,6 +171,67 @@ export async function addProfileOwner(
     });
 }
 
+export type FirstClaimOutcome =
+  | { outcome: 'accepted'; name: string; screenname: string | null }
+  | { outcome: 'not-found' }
+  | { outcome: 'already-claimed' };
+
+/** Serialize first claims from setup invitations and legacy claim emails. */
+export async function claimUnownedProfile(
+  profileId: string,
+  userId: string,
+  invitationEmail?: string
+): Promise<FirstClaimOutcome> {
+  return db.transaction(async (tx) => {
+    const [profile] = await tx
+      .select({
+        id: profiles.id,
+        name: profiles.name,
+        screenname: profiles.screenname,
+        userId: profiles.userId,
+        pendingOwnerEmail: profiles.pendingOwnerEmail,
+        status: profiles.status,
+      })
+      .from(profiles)
+      .where(eq(profiles.id, profileId))
+      .for('update');
+    if (!profile) return { outcome: 'not-found' };
+    if (
+      invitationEmail !== undefined &&
+      (profile.userId !== null ||
+        profile.pendingOwnerEmail !== invitationEmail ||
+        (profile.status as { source?: string } | null)?.source !==
+          BUSINESS_INTAKE_SOURCE)
+    ) {
+      return { outcome: 'not-found' };
+    }
+    const [owner] = await tx
+      .select({ id: profileOwners.id })
+      .from(profileOwners)
+      .where(eq(profileOwners.profileId, profileId))
+      .limit(1);
+    if (profile.userId || owner) {
+      if (invitationEmail !== undefined) {
+        await tx
+          .update(profiles)
+          .set({ pendingOwnerEmail: null })
+          .where(eq(profiles.id, profileId));
+      }
+      return { outcome: 'already-claimed' };
+    }
+    await tx.insert(profileOwners).values({ profileId, userId, role: 'owner' });
+    await tx
+      .update(profiles)
+      .set({ pendingOwnerEmail: null })
+      .where(eq(profiles.id, profileId));
+    return {
+      outcome: 'accepted',
+      name: profile.name,
+      screenname: profile.screenname,
+    };
+  });
+}
+
 /**
  * Has anyone claimed this listing?
  *
@@ -187,4 +248,24 @@ export async function isProfileClaimed(profileId: string): Promise<boolean> {
 
   if (!row) return false;
   return Boolean(row.userId || row.ownerId);
+}
+
+export async function claimedProfileIds(
+  profileIds: string[]
+): Promise<Set<string>> {
+  if (profileIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ id: profiles.id })
+    .from(profiles)
+    .leftJoin(profileOwners, eq(profileOwners.profileId, profiles.id))
+    .where(
+      and(
+        inArray(profiles.id, profileIds),
+        or(
+          sql`${profiles.userId} IS NOT NULL`,
+          sql`${profileOwners.id} IS NOT NULL`
+        )
+      )
+    );
+  return new Set(rows.map((row) => row.id));
 }

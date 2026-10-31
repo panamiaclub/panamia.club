@@ -8,9 +8,11 @@ export interface PronounsInterface {
 }
 
 export interface ProfileStatusInterface {
-  submitted?: Date;
-  approved?: Date;
-  published?: Date;
+  submitted?: Date | string;
+  approved?: Date | string;
+  published?: Date | string;
+  declined?: Date | string;
+  source?: string;
   notes?: string;
 }
 
@@ -141,6 +143,8 @@ export interface ProfileInterface {
   status?: ProfileStatusInterface;
   locally_based: string;
   details: string;
+  /** Raw JSONB returned by the owner-scoped profile API. */
+  descriptions?: ProfileDescriptions;
   background?: string;
   hearaboutus?: string;
   affiliate?: string;

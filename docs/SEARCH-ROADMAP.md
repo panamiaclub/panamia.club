@@ -12,6 +12,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Public listing destinations](#public-listing-destinations)
 - [Online base ZIPs](#online-base-zips)
 - [How Search Works Today](#how-search-works-today)
 - [Measured Failures](#measured-failures)
@@ -51,6 +52,15 @@ The required extensions are already available on the database — they are simpl
 - Searching events, articles, or pana social posts — profiles only, for now
 
 ---
+
+## Public listing destinations
+
+Approved listings are browsable before claiming: search cards, map selections,
+native cards, featured feed entries, and recommendation lists use `/p/{handle}`
+when available or `/listings/{profileId}` otherwise. Claim actions are separate
+from browsing, and ownership badges use actual `profile_owners` / `userId`
+links rather than guessing from a screenname. Pending and withdrawn listings
+remain unavailable publicly.
 
 ## Online base ZIPs
 
