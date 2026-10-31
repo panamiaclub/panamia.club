@@ -1376,7 +1376,7 @@ Publish at `legal/accessibility/statement.html`:
       shared `deleteAccount()` with `attributionChoice: 'anonymize'`)
 - [x] Wellness note on warning page (988 Suicide & Crisis Lifeline,
       soft muted card, non-intrusive)
-- [ ] Wire Settings page "Delete Account" link to `/form/delete-account`
+- [x] Wire Settings and Privacy Settings "Delete account" links to `/form/delete-account`
 - [ ] TODO(GHL): Trigger GoHighLevel flow email "Your account has been deleted"
 
 ### Phase 6 — Machine-Readable Layer

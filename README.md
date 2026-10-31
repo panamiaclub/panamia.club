@@ -104,6 +104,7 @@ See [FEATURES.md](./docs/FEATURES.md) for a complete feature overview.
 | ---------------------------------------------- | --------------------------------------- |
 | [Quick Start](./docs/QUICK-START.md)           | Developer setup guide                   |
 | [Android](./docs/ANDROID.md)                   | Phone testing and Google Play releases  |
+| [iOS](./docs/IOS.md)                           | iPhone/iPad testing and App Store releases |
 | [Features](./docs/FEATURES.md)                 | Platform feature overview               |
 | [Database Design](./docs/DATABASE-DESIGN.md)   | Schema, migrations, connection setup    |
 | [Articles Roadmap](./docs/ARTICLE-ROADMAP.md)  | Community articles implementation plan  |

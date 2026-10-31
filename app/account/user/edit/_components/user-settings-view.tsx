@@ -1288,7 +1288,32 @@ export function UserSettingsView({
                 </>
               )}
 
+              <div className="mt-4">
+                <SettingsCard danger>
+                  <SettingsRow
+                    label="Delete your account"
+                    note="Review what will be removed, then permanently delete your account and private data. This is separate from deleting your marketing record."
+                    control={
+                      <Link
+                        href="/form/delete-account"
+                        className="settings-btn min-h-11"
+                        data-variant="danger"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        Delete account
+                      </Link>
+                    }
+                  />
+                </SettingsCard>
+              </div>
+
               <p className="settings-note mt-3">
+                <Link
+                  href="/account/privacy"
+                  className="text-pana-indigo mr-4 font-extrabold underline"
+                >
+                  Privacy settings
+                </Link>
                 <Link
                   href="/legal/privacy"
                   className="text-pana-indigo font-extrabold underline"

@@ -26,6 +26,7 @@ import { useRouter } from 'next/navigation';
 import {
   hasOpenNativeOverlay,
   isNativeApp,
+  nativePlatform,
   NATIVE_APP_CLASS,
   NATIVE_BACK_BUTTON_EVENT,
 } from '@/lib/mobile/native';
@@ -34,6 +35,7 @@ import {
   nativeDeepLinkUrl,
   nativeLaunchUrlFingerprint,
 } from '@/lib/mobile/auth-links';
+import { trackNativeViewport } from '@/lib/mobile/viewport';
 
 export function NativeShell() {
   const router = useRouter();
@@ -46,7 +48,13 @@ export function NativeShell() {
      * rather than during render because the server has no way to know (see
      * lib/mobile/native.ts) — rendering it into the HTML would be a guess, and
      * a wrong guess is a hydration mismatch. */
-    document.documentElement.classList.add(NATIVE_APP_CLASS);
+    const root = document.documentElement;
+    const hadNativeClass = root.classList.contains(NATIVE_APP_CLASS);
+    const previousPlatform = root.getAttribute('data-native-platform');
+    const platform = nativePlatform();
+    root.classList.add(NATIVE_APP_CLASS);
+    if (platform) root.setAttribute('data-native-platform', platform);
+    const stopViewport = platform === 'ios' ? trackNativeViewport() : undefined;
 
     /* Listener handles, collected so cleanup can remove them. Capacitor's
      * addListener is async, so what is stored is the promise of a handle —
@@ -131,33 +139,35 @@ export function NativeShell() {
        *
        * iOS never fires this: there is no hardware button, and the edge-swipe
        * gesture is handled by the WebView itself. */
-      pending.push(
-        App.addListener('backButton', ({ canGoBack }) => {
-          if (
-            !window.dispatchEvent(
-              new Event(NATIVE_BACK_BUTTON_EVENT, { cancelable: true })
-            )
-          ) {
-            return;
-          }
-          if (hasOpenNativeOverlay()) {
-            document.dispatchEvent(
-              new KeyboardEvent('keydown', {
-                key: 'Escape',
-                code: 'Escape',
-                bubbles: true,
-                cancelable: true,
-              })
-            );
-            return;
-          }
-          if (canGoBack) {
-            window.history.back();
-          } else {
-            void App.exitApp();
-          }
-        })
-      );
+      if (platform === 'android') {
+        pending.push(
+          App.addListener('backButton', ({ canGoBack }) => {
+            if (
+              !window.dispatchEvent(
+                new Event(NATIVE_BACK_BUTTON_EVENT, { cancelable: true })
+              )
+            ) {
+              return;
+            }
+            if (hasOpenNativeOverlay()) {
+              document.dispatchEvent(
+                new KeyboardEvent('keydown', {
+                  key: 'Escape',
+                  code: 'Escape',
+                  bubbles: true,
+                  cancelable: true,
+                })
+              );
+              return;
+            }
+            if (canGoBack) {
+              window.history.back();
+            } else {
+              void App.exitApp();
+            }
+          })
+        );
+      }
 
       // HTTPS App/Universal Links and the narrowly scoped email-auth scheme
       // share the same origin validation. Register before reading the cold
@@ -177,6 +187,11 @@ export function NativeShell() {
 
     return () => {
       cancelled = true;
+      stopViewport?.();
+      if (!hadNativeClass) root.classList.remove(NATIVE_APP_CLASS);
+      if (previousPlatform === null)
+        root.removeAttribute('data-native-platform');
+      else root.setAttribute('data-native-platform', previousPlatform);
       /* Runs whether or not the async block got that far, because a promise
        * pushed before unmount still resolves to a live listener. */
       for (const handle of pending) {

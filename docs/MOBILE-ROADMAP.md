@@ -101,8 +101,8 @@ in the system browser, outside the app's cookie store, and three things break:
 | App Links / Universal Links native side | Done (manifest + entitlements)                                     |
 | App icons and splash images             | Generated from `mobile/assets/` (see below)                        |
 | Built or run on a device                | **Not yet** — but both platforms compile in CI                     |
-| CI builds both platforms                | Done, green (`.github/workflows/mobile-build.yml`)                 |
-| Signing, store listings                 | Android tooling ready; credentials/listing pending                 |
+| CI builds both platforms                | Configured; this iOS change still requires a macOS workflow run     |
+| Signing, store listings                 | Android + iOS tooling ready; credentials/listings pending           |
 | Authentication                          | Android native Google + in-app email-link handoff; iOS email links |
 | Story photo/video camera                | Implemented; device testing pending                                |
 | Directory-first native navigation       | Implemented in web code; device testing pending                    |
@@ -172,6 +172,11 @@ toolchain restriction, not Capacitor's.
 You do not have to _own_ that Mac, though. CI builds the iOS app on a
 GitHub-hosted macOS runner on every relevant change — see
 [Continuous integration](#continuous-integration) below.
+
+For iPhone/iPad device testing, signing, TestFlight, and App Store preparation,
+see [iOS Device Testing and Publishing](./IOS.md). The shared native UI includes
+iOS keyboard-viewport handling, safe areas, and WebView history gestures;
+Android keeps its existing UI and hardware-back behavior.
 
 ```bash
 yarn mobile                # build + install + launch on Android (one command)
@@ -365,7 +370,7 @@ no Apple Developer account required.
 | Job     | Runner          | Produces                                    |
 | ------- | --------------- | ------------------------------------------- |
 | Android | `ubuntu-latest` | Unsigned debug APK, uploaded as an artifact |
-| iOS     | `macos-latest`  | Simulator build (verification only)         |
+| iOS     | `macos-latest`  | Simulator + unsigned device Release archive (verification only) |
 
 Neither job takes a single secret, which is deliberate — it means both run on
 pull requests from forks without exposing anything. Two things make that
@@ -420,10 +425,11 @@ upload.
 
 ### What this does not do
 
-It does not produce anything shippable. Release builds need a keystore, an Apple
-Developer account, and the secrets that go with them, so they belong in a
-separate workflow. When that exists, the natural split is: this workflow
-verifies every change, that one runs on tags. See **Next Steps** below.
+It does not produce anything shippable. Signed releases use the separate
+`android-release.yml` and `ios-release.yml` workflows, with their own credentials
+and explicit publication inputs. The iOS workflow can upload to App Store Connect
+for TestFlight but never publishes a public App Store version automatically.
+See [Android publishing](./ANDROID.md) and [iOS publishing](./IOS.md).
 
 ---
 
@@ -531,6 +537,7 @@ a ban on web-backed apps, it is a bar to clear. What already helps:
 - Hardware back, splash, and an offline experience that is not a browser error.
 - Deep links that open the app, so the app is a real destination on the device.
 - Both surfaces in one download.
+- Directory-first native tabs and map/results UI, plus the shared story camera.
 
 What would clear it decisively is native capability the browser cannot offer —
 push notifications first, then camera-backed uploads and share-sheet targets.
@@ -556,10 +563,10 @@ The canonical production domain is moving to `panamia.club`. Complete that
 migration before device and store-review testing so the app, donation return
 URLs, deep links, and public disclosures consistently use the same domain.
 
-**Submission blocker:** the donation-enabled iOS app is not ready to submit
-until Apple nonprofit approval is documented and the product includes accurate
-fund-use disclosure and tax-receipt behavior. If those are not complete, keep
-donations disabled in-app.
+**Current iOS behavior:** `/donate` shows an informational screen instead of a
+checkout form. In-app fundraising remains disabled until Apple nonprofit approval
+is documented and accurate fund-use disclosure and tax-receipt behavior are
+implemented. Web and Android donation behavior is unchanged.
 
 Apple references:
 

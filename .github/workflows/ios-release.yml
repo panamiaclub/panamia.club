@@ -1,0 +1,163 @@
+name: iOS Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: App Store version (for example 1.0.0)
+        required: true
+        type: string
+      build_number:
+        description: Increasing build number for this version (1-9999)
+        required: true
+        type: number
+      upload_to_testflight:
+        description: Upload the signed IPA to App Store Connect for TestFlight
+        required: true
+        default: false
+        type: boolean
+
+concurrency:
+  group: ios-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Signed iOS App Store package
+    runs-on: macos-latest
+    timeout-minutes: 45
+    environment: ios-release
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Report Apple toolchain
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks
+
+      - name: Configure release signing
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CERTIFICATE_BASE64" || { echo "::error::APPLE_DISTRIBUTION_CERTIFICATE_BASE64 is not configured"; exit 1; }
+          test -n "$CERTIFICATE_PASSWORD" || { echo "::error::APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD is not configured"; exit 1; }
+          test -n "$PROFILE_BASE64" || { echo "::error::APPLE_PROVISIONING_PROFILE_BASE64 is not configured"; exit 1; }
+          test -n "$APPLE_TEAM_ID" || { echo "::error::APPLE_TEAM_ID is not configured"; exit 1; }
+          umask 077
+          printf '%s' "$CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/pana-ios-signing.p12"
+          printf '%s' "$PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/pana-ios-signing.mobileprovision"
+          security cms -D -i "$RUNNER_TEMP/pana-ios-signing.mobileprovision" > "$RUNNER_TEMP/pana-ios-profile.plist"
+          python3 - <<'PY'
+          import datetime
+          import os
+          import pathlib
+          import plistlib
+          import uuid
+
+          profile = plistlib.loads((pathlib.Path(os.environ["RUNNER_TEMP"]) / "pana-ios-profile.plist").read_bytes())
+          team = os.environ["APPLE_TEAM_ID"]
+          entitlements = profile["Entitlements"]
+          if profile.get("TeamIdentifier") != [team] or entitlements.get("application-identifier") != f"{team}.social.pana.app":
+              raise SystemExit("The provisioning profile must belong to APPLE_TEAM_ID and social.pana.app.")
+          if profile.get("ProvisionedDevices") or profile.get("ProvisionsAllDevices") or entitlements.get("get-task-allow"):
+              raise SystemExit("Use an App Store Connect distribution profile, not a development, ad-hoc, or enterprise profile.")
+          if profile["ExpirationDate"].replace(tzinfo=datetime.timezone.utc) <= datetime.datetime.now(datetime.timezone.utc):
+              raise SystemExit("The provisioning profile has expired.")
+          domains = entitlements.get("com.apple.developer.associated-domains", [])
+          if "*" not in domains and not {"applinks:panamia.club", "applinks:social.panamia.club"}.issubset(domains):
+              raise SystemExit("The distribution profile must allow Associated Domains for both app surfaces.")
+          identifier = str(uuid.UUID(profile["UUID"])).upper()
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
+              output.write(f"IOS_PROFILE_UUID={identifier}\n")
+          PY
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/pana-ios-profile.plist" | tr '[:lower:]' '[:upper:]')
+          mkdir -p "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$RUNNER_TEMP/pana-ios-signing.mobileprovision" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          cp "$RUNNER_TEMP/pana-ios-signing.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          KEYCHAIN="$RUNNER_TEMP/pana-ios-signing.keychain-db"
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/pana-ios-signing.p12" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+
+      - name: Build signed IPA
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          VERSION_NAME: ${{ inputs.version_name }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          yarn mobile:bundle:ios \
+            --version-name "$VERSION_NAME" \
+            --build-number "$BUILD_NUMBER" \
+            --provisioning-profile "$IOS_PROFILE_UUID"
+
+      - name: Save signed IPA and debug symbols
+        uses: actions/upload-artifact@v7
+        with:
+          name: pana-mia-ios-${{ inputs.version_name }}-${{ inputs.build_number }}
+          path: |
+            mobile/ios/App/build/release/*/export/*.ipa
+            mobile/ios/App/build/release/*/PanaMia.xcarchive/dSYMs/**
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload to App Store Connect
+        if: ${{ inputs.upload_to_testflight }}
+        env:
+          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$API_KEY_BASE64" || { echo "::error::APP_STORE_CONNECT_API_KEY_BASE64 is not configured"; exit 1; }
+          [[ "$API_KEY_ID" =~ ^[A-Z0-9]{10}$ ]] || { echo "::error::APP_STORE_CONNECT_API_KEY_ID is invalid"; exit 1; }
+          test -n "$API_ISSUER_ID" || { echo "::error::APP_STORE_CONNECT_ISSUER_ID is not configured"; exit 1; }
+          umask 077
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "$API_KEY_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_$API_KEY_ID.p8"
+          IPA_FILES=(mobile/ios/App/build/release/*/export/*.ipa)
+          test "${#IPA_FILES[@]}" -eq 1 && test -f "${IPA_FILES[0]}"
+          xcrun altool --upload-app --type ios --file "${IPA_FILES[0]}" \
+            --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER_ID"
+
+      - name: Remove signing credentials
+        if: always()
+        env:
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/pana-ios-signing.keychain-db"
+          if [ -f "$KEYCHAIN" ]; then
+            security list-keychains -d user -s login.keychain-db
+            security delete-keychain "$KEYCHAIN"
+          fi
+          if [ -n "${IOS_PROFILE_UUID:-}" ]; then
+            rm -f "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/$IOS_PROFILE_UUID.mobileprovision"
+            rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/$IOS_PROFILE_UUID.mobileprovision"
+          fi
+          rm -f "$RUNNER_TEMP/pana-ios-signing.p12" "$RUNNER_TEMP/pana-ios-signing.mobileprovision" "$RUNNER_TEMP/pana-ios-profile.plist"
+          if [[ "${API_KEY_ID:-}" =~ ^[A-Z0-9]{10}$ ]]; then
+            rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_$API_KEY_ID.p8"
+          fi

@@ -11,7 +11,7 @@
 # anything, and neither needs a single secret:
 #
 #   - Android produces an unsigned debug APK.
-#   - iOS builds for the simulator, which skips code signing entirely.
+#   - iOS builds for the simulator and archives an unsigned device Release.
 #
 # Release signing is a separate concern and belongs in a separate workflow,
 # because it needs a keystore, an Apple Developer account, and the secrets that
@@ -41,9 +41,15 @@ on:
       - 'lib/mobile/**'
       - 'components/mobile/**'
       - 'scripts/mobile-assets.ts'
+      - 'scripts/ios-bundle.ts'
+      - 'scripts/ios-sideload.ts'
+      - 'tests-unit/ios-release.test.ts'
+      - 'tests-unit/ios-sideload.test.ts'
+      - 'tests-unit/mobile-viewport.test.ts'
       - 'package.json'
       - 'yarn.lock'
       - '.github/workflows/mobile-build.yml'
+      - '.github/workflows/ios-release.yml'
   pull_request:
     branches: [main, develop]
     paths:
@@ -52,9 +58,15 @@ on:
       - 'lib/mobile/**'
       - 'components/mobile/**'
       - 'scripts/mobile-assets.ts'
+      - 'scripts/ios-bundle.ts'
+      - 'scripts/ios-sideload.ts'
+      - 'tests-unit/ios-release.test.ts'
+      - 'tests-unit/ios-sideload.test.ts'
+      - 'tests-unit/mobile-viewport.test.ts'
       - 'package.json'
       - 'yarn.lock'
       - '.github/workflows/mobile-build.yml'
+      - '.github/workflows/ios-release.yml'
   # Native toolchains break on their own schedule -- a new Xcode on the runner
   # image, a Gradle plugin that stops supporting a JDK. Being able to trigger a
   # build without pushing a commit is how you tell "we broke it" from "the
@@ -129,7 +141,7 @@ jobs:
           if-no-files-found: error
 
   ios:
-    name: iOS (simulator build)
+    name: iOS (simulator + unsigned Release)
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
@@ -145,6 +157,16 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
+
+      - name: Check mobile release and viewport regressions
+        run: >-
+          yarn node --import tsx --test
+          tests-unit/native-app.test.ts
+          tests-unit/mobile-auth.test.ts
+          tests-unit/story-camera.test.ts
+          tests-unit/mobile-viewport.test.ts
+          tests-unit/ios-release.test.ts
+          tests-unit/ios-sideload.test.ts
 
       # Capacitor 8 uses Swift Package Manager rather than CocoaPods, so there
       # is no `pod install` here and no Podfile in the repo. Dependencies
@@ -205,6 +227,27 @@ jobs:
             exit 1
           fi
           echo "Built $APP ($(du -sh "$APP" | cut -f1))"
+
+      - name: Verify unsigned device release archive
+        working-directory: mobile/ios/App
+        run: |
+          plutil -lint App/Info.plist App/App.entitlements
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/PanaMia.xcarchive \
+            -derivedDataPath build \
+            -quiet \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            archive
+          APP="build/PanaMia.xcarchive/Products/Applications/App.app"
+          test -d "$APP"
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist")" = social.pana.app
+          find "$APP" -name PrivacyInfo.xcprivacy -print > build/privacy-manifests.txt
+          test -s build/privacy-manifests.txt || { echo "::error::SDK privacy manifests are missing from the release archive."; exit 1; }
 
       # xcodebuild's own failure output is buried in thousands of lines of
       # compiler invocations. When a build breaks, this is the file worth

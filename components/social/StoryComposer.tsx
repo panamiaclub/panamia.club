@@ -104,6 +104,7 @@ export function StoryComposer({ onClose, onPosted }: StoryComposerProps) {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/70" />
         <Dialog.Content
+          data-story-composer={!cameraOpen || undefined}
           className={
             cameraOpen
               ? 'fixed inset-0 z-[101] h-dvh w-screen overflow-hidden bg-black sm:inset-auto sm:top-1/2 sm:left-1/2 sm:h-[min(90dvh,56rem)] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl'

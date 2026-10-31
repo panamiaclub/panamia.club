@@ -39,6 +39,8 @@
 	<string>Take photos and videos to share in your story.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Record sound when you capture a story video or voice memo.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Find nearby businesses and community events when you choose to use your location.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

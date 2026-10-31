@@ -2,27 +2,21 @@
 
 import { useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
+import { observeVisualViewport } from '@/lib/mobile/viewport';
 import styles from './workspace.module.css';
 
 export function WorkspacePage({ children }: { children: ReactNode }) {
   useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
     const property = '--messages-viewport-height';
     const previous = document.body.style.getPropertyValue(property);
-    const resize = () => {
-      if (viewport.scale !== 1) return;
+    const stop = observeVisualViewport((viewport) => {
       document.body.style.setProperty(
         property,
         `${viewport.height + viewport.offsetTop}px`
       );
-    };
-    resize();
-    viewport.addEventListener('resize', resize);
-    viewport.addEventListener('scroll', resize);
+    });
     return () => {
-      viewport.removeEventListener('resize', resize);
-      viewport.removeEventListener('scroll', resize);
+      stop();
       if (previous) document.body.style.setProperty(property, previous);
       else document.body.style.removeProperty(property);
     };

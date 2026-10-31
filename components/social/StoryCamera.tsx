@@ -33,8 +33,8 @@ function deviceError(error: unknown, device: 'camera' | 'microphone'): string {
   const name = error instanceof Error ? error.name : '';
   if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
     return device === 'camera'
-      ? 'Camera access was denied. Allow it in your browser or Android app settings, then try again, or choose from your gallery.'
-      : 'Microphone access was denied. Allow it in your browser or Android app settings to record video, or switch to Photo.';
+      ? 'Camera access was denied. Allow it in your browser or app settings, then try again, or choose from your gallery.'
+      : 'Microphone access was denied. Allow it in your browser or app settings to record video, or switch to Photo.';
   }
   if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
     return `No ${device} was found. You can still choose a photo or video from your gallery.`;
@@ -384,7 +384,7 @@ export function StoryCamera({
 
   return (
     <div className="flex h-full flex-col bg-black text-white">
-      <header className="flex flex-none items-center justify-between gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3">
+      <header className="flex flex-none items-center justify-between gap-3 pt-[max(1rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-3 pl-[max(1rem,env(safe-area-inset-left))]">
         <button
           ref={backButton}
           type="button"
@@ -458,7 +458,7 @@ export function StoryCamera({
         )}
       </div>
 
-      <footer className="flex-none space-y-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <footer className="flex-none space-y-4 pt-4 pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))]">
         {error && (
           <p role="alert" className="text-center text-sm text-red-200">
             {error}

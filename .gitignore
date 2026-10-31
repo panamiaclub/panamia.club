@@ -104,8 +104,10 @@ external/panamia-next-crm-bridge/.wrangler/
 *.jks
 *.keystore
 mobile/android/keystore.properties
-mobile/ios/App/*.mobileprovision
-mobile/ios/App/*.p12
+*.mobileprovision
+*.p12
+*.p8
+*.xcarchive/
 
 # Local artifacts of scripts/migrate-supabase-region.ts. The manifest is a
 # point-in-time census of one database (table names, row counts) and the dump

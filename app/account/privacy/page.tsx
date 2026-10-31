@@ -26,7 +26,7 @@ import {
 //   - See whether GPC was detected at time of consent
 //   - Withdraw module-level consent (hard-deletes the receipt)
 //   - Link to full terms and privacy policy
-//   - Future: exercise data rights (access, deletion, portability)
+//   - Start account deletion and request data access or portability
 //
 // Top-level terms consent cannot be withdrawn here — withdrawing requires
 // account deletion (see Phase 5).
@@ -615,9 +615,6 @@ export default function PrivacySettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Data rights — future enhancement */}
-      {/* Phase 5: Add data export, deletion request, and portability buttons
-          here. These should link to the account deletion flow when built. */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Your Data Rights</CardTitle>
@@ -632,12 +629,19 @@ export default function PrivacySettingsPage() {
             for details.
           </p>
           <p className="text-muted-foreground text-sm">
-            To exercise these rights, contact{' '}
+            For data access or portability, contact{' '}
             <a href="mailto:hola@pana.social" className="underline">
               hola@pana.social
             </a>
             .
           </p>
+          <p className="text-muted-foreground text-sm">
+            You can permanently delete your account and private data after
+            reviewing what will be removed.
+          </p>
+          <Button variant="destructive" className="mt-2 min-h-11" asChild>
+            <Link href="/form/delete-account">Delete account</Link>
+          </Button>
         </CardContent>
       </Card>
     </div>

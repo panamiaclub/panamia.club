@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import { Medal, Trophy, Crown, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import PublicPageShell from '@/components/PublicPageShell';
 import publicStyles from '@/components/PublicPageShell.module.css';
 import { useIsNativeApp } from '@/lib/mobile/use-native-app';
+import { nativePlatform } from '@/lib/mobile/native';
 import {
   Table,
   TableBody,
@@ -64,6 +66,29 @@ function TierBadge({ tier }: TierBadgeProps) {
 
 export default function DonatePage() {
   const isNativeApp = useIsNativeApp();
+  if (isNativeApp && nativePlatform() === 'ios') {
+    return (
+      <PublicPageShell
+        eyebrow="Support Pana MIA"
+        title="THANK YOU FOR YOUR SUPPORT"
+        intro="Donations are not available inside the iOS app yet."
+      >
+        <div className="mx-auto max-w-xl space-y-6">
+          <p>
+            You can visit panamia.club in your browser to support Pana MIA Club.
+            Donations do not unlock app features or digital content.
+          </p>
+          <Button asChild>
+            <Link href="/d">Back to Directory</Link>
+          </Button>
+        </div>
+      </PublicPageShell>
+    );
+  }
+  return <DonationForm isNativeApp={isNativeApp} />;
+}
+
+function DonationForm({ isNativeApp }: { isNativeApp: boolean }) {
   const [email, setEmail] = useState('');
   const [amount, setAmount] = useState(0.0);
   const [comment, setComment] = useState('');
