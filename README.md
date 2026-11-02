@@ -73,7 +73,7 @@ Visit [pana.social](https://pana.social) to create your profile and start connec
 
 ### Support Us
 
-We're a non-profit and rely on community support. [Make a donation](https://pana.social/donate/) to help keep the platform running.
+We're a non-profit and rely on community support. [Make a donation](https://pana.social/support-pana) to help keep the platform running.
 
 ### Contribute
 
@@ -123,7 +123,7 @@ See [FEATURES.md](./docs/FEATURES.md) for a complete feature overview.
 - **Website**: [pana.social](https://pana.social)
 - **Contact Form**: [pana.social/form/contact-us](https://pana.social/form/contact-us/)
 - **GitHub Issues**: [Report bugs or suggest features](https://github.com/unitedcolorsofg/panamia-next/issues)
-- **Donations**: [Support Us](https://pana.social/donate/)
+- **Donations**: [Support Us](https://pana.social/support-pana)
 
 For security concerns, use the contact form with subject "SECURITY VULNERABILITY".
 

@@ -13,22 +13,21 @@ import esCommon from '../locales/es/common.json';
 import enHome from '../locales/en/home.json';
 import esHome from '../locales/es/home.json';
 
-// Unit SSR validates markup; Vite handles stylesheet processing.
-registerHooks({
+// This content-only SSR test needs class names, not Vite's CSS compilation.
+const cssModules = registerHooks({
   load(url, context, nextLoad) {
-    if (url.endsWith('.module.css')) {
-      return {
-        format: 'module',
-        source: 'export default {};',
-        shortCircuit: true,
-      };
-    }
-    return nextLoad(url, context);
+    if (!url.endsWith('.module.css')) return nextLoad(url, context);
+    return {
+      format: 'module',
+      shortCircuit: true,
+      source:
+        'export default new Proxy({}, { get: (_target, property) => property });',
+    };
   },
 });
-
 const { HomePage } = await import('../components/home/home-page');
 const { HomeMock } = await import('../app/mock/home/_components/home-mock');
+cssModules.deregister();
 
 const APPROVED_INTRODUCTION =
   'Pana MIA Club is South Florida\u2019s first hyper-local connection platform built by and for the community. We are here for the creatives, small business owners, culture keepers, and everyone in between, all for a future that is local, a future for the people.';

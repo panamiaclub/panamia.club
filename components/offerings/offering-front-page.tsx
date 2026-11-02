@@ -195,7 +195,7 @@ export function OfferingFrontPage({
   /**
    * Where the two buttons go. Hrefs live at the call site rather than in the
    * locale files — a translator should not be able to change where a button
-   * goes — and several of them point at routes (`/e/new`, `/donate`) that have
+   * goes — and several of them point at routes (`/e/new`, `/support-pana`) that have
    * nothing to do with the offering's own registry entry. Their *labels* come
    * from `ctaPrimary` / `ctaSecondary` in the namespace, which is what keeps
    * the six pages themselves down to a single line each.

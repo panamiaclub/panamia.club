@@ -25,7 +25,14 @@ Next.js 16 App Router directory containing all pages, layouts, and API routes.
 | `/signin`           | Authentication page                          |
 | `/links`            | Link tree style page                         |
 | `/podcasts`         | Podcast listings                             |
-| `/donate`           | Donation page                                |
+| `/support-pana`     | One-time/monthly giving and sponsorship      |
+| `/donate`           | Permanent redirect to `/support-pana`        |
+
+Support Pana renders the approved giving design and retains the
+`#giving-circle` and `#sponsorship` sections. `/donate` preserves query
+parameters when redirecting, including canceled Stripe checkout selections.
+New checkout cancellations return directly to `/support-pana`; the existing
+`/donation/confirmation` route is unchanged.
 
 About section URLs keep the complete page and scroll to the requested section:
 `/about-us/our-story`, `/about-us/why-local`, `/about-us/pillars`,

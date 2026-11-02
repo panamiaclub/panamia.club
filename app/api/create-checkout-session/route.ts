@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       ],
       mode: isRecurring ? 'subscription' : 'payment',
       success_url: `${origin}/donation/confirmation?tier=${tier}&amt=${amount}&frequency=${frequency}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/donate?${cancelQuery}`,
+      cancel_url: `${origin}/support-pana?${cancelQuery}`,
       customer_email: customerEmail || undefined,
       metadata: {
         comment,

@@ -357,7 +357,7 @@ export default function AboutUsContent({ section }: { section?: string }) {
           <h2>{t('support.title')}</h2>
           <p>{t('support.p1')}</p>
         </div>
-        <Link href="/donate" className={styles.supportCta}>
+        <Link href="/support-pana" className={styles.supportCta}>
           {t('support.ctaShort')}
           <ArrowRight aria-hidden="true" />
         </Link>

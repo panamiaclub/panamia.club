@@ -146,7 +146,7 @@ describe('info site content', () => {
       { id: 'events', href: '/e' },
       { id: 'connectors', href: '/connectors' },
       { id: 'listing', href: '/form/get-listed' },
-      { id: 'support', href: '/donate' },
+      { id: 'support', href: '/support-pana' },
     ]);
   });
 
