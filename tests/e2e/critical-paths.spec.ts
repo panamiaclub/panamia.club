@@ -443,6 +443,145 @@ test.describe('Live donation checkout', () => {
   });
 });
 
+test.describe('Donation thank-you page', () => {
+  for (const [query, message, monthly] of [
+    [
+      'frequency=one-time&tier=0&amt=100',
+      'Thank you so much for your contribution!',
+      false,
+    ],
+    [
+      'frequency=monthly&tier=0&amt=50',
+      'Thank you so much for your monthly support!',
+      true,
+    ],
+    [
+      'frequency=monthly&tier=2&amt=1500',
+      'Thank you so much for becoming a Gente dePana!',
+      true,
+    ],
+    ['tier=1&amt=1000', 'Thank you so much for becoming a Gente dePana!', true],
+    [
+      'frequency=one-time&tier=3',
+      'Thank you so much for your contribution!',
+      false,
+    ],
+  ] as const) {
+    test(`keeps the correct gratitude message for ${query}`, async ({
+      page,
+    }) => {
+      const response = await page.goto(`/donation/confirmation?${query}`, {
+        waitUntil: 'domcontentloaded',
+      });
+      expect(response?.status()).toBe(200);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+        'Muchísimas Gracias!'
+      );
+      await expect(page.getByRole('heading', { level: 2 })).toHaveText(message);
+      await expect(page.locator('[data-monthly-thanks]')).toHaveCount(
+        monthly ? 1 : 0
+      );
+      await expect(
+        page.getByText('These features should be activated', { exact: false })
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole('link', { name: 'gentede@panamia.club', exact: true })
+      ).toHaveAttribute('href', 'mailto:gentede@panamia.club');
+      const actions = page.getByRole('navigation', { name: 'After giving' });
+      await expect(actions.getByRole('link')).toHaveCount(2);
+      await expect(
+        actions.getByRole('link', { name: 'Return to Home' })
+      ).toHaveAttribute('href', '/');
+      await expect(
+        actions.getByRole('link', { name: 'Explore Directory' })
+      ).toHaveAttribute('href', '/directory/search');
+    });
+  }
+
+  test('uses the giving page palette and fits phone, tablet and desktop layouts', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' });
+    await page.goto('/donation/confirmation?frequency=one-time&tier=0', {
+      waitUntil: 'domcontentloaded',
+    });
+    const thanks = page.locator('[data-donation-thanks]');
+    await expect(thanks).toHaveCSS('background-color', 'rgb(255, 247, 236)');
+    await expect(thanks).toHaveCSS('color', 'rgb(17, 13, 13)');
+    await expect(
+      page.getByRole('heading', { level: 1 }).locator('span')
+    ).toHaveCSS('color', 'rgb(48, 62, 140)');
+    await expect(
+      page.getByRole('img', {
+        name: 'Panas gathered together at a local community event.',
+      })
+    ).toBeVisible();
+    const actions = page.getByRole('navigation', { name: 'After giving' });
+    for (const width of [320, 390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      await expect(async () => {
+        const bounds = await thanks.evaluate((element) => ({
+          content: element.scrollWidth,
+          viewport: element.clientWidth,
+        }));
+        expect(bounds.viewport).toBeGreaterThan(0);
+        expect(bounds.content).toBeLessThanOrEqual(bounds.viewport + 1);
+        const captionGap = await thanks.locator('figure').evaluate((figure) => {
+          const caption = figure.querySelector('figcaption');
+          const stamp = figure.querySelector('div[aria-hidden="true"]');
+          if (!caption || !stamp)
+            throw new Error('Missing thank-you photo caption or stamp');
+          const text = document.createRange();
+          text.selectNodeContents(caption);
+          return (
+            stamp.getBoundingClientRect().left -
+            text.getBoundingClientRect().right
+          );
+        });
+        expect(captionGap).toBeGreaterThanOrEqual(8);
+      }).toPass({ timeout: 30_000 });
+      for (const name of ['Return to Home', 'Explore Directory']) {
+        const link = actions.getByRole('link', { name });
+        await expect(async () => {
+          await link.scrollIntoViewIfNeeded();
+          const box = await link.boundingBox();
+          expect(box).not.toBeNull();
+          if (box) expect(box.height).toBeGreaterThanOrEqual(44);
+        }).toPass({ timeout: 30_000 });
+      }
+    }
+    await actions.getByRole('link', { name: 'Return to Home' }).focus();
+    await page.keyboard.press('Tab');
+    await expect(
+      actions.getByRole('link', { name: 'Explore Directory' })
+    ).toBeFocused();
+    await expect(
+      actions.getByRole('link', { name: 'Explore Directory' })
+    ).toHaveCSS('outline-style', 'solid');
+  });
+
+  test('rendering gratitude does not create another checkout', async ({
+    page,
+  }) => {
+    const checkoutRequests: string[] = [];
+    await page.route('**/api/create-checkout-session', async (route) => {
+      checkoutRequests.push(route.request().url());
+      await route.abort();
+    });
+    await page.goto(
+      '/donation/confirmation?frequency=one-time&tier=0&amt=100',
+      {
+        waitUntil: 'domcontentloaded',
+      }
+    );
+    await expect(page.locator('[data-donation-thanks]')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /Continue to checkout|Donate/ })
+    ).toHaveCount(0);
+    expect(checkoutRequests).toEqual([]);
+  });
+});
+
 test.describe('Donation design mock', () => {
   test.beforeEach(async ({ page }) => {
     const response = await page.goto('/mock/donate', {
