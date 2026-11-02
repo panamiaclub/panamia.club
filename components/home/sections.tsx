@@ -202,13 +202,9 @@ function HeroCard() {
         </h1>
 
         <div className="mx-auto mt-4 max-w-[760px]">
-          {/* The mission, cut to one line. The full sentence names the three
-              groups and the role the club plays between them, which is the
-              right level of detail for an about page and one clause too many
-              for the first thing anyone reads. What is left is the claim and
-              the reason for it; the three stops further down are where the
-              groups get named. */}
-          <p className="hero-subheadline">{t('hero.mission')}</p>
+          <p className="hero-subheadline">
+            <strong>{t('hero.mission')}</strong>
+          </p>
 
           {/* The scope control, and the whole point of this section.
               
