@@ -258,7 +258,7 @@ export function createNativeApiFixtures(
       const mappable = matching.filter((item) =>
         item.online_only
           ? item.online_zip != null
-          : item.geo?.coordinates != null
+          : item.geo?.coordinates != null || item.zip_area != null
       );
       const mapView = url.searchParams.get('v') === 'map';
       const page = Number(url.searchParams.get('page') || '1');
@@ -283,6 +283,9 @@ export function createNativeApiFixtures(
             ? {
                 totalResults: matching.length,
                 unmappedCount: matching.length - mappable.length,
+                unmappedResults: matching.filter(
+                  (item) => !mappable.includes(item)
+                ),
               }
             : undefined,
         }),

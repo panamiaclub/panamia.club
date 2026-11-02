@@ -22,13 +22,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { fetchDirectorySignalStates } from '@/lib/directory-signals';
+import { toast } from '@/hooks/use-toast';
 
 /**
  * Who is browsing the directory, and what they have already saved.
  *
  * The profile page asks the same questions one listing at a time. Search shows
- * twenty at once, so everything here is keyed by profile id and answered in a
- * single request — see app/api/listings/signals/route.ts. The search payload
+ * the complete browsing collection, so state is keyed by profile id and read in
+ * bounded batches — see app/api/listings/signals/route.ts. The search payload
  * itself is edge-cached and shared, so nothing viewer-specific can come from
  * it; this provider layers the personal answer on top.
  */
@@ -98,7 +100,7 @@ export function useDirectoryViewer(): DirectoryViewerValue {
 }
 
 interface ProviderProps {
-  /** Ids of the listings currently on screen. */
+  /** Complete matching collection, stable across viewport changes. */
   profileIds: string[];
   children: ReactNode;
 }
@@ -146,21 +148,28 @@ export function DirectoryViewerProvider({
     }
 
     let cancelled = false;
+    const controller = new AbortController();
 
-    fetch(`/api/listings/signals?ids=${encodeURIComponent(idKey)}`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((payload) => {
-        if (cancelled || !payload?.success) return;
-        setMaySignal(payload.data.maySignal);
-        setListings(payload.data.listings ?? {});
+    fetchDirectorySignalStates(idKey ? idKey.split(',') : [], controller.signal)
+      .then((data) => {
+        if (cancelled) return;
+        setMaySignal(data.maySignal);
+        setListings(data.listings);
       })
-      .catch(() => {
-        // Leave the public counts alone. A failed lookup should cost the
-        // viewer their own state, not everybody's numbers.
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        console.error('Could not load directory saved listings:', error);
+        toast({
+          title: 'Could not load your saved listings',
+          description:
+            'Refresh the page to retry. Public listings are still available.',
+          variant: 'destructive',
+        });
       });
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [idKey, userId, status]);
 
@@ -182,6 +191,14 @@ export function DirectoryViewerProvider({
   const requirePana = useCallback(
     (action: GateAction, subject: GateSubject) => {
       if (viewer === 'pana') return true;
+      if (userId && maySignal === null) {
+        toast({
+          title: 'Your saved listings are not ready yet',
+          description:
+            'Please try again shortly, or refresh the page to retry.',
+        });
+        return false;
+      }
       // Reached by signed-out visitors, and kept as a backstop for business
       // accounts: the UI no longer renders anything they could click, but
       // enforcement should not depend on a component remembering to hide a
@@ -189,11 +206,11 @@ export function DirectoryViewerProvider({
       setBlocked({ action, subject });
       return false;
     },
-    [viewer]
+    [viewer, userId, maySignal]
   );
 
   // Read inside the toggle without making it a dependency — otherwise every
-  // save would rebuild the callback and re-render all twenty cards.
+  // save would rebuild the callback and re-render every card.
   const listingsRef = useRef(listings);
   listingsRef.current = listings;
 

@@ -17,7 +17,7 @@ import {
   effectiveDirectoryRadius,
   isDirectoryRadius,
 } from '@/lib/directory-radius';
-import { useSearch } from '@/lib/query/directory';
+import { searchParamsToString, useSearch } from '@/lib/query/directory';
 import { useMyGroups } from '@/lib/query/social';
 import { useNativeEvents, useNativeGroups } from '@/lib/query/native-app';
 import { nativeBusiness, nativeEvent, nativeGroup } from '@/lib/mobile/browse';
@@ -127,11 +127,7 @@ export default function NativeDirectory({
     geolat: location.coords?.lat ?? 0,
     geolng: location.coords?.lng ?? 0,
   };
-  const { pageNum: _pageNum, ...mapFilters } = queryFilters;
-  const directory = useSearch(queryFilters, {
-    enabled: active && scope === 'directory',
-  });
-  const directoryMap = useSearch(
+  const directory = useSearch(
     { ...queryFilters, pageNum: 1, resultsView: 'map' },
     { enabled: active && scope === 'directory' }
   );
@@ -142,12 +138,16 @@ export default function NativeDirectory({
     viewerKey,
   });
   const businesses = useMemo(
-    () => (directory.data?.data ?? []).map(nativeBusiness),
+    () =>
+      [
+        ...(directory.data?.data ?? []),
+        ...(directory.data?.map?.unmappedResults ?? []),
+      ].map(nativeBusiness),
     [directory.data]
   );
   const mappedBusinesses = useMemo(
-    () => (directoryMap.data?.data ?? []).map(nativeBusiness),
-    [directoryMap.data]
+    () => (directory.data?.data ?? []).map(nativeBusiness),
+    [directory.data]
   );
   const eventItems = useMemo(
     () =>
@@ -190,8 +190,7 @@ export default function NativeDirectory({
   );
   const searching = term !== query.trim();
   const categories = params.filterCategories.split('+').filter(Boolean);
-  const total = directory.data?.pagination.total ?? 0;
-  const totalPages = directory.data?.pagination.totalPages ?? 1;
+  const total = directory.data?.map?.totalResults ?? 0;
   const scopeLabel =
     scope === 'directory'
       ? 'Directory'
@@ -323,64 +322,23 @@ export default function NativeDirectory({
           <NativeMapResults
             items={businesses}
             mapItems={mappedBusinesses}
-            unmappedCount={directoryMap.data?.map?.unmappedCount}
+            unmappedCount={directory.data?.map?.unmappedCount}
+            directorySections
             label="Directory"
             count={`${total} ${total === 1 ? 'listing' : 'listings'}`}
             filterKey={JSON.stringify([
-              term,
-              mapFilters,
-              radius,
-              sort,
+              searchParamsToString({ ...queryFilters, pageNum: 1 }),
               filterVersion,
             ])}
             active={active && scope === 'directory'}
-            loading={directory.isPending || directoryMap.isPending || searching}
-            failed={
-              directory.isError ||
-              directory.data?.success === false ||
-              directoryMap.isError ||
-              directoryMap.data?.success === false
-            }
+            loading={directory.isPending || searching}
+            failed={directory.isError || directory.data?.success === false}
             onRetry={() => {
               void directory.refetch();
-              void directoryMap.refetch();
             }}
             viewer={location.coords}
             controlsInset={106}
             onControlsCovered={directoryCovered}
-            footer={
-              totalPages > 1 ? (
-                <div className={styles.pagination}>
-                  <button
-                    type="button"
-                    disabled={params.pageNum <= 1}
-                    onClick={() =>
-                      setParams((current) => ({
-                        ...current,
-                        pageNum: current.pageNum - 1,
-                      }))
-                    }
-                  >
-                    Previous
-                  </button>
-                  <span>
-                    Page {params.pageNum} of {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={params.pageNum >= totalPages}
-                    onClick={() =>
-                      setParams((current) => ({
-                        ...current,
-                        pageNum: current.pageNum + 1,
-                      }))
-                    }
-                  >
-                    Next
-                  </button>
-                </div>
-              ) : null
-            }
           />
         )}
       </div>

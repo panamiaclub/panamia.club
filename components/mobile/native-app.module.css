@@ -289,6 +289,10 @@
   border-color: var(--color-pana-pink);
 }
 
+.pin[data-approximate] {
+  border-style: dashed;
+}
+
 .pin[data-online-zip] {
   display: flex;
   align-items: center;
@@ -407,6 +411,31 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 12px;
+}
+
+.resultSection {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.resultSection + .resultSection {
+  margin-top: 12px;
+  padding-top: 20px;
+  border-top: 1px solid rgb(17 13 13 / 0.18);
+}
+
+.resultSection h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.resultSectionCopy {
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .card {

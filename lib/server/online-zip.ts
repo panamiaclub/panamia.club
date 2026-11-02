@@ -102,20 +102,18 @@ export function getOnlineZipArea(postalCode: string) {
 
 interface ZipProfile {
   id: string;
-  onlineOnly?: unknown;
   addressPostalCode?: unknown;
   addressCountry?: unknown;
   geo?: unknown;
 }
 
-/** Legacy ZIPs can be resolved without ever reusing private street coordinates. */
-export async function getOnlineZipAreasForProfiles(
+/** Resolve only existing public ZIPs; callers choose which rows need a fallback. */
+export async function getDirectoryZipAreasForProfiles(
   rows: readonly ZipProfile[]
 ): Promise<Map<string, OnlineZipArea | null>> {
   const areas = new Map<string, OnlineZipArea | null>();
   const missing = new Map<string, string[]>();
   for (const row of rows) {
-    if (row.onlineOnly !== true) continue;
     areas.set(row.id, null);
     const zip = normalizeUsZip(row.addressPostalCode);
     if (

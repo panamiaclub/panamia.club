@@ -275,6 +275,39 @@ describe('native data models', () => {
     assert.deepEqual(defensive[0].coords, zip.coords);
   });
 
+  it('keeps ZIP-only businesses approximate without classifying them as online', () => {
+    const area = {
+      postalCode: '33138',
+      country: 'US' as const,
+      city: 'Miami',
+      region: 'FL',
+      lat: 25.8521,
+      lng: -80.1821,
+    };
+    const zipOnly = nativeBusiness({
+      ...business,
+      geo: null,
+      online_only: false,
+      primary_address: { city: 'Miami', zipcode: '33138' },
+      zip_area: area,
+    });
+    assert.deepEqual(zipOnly.coords, { lat: area.lat, lng: area.lng });
+    assert.match(zipOnly.location, /Approximate ZIP 33138 area/);
+    assert.equal(zipOnly.zipArea, null);
+    assert.deepEqual(zipOnly.approximateZip, area);
+    const online = nativeBusiness({
+      ...business,
+      _id: 'online',
+      online_only: true,
+      primary_address: { zipcode: '33138' },
+      online_zip: area,
+    });
+    const pins = nativeMapPins([zipOnly, online]);
+    assert.equal(pins.length, 2);
+    assert.equal(pins.filter((pin) => pin.zipArea).length, 1);
+    assert.equal(pins.find((pin) => !pin.zipArea)?.items[0], zipOnly);
+  });
+
   it('uses the real event venue, event timezone, attendance and detail page', () => {
     const item = nativeEvent(event);
     assert.deepEqual(item.coords, { lat: 25.76, lng: -80.19 });

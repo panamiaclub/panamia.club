@@ -96,8 +96,10 @@ describe('directory radius query encoding', () => {
       searchParamsToString({ ...base, resultsView: 'map' })
     );
     assert.equal(map.get('v'), 'map');
+    assert.equal(map.get('mapVersion'), '2');
     assert.equal(list.has('v'), false);
     map.delete('v');
+    map.delete('mapVersion');
     assert.equal(map.toString(), list.toString());
   });
 });

@@ -23,6 +23,7 @@ import {
   formatWhen,
   resultCoords,
   resultHref,
+  resultZipArea,
 } from '../_lib/format';
 
 const FALLBACK_COVER = '/img/bg_coconut_blue.jpg';
@@ -66,6 +67,7 @@ export function ResultCard({ result, index, viewerCoords }: ResultCardProps) {
   // coordinates never leave the browser, and so this rounds identically to the
   // same business's profile page.
   const coords = resultCoords(result);
+  const zipArea = resultZipArea(result);
   const distance =
     viewerCoords && coords && !result.online_only
       ? distanceInMiles(viewerCoords, coords)
@@ -128,34 +130,43 @@ export function ResultCard({ result, index, viewerCoords }: ResultCardProps) {
         {/* Place and proximity, together and high up. "Little Haiti" alone
             does not tell a pana in Hollywood whether this is worth the drive,
             and that judgement is the whole reason they came to the directory. */}
-        {(result.online_only || result.primary_address?.city) && (
-          <p className="dirsearch-card-where">
-            {result.online_only ? (
-              <>
-                <Globe className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>
-                  {onlineBusinessLocation(result.primary_address?.zipcode)}
-                </span>
-                {normalizeUsZip(result.primary_address?.zipcode) &&
-                  !result.online_zip && (
-                    <span className="dirsearch-card-distance-off">
-                      Map position unavailable
-                    </span>
-                  )}
-              </>
-            ) : (
-              <>
-                <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{result.primary_address?.city}</span>
-                {distance !== null && (
-                  <span className="dirsearch-card-distance">
-                    {formatDistance(distance)}
+        <p className="dirsearch-card-where">
+          {result.online_only ? (
+            <>
+              <Globe className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>
+                {onlineBusinessLocation(result.primary_address?.zipcode)}
+              </span>
+              {normalizeUsZip(result.primary_address?.zipcode) &&
+                !result.online_zip && (
+                  <span className="dirsearch-card-distance-off">
+                    Map position unavailable
                   </span>
                 )}
-              </>
-            )}
-          </p>
-        )}
+            </>
+          ) : (
+            <>
+              <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>
+                {zipArea
+                  ? `Approximate ZIP ${zipArea.postalCode} area - ${result.primary_address?.city || zipArea.city}`
+                  : result.primary_address?.city || 'Map location not provided'}
+              </span>
+              {!coords &&
+                !zipArea &&
+                normalizeUsZip(result.primary_address?.zipcode) && (
+                  <span className="dirsearch-card-distance-off">
+                    Map position unavailable
+                  </span>
+                )}
+              {distance !== null && (
+                <span className="dirsearch-card-distance">
+                  {formatDistance(distance)}
+                </span>
+              )}
+            </>
+          )}
+        </p>
 
         {result.details && (
           <p className="dirsearch-card-blurb">{result.details}</p>

@@ -17,6 +17,7 @@ import {
   type DirectorySort,
 } from '@/lib/query/directory';
 import { groupOnlineZipListings } from '@/lib/online-zip';
+import { mapContainsPoint, type MapBounds } from '@/lib/map/viewport';
 import { searchPath } from '@/lib/directory-search-path';
 import {
   DEFAULT_DIRECTORY_RADIUS,
@@ -31,8 +32,8 @@ import { FilterBar, type FilterState } from './filter-bar';
 import { ResultCard } from './result-card';
 import { MapPanel } from './map-panel';
 import { EmptyState } from './empty-state';
-import { SearchPagination } from './search-pagination';
 import { getDirectorySearchParams } from '../_lib/search-params';
+import { resultMapCoords, resultZipArea } from '../_lib/format';
 
 /** `a+b+c` is the directory's existing multi-value encoding. Kept as-is. */
 function splitList(raw: string): string[] {
@@ -87,43 +88,52 @@ export function DirectorySearchContent({
     geolng: coords?.lng ?? 0,
     radius: effectiveRadius,
   };
-  const { data: searchResult, isLoading } = useSearch(queryFilters);
   const {
-    data: mapSearchResult,
-    isLoading: mapLoading,
-    isError: mapError,
-    refetch: retryMap,
+    data: searchResult,
+    isLoading,
+    isError,
+    refetch,
   } = useSearch({ ...queryFilters, pageNum: 1, resultsView: 'map' });
-  const searchKey = searchParamsToString(queryFilters);
   const mapScopeKey = searchParamsToString({ ...queryFilters, pageNum: 1 });
 
-  const results = useMemo(() => searchResult?.data ?? [], [searchResult]);
-  const mapResults = useMemo(
-    () => mapSearchResult?.data ?? [],
-    [mapSearchResult]
+  const mapResults = useMemo(() => searchResult?.data ?? [], [searchResult]);
+  const onlineResults = useMemo(
+    () => searchResult?.map?.unmappedResults ?? [],
+    [searchResult]
   );
+  const [bounds, setBounds] = useState<MapBounds | null>(null);
   const [focusedZip, setFocusedZip] = useState<string | null>(null);
   const zipGroups = useMemo(
     () =>
       groupOnlineZipListings(mapResults, (result) =>
-        result.online_only ? result.online_zip : null
+        result.online_only ? resultZipArea(result) : null
       ),
     [mapResults]
   );
   const zipGroup = zipGroups.find(
     (group) => group.area.postalCode === focusedZip
   );
-  const visibleResults = zipGroup?.items ?? results;
-  const totalResults = searchResult?.pagination?.total ?? 0;
-  const totalPages = searchResult?.pagination?.totalPages ?? 1;
+  const inMapResults = useMemo(
+    () =>
+      (zipGroup?.items ?? mapResults).filter((result) =>
+        mapContainsPoint(bounds, resultMapCoords(result))
+      ),
+    [zipGroup, mapResults, bounds]
+  );
+  const visibleResults = useMemo(
+    () => [...inMapResults, ...onlineResults],
+    [inMapResults, onlineResults]
+  );
+  const totalResults = searchResult?.map?.totalResults ?? 0;
+  const failed = isError || searchResult?.success === false;
 
   const profileIds = useMemo(
-    () => visibleResults.map((result) => result._id),
-    [visibleResults]
+    () => [...mapResults, ...onlineResults].map((result) => result._id),
+    [mapResults, onlineResults]
   );
 
   /**
-   * Filters and pagination stay in the query string — only the term lives in
+   * Filters stay in the query string — only the term lives in
    * the path — so every navigation rebuilds the term's path and carries the
    * rest across as params. `q` is dropped on the way: keeping it would leave
    * two copies of the term in one URL, free to disagree.
@@ -247,7 +257,7 @@ export function DirectorySearchContent({
   // up for the whole wait instead of flashing the old list in between.
   const busy = isLoading || navigating;
 
-  const showEmpty = !busy && results.length === 0;
+  const showEmpty = !busy && !failed && totalResults === 0;
 
   // Which card the cursor is over, so the matching pin can light up. Held here
   // rather than in either pane because it is the one piece of state the list
@@ -264,29 +274,15 @@ export function DirectorySearchContent({
   // card is this pin?" was gone before it could be read.
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const pendingPinSelection = useRef<{
-    id: string;
-    scope: string;
-  } | null>(null);
 
   // A new result set means the old scroll position is about a different list,
   // and the old selection is about a business that may not even be in it.
   useEffect(() => {
-    if (!searchResult) return;
     listRef.current?.scrollTo({ top: 0 });
     setHoveredId(null);
-    const pending = pendingPinSelection.current;
-    setSelectedId(
-      pending?.scope === mapScopeKey &&
-        searchResult.data.some((result) => result._id === pending.id)
-        ? pending.id
-        : null
-    );
-    pendingPinSelection.current = null;
-  }, [searchResult, mapScopeKey]);
-  useEffect(() => {
+    setSelectedId(null);
     setFocusedZip(null);
-  }, [searchKey]);
+  }, [mapScopeKey]);
 
   // The map drops its own selection the moment the viewer's location arrives,
   // because it re-frames to their neighbourhood and the chosen pin may not be
@@ -308,26 +304,15 @@ export function DirectorySearchContent({
   // is already on screen from jumping — but on its own it parks the card hard
   // against whichever edge it came from. The breathing room is CSS's job:
   // `.dirsearch-grid > li` carries a `scroll-margin-block` that this honours.
-  const handlePinSelect = useCallback(
-    (id: string | null) => {
-      setFocusedZip(null);
-      setSelectedId(id);
-      pendingPinSelection.current = null;
-      const result = mapResults.find((item) => item._id === id);
-      if (!result?.result_index) return;
-      const page = Math.ceil(result.result_index / params.pageLimit);
-      if (page !== params.pageNum) {
-        pendingPinSelection.current = { id: result._id, scope: mapScopeKey };
-        patch({ p: page === 1 ? null : page.toString() });
-      }
-    },
-    [mapResults, mapScopeKey, params.pageLimit, params.pageNum, patch]
-  );
+  const handlePinSelect = useCallback((id: string | null) => {
+    setFocusedZip(null);
+    setSelectedId(id);
+  }, []);
   useEffect(() => {
     if (!selectedId || busy) return;
     const card = document.getElementById(`dirsearch-result-${selectedId}`);
     card?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, [selectedId, focusedZip, searchResult, busy]);
+  }, [selectedId, focusedZip, busy]);
 
   const handleZipSelect = (zip: string) => {
     setFocusedZip((current) => (current === zip ? null : zip));
@@ -341,6 +326,27 @@ export function DirectorySearchContent({
       patch({ view: null });
     }
   };
+
+  const sections = [
+    {
+      id: 'in-map',
+      title: 'In map',
+      description: bounds
+        ? 'Businesses in the visible map area. ZIP-area locations are approximate.'
+        : 'Businesses with a public map location. Open the map to narrow by area.',
+      items: inMapResults,
+      empty:
+        'No matches in this map area. Move or zoom out on the map to see more.',
+    },
+    {
+      id: 'online',
+      title: 'Online',
+      description:
+        'Listings without a usable map location. This does not imply online service.',
+      items: onlineResults,
+      empty: 'No matching listings without a map location.',
+    },
+  ];
 
   return (
     <DirectoryViewerProvider profileIds={profileIds}>
@@ -404,6 +410,17 @@ export function DirectorySearchContent({
                       ))}
                     </ul>
                   </div>
+                ) : failed ? (
+                  <div className="dirsearch-results" role="alert">
+                    <p>Could not load directory results.</p>
+                    <button
+                      type="button"
+                      className="underline"
+                      onClick={() => void refetch()}
+                    >
+                      Retry
+                    </button>
+                  </div>
                 ) : showEmpty ? (
                   <EmptyState
                     term={params.searchTerm}
@@ -414,40 +431,53 @@ export function DirectorySearchContent({
                   />
                 ) : (
                   <div className="dirsearch-results">
-                    <ul className="dirsearch-grid">
-                      {visibleResults.map((result) => (
-                        <li
-                          key={result._id}
-                          id={`dirsearch-result-${result._id}`}
-                          data-on={result._id === hoveredId}
-                          data-selected={result._id === selectedId}
-                          onMouseEnter={() => setHoveredId(result._id)}
-                          onMouseLeave={() => setHoveredId(null)}
-                          onFocus={() => setHoveredId(result._id)}
-                          onBlur={() => setHoveredId(null)}
-                        >
-                          <ResultCard
-                            result={result}
-                            index={
-                              result.result_index ??
-                              (params.pageNum - 1) * params.pageLimit +
-                                results.indexOf(result) +
-                                1
-                            }
-                            viewerCoords={coords}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-
-                    {totalPages > 1 && !zipGroup && (
-                      <SearchPagination
-                        currentPage={params.pageNum}
-                        totalPages={totalPages}
-                        totalResults={totalResults}
-                        onPageChange={(page) => patch({ p: page.toString() })}
-                      />
-                    )}
+                    {sections.map((section) => (
+                      <section
+                        key={section.id}
+                        id={`dirsearch-${section.id}`}
+                        className="dirsearch-resultsection"
+                        aria-labelledby={`dirsearch-${section.id}-title`}
+                      >
+                        <div className="dirsearch-sectionhead">
+                          <h2 id={`dirsearch-${section.id}-title`}>
+                            {section.title}
+                          </h2>
+                          <span aria-live="polite">{section.items.length}</span>
+                        </div>
+                        <p className="dirsearch-sectioncopy">
+                          {section.description}
+                        </p>
+                        {section.items.length === 0 ? (
+                          <p className="dirsearch-sectionempty">
+                            {section.empty}
+                          </p>
+                        ) : (
+                          <ul className="dirsearch-grid">
+                            {section.items.map((result) => (
+                              <li
+                                key={result._id}
+                                id={`dirsearch-result-${result._id}`}
+                                data-on={result._id === hoveredId}
+                                data-selected={result._id === selectedId}
+                                onMouseEnter={() => setHoveredId(result._id)}
+                                onMouseLeave={() => setHoveredId(null)}
+                                onFocus={() => setHoveredId(result._id)}
+                                onBlur={() => setHoveredId(null)}
+                              >
+                                <ResultCard
+                                  result={result}
+                                  index={
+                                    result.result_index ??
+                                    visibleResults.indexOf(result) + 1
+                                  }
+                                  viewerCoords={coords}
+                                />
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </section>
+                    ))}
                   </div>
                 )}
 
@@ -513,14 +543,16 @@ export function DirectorySearchContent({
               results={mapResults}
               viewerCoords={coords}
               radius={effectiveRadius}
+              scopeKey={mapScopeKey}
+              onBoundsChange={setBounds}
               highlightId={hoveredId}
               onPinSelect={handlePinSelect}
               selectedZip={focusedZip}
               onZipSelect={handleZipSelect}
-              unmappedCount={mapSearchResult?.map?.unmappedCount}
-              loading={mapLoading}
-              failed={mapError || mapSearchResult?.success === false}
-              onRetry={() => void retryMap()}
+              unmappedCount={searchResult?.map?.unmappedCount}
+              loading={isLoading}
+              failed={failed}
+              onRetry={() => void refetch()}
             />
           </aside>
         </div>

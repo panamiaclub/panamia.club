@@ -1591,7 +1591,17 @@ test('complete maps ignore list pagination while preserving filters, positions, 
     map.data.map((row) => row.result_index),
     [22, 23, 24]
   );
-  assert.deepEqual(map.map, { totalResults: 25, unmappedCount: 22 });
+  assert.equal(map.map?.totalResults, 25);
+  assert.equal(map.map?.unmappedCount, 22);
+  assert.equal(map.map?.unmappedResults.length, 22);
+  assert.deepEqual(
+    map.map?.unmappedResults.map((row) => row.id),
+    [
+      ...Array.from({ length: 21 }, (_, index) => `unlocated-${index}`),
+      'online-unknown',
+    ]
+  );
+  assert.equal(map.map?.unmappedResults.at(-1)?.result_index, 25);
   assert.deepEqual(map.pagination, {
     page: 1,
     limit: 3,
@@ -1604,6 +1614,8 @@ test('complete maps ignore list pagination while preserving filters, positions, 
   assert.deepEqual(online.online_zip, zipArea('33138'));
   assert.ok(map.data.every((row) => !('email' in row)));
   assert.ok(map.data.every((row) => !('addressLat' in row)));
+  assert.ok(map.map?.unmappedResults.every((row) => !('email' in row)));
+  assert.ok(map.map?.unmappedResults.every((row) => row.geo === null));
 
   const filtered = await directory.getSearch({
     ...options,
@@ -1617,7 +1629,11 @@ test('complete maps ignore list pagination while preserving filters, positions, 
       ['online-miami', 2],
     ]
   );
-  assert.deepEqual(filtered.map, { totalResults: 2, unmappedCount: 0 });
+  assert.deepEqual(filtered.map, {
+    totalResults: 2,
+    unmappedCount: 0,
+    unmappedResults: [],
+  });
 
   const nearby = await directory.getSearch({
     ...options,
@@ -1631,7 +1647,11 @@ test('complete maps ignore list pagination while preserving filters, positions, 
     nearby.data.map((row) => row.id),
     ['public-miami', 'online-miami']
   );
-  assert.deepEqual(nearby.map, { totalResults: 2, unmappedCount: 0 });
+  assert.deepEqual(nearby.map, {
+    totalResults: 2,
+    unmappedCount: 0,
+    unmappedResults: [],
+  });
 
   const unlocated = await directory.getSearch({
     ...options,
@@ -1639,7 +1659,9 @@ test('complete maps ignore list pagination while preserving filters, positions, 
     filterCategories: 'music',
   });
   assert.deepEqual(unlocated.data, []);
-  assert.deepEqual(unlocated.map, { totalResults: 21, unmappedCount: 21 });
+  assert.equal(unlocated.map?.totalResults, 21);
+  assert.equal(unlocated.map?.unmappedCount, 21);
+  assert.equal(unlocated.map?.unmappedResults.length, 21);
   assert.equal(unlocated.pagination.totalPages, 0);
 
   const empty = await directory.getSearch({
@@ -1648,7 +1670,11 @@ test('complete maps ignore list pagination while preserving filters, positions, 
     certifiedOnly: true,
   });
   assert.deepEqual(empty.data, []);
-  assert.deepEqual(empty.map, { totalResults: 0, unmappedCount: 0 });
+  assert.deepEqual(empty.map, {
+    totalResults: 0,
+    unmappedCount: 0,
+    unmappedResults: [],
+  });
 });
 
 test('a complete map includes more than one page of located listings', async () => {
@@ -1679,11 +1705,135 @@ test('a complete map includes more than one page of located listings', async () 
     resultsView: 'map',
   });
   assert.equal(map.data.length, 27);
-  assert.deepEqual(map.map, { totalResults: 47, unmappedCount: 20 });
+  assert.equal(map.map?.totalResults, 47);
+  assert.equal(map.map?.unmappedCount, 20);
+  assert.equal(map.map?.unmappedResults.length, 20);
   assert.deepEqual(
     map.data.map((row) => row.result_index),
     Array.from({ length: 27 }, (_, index) => index + 21)
   );
+});
+
+test('ZIP-only directory locations reuse existing public ZIPs without changing profiles or exact points', async () => {
+  await db.insert(schema.profiles).values([
+    {
+      id: 'zip-only',
+      email: 'zip-only@test.invalid',
+      name: 'A ZIP-only business',
+      active: true,
+      onlineOnly: false,
+      addressLocality: 'Miami',
+      addressPostalCode: '33138-1234',
+      addressCountry: 'US',
+    },
+    {
+      id: 'stored-zip-only',
+      email: 'stored-zip-only@test.invalid',
+      name: 'B Stored ZIP-only business',
+      active: true,
+      addressPostalCode: '33301',
+      geo: { zipArea: zipArea('33301') },
+    },
+    {
+      id: 'exact-with-zip',
+      email: 'exact-with-zip@test.invalid',
+      name: 'C Exact business',
+      active: true,
+      addressPostalCode: '33138',
+      addressLat: '25.85',
+      addressLng: '-80.18',
+    },
+    ...[
+      ['invalid-zip', '3313', 'US'],
+      ['unknown-zip', '00000', 'US'],
+      ['non-us-zip', '33138', 'CA'],
+      ['missing-zip', null, 'US'],
+    ].map(([id, zip, country]) => ({
+      id: id!,
+      email: `${id}@test.invalid`,
+      name: `D ${id}`,
+      active: true,
+      addressPostalCode: zip,
+      addressCountry: country,
+    })),
+  ]);
+  const options = {
+    pageNum: 999,
+    pageLimit: 20,
+    searchTerm: '',
+    filterCategories: '',
+    geolat: '',
+    geolng: '',
+    radius: 'all' as const,
+    resultsView: 'map',
+  };
+  const map = await directory.getSearch(options);
+  assert.deepEqual(
+    map.data.map((row) => row.id),
+    ['zip-only', 'stored-zip-only', 'exact-with-zip']
+  );
+  const approximate = map.data[0];
+  assert.equal(approximate.geo, null);
+  assert.equal(approximate.online_only, false);
+  assert.equal(approximate.online_zip, null);
+  assert.deepEqual(approximate.zip_area, zipArea('33138'));
+  assert.deepEqual(map.data[1].zip_area, zipArea('33301'));
+  assert.deepEqual(map.data[2].geo?.coordinates, [-80.18, 25.85]);
+  assert.equal(map.data[2].zip_area, null);
+  assert.equal(map.map?.unmappedCount, 4);
+  assert.equal(map.map?.unmappedResults.length, 4);
+  assert.deepEqual(zipRequests, [
+    'https://api.zippopotam.us/us/33138',
+    'https://api.zippopotam.us/us/00000',
+  ]);
+
+  const original = await db.query.profiles.findFirst({
+    where: eq(schema.profiles.id, 'zip-only'),
+  });
+  assert.equal(original?.addressPostalCode, '33138-1234');
+  assert.equal(original?.addressLat, null);
+  assert.equal(original?.addressLng, null);
+  assert.equal(original?.geo, null);
+  assert.equal(original?.onlineOnly, false);
+
+  const nearby = await directory.getSearch({
+    ...options,
+    geolat: '25.85',
+    geolng: '-80.18',
+    radius: '5',
+  });
+  assert.deepEqual(
+    nearby.data.map((row) => row.id),
+    ['zip-only', 'exact-with-zip']
+  );
+  assert.equal(nearby.map?.unmappedCount, 0);
+});
+
+test('ZIP lookup failures retain ZIP-only listings as explicitly unlocated results', async () => {
+  await db.insert(schema.profiles).values({
+    id: 'zip-only-unavailable',
+    email: 'zip-only-unavailable@test.invalid',
+    name: 'ZIP-only business',
+    active: true,
+    addressPostalCode: '33138',
+  });
+  zipUnavailable = true;
+  const map = await directory.getSearch({
+    pageNum: 1,
+    pageLimit: 20,
+    searchTerm: '',
+    filterCategories: '',
+    geolat: '',
+    geolng: '',
+    radius: 'all',
+    resultsView: 'map',
+  });
+  assert.deepEqual(map.data, []);
+  assert.equal(map.map?.unmappedCount, 1);
+  assert.equal(map.map?.unmappedResults[0].id, 'zip-only-unavailable');
+  assert.equal(map.map?.unmappedResults[0].primary_address.zipcode, '33138');
+  assert.equal(map.map?.unmappedResults[0].zip_area, null);
+  assert.equal(map.map?.unmappedResults[0].geo, null);
 });
 
 test('an existing pana can submit and manage a separate listing with the same email', async () => {
