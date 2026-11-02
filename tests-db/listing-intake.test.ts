@@ -14,7 +14,13 @@ const email = 'ana@test.invalid';
 const userId = 'ana-account';
 const personalId = 'ana-personal-profile';
 let session: {
-  user: { id: string; email: string; name: string; isAdmin?: boolean };
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    isAdmin?: boolean;
+    isContentModerator?: boolean;
+  };
 } | null;
 let activeProfileId: string | undefined;
 let verificationPasses = true;
@@ -198,6 +204,7 @@ let setup: typeof import('../app/api/listings/setup/route');
 let setupEmail: typeof import('../lib/server/listing-setup');
 let ownership: typeof import('../lib/server/profile-owners');
 let publicListingPage: typeof import('../app/listings/[profileId]/page');
+let adminListingPreviewPage: typeof import('../app/admin/listings/[profileId]/preview/page');
 let featured: typeof import('../app/api/directory/featured/route');
 let sitemap: typeof import('../app/sitemap');
 let recommendationLists: typeof import('../lib/federation/wrappers/recommendation-list');
@@ -252,6 +259,8 @@ before(async () => {
   setupEmail = await import('../lib/server/listing-setup');
   ownership = await import('../lib/server/profile-owners');
   publicListingPage = await import('../app/listings/[profileId]/page');
+  adminListingPreviewPage =
+    await import('../app/admin/listings/[profileId]/preview/page');
   featured = await import('../app/api/directory/featured/route');
   sitemap = await import('../app/sitemap');
   recommendationLists =
@@ -697,6 +706,92 @@ test('public ID pages reject pending, declined, unknown, and personal profiles',
     })
     .where(eq(schema.profiles.id, profileId));
   assert.equal(await profileReader.getPublicListing(profileId), null);
+});
+
+test('listing previews reject anonymous, non-admin, and moderator sessions before reading profiles', async () => {
+  session = null;
+  const profileId = (await (await ownerSubmit()).json()).profileId;
+  const lookup = mock.method(db.query.profiles, 'findFirst');
+  try {
+    for (const viewer of [
+      null,
+      { user: { id: userId, email, name: 'Ana Person' } },
+      {
+        user: {
+          id: userId,
+          email,
+          name: 'Ana Person',
+          isContentModerator: true,
+        },
+      },
+    ]) {
+      session = viewer;
+      assert.equal(await profileReader.getAdminListingPreview(profileId), null);
+      await assert.rejects(
+        adminListingPreviewPage.default({
+          params: Promise.resolve({ profileId }),
+        }),
+        /TEST_NOT_FOUND/
+      );
+    }
+    assert.equal(lookup.mock.callCount(), 0);
+  } finally {
+    lookup.mock.restore();
+  }
+});
+
+test('admins can preview pending and declined profiles without making them public', async () => {
+  session = null;
+  const profileId = (await (await ownerSubmit()).json()).profileId;
+  session = {
+    user: { id: userId, email, name: 'Ana Person', isAdmin: true },
+  };
+  for (const status of [
+    { source: 'business_intake' },
+    { source: 'business_intake', declined: new Date().toISOString() },
+  ]) {
+    await db
+      .update(schema.profiles)
+      .set({ status, screenname: 'pending-shop' })
+      .where(eq(schema.profiles.id, profileId));
+    const profile = await profileReader.getAdminListingPreview(profileId);
+    assert.ok(profile);
+    assert.equal(profile.id, profileId);
+    assert.equal(profile.name, 'Ana Bakery');
+    assert.equal(profile.screenname, 'pending-shop');
+    assert.equal(profile.active, false);
+    const page = await adminListingPreviewPage.default({
+      params: Promise.resolve({ profileId }),
+    });
+    const content = page.props.children[1];
+    assert.equal(content.type, BusinessProfile);
+    assert.equal(content.props.profile.id, profileId);
+    assert.equal(content.props.handle, 'pending-shop');
+    assert.equal(content.props.preview, true);
+    assert.equal(await profileReader.getPublicListing(profileId), null);
+    assert.equal(await profileReader.getPublicProfile('pending-shop'), null);
+    assert.equal((await saved(profileId)).active, false);
+  }
+});
+
+test('admin profile previews reject missing and non-intake profiles and stay unindexed', async () => {
+  session = {
+    user: { id: userId, email, name: 'Ana Person', isAdmin: true },
+  };
+  for (const profileId of [personalId, 'unknown-profile']) {
+    assert.equal(await profileReader.getAdminListingPreview(profileId), null);
+    await assert.rejects(
+      adminListingPreviewPage.default({
+        params: Promise.resolve({ profileId }),
+      }),
+      /TEST_NOT_FOUND/
+    );
+  }
+  assert.equal(adminListingPreviewPage.dynamic, 'force-dynamic');
+  assert.deepEqual(adminListingPreviewPage.metadata.robots, {
+    index: false,
+    follow: false,
+  });
 });
 
 test('a legacy directory account without a profile handle retains its canonical user-handle URL', async () => {

@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import Link from 'next/link';
 
 import { useAdminGate } from '@/components/Admin/gate';
 import { AdminPageHeader, Panel, StatBand } from '@/components/Admin/parts';
 import PageMeta from '@/components/PageMeta';
 import { ADMIN_CHROME } from '@/lib/admin/theme';
+import { listingPreviewPath, listingPublicPath } from '@/lib/listing-url';
 import {
   FLAG_LABEL,
   FLAG_NOTE,
@@ -366,7 +368,16 @@ export default function AdminListingsPage() {
                     {row.decision}
                   </span>
                   <span className="min-w-[12rem] leading-snug font-bold">
-                    {row.name}
+                    <Link
+                      href={
+                        row.decision === 'approved'
+                          ? listingPublicPath(row)
+                          : listingPreviewPath(row.id)
+                      }
+                      className="hover:text-pana-navy underline underline-offset-4"
+                    >
+                      {row.name}
+                    </Link>
                     {row.locality && (
                       <span className="text-pana-ink/60 font-normal">
                         {' '}
@@ -439,7 +450,12 @@ function ListingRow({
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-[16rem] flex-1">
           <h3 className="text-xl leading-tight font-extrabold">
-            {listing.name}
+            <Link
+              href={listingPreviewPath(listing.id)}
+              className="hover:text-pana-navy underline underline-offset-4"
+            >
+              {listing.name}
+            </Link>
           </h3>
           <p className="text-pana-ink/70 mt-1 text-sm">
             {listing.fiveWords || 'No summary given'}

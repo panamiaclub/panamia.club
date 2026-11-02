@@ -26,9 +26,11 @@ import { ClaimListingCta } from './claim-listing-cta';
 export async function BusinessProfile({
   profile,
   handle = '',
+  preview = false,
 }: {
   profile: LegacyProfile;
   handle?: string;
+  preview?: boolean;
 }) {
   const view = toProfileView(profile, handle);
   const [counts, recommenderAvatars, upcoming, claimed, socialActor] =
@@ -37,7 +39,7 @@ export async function BusinessProfile({
       getRecommenderAvatars(profile.id),
       getUpcomingEventsForHost(profile.id),
       isProfileClaimed(profile.id),
-      handle ? getActorByScreenname(handle) : Promise.resolve(null),
+      !preview && handle ? getActorByScreenname(handle) : Promise.resolve(null),
     ]);
   const events: ProfileEvent[] = upcoming.map((event) => ({
     id: event.id,
@@ -72,6 +74,7 @@ export async function BusinessProfile({
       npub = null;
     }
   }
+  const Container = preview ? 'div' : 'main';
   return (
     <ProfileViewer
       profileId={profile.id}
@@ -79,9 +82,14 @@ export async function BusinessProfile({
       businessLogo={view.logo}
       initialSaves={counts.saves}
       initialRecommends={counts.recommends}
+      preview={preview}
     >
-      <main>
-        <ProfileHero profile={view} recommenderAvatars={recommenderAvatars} />
+      <Container>
+        <ProfileHero
+          profile={view}
+          recommenderAvatars={recommenderAvatars}
+          preview={preview}
+        />
         <section className="surface-butter py-16 md:py-24">
           <div className="container mx-auto px-4">
             <ProfileAbout profile={view} tags={tags} />
@@ -93,13 +101,14 @@ export async function BusinessProfile({
         ) : claimed ? (
           <ProfileEventsEmpty />
         ) : null}
-        {claimed ? (
-          socialActor && handle ? (
-            <SocialSection handle={handle} />
-          ) : null
-        ) : (
-          <ClaimListingCta profileId={profile.id} />
-        )}
+        {!preview &&
+          (claimed ? (
+            socialActor && handle ? (
+              <SocialSection handle={handle} />
+            ) : null
+          ) : (
+            <ClaimListingCta profileId={profile.id} />
+          ))}
         {(isMentor || hasAddress || npub) && (
           <section className="surface-cream py-16 md:py-24">
             <div className="container mx-auto max-w-3xl space-y-4 px-4">
@@ -107,6 +116,7 @@ export async function BusinessProfile({
                 <MentoringSection
                   mentoring={profile.mentoring}
                   handle={handle}
+                  preview={preview}
                 />
               )}
               {hasAddress && (
@@ -129,7 +139,7 @@ export async function BusinessProfile({
             </div>
           </section>
         )}
-      </main>
+      </Container>
     </ProfileViewer>
   );
 }
