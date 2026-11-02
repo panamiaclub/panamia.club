@@ -11,6 +11,7 @@ import {
   HomeArticleRail,
   MOCK_HOME_ARTICLES,
 } from '@/components/home/article-rail';
+import { WelcomeFooter } from '@/components/home/welcome-footer';
 
 /**
  * The Pana Mia homepage.
@@ -36,7 +37,11 @@ import {
  * `py-24`-everywhere spacing, which is where most of the old page's empty
  * space came from.
  */
-export function HomePage() {
+export function HomePage({
+  welcomeFooterPreview = false,
+}: {
+  welcomeFooterPreview?: boolean;
+} = {}) {
   return (
     <>
       <ScrollReveal />
@@ -48,6 +53,7 @@ export function HomePage() {
         <HomeArticleRail initialArticles={MOCK_HOME_ARTICLES} />
         <GetInvolvedQuiz />
       </div>
+      <WelcomeFooter preview={welcomeFooterPreview} />
     </>
   );
 }
