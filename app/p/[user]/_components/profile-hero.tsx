@@ -37,9 +37,11 @@ import { useViewerLocation } from '../_lib/use-viewer-location';
 export function ProfileHero({
   profile,
   recommenderAvatars,
+  preview = false,
 }: {
   profile: ProfileView;
   recommenderAvatars: string[];
+  preview?: boolean;
 }) {
   const { t } = useTranslation('profile');
   const { showsPanaActions, signals, toggleSignal, isOwner } =
@@ -103,7 +105,7 @@ export function ProfileHero({
         <div className="-mt-16 flex flex-col gap-6 md:-mt-24 md:flex-row md:items-end md:gap-8">
           {profile.logo && (
             <div className="bizprofile-logo">
-              {profile.handle ? (
+              {profile.handle && !preview ? (
                 <StoryRing username={profile.handle} size="lg">
                   <Image
                     src={profile.logo}
@@ -274,83 +276,85 @@ export function ProfileHero({
             </div>
           </div>
 
-          <div>
-            <div className="flex flex-wrap gap-3">
-              {/* Save and Recommend are absent, not disabled, for a
-                  business-only account. See `showsPanaActions`. Share stays:
-                  it costs nothing and sends people to the business.
+          {!preview && (
+            <div>
+              <div className="flex flex-wrap gap-3">
+                {/* Save and Recommend are absent, not disabled, for a
+                    business-only account. See `showsPanaActions`. Share stays:
+                    it costs nothing and sends people to the business.
 
-                  They are absent for the listing's own owners too. These two
-                  numbers are the only evidence a visitor has that other
-                  people rate this business, so the one person with an
-                  interest in inflating them is the one person who should not
-                  be able to. */}
-              {showsPanaActions && !isOwner && (
-                <>
-                  <Button
-                    size="lg"
-                    onClick={() => toggleSignal('save')}
-                    aria-pressed={signals.saved}
-                    className={
-                      signals.saved
-                        ? 'bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 rounded-full font-extrabold'
-                        : 'bg-pana-flame text-pana-ink hover:bg-pana-burnt rounded-full font-extrabold'
-                    }
-                  >
-                    {signals.saved ? (
-                      <BookmarkCheck className="h-4 w-4" aria-hidden="true" />
-                    ) : (
-                      <Bookmark className="h-4 w-4" aria-hidden="true" />
-                    )}
-                    {signals.saved ? t('hero.saved') : t('hero.save')}
-                  </Button>
+                    They are absent for the listing's own owners too. These two
+                    numbers are the only evidence a visitor has that other
+                    people rate this business, so the one person with an
+                    interest in inflating them is the one person who should not
+                    be able to. */}
+                {showsPanaActions && !isOwner && (
+                  <>
+                    <Button
+                      size="lg"
+                      onClick={() => toggleSignal('save')}
+                      aria-pressed={signals.saved}
+                      className={
+                        signals.saved
+                          ? 'bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 rounded-full font-extrabold'
+                          : 'bg-pana-flame text-pana-ink hover:bg-pana-burnt rounded-full font-extrabold'
+                      }
+                    >
+                      {signals.saved ? (
+                        <BookmarkCheck className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Bookmark className="h-4 w-4" aria-hidden="true" />
+                      )}
+                      {signals.saved ? t('hero.saved') : t('hero.save')}
+                    </Button>
 
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={() => toggleSignal('recommend')}
-                    aria-pressed={signals.recommended}
-                    className={
-                      signals.recommended
-                        ? 'border-pana-indigo bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 rounded-full border-2 font-extrabold'
-                        : 'border-pana-ink/25 text-pana-ink hover:bg-pana-butter-2 rounded-full border-2 bg-white font-extrabold'
-                    }
-                  >
-                    <ThumbsUp className="h-4 w-4" aria-hidden="true" />
-                    {signals.recommended
-                      ? t('hero.recommended')
-                      : t('hero.recommend')}
-                  </Button>
-                </>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={() => toggleSignal('recommend')}
+                      aria-pressed={signals.recommended}
+                      className={
+                        signals.recommended
+                          ? 'border-pana-indigo bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 rounded-full border-2 font-extrabold'
+                          : 'border-pana-ink/25 text-pana-ink hover:bg-pana-butter-2 rounded-full border-2 bg-white font-extrabold'
+                      }
+                    >
+                      <ThumbsUp className="h-4 w-4" aria-hidden="true" />
+                      {signals.recommended
+                        ? t('hero.recommended')
+                        : t('hero.recommend')}
+                    </Button>
+                  </>
+                )}
+
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={handleShare}
+                  className="border-pana-ink/25 text-pana-ink hover:bg-pana-butter-2 rounded-full border-2 bg-white font-extrabold"
+                >
+                  <Share2 className="h-4 w-4" aria-hidden="true" />
+                  {shared ? t('hero.shareCopied') : t('hero.share')}
+                </Button>
+              </div>
+
+              {/* Hiding the controls with no explanation is how "unavailable"
+                  gets mistaken for "broken". One quiet line is enough to say
+                  which account type is missing and where to get one. */}
+              {!showsPanaActions && (
+                <p className="bizprofile-hero-note">
+                  {t('hero.directoryNote')}{' '}
+                  <Link href="/welcome">{t('hero.directoryNoteLink')}</Link>
+                </p>
               )}
 
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={handleShare}
-                className="border-pana-ink/25 text-pana-ink hover:bg-pana-butter-2 rounded-full border-2 bg-white font-extrabold"
-              >
-                <Share2 className="h-4 w-4" aria-hidden="true" />
-                {shared ? t('hero.shareCopied') : t('hero.share')}
-              </Button>
+              {/* Same reasoning for owners, who would otherwise be left
+                  wondering where the buttons went on their own page. */}
+              {showsPanaActions && isOwner && (
+                <p className="bizprofile-hero-note">{t('hero.ownerNote')}</p>
+              )}
             </div>
-
-            {/* Hiding the controls with no explanation is how "unavailable"
-                gets mistaken for "broken". One quiet line is enough to say
-                which account type is missing and where to get one. */}
-            {!showsPanaActions && (
-              <p className="bizprofile-hero-note">
-                {t('hero.directoryNote')}{' '}
-                <Link href="/welcome">{t('hero.directoryNoteLink')}</Link>
-              </p>
-            )}
-
-            {/* Same reasoning for owners, who would otherwise be left
-                wondering where the buttons went on their own page. */}
-            {showsPanaActions && isOwner && (
-              <p className="bizprofile-hero-note">{t('hero.ownerNote')}</p>
-            )}
-          </div>
+          )}
         </div>
 
         {/* Outbound links. On the page this replaces these were buried under a

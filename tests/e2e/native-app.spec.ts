@@ -26,6 +26,52 @@ async function native(page: Page) {
   });
   return installNativeApiFixtures(page);
 }
+
+async function nativeBrowser(
+  page: Page,
+  platform: 'android' | 'ios',
+  failBrowser = false
+) {
+  await page.addInitScript(
+    (config) => {
+      Object.assign(window, {
+        CapacitorCustomPlatform: { name: config.platform },
+        Capacitor: {
+          isNativePlatform: () => true,
+          getPlatform: () => config.platform,
+          isPluginAvailable: (name: string) => name === 'Browser',
+          PluginHeaders: [
+            {
+              name: 'Browser',
+              methods: [{ name: 'open', rtype: 'promise' }],
+            },
+          ],
+          nativePromise: async (
+            plugin: string,
+            method: string,
+            args: unknown
+          ) => {
+            const calls = JSON.parse(
+              sessionStorage.getItem('native-browser-test.calls') ?? '[]'
+            );
+            calls.push({ plugin, method, args });
+            sessionStorage.setItem(
+              'native-browser-test.calls',
+              JSON.stringify(calls)
+            );
+            if (config.failBrowser && plugin === 'Browser') {
+              throw new Error('Browser unavailable');
+            }
+            return {};
+          },
+        },
+      });
+    },
+    { platform, failBrowser }
+  );
+  return installNativeApiFixtures(page);
+}
+
 const map = (page: Page, name = 'Directory') =>
   page.locator(`[data-map-results="${name}"]`);
 async function scope(page: Page, label: string) {
@@ -109,6 +155,96 @@ test('mobile browsers keep the website layout rather than the native tabs', asyn
   await expect(page.locator('#layout-main')).toBeVisible();
   await expect(page.getByRole('banner').first()).toBeVisible();
   await expect(page.locator('[data-native-app]')).toHaveCount(0);
+});
+
+for (const viewport of [
+  { width: 390, height: 844 },
+  { width: 1280, height: 720 },
+]) {
+  test(`About Pana opens a new browser tab from the account menu at ${viewport.width}x${viewport.height}`, async ({
+    page,
+    context,
+  }) => {
+    await installNativeApiFixtures(page);
+    await context.route('https://panamia.club/**', (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: '<title>Pana Mia</title>',
+      })
+    );
+    await page.setViewportSize(viewport);
+    await page.goto('/d');
+    const trigger = page.getByRole('button', { name: /Native Viewer/ });
+    await trigger.click();
+    const menu = page.getByRole('menu');
+    const about = menu.getByRole('menuitem', {
+      name: 'About Pana',
+      exact: true,
+    });
+    await expect(menu.getByRole('menuitem').nth(-2)).toHaveText('About Pana');
+    await expect(menu.getByRole('menuitem').last()).toHaveText('Sign Out');
+    await expect(about).toHaveAttribute('href', 'https://panamia.club/');
+    await expect(about).toHaveAttribute('target', '_blank');
+    await expect(about).toHaveAttribute('rel', 'noopener noreferrer');
+    const [popup] = await Promise.all([
+      page.waitForEvent('popup'),
+      about.click(),
+    ]);
+    await expect(popup).toHaveURL('https://panamia.club/');
+    await expect(page).toHaveURL(/\/d$/);
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  });
+}
+
+for (const platform of ['android', 'ios'] as const) {
+  test(`About Pana opens the native browser on ${platform} without leaving the app`, async ({
+    page,
+    context,
+  }) => {
+    await nativeBrowser(page, platform);
+    await page.goto('/d');
+    const trigger = page.getByRole('button', { name: /Native Viewer/ });
+    await trigger.click();
+    const menu = page.getByRole('menu');
+    await expect(menu.getByRole('menuitem').nth(-2)).toHaveText('About Pana');
+    await expect(menu.getByRole('menuitem').last()).toHaveText('Sign Out');
+    await menu
+      .getByRole('menuitem', { name: 'About Pana', exact: true })
+      .click();
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          JSON.parse(
+            sessionStorage.getItem('native-browser-test.calls') ?? '[]'
+          )
+        )
+      )
+      .toEqual([
+        {
+          plugin: 'Browser',
+          method: 'open',
+          args: { url: 'https://panamia.club/' },
+        },
+      ]);
+    await expect(page).toHaveURL(/\/d$/);
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(context.pages()).toHaveLength(1);
+  });
+}
+
+test('About Pana reports a native browser failure without navigating the app', async ({
+  page,
+  context,
+}) => {
+  await nativeBrowser(page, 'android', true);
+  await page.goto('/d');
+  await page.getByRole('button', { name: /Native Viewer/ }).click();
+  await page.getByRole('menuitem', { name: 'About Pana', exact: true }).click();
+  await expect(
+    page.getByText("Couldn't open Pana Mia. Please try again.")
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/d$/);
+  expect(context.pages()).toHaveLength(1);
 });
 
 for (const viewport of [

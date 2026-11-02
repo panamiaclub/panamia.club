@@ -61,7 +61,7 @@ describe('account menu destinations', () => {
     }
   });
 
-  test('places Admin in the pinned footer before Sign Out', () => {
+  test('places Admin and About Pana in the pinned footer before Sign Out', () => {
     const source = readFileSync(
       new URL('../components/account/identity-menu.tsx', import.meta.url),
       'utf8'
@@ -71,8 +71,9 @@ describe('account menu destinations', () => {
     assert.ok(start >= 0 && end > start);
     const footer = source.slice(start, end);
     const admin = footer.indexOf('<AdminMenuLink');
+    const about = footer.indexOf("t('nav.siteMenu.aboutPana')");
     const signOut = footer.indexOf('<LogOut');
-    assert.ok(admin >= 0 && admin < signOut);
+    assert.ok(admin >= 0 && admin < about && about < signOut);
   });
 
   test('renders Admin as a session-gated row, not a destination bubble', () => {
