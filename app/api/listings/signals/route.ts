@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getViewerSignalStates } from '@/lib/server/profile-signals';
+import { DIRECTORY_SIGNAL_BATCH_SIZE } from '@/lib/directory-signals';
 
 /**
- * This viewer's save/recommend state across a page of search results.
+ * This viewer's save/recommend state across a batch of search results.
  *
  * The directory search payload is edge-cached for everyone (see
  * app/api/getDirectorySearch/route.ts), so it can carry the public counts but
@@ -11,19 +12,11 @@ import { getViewerSignalStates } from '@/lib/server/profile-signals';
  * never be cached — one visitor's saves served to the next would be a data
  * leak, not just a stale number.
  *
- * Batched because a page shows twenty listings. Calling the per-listing
- * endpoint in a loop would be twenty round trips asking the same viewer-global
- * question twenty times.
+ * Batching avoids a per-listing round trip that repeats the same viewer-global
+ * permission lookup for every card.
  */
 
 export const dynamic = 'force-dynamic';
-
-/**
- * Cap on ids per request. Above the page size on purpose — a page of 20 with
- * room to spare — but bounded, so a hand-edited URL cannot ask about every
- * listing in the directory at once.
- */
-const MAX_IDS = 60;
 
 const NO_STORE = { 'Cache-Control': 'no-store' };
 
@@ -36,9 +29,12 @@ export async function GET(request: NextRequest) {
     .map((id) => id.trim())
     .filter(Boolean);
 
-  if (ids.length > MAX_IDS) {
+  if (ids.length > DIRECTORY_SIGNAL_BATCH_SIZE) {
     return NextResponse.json(
-      { success: false, error: `At most ${MAX_IDS} ids per request` },
+      {
+        success: false,
+        error: `At most ${DIRECTORY_SIGNAL_BATCH_SIZE} ids per request`,
+      },
       { status: 400, headers: NO_STORE }
     );
   }

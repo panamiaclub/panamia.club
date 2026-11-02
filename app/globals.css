@@ -11823,6 +11823,31 @@ body:has(.dirsearch) {
   margin-top: auto;
 }
 
+.dirsearch-resultsection + .dirsearch-resultsection {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgb(2 8 17 / 0.18);
+}
+
+.dirsearch-sectionhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-weight: 900;
+}
+
+.dirsearch-sectionhead h2 {
+  font-size: 1.25rem;
+}
+
+.dirsearch-sectioncopy,
+.dirsearch-sectionempty {
+  margin-block: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
 @container (min-width: 44rem) {
   .dirsearch-listbody .dirsearch-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -11835,8 +11860,6 @@ body:has(.dirsearch) {
   }
 }
 
-/* Number and logo travel together. The number links the map to the list at a
-   glance; the logo keeps the identity that made the original pins useful. */
 .dirsearch-pin {
   display: flex;
   align-items: center;
@@ -11848,16 +11871,8 @@ body:has(.dirsearch) {
   overflow: visible;
 }
 
-.dirsearch-pin > span {
-  display: grid;
-  width: 1.35rem;
-  height: 1.35rem;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--story-blue);
-  color: #fff;
-  font-size: 0.62rem;
-  font-weight: 900;
+.dirsearch-pin[data-approximate] {
+  border-style: dashed;
 }
 
 .dirsearch-pin img {
@@ -11871,10 +11886,6 @@ body:has(.dirsearch) {
   box-shadow:
     0 0 0 4px rgb(242 136 47 / 0.38),
     0 8px 20px rgb(17 13 13 / 0.26);
-}
-
-.dirsearch-pin[data-on='true'] > span {
-  background: var(--story-coral);
 }
 
 @media (min-width: 72rem) {

@@ -11,6 +11,7 @@ import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
 import { revalidatePath } from 'next/cache';
 import { listingPublicPath } from '@/lib/listing-url';
 import { normalizeUsZip, readOnlineZipArea } from '@/lib/online-zip';
+import { readMapPoint } from '@/lib/map/viewport';
 import { checkAdminAuth } from '@/lib/server/admin-auth';
 import {
   ProfileDescriptions,
@@ -68,25 +69,14 @@ export interface LegacyProfile {
 export function extractCoordinates(
   profile: Record<string, unknown>
 ): [number, number] | null {
-  const lat = Number(profile.addressLat);
-  const lng = Number(profile.addressLng);
-
-  if (
-    profile.addressLat != null &&
-    profile.addressLng != null &&
-    Number.isFinite(lat) &&
-    Number.isFinite(lng)
-  ) {
-    return [lng, lat];
-  }
+  const point = readMapPoint(profile.addressLat, profile.addressLng);
+  if (point) return [point.lng, point.lat];
 
   const geo = profile.geo as { coordinates?: unknown } | null;
   const legacy = Array.isArray(geo?.coordinates) ? geo.coordinates : null;
   if (legacy && legacy.length >= 2) {
-    const [legacyLng, legacyLat] = [Number(legacy[0]), Number(legacy[1])];
-    if (Number.isFinite(legacyLng) && Number.isFinite(legacyLat)) {
-      return [legacyLng, legacyLat];
-    }
+    const fallback = readMapPoint(legacy[1], legacy[0]);
+    if (fallback) return [fallback.lng, fallback.lat];
   }
 
   return null;

@@ -2,6 +2,12 @@ import type { SearchResultsInterface } from '@/lib/query/directory';
 import type { Coords } from '@/app/p/[user]/_lib/profile-view';
 import { profileCategoryList } from '@/lib/lists';
 import { listingPublicPath } from '@/lib/listing-url';
+import {
+  isOnlineZipArea,
+  normalizeUsZip,
+  type OnlineZipArea,
+} from '@/lib/online-zip';
+import { readMapPoint } from '@/lib/map/viewport';
 
 /**
  * Presentation helpers for the directory result card.
@@ -67,9 +73,29 @@ export function resultCoords(result: SearchResultsInterface): Coords | null {
   const coordinates = result.geo?.coordinates as unknown;
   if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
 
-  const [lng, lat] = [Number(coordinates[0]), Number(coordinates[1])];
-  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
-  return { lat, lng };
+  return readMapPoint(coordinates[1], coordinates[0]);
+}
+
+/** ZIP precision is explicit and never promoted to an exact visiting address. */
+export function resultZipArea(
+  result: SearchResultsInterface
+): OnlineZipArea | null {
+  const area = result.online_only
+    ? result.online_zip
+    : resultCoords(result)
+      ? null
+      : result.zip_area;
+  return isOnlineZipArea(area) &&
+    area.postalCode === normalizeUsZip(result.primary_address?.zipcode)
+    ? area
+    : null;
+}
+
+export function resultMapCoords(result: SearchResultsInterface): Coords | null {
+  const exact = resultCoords(result);
+  if (exact) return exact;
+  const area = resultZipArea(result);
+  return area ? { lat: area.lat, lng: area.lng } : null;
 }
 
 /**
