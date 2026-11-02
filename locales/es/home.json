@@ -7,6 +7,16 @@
     "scrollNote": "Desplázate ↓ · Explora el directorio"
   },
   "comingSoon": "Próximamente",
+  "welcomeFooter": {
+    "region": "Bienvenido a Pana Mia",
+    "title": "Tu gente está aquí.",
+    "description": "Crea tu cuenta Pana y conecta con tu comunidad local.",
+    "cta": "Crea una cuenta Pana",
+    "hide": "Ocultar",
+    "reopen": "Regístrate",
+    "mockNote": "Maqueta de diseño",
+    "storageUnavailable": "Tu navegador no pudo guardar esta preferencia. La bienvenida puede abrirse de nuevo en tu próxima visita."
+  },
   "directory": {
     "eyebrow": "El Directorio",
     "title": "Encuentra a Tu<br/><em>Gente</em>",

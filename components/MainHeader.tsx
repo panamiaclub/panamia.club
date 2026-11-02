@@ -184,7 +184,10 @@ export default function MainHeader({
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const isShopRoute = pathname === '/shop' || pathname.startsWith('/shop/');
-  const showDirectoryJoin = pathname === '/' || pathname === '/mock/home';
+  const showDirectoryJoin =
+    pathname === '/' ||
+    pathname === '/mock/home' ||
+    pathname === '/mock/welcome-footer';
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const mastheadRef = useRef<HTMLDivElement>(null);
 

@@ -35,16 +35,16 @@ Base components from [shadcn/ui](https://ui.shadcn.com/) - the building blocks:
 
 Components for admin interfaces:
 
-| Component            | Description                                     |
-| -------------------- | ----------------------------------------------- |
-| `nav.tsx`            | Sidebar navigation; active state by pathname    |
-| `overview.tsx`       | The `/admin` index — tools as rows with blurbs  |
-| `gate.tsx`           | `useAdminGate()` — client-side admin check      |
-| `eyebrow.tsx`        | Group label above a page title                  |
-| `status-pill.tsx`    | `MOCK` / `SOON` tag on a tool name              |
-| `parts.tsx`          | Shared furniture: `Panel`, `StatBand`           |
-| `mock-controls.tsx`  | Inert controls for the mocked views             |
-| `mock-bar.tsx`       | "This page is fixtures" banner                  |
+| Component           | Description                                    |
+| ------------------- | ---------------------------------------------- |
+| `nav.tsx`           | Sidebar navigation; active state by pathname   |
+| `overview.tsx`      | The `/admin` index — tools as rows with blurbs |
+| `gate.tsx`          | `useAdminGate()` — client-side admin check     |
+| `eyebrow.tsx`       | Group label above a page title                 |
+| `status-pill.tsx`   | `MOCK` / `SOON` tag on a tool name             |
+| `parts.tsx`         | Shared furniture: `Panel`, `StatBand`          |
+| `mock-controls.tsx` | Inert controls for the mocked views            |
+| `mock-bar.tsx`      | "This page is fixtures" banner                 |
 
 ## Form Components (`Form/`)
 
@@ -123,10 +123,21 @@ never mounted anywhere.
 | `MainHeader.tsx`      | Site header with navigation                  |
 | `MainFooter.tsx`      | Site footer                                  |
 | `HeroBar.tsx`         | Page hero section                            |
-| `CallToActionBar.tsx` | Profile completion or test-site announcement  |
+| `CallToActionBar.tsx` | Profile completion or test-site announcement |
 
 The main header does not display a newsletter signup banner. Visitors can
 still subscribe through the newsletter form on `/info#newsletter-signup`.
+
+The main web homepage mounts `home/welcome-footer.tsx` for anonymous visitors.
+It automatically opens once per browser, using the functional
+`pana:welcome-footer:v1` local-storage preference. The persistent bookmark
+says **Hide** while the account prompt is open and **Sign up** when closed.
+The compact footer overlays the town without resizing it and keeps the search
+visible. Signed-in members and the native Android/iOS apps never see the
+prompt or bookmark. Navigating away removes its footer clearance.
+
+`/mock/welcome-footer` shares this implementation with an isolated preview
+preference, so reviewing the mock does not consume a real first visit.
 
 ## Branding Components
 

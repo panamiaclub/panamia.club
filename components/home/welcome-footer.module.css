@@ -1,0 +1,211 @@
+.panel {
+  position: fixed;
+  z-index: 40;
+  inset-inline: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - var(--main-masthead-offset, 65px) - 1rem);
+  overflow-y: auto;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border: 2px solid var(--color-pana-ink);
+  border-bottom: 0;
+  border-radius: 1rem 1rem 0 0;
+  background: var(--color-pana-cream);
+  color: var(--color-pana-ink);
+  box-shadow: 0 -6px 24px rgb(17 13 13 / 10%);
+  visibility: hidden;
+}
+
+.panel[data-space-available='true'] {
+  visibility: visible;
+}
+
+.bookmark {
+  position: fixed;
+  z-index: 40;
+  inset-inline-start: max(1rem, env(safe-area-inset-left, 0px));
+  bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 8.25rem;
+  min-height: 2.75rem;
+  padding: 0.625rem 1rem calc(0.625rem + env(safe-area-inset-bottom, 0px));
+  border: 2px solid var(--color-pana-ink);
+  border-bottom: 0;
+  border-radius: 0.75rem 0.75rem 0 0;
+  background: var(--color-pana-orange);
+  color: var(--color-pana-ink);
+  box-shadow: 0 -3px 12px rgb(17 13 13 / 10%);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.bookmark:hover {
+  background: var(--color-pana-butter);
+}
+
+.bookmark[data-open='true'] {
+  bottom: calc(var(--welcome-footer-height, 0px) - 2px);
+  padding-bottom: 0.625rem;
+  visibility: hidden;
+}
+
+.bookmark[data-open='true'][data-space-available='true'] {
+  visibility: visible;
+}
+
+:global(body:has([data-welcome-footer])) {
+  padding-bottom: var(--welcome-footer-clearance, 0px);
+}
+
+:global(html:has([data-welcome-footer])) {
+  scroll-padding-bottom: calc(var(--welcome-footer-clearance, 0px) + 1rem);
+}
+
+/* The site's floating report control belongs beside the handle, not over a signup. */
+:global(body:has([data-welcome-footer]) button[aria-label='Report a bug']) {
+  bottom: max(1rem, calc(var(--welcome-footer-height, 0px) - 3.5rem));
+}
+
+.bar {
+  width: min(100%, 72rem);
+  margin-inline: auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1.5rem;
+}
+
+.identity {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.flower {
+  display: grid;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-pana-orange);
+}
+
+.flower svg {
+  width: 1.875rem;
+  height: 1.875rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 850;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+
+.description {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  min-width: 0;
+  padding: 0.625rem 1rem;
+  border: 1.5px solid var(--color-pana-ink);
+  background: var(--color-pana-orange);
+  color: var(--color-pana-ink);
+  font-weight: 800;
+  line-height: 1.3;
+  text-decoration: none;
+}
+
+.cta:hover {
+  box-shadow: 2px 2px 0 var(--color-pana-ink);
+}
+
+.cta svg {
+  flex-shrink: 0;
+}
+
+.storageNote {
+  width: min(100%, 72rem);
+  margin: 0 auto;
+  padding: 0 1.5rem 0.75rem;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+}
+
+.cta:focus-visible,
+.bookmark:focus-visible {
+  outline: 3px solid var(--color-pana-indigo);
+  outline-offset: 3px;
+}
+
+@media (min-width: 40rem) and (max-width: 80rem) {
+  .bar {
+    padding-inline-end: 10.5rem;
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding-inline-start: 1rem;
+  }
+
+  .identity {
+    gap: 0.625rem;
+  }
+
+  .title {
+    font-size: 1.125rem;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .cta {
+    flex: 1;
+  }
+}
+
+@media (max-width: 39.99rem) {
+  .bar {
+    padding-inline-end: 4.25rem;
+  }
+}
+
+@media (max-width: 29.99rem) {
+  .description {
+    display: none;
+  }
+}
