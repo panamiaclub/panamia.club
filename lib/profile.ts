@@ -5,9 +5,23 @@ import {
   ProfileMentoring,
 } from './interfaces';
 
-export const listSelectedCategories = (categories: CategoryInterface) => {
+export function changedProfileTextFields(
+  values: Record<string, unknown>,
+  current: Record<string, unknown>
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(values).filter(
+      ([field, value]) => String(value ?? '') !== String(current[field] ?? '')
+    )
+  );
+}
+
+export const listSelectedCategories = (
+  categories: Partial<CategoryInterface>
+) => {
   let listText = '';
   Object.keys(categories).forEach((key) => {
+    if (!categories[key as keyof CategoryInterface]) return;
     const listObj = profileCategoryList.find((obj) => {
       return obj.value == key;
     });

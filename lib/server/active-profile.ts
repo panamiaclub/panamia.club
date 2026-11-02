@@ -19,7 +19,8 @@ import { db } from '@/lib/db';
 import { profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { ensureActorForProfile } from '@/lib/federation/wrappers/actor';
-import { canAdministerProfile } from './profile-owners';
+import { BUSINESS_INTAKE_SOURCE, canAdministerProfile } from './profile-owners';
+import { isDirectoryAccountType } from '@/lib/accounts';
 import type { NextResponse } from 'next/server';
 
 export const ACTIVE_PROFILE_COOKIE = 'pana_active_profile';
@@ -71,6 +72,36 @@ export async function getActiveProfile(userId: string) {
   return (
     (await db.query.profiles.findFirst({ where: eq(profiles.id, id) })) ?? null
   );
+}
+
+/**
+ * An explicit listing scope never falls back to the active/personal profile.
+ * The ordinary account editors keep their existing cookie-scoped behavior.
+ */
+export async function getEditableProfile(
+  userId: string,
+  listingId: string | null
+) {
+  if (listingId === null) return getActiveProfile(userId);
+  if (!listingId || !(await canAdministerProfile(userId, listingId)))
+    return null;
+
+  const listing = await db.query.profiles.findFirst({
+    where: eq(profiles.id, listingId),
+    with: { user: { columns: { accountType: true } } },
+  });
+  if (
+    !listing ||
+    (listing.userId !== null &&
+      (listing.status as { source?: string } | null)?.source !==
+        BUSINESS_INTAKE_SOURCE &&
+      !isDirectoryAccountType(listing.user?.accountType))
+  ) {
+    return null;
+  }
+
+  const { user: _user, ...profile } = listing;
+  return profile;
 }
 
 /**

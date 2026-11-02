@@ -33,5 +33,6 @@ jobs:
         run: >-
           yarn node --experimental-test-module-mocks --import tsx --test
           tests-db/listing-intake.test.ts
+          tests-db/listing-review.test.ts
           tests-db/screenname-profile-email-collision.test.ts
           tests-db/screenname-required-fields.test.ts

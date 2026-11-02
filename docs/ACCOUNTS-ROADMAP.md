@@ -59,6 +59,15 @@ someone actually administers the listing; a handle alone is not a claim.
 Business managers do not need a personal social profile to use their dashboard.
 No migration or reassignment of existing approved businesses is required.
 
+Existing businesses also have a focused review journey, starting at
+`/listings/claim/start?id={profileId}` and continuing, after ownership
+verification, at `/listings/review?id={profileId}`. It reuses the account
+editors with an explicitly authorized listing scope rather than changing the
+active identity. Public previews exclude private contact and pending-owner
+information. Business contact edits never change `users.email` or the human's
+personal profile. See `docs/ONBOARDING-ROADMAP.md` for the journey and recovery
+behavior.
+
 ### The two tables
 
 | Table      | Role                        | Created when                      |
@@ -71,7 +80,9 @@ and **nullable** (migration `0022`). Nullability supports two real flows:
 
 - **Unclaimed profiles** — an admin-imported listing that predates its account.
   `claimProfileForUser()` in `auth.ts` attaches it on first sign-in by matching
-  `profiles.email` against the user's email.
+  `profiles.email` against the user's email. This does **not** apply to listings
+  marked `status.source = 'business_intake'`; those use explicit ownership
+  verification and `profile_owners`, without consuming a personal identity slot.
 - **Tombstoned profiles** — account deletion nulls `user_id` to sever the
   cascade so the record survives for attribution.
 

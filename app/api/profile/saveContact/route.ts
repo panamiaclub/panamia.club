@@ -4,8 +4,9 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
-import { getActiveProfile } from '@/lib/server/active-profile';
+import { getEditableProfile } from '@/lib/server/active-profile';
 import { describeDbError } from '@/lib/server/db-error';
+import { revalidatePublicListing } from '@/lib/server/profile';
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -23,16 +24,16 @@ export async function POST(request: NextRequest) {
 
   const { email, phone_number, pronouns } = body;
 
-  // The profile being acted as - their own, or a business listing they administer
-  const existingProfile = await getActiveProfile(session.user.id);
+  const listingId = request.nextUrl.searchParams.get('listingId');
+  const existingProfile = await getEditableProfile(session.user.id, listingId);
 
   if (!existingProfile) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Could not find profile',
+        error: 'You do not manage that profile.',
       },
-      { status: 404 }
+      { status: listingId !== null ? 403 : 404 }
     );
   }
 
@@ -81,12 +82,15 @@ export async function POST(request: NextRequest) {
       .update(profiles)
       .set({
         ...(contactEmail ? { email: contactEmail } : {}),
-        phoneNumber: phone_number || null,
-        pronouns: pronounsStr,
+        ...('phone_number' in body
+          ? { phoneNumber: phone_number || null }
+          : {}),
+        ...('pronouns' in body ? { pronouns: pronounsStr } : {}),
       })
       .where(eq(profiles.id, existingProfile.id))
       .returning();
 
+    revalidatePublicListing(existingProfile.id, existingProfile.screenname);
     return NextResponse.json(
       { success: true, data: updatedProfile },
       { status: 200 }

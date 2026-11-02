@@ -37,6 +37,23 @@ account-email-change, and screenname handlers. Shared inboxes must not merge
 identities, transfer ownership, approve the wrong listing, or update another
 profile's mentoring data. Login emails and personal identity slots remain unique.
 
+### Existing listing review and claims (no secrets)
+
+```
+yarn node --experimental-test-module-mocks --import tsx --test tests-db/listing-review.test.ts tests-db/listing-intake.test.ts
+```
+
+The review suite uses the same isolated PGlite approach and exercises the real
+claim, verification, ownership, private-read, editing and photo-upload handlers.
+Mail delivery, image storage, social-actor provisioning and ZIP lookup are
+mocked; it never sends a real message or connects to an external database.
+Coverage includes public-preview privacy, account-bound single-use tokens,
+anonymous/wrong-account recovery, explicit correct-business authorization across
+all editors, multiple managed listings, login/contact separation, preservation
+of untouched information, and online/mobile location privacy. Browser coverage
+in `tests/e2e/listing-review.spec.ts` follows the complete guided journey with
+isolated API fixtures.
+
 ### Isolated status visibility regression (no secrets)
 
 ```

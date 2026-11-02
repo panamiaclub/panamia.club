@@ -5,7 +5,17 @@ import { profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { sendTemplateEmail } from '@/lib/email';
 import { createClaimToken, maskEmail } from '@/lib/server/listing-claim';
-import { isProfileClaimed } from '@/lib/server/profile-owners';
+import {
+  canAdministerProfile,
+  isProfileClaimed,
+} from '@/lib/server/profile-owners';
+import {
+  getPublicListing,
+  transformToLegacyFormat,
+} from '@/lib/server/profile';
+import { getEditableProfile } from '@/lib/server/active-profile';
+import { listingPublicPath, listingReviewPath } from '@/lib/listing-url';
+import type { ClaimListingContext } from '@/lib/listing-review';
 
 /**
  * Request a claim link for an unclaimed listing.
@@ -23,28 +33,55 @@ interface RouteParams {
 /**
  * Public claim status for a listing.
  *
- * Returns only the name — which is already public in the directory — and
- * whether it can still be claimed, so the start page can address the owner by
- * their business without exposing the contact email to passers-by.
+ * Only the public preview and this viewer's management permission leave here.
+ * Private contact and pending-owner fields never belong in the landing page.
  */
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const { profileId } = await params;
 
-  const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.id, profileId),
-    columns: { id: true, name: true },
-  });
+  const session = await auth();
+  let profile = await getPublicListing(profileId);
+  if (!profile && session?.user?.id) {
+    const managed = await getEditableProfile(session.user.id, profileId);
+    if (managed) profile = transformToLegacyFormat(managed);
+  }
 
   if (!profile) {
     return NextResponse.json(
-      { error: 'That listing no longer exists.' },
+      { error: 'That public business listing could not be found.' },
       { status: 404 }
     );
   }
 
-  return NextResponse.json({
+  const address = profile.primary_address;
+  const area = [address.city, address.state, address.zipcode]
+    .filter(Boolean)
+    .join(', ');
+  const context: ClaimListingContext = {
+    profileId: profile.id,
     name: profile.name,
+    summary: profile.five_words || profile.details || '',
+    imageUrl: profile.images.primaryCDN || null,
+    publicPath: listingPublicPath({
+      id: profile.id,
+      screenname:
+        typeof profile.screenname === 'string' ? profile.screenname : null,
+    }),
+    locationLabel: profile.onlineOnly
+      ? address.zipcode
+        ? `Online business - based near ZIP ${address.zipcode} (approximate)`
+        : 'Online business - base ZIP not added'
+      : area || 'Location not added yet',
+    missingLocation: !address.zipcode,
     claimable: !(await isProfileClaimed(profile.id)),
+    canManage: Boolean(
+      session?.user?.id &&
+      (await canAdministerProfile(session.user.id, profile.id))
+    ),
+    published: profile.active === true,
+  };
+  return NextResponse.json(context, {
+    headers: { 'Cache-Control': 'private, no-store' },
   });
 }
 
@@ -59,6 +96,23 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
 
   try {
     const { profileId } = await params;
+
+    const managed = await getEditableProfile(session.user.id, profileId);
+    if (managed) {
+      return NextResponse.json({
+        success: true,
+        alreadyOwned: true,
+        profileId: managed.id,
+        reviewPath: listingReviewPath(managed.id),
+      });
+    }
+
+    if (!(await getPublicListing(profileId))) {
+      return NextResponse.json(
+        { error: 'That public business listing could not be found.' },
+        { status: 404 }
+      );
+    }
 
     const profile = await db.query.profiles.findFirst({
       where: eq(profiles.id, profileId),
@@ -89,6 +143,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       process.env.NEXT_PUBLIC_HOST_URL
     );
     claimUrl.searchParams.set('token', token);
+    claimUrl.searchParams.set('id', profile.id);
 
     await sendTemplateEmail(
       'listing.claim',

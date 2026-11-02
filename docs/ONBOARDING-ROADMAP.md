@@ -76,6 +76,43 @@ a different business contact gets a receipt without the sign-in link. Connected
 owners receive future decisions at their current account email. Sign-in and setup
 links stay private to that account.
 
+### Review and claim an existing listing
+
+The permanent entry for an existing directory business is
+`/listings/claim/start?id={profileId}`. Use the actual public PostgreSQL profile
+ID, never an import/source ID or an email address. The page shows a public-only
+preview before sign-in. Opening it or signing in does not assign ownership.
+
+An unclaimed business requires an explicit request for a one-hour, one-time
+ownership link sent to its business contact inbox. The requesting Pana account
+may use a different email. Verification is bound to that account; a signed-out
+visitor returns to the same token after sign-in, and a wrong-account visit can
+switch accounts without consuming the rightful requester's link. Existing claim
+URLs still work. New verification emails also retain the public profile ID for
+expired/used-link recovery.
+
+Already-authorized owners go directly to `/listings/review?id={profileId}`,
+not an "already claimed" dead end. Owners can still use the permanent entry
+when their listing is not public; other visitors cannot preview it, and the
+review does not offer a broken public destination. The review reuses the address, description,
+category, private contact, public link and photo editors, in that order. Each
+editor carries `listingId` explicitly and checks `profile_owners` (or the
+existing direct ownership link) again on reads and writes. Invalid, foreign or
+personal profile scopes never fall back to the currently active identity.
+The journey does not switch the active-profile cookie.
+
+Existing information is prefilled and omitted values are preserved. Missing
+location is not classified as online-only: owners can keep it unconfirmed,
+provide a public visiting address/ZIP, choose an approximate online base ZIP, or
+remove a previous address for a mobile/appointment-based business. No private
+home address or guessed ZIP is required. Online ZIP validation and street/point
+privacy use the existing address API. Saving each section continues to the next;
+photos can be kept unchanged. The completion page links to the updated public
+listing and the permanent management/review URL for that exact business.
+
+This is a product UI path only. It does not create, schedule or send a campaign,
+import contacts, bulk-claim businesses, or modify existing listings on arrival.
+
 ### What happens on a first sign-in
 
 | Step                   | Where       | Effect                                                                                                      |

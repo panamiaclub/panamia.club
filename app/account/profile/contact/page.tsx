@@ -14,11 +14,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { changedProfileTextFields } from '@/lib/profile';
+import {
+  ListingReviewAccess,
+  ListingReviewStepHeader,
+  useListingReviewStep,
+} from '@/components/listings/review-step';
 
 export default function AccountProfileContact() {
   const { data: session, status } = useSession();
-  const mutation = useMutateProfileContact();
-  const { data, isLoading } = useProfile();
+  const review = useListingReviewStep('contact');
+  const mutation = useMutateProfileContact(review.listingId);
+  const { data, isLoading } = useProfile(review.listingId);
   const profile = data as ProfileInterface;
   const emailInput = useRef<HTMLInputElement>(null);
   const isListing = Boolean(profile && profile.userId !== session?.user?.id);
@@ -33,17 +40,31 @@ export default function AccountProfileContact() {
     const updates = {
       email: formData.get('email'),
       phone_number: formData.get('phone_number'),
-      pronouns: {
-        sheher: formData.get('pronouns_sheher') ? true : false,
-        hehim: formData.get('pronouns_hehim') ? true : false,
-        theythem: formData.get('pronouns_theythem') ? true : false,
-        none: formData.get('pronouns_none') ? true : false,
-        other: formData.get('pronouns_other') ? true : false,
-        other_desc: formData.get('pronouns_otherdesc'),
-      },
+      ...(!review.active
+        ? {
+            pronouns: {
+              sheher: formData.get('pronouns_sheher') ? true : false,
+              hehim: formData.get('pronouns_hehim') ? true : false,
+              theythem: formData.get('pronouns_theythem') ? true : false,
+              none: formData.get('pronouns_none') ? true : false,
+              other: formData.get('pronouns_other') ? true : false,
+              other_desc: formData.get('pronouns_otherdesc'),
+            },
+          }
+        : {}),
     };
 
-    mutation.mutate(updates);
+    const changes = review.active
+      ? changedProfileTextFields(updates, {
+          email: profile.email,
+          phone_number: profile.phoneNumber ?? profile.phone_number,
+        })
+      : updates;
+    if (review.active && !Object.keys(changes).length) {
+      review.onSaved();
+      return;
+    }
+    mutation.mutate(changes, { onSuccess: review.onSaved });
   };
 
   if (status === 'loading' || isLoading) {
@@ -55,10 +76,14 @@ export default function AccountProfileContact() {
   }
 
   if (!session) {
+    if (review.active)
+      return <ListingReviewAccess listingId={review.listingId} />;
     return <Status401_Unauthorized />;
   }
 
   if (!profile) {
+    if (review.active)
+      return <ListingReviewAccess listingId={review.listingId} signedIn />;
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-gray-500">No profile found</div>
@@ -70,21 +95,37 @@ export default function AccountProfileContact() {
     <main className="container mx-auto max-w-3xl px-4 py-8">
       <PageMeta title="Contact Info | Edit Profile" desc="" />
 
-      <h2 className="mb-8 text-3xl font-bold">Profile - Edit Contact Info</h2>
+      {review.active ? (
+        <ListingReviewStepHeader
+          listingId={review.listingId}
+          name={profile.name}
+          step="contact"
+        />
+      ) : (
+        <h2 className="mb-8 text-3xl font-bold">Profile - Edit Contact Info</h2>
+      )}
 
       <Card>
         <CardContent className="pt-6">
-          <form onSubmit={submitForm} className="space-y-6">
+          <form
+            key={profile.id ?? profile._id}
+            onSubmit={submitForm}
+            className="space-y-6"
+          >
             <div className="mb-6 flex justify-between gap-4">
               <Button variant="outline" asChild>
-                <Link href="/account/profile/edit">
+                <Link href={review.backHref}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Link>
               </Button>
               <Button type="submit" disabled={isLoading || mutation.isPending}>
                 <Save className="mr-2 h-4 w-4" />
-                {mutation.isPending ? 'Saving...' : 'Save Changes'}
+                {mutation.isPending
+                  ? 'Saving...'
+                  : review.active
+                    ? 'Save and continue'
+                    : 'Save Changes'}
               </Button>
             </div>
 
@@ -139,96 +180,103 @@ export default function AccountProfileContact() {
               </p>
             </div>
 
-            <div className="space-y-4">
-              <Label>Pronouns:</Label>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="pronouns_sheher"
-                    name="pronouns_sheher"
-                    defaultChecked={profile.pronouns?.sheher ? true : false}
-                  />
-                  <Label
-                    htmlFor="pronouns_sheher"
-                    className="cursor-pointer font-normal"
-                  >
-                    She/Her
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="pronouns_hehim"
-                    name="pronouns_hehim"
-                    defaultChecked={profile.pronouns?.hehim ? true : false}
-                  />
-                  <Label
-                    htmlFor="pronouns_hehim"
-                    className="cursor-pointer font-normal"
-                  >
-                    He/Him
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="pronouns_theythem"
-                    name="pronouns_theythem"
-                    defaultChecked={profile.pronouns?.theythem ? true : false}
-                  />
-                  <Label
-                    htmlFor="pronouns_theythem"
-                    className="cursor-pointer font-normal"
-                  >
-                    They/Them
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="pronouns_none"
-                    name="pronouns_none"
-                    defaultChecked={profile.pronouns?.none ? true : false}
-                  />
-                  <Label
-                    htmlFor="pronouns_none"
-                    className="cursor-pointer font-normal"
-                  >
-                    No Preference
-                  </Label>
-                </div>
-
-                <div className="space-y-2">
+            {!review.active && (
+              <div className="space-y-4">
+                <Label>Pronouns:</Label>
+                <div className="space-y-3">
                   <div className="flex items-center space-x-2">
                     <Checkbox
-                      id="pronouns_other"
-                      name="pronouns_other"
-                      defaultChecked={profile.pronouns?.other ? true : false}
-                      onCheckedChange={(checked) => setShowOtherDesc(!!checked)}
+                      id="pronouns_sheher"
+                      name="pronouns_sheher"
+                      defaultChecked={profile.pronouns?.sheher ? true : false}
                     />
                     <Label
-                      htmlFor="pronouns_other"
+                      htmlFor="pronouns_sheher"
                       className="cursor-pointer font-normal"
                     >
-                      Other:
+                      She/Her
                     </Label>
                   </div>
-                  {showOtherDesc && (
-                    <Input
-                      id="pronouns_otherdesc"
-                      name="pronouns_otherdesc"
-                      type="text"
-                      defaultValue={profile.pronouns?.other_desc}
-                      placeholder="Please specify"
-                      className="ml-6"
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="pronouns_hehim"
+                      name="pronouns_hehim"
+                      defaultChecked={profile.pronouns?.hehim ? true : false}
                     />
-                  )}
+                    <Label
+                      htmlFor="pronouns_hehim"
+                      className="cursor-pointer font-normal"
+                    >
+                      He/Him
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="pronouns_theythem"
+                      name="pronouns_theythem"
+                      defaultChecked={profile.pronouns?.theythem ? true : false}
+                    />
+                    <Label
+                      htmlFor="pronouns_theythem"
+                      className="cursor-pointer font-normal"
+                    >
+                      They/Them
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="pronouns_none"
+                      name="pronouns_none"
+                      defaultChecked={profile.pronouns?.none ? true : false}
+                    />
+                    <Label
+                      htmlFor="pronouns_none"
+                      className="cursor-pointer font-normal"
+                    >
+                      No Preference
+                    </Label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="pronouns_other"
+                        name="pronouns_other"
+                        defaultChecked={profile.pronouns?.other ? true : false}
+                        onCheckedChange={(checked) =>
+                          setShowOtherDesc(!!checked)
+                        }
+                      />
+                      <Label
+                        htmlFor="pronouns_other"
+                        className="cursor-pointer font-normal"
+                      >
+                        Other:
+                      </Label>
+                    </div>
+                    {showOtherDesc && (
+                      <Input
+                        id="pronouns_otherdesc"
+                        name="pronouns_otherdesc"
+                        type="text"
+                        defaultValue={profile.pronouns?.other_desc}
+                        placeholder="Please specify"
+                        className="ml-6"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {mutation.isError && (
-              <div className="rounded-md bg-red-50 p-4 text-red-600">
+              <div
+                role="alert"
+                className="rounded-md bg-red-50 p-4 text-red-600"
+              >
                 Failed to update profile. Please try again.
               </div>
             )}

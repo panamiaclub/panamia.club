@@ -13,11 +13,18 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { changedProfileTextFields } from '@/lib/profile';
+import {
+  ListingReviewAccess,
+  ListingReviewStepHeader,
+  useListingReviewStep,
+} from '@/components/listings/review-step';
 
 export default function AccountProfileSocial() {
   const { data: session, status } = useSession();
-  const mutation = useMutateProfileSocial();
-  const { data, isLoading } = useProfile();
+  const review = useListingReviewStep('social');
+  const mutation = useMutateProfileSocial(review.listingId);
+  const { data, isLoading } = useProfile(review.listingId);
   const profile = data as ProfileInterface;
 
   const submitForm = (e: FormEvent) => {
@@ -35,7 +42,14 @@ export default function AccountProfileSocial() {
       },
     };
 
-    mutation.mutate(updates);
+    const changes = review.active
+      ? changedProfileTextFields(updates.socials, { ...profile.socials })
+      : updates.socials;
+    if (review.active && !Object.keys(changes).length) {
+      review.onSaved();
+      return;
+    }
+    mutation.mutate({ socials: changes }, { onSuccess: review.onSaved });
   };
 
   if (status === 'loading' || isLoading) {
@@ -47,10 +61,14 @@ export default function AccountProfileSocial() {
   }
 
   if (!session) {
+    if (review.active)
+      return <ListingReviewAccess listingId={review.listingId} />;
     return <Status401_Unauthorized />;
   }
 
   if (!profile) {
+    if (review.active)
+      return <ListingReviewAccess listingId={review.listingId} signedIn />;
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-gray-500">No profile found</div>
@@ -62,23 +80,39 @@ export default function AccountProfileSocial() {
     <main className="container mx-auto max-w-3xl px-4 py-8">
       <PageMeta title="Profile Socials | Edit Profile" desc="" />
 
-      <h2 className="mb-8 text-3xl font-bold">
-        Profile - Edit Links and Socials
-      </h2>
+      {review.active ? (
+        <ListingReviewStepHeader
+          listingId={review.listingId}
+          name={profile.name}
+          step="social"
+        />
+      ) : (
+        <h2 className="mb-8 text-3xl font-bold">
+          Profile - Edit Links and Socials
+        </h2>
+      )}
 
       <Card>
         <CardContent className="pt-6">
-          <form onSubmit={submitForm} className="space-y-6">
+          <form
+            key={profile.id ?? profile._id}
+            onSubmit={submitForm}
+            className="space-y-6"
+          >
             <div className="mb-6 flex justify-between gap-4">
               <Button variant="outline" asChild>
-                <Link href="/account/profile/edit">
+                <Link href={review.backHref}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Link>
               </Button>
               <Button type="submit" disabled={isLoading || mutation.isPending}>
                 <Save className="mr-2 h-4 w-4" />
-                {mutation.isPending ? 'Saving...' : 'Save Changes'}
+                {mutation.isPending
+                  ? 'Saving...'
+                  : review.active
+                    ? 'Save and continue'
+                    : 'Save Changes'}
               </Button>
             </div>
 
@@ -149,7 +183,10 @@ export default function AccountProfileSocial() {
             </div>
 
             {mutation.isError && (
-              <div className="rounded-md bg-red-50 p-4 text-red-600">
+              <div
+                role="alert"
+                className="rounded-md bg-red-50 p-4 text-red-600"
+              >
                 Failed to update profile. Please try again.
               </div>
             )}

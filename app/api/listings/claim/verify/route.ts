@@ -4,6 +4,8 @@ import { consumeClaimToken } from '@/lib/server/listing-claim';
 import { claimUnownedProfile } from '@/lib/server/profile-owners';
 import { createActorForProfile } from '@/lib/federation';
 import { revalidatePublicListing } from '@/lib/server/profile';
+import { getEditableProfile } from '@/lib/server/active-profile';
+import { listingReviewPath } from '@/lib/listing-url';
 
 /**
  * Redeem a claim token.
@@ -20,28 +22,36 @@ export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json(
-      { error: 'Sign in to finish claiming this listing.' },
+      {
+        code: 'signin_required',
+        error: 'Sign in to finish claiming this listing.',
+      },
       { status: 401 }
     );
   }
 
   try {
-    const body = (await request.json().catch(() => null)) as {
-      token?: string;
-    } | null;
+    const body: unknown = await request.json().catch(() => null);
 
-    const token = body?.token?.trim();
+    const token =
+      body &&
+      typeof body === 'object' &&
+      'token' in body &&
+      typeof body.token === 'string'
+        ? body.token.trim()
+        : '';
     if (!token) {
       return NextResponse.json(
-        { error: 'That link is missing its token.' },
+        { code: 'missing_token', error: 'That link is missing its token.' },
         { status: 400 }
       );
     }
 
-    const target = await consumeClaimToken(token);
-    if (!target) {
+    const target = await consumeClaimToken(token, session.user.id);
+    if (target.outcome === 'invalid') {
       return NextResponse.json(
         {
+          code: 'invalid_token',
           error:
             'This link has expired or already been used. Request a new one from the listing.',
         },
@@ -51,9 +61,10 @@ export async function POST(request: NextRequest) {
 
     // The token is bound to the account that requested it. Opening the email
     // while signed in as someone else must not hand them the business.
-    if (target.userId !== session.user.id) {
+    if (target.outcome === 'wrong-account') {
       return NextResponse.json(
         {
+          code: 'wrong_account',
           error:
             'This link was issued to a different account. Sign in with the account that requested it.',
         },
@@ -74,8 +85,18 @@ export async function POST(request: NextRequest) {
     // hold valid tokens for the same listing at once; whoever confirms first
     // wins and the loser gets told, instead of silently becoming a co-owner.
     if (result.outcome === 'already-claimed') {
+      const owned = await getEditableProfile(session.user.id, target.profileId);
+      if (owned) {
+        return NextResponse.json({
+          success: true,
+          profileId: owned.id,
+          businessName: owned.name,
+          reviewPath: listingReviewPath(owned.id),
+        });
+      }
       return NextResponse.json(
         {
+          code: 'already_claimed',
           error:
             'Someone else claimed this listing first. Contact us at hola@pana.social if that is wrong.',
         },
@@ -115,6 +136,7 @@ export async function POST(request: NextRequest) {
       success: true,
       profileId: profile.id,
       businessName: profile.name,
+      reviewPath: listingReviewPath(profile.id),
     });
   } catch (error) {
     console.error('[listings/claim/verify] failed', error);
