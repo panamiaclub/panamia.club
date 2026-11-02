@@ -15,7 +15,8 @@ function DonationConfirmationContent() {
   const _amt = searchParams?.get('amt')
     ? parseInt(searchParams.get('amt')!)
     : 0;
-  const isRecurring = tier > 0;
+  const frequency = searchParams?.get('frequency');
+  const isRecurring = frequency === 'monthly' || (!frequency && tier > 0);
 
   return (
     <div className="from-background to-muted/20 flex min-h-screen flex-col bg-gradient-to-b">
@@ -32,7 +33,9 @@ function DonationConfirmationContent() {
           <h1 className="mb-4 text-4xl font-bold">Muchísimas Gracias!</h1>
           <h2 className="text-muted-foreground text-2xl">
             {isRecurring
-              ? 'Thank you so much for becoming a Gente dePana!'
+              ? tier > 0
+                ? 'Thank you so much for becoming a Gente dePana!'
+                : 'Thank you so much for your monthly support!'
               : 'Thank you so much for your contribution!'}
           </h2>
         </div>
@@ -46,7 +49,7 @@ function DonationConfirmationContent() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {isRecurring && (
+            {isRecurring && tier > 0 && (
               <div className="bg-pana-blue/10 rounded-lg p-4">
                 <p className="text-sm">
                   You will be receiving a confirmation email from us soon with

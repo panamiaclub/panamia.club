@@ -10,6 +10,17 @@ Kept separate from `tests/` (Playwright, browser) and `tests-relay/`
 
 ## Running
 
+### Donation checkout (no secrets)
+
+```
+yarn node --experimental-test-module-mocks --import tsx --test tests-db/donation-checkout.test.ts tests-unit/donations.test.ts
+```
+
+These suites call the production Checkout handler with only Stripe's network
+boundary replaced. They validate exact cents, one-time/monthly price shapes,
+server-derived membership, optional email, safe return URLs, and explicit
+failure responses. No database, Stripe account, or external network is used.
+
 ### Directory contact and signup regressions (no secrets)
 
 ```

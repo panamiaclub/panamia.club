@@ -139,7 +139,9 @@ test.describe('Public Navigation', () => {
   test('donate page loads', async ({ page }) => {
     const res = await page.goto('/donate');
     expect(res?.status()).toBe(200);
-    await expect(page.locator('h1').first()).toContainText('MAKE A DONATION');
+    await expect(page.locator('h1').first()).toContainText(
+      'The future is local.'
+    );
   });
 
   // /affiliate is a redirect shim: it banks an affiliate code in localStorage
