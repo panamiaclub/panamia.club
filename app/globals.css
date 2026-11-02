@@ -7497,6 +7497,8 @@ body:has(.home-hero-field) .bizprofile-mockbar .mock-toolbar-link {
  * dissolve the sky into the paper, and with no sky it was cream fading into
  * cream, so it has gone with the sky. */
 .home-hero-field {
+  --home-hero-headline-size: clamp(42px, min(8.4vw, 13svh), 126px);
+
   background-color: transparent;
   color: var(--story-ink);
   /* Named so the masthead can react to this card leaving, from a different
@@ -7574,7 +7576,14 @@ body:has(.home-hero-field) .bizprofile-mockbar .mock-toolbar-link {
    and only bites on short windows, which is where the room is needed. */
 .home-hero-field .hero-headline {
   text-shadow: none;
-  font-size: clamp(42px, min(8.4vw, 13svh), 126px);
+  font-size: var(--home-hero-headline-size);
+}
+
+/* One-third of the headline, without shrinking the existing phone copy. */
+.home-hero-field .hero-subheadline {
+  font-size: max(17px, calc(var(--home-hero-headline-size) / 3));
+  line-height: 1.25;
+  text-wrap: balance;
 }
 
 /* Coral rather than orange, and for a specific reason: the wordmark directly
@@ -8084,8 +8093,8 @@ body:has([data-density]) {
      ceiling comes down to roughly a tenth of the screen here; the floor and
      the width term are untouched, so nothing changes on any screen tall
      enough not to need it. */
-  [data-density] .home-hero-field .hero-headline {
-    font-size: clamp(38px, min(8.4vw, 9.8svh), 126px);
+  [data-density] .home-hero-field {
+    --home-hero-headline-size: clamp(38px, min(8.4vw, 9.8svh), 126px);
   }
 }
 
