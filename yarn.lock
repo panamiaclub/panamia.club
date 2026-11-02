@@ -9244,7 +9244,7 @@ __metadata:
     react-server-dom-webpack: "npm:^19.3.1"
     recharts: "npm:3.10.1"
     sanitize-html: "npm:^2.18.1"
-    stripe: "npm:22.6.2"
+    stripe: "npm:23.1.0"
     tailwind-merge: "npm:^3.7.0"
     tailwindcss: "npm:4.3.3"
     tsx: "npm:^4.23.15"
@@ -10728,15 +10728,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"stripe@npm:22.6.2":
-  version: 22.6.2
-  resolution: "stripe@npm:22.6.2"
+"stripe@npm:23.1.0":
+  version: 23.1.0
+  resolution: "stripe@npm:23.1.0"
   peerDependencies:
-    "@types/node": ">=18"
+    "@types/node": ">=20"
   peerDependenciesMeta:
     "@types/node":
       optional: true
-  checksum: 10c0/ffc2f74903cc7a95d001b5487c78c1d820af0487ca5283dca0b4215c9771370aa39e43ba264dfb71ad496318f1300dc72b0ca6be576f07e30add3ed099cccd7d
+  checksum: 10c0/9f17a0317824e499297efcf89e37cecdab456b019005efb54f62e3a932f59dc44663e8eac01cd04034c68d73d8748cc04d169308536c8098a273a3066b7caf4b
   languageName: node
   linkType: hard
 
