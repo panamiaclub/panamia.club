@@ -327,7 +327,7 @@ export const getSearch = async ({
   geolat,
   geolng,
   radius,
-  resultsView: _resultsView,
+  resultsView,
   sort = 'relevance',
   certifiedOnly,
   withEventsOnly,
@@ -336,6 +336,7 @@ export const getSearch = async ({
   languages,
   freeOnly,
 }: SearchInterface) => {
+  const mapView = resultsView === 'map';
   const viewerLat = Number(geolat);
   const viewerLng = Number(geolng);
   const hasViewerLocation =
@@ -353,7 +354,13 @@ export const getSearch = async ({
     return {
       success: true,
       data: [],
-      pagination: { page: pageNum, limit: pageLimit, total: 0, totalPages: 0 },
+      pagination: {
+        page: mapView ? 1 : pageNum,
+        limit: mapView ? 1 : pageLimit,
+        total: 0,
+        totalPages: 0,
+      },
+      map: mapView ? { totalResults: 0, unmappedCount: 0 } : undefined,
     };
   }
 
@@ -500,21 +507,41 @@ export const getSearch = async ({
 
   const total = ordered.length;
   const skip = pageNum > 1 ? (pageNum - 1) * pageLimit : 0;
-  const data = await enrichPage(
-    ordered.slice(skip, skip + pageLimit),
+  const indexed = ordered.map((profile, index) => ({
+    profile,
+    resultIndex: index + 1,
+  }));
+  const selected = mapView
+    ? indexed.filter(({ profile }) =>
+        profile.onlineOnly === true
+          ? zipAreas.get(profile.id) != null
+          : extractCoordinates(profile) !== null
+      )
+    : indexed.slice(skip, skip + pageLimit);
+  const enriched = await enrichPage(
+    selected.map(({ profile }) => profile),
     countsForSort,
     zipAreas
   );
+  const data = enriched.map((result, index) => ({
+    ...result,
+    result_index: selected[index].resultIndex,
+  }));
 
   return {
     success: true,
     data,
     pagination: {
-      page: pageNum,
-      limit: pageLimit,
-      total,
-      totalPages: Math.ceil(total / pageLimit),
+      page: mapView ? 1 : pageNum,
+      limit: mapView ? Math.max(data.length, 1) : pageLimit,
+      total: mapView ? data.length : total,
+      totalPages: mapView
+        ? Number(data.length > 0)
+        : Math.ceil(total / pageLimit),
     },
+    map: mapView
+      ? { totalResults: total, unmappedCount: total - data.length }
+      : undefined,
   };
 };
 
@@ -619,11 +646,8 @@ function sortProfiles(
 }
 
 /**
- * Join the extra data onto one page of results.
- *
- * Only ever called with the slice being rendered. Running this over the whole
- * filtered set would issue the same three queries against thousands of ids to
- * throw all but twenty rows away.
+ * Enrich only the rows being rendered: one list page or every usable map
+ * location. Unlocated results are never enriched for a map request.
  */
 async function enrichPage(
   rows: ProfileRow[],

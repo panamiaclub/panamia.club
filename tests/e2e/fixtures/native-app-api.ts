@@ -23,8 +23,10 @@ const north = {
   lng: '-80.14',
 };
 
-export function createNativeApiFixtures() {
-  const businesses: SearchResultsInterface[] = [
+export function createNativeApiFixtures(
+  options: { businesses?: SearchResultsInterface[] } = {}
+) {
+  const businesses: SearchResultsInterface[] = options.businesses ?? [
     {
       _id: 'cafe',
       id: 'cafe',
@@ -248,16 +250,41 @@ export function createNativeApiFixtures() {
     }
     if (path === '/api/getDirectorySearch') {
       const q = (url.searchParams.get('q') ?? '').toLowerCase();
-      const data = businesses.filter((item) =>
-        `${item.name} ${item.details}`.toLowerCase().includes(q)
+      const matching = businesses
+        .filter((item) =>
+          `${item.name} ${item.details}`.toLowerCase().includes(q)
+        )
+        .map((item, index) => ({ ...item, result_index: index + 1 }));
+      const mappable = matching.filter((item) =>
+        item.online_only
+          ? item.online_zip != null
+          : item.geo?.coordinates != null
       );
+      const mapView = url.searchParams.get('v') === 'map';
+      const page = Number(url.searchParams.get('page') || '1');
+      const limit = Number(url.searchParams.get('limit') || '20');
       return {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          data,
-          pagination: { page: 1, limit: 20, total: data.length, totalPages: 1 },
+          data: mapView
+            ? mappable
+            : matching.slice((page - 1) * limit, page * limit),
+          pagination: {
+            page: mapView ? 1 : page,
+            limit: mapView ? Math.max(mappable.length, 1) : limit,
+            total: mapView ? mappable.length : matching.length,
+            totalPages: mapView
+              ? Number(mappable.length > 0)
+              : Math.ceil(matching.length / limit),
+          },
+          map: mapView
+            ? {
+                totalResults: matching.length,
+                unmappedCount: matching.length - mappable.length,
+              }
+            : undefined,
         }),
       };
     }
@@ -392,8 +419,11 @@ export function createNativeApiFixtures() {
   return { state, respond };
 }
 
-export async function installNativeApiFixtures(page: Page) {
-  const fixtures = createNativeApiFixtures();
+export async function installNativeApiFixtures(
+  page: Page,
+  options: { businesses?: SearchResultsInterface[] } = {}
+) {
+  const fixtures = createNativeApiFixtures(options);
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     await route.fulfill(

@@ -506,6 +506,192 @@ test('nearby online results use ZIP areas rather than old home coordinates and g
   assert.ok(all.data.every((row) => row.geo === null));
 });
 
+test('complete maps ignore list pagination while preserving filters, positions, and location privacy', async () => {
+  await db.insert(schema.profiles).values([
+    ...Array.from({ length: 21 }, (_, index) => ({
+      id: `unlocated-${index}`,
+      email: `unlocated-${index}@test.invalid`,
+      name: `A Unlocated ${String(index).padStart(2, '0')}`,
+      active: true,
+      categories: { music: true },
+    })),
+    {
+      id: 'public-miami',
+      email: 'public-miami@test.invalid',
+      name: 'B Miami storefront',
+      active: true,
+      categories: { food: true },
+      addressLat: '25.85',
+      addressLng: '-80.18',
+    },
+    {
+      id: 'public-broward',
+      email: 'public-broward@test.invalid',
+      name: 'C Broward storefront',
+      active: true,
+      categories: { art: true },
+      geo: { type: 'Point', coordinates: [-80.1288, 26.1216] },
+    },
+    {
+      id: 'online-miami',
+      email: 'online-miami@test.invalid',
+      name: 'D Online shop',
+      active: true,
+      categories: { food: true },
+      onlineOnly: true,
+      addressPostalCode: '33138',
+      addressCountry: 'US',
+      addressLat: '37.8',
+      addressLng: '-122.4',
+      geo: { type: 'Point', coordinates: [-122.4, 37.8] },
+    },
+    {
+      id: 'online-unknown',
+      email: 'online-unknown@test.invalid',
+      name: 'E Unknown online shop',
+      active: true,
+      onlineOnly: true,
+      addressPostalCode: '00000',
+      addressCountry: 'US',
+      addressLat: '25.85',
+      addressLng: '-80.18',
+    },
+    {
+      id: 'inactive-point',
+      email: 'inactive-point@test.invalid',
+      name: 'F Inactive storefront',
+      active: false,
+      addressLat: '25.85',
+      addressLng: '-80.18',
+    },
+  ]);
+  const options = {
+    pageNum: 1,
+    pageLimit: 20,
+    searchTerm: '',
+    filterCategories: '',
+    geolat: '',
+    geolng: '',
+    radius: 'all' as const,
+    resultsView: '',
+  };
+  const firstPage = await directory.getSearch(options);
+  assert.equal(firstPage.data.length, 20);
+  assert.equal(firstPage.pagination.total, 25);
+  assert.ok(firstPage.data.every((row) => row.geo === null));
+  assert.deepEqual(
+    firstPage.data.map((row) => row.result_index),
+    Array.from({ length: 20 }, (_, index) => index + 1)
+  );
+
+  const map = await directory.getSearch({
+    ...options,
+    pageNum: 999,
+    resultsView: 'map',
+  });
+  assert.deepEqual(
+    map.data.map((row) => row.id),
+    ['public-miami', 'public-broward', 'online-miami']
+  );
+  assert.deepEqual(
+    map.data.map((row) => row.result_index),
+    [22, 23, 24]
+  );
+  assert.deepEqual(map.map, { totalResults: 25, unmappedCount: 22 });
+  assert.deepEqual(map.pagination, {
+    page: 1,
+    limit: 3,
+    total: 3,
+    totalPages: 1,
+  });
+  const online = map.data.find((row) => row.id === 'online-miami');
+  assert.ok(online);
+  assert.equal(online.geo, null);
+  assert.deepEqual(online.online_zip, zipArea('33138'));
+  assert.ok(map.data.every((row) => !('email' in row)));
+  assert.ok(map.data.every((row) => !('addressLat' in row)));
+
+  const filtered = await directory.getSearch({
+    ...options,
+    resultsView: 'map',
+    filterCategories: 'food',
+  });
+  assert.deepEqual(
+    filtered.data.map((row) => [row.id, row.result_index]),
+    [
+      ['public-miami', 1],
+      ['online-miami', 2],
+    ]
+  );
+  assert.deepEqual(filtered.map, { totalResults: 2, unmappedCount: 0 });
+
+  const nearby = await directory.getSearch({
+    ...options,
+    resultsView: 'map',
+    geolat: '25.85',
+    geolng: '-80.18',
+    radius: '5',
+    sort: 'nearest',
+  });
+  assert.deepEqual(
+    nearby.data.map((row) => row.id),
+    ['public-miami', 'online-miami']
+  );
+  assert.deepEqual(nearby.map, { totalResults: 2, unmappedCount: 0 });
+
+  const unlocated = await directory.getSearch({
+    ...options,
+    resultsView: 'map',
+    filterCategories: 'music',
+  });
+  assert.deepEqual(unlocated.data, []);
+  assert.deepEqual(unlocated.map, { totalResults: 21, unmappedCount: 21 });
+  assert.equal(unlocated.pagination.totalPages, 0);
+
+  const empty = await directory.getSearch({
+    ...options,
+    resultsView: 'map',
+    certifiedOnly: true,
+  });
+  assert.deepEqual(empty.data, []);
+  assert.deepEqual(empty.map, { totalResults: 0, unmappedCount: 0 });
+});
+
+test('a complete map includes more than one page of located listings', async () => {
+  await db.insert(schema.profiles).values([
+    ...Array.from({ length: 20 }, (_, index) => ({
+      id: `unlocated-${index}`,
+      email: `unlocated-${index}@test.invalid`,
+      name: `A Unlocated ${String(index).padStart(2, '0')}`,
+      active: true,
+    })),
+    ...Array.from({ length: 27 }, (_, index) => ({
+      id: `located-${index}`,
+      email: `located-${index}@test.invalid`,
+      name: `B Located ${String(index).padStart(2, '0')}`,
+      active: true,
+      addressLat: '25.85',
+      addressLng: '-80.18',
+    })),
+  ]);
+  const map = await directory.getSearch({
+    pageNum: 2,
+    pageLimit: 20,
+    searchTerm: '',
+    filterCategories: '',
+    geolat: '',
+    geolng: '',
+    radius: 'all',
+    resultsView: 'map',
+  });
+  assert.equal(map.data.length, 27);
+  assert.deepEqual(map.map, { totalResults: 47, unmappedCount: 20 });
+  assert.deepEqual(
+    map.data.map((row) => row.result_index),
+    Array.from({ length: 27 }, (_, index) => index + 21)
+  );
+});
+
 test('an existing pana can submit and manage a separate listing with the same email', async () => {
   const response = await submit({
     manageWithPana: true,

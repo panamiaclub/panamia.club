@@ -66,9 +66,15 @@ unavailable ZIP locations remain discoverable in All-areas mode with explicit
 map-unavailable messaging.
 
 Web and native maps group matching online results into one globe bubble per
-ZIP, with no empty ZIP markers. Counts refer to the currently loaded result
-page, just like storefront pins. Selecting a ZIP focuses those businesses in
-the existing results list; it does not generate directions or imply that
+ZIP, with no empty ZIP markers. Both request `v=map` with the same
+search and filters as the list, but independently of list pagination. It
+includes every matching public storefront point and online ZIP area; listings
+without usable locations stay in the paginated list and are counted in the
+map notice. Pin numbers refer to positions in the complete filtered result
+set on the web, and selecting a storefront pin opens its list page. Native
+pins open the matching business preview, including listings on other pages. Selecting a ZIP
+focuses all matching businesses in that area in the existing results list,
+including matches on other pages. It does not generate directions or imply that
 delivery or pickup is offered. Postal coordinates come from GeoNames through
 Zippopotam.us, are attributed under CC BY 4.0, and are cached for 30 days.
 

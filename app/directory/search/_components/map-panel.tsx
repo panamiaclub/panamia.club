@@ -46,6 +46,10 @@ interface MapPanelProps {
   onPinSelect?: (id: string | null) => void;
   selectedZip?: string | null;
   onZipSelect?: (zip: string) => void;
+  unmappedCount?: number;
+  loading?: boolean;
+  failed?: boolean;
+  onRetry?: () => void;
 }
 
 interface Pin {
@@ -78,6 +82,10 @@ export function MapPanel({
   onPinSelect,
   selectedZip = null,
   onZipSelect,
+  unmappedCount,
+  loading = false,
+  failed = false,
+  onRetry,
 }: MapPanelProps) {
   const pins = useMemo<Pin[]>(
     () =>
@@ -92,7 +100,7 @@ export function MapPanel({
             distance: viewerCoords
               ? distanceInMiles(viewerCoords, coords)
               : null,
-            index: index + 1,
+            index: result.result_index ?? index + 1,
           },
         ];
       }),
@@ -117,9 +125,10 @@ export function MapPanel({
     [pins, zipGroups]
   );
   const offMapCount =
+    unmappedCount ??
     results.length -
-    pins.length -
-    zipGroups.reduce((total, group) => total + group.items.length, 0);
+      pins.length -
+      zipGroups.reduce((total, group) => total + group.items.length, 0);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [view, setView] = useState(() => frameForPoints(points));
@@ -285,15 +294,25 @@ export function MapPanel({
         hasZipAreas={zipGroups.length > 0}
       />
 
-      {/* A missing ZIP or failed lookup must not quietly remove a listing. */}
-      {offMapCount > 0 && (
+      {loading ? (
+        <p className="dirsearch-mapoffmap" role="status">
+          Loading map locations...
+        </p>
+      ) : failed ? (
+        <div className="dirsearch-mapoffmap" role="alert">
+          <span>Could not load map locations.</span>
+          <button type="button" className="underline" onClick={onRetry}>
+            Retry
+          </button>
+        </div>
+      ) : offMapCount > 0 ? (
         <p className="dirsearch-mapoffmap">
           <Globe className="h-4 w-4 shrink-0" aria-hidden="true" />
           {offMapCount === 1
             ? '1 result has no usable map location.'
             : `${offMapCount} results have no usable map location.`}
         </p>
-      )}
+      ) : null}
 
       {selected && (
         <div className="dirsearch-map-card">

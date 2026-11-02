@@ -11,7 +11,11 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { useSearch, type DirectorySort } from '@/lib/query/directory';
+import {
+  searchParamsToString,
+  useSearch,
+  type DirectorySort,
+} from '@/lib/query/directory';
 import { groupOnlineZipListings } from '@/lib/online-zip';
 import { searchPath } from '@/lib/directory-search-path';
 import {
@@ -76,22 +80,35 @@ export function DirectorySearchContent({
 
   // Pane switching is UI state, not a new search; it must preserve ZIP focus.
   const { view: _view, ...searchFilters } = params;
-  const { data: searchResult, isLoading } = useSearch({
+  const queryFilters = {
     ...searchFilters,
     sort,
     geolat: coords?.lat ?? 0,
     geolng: coords?.lng ?? 0,
     radius: effectiveRadius,
-  });
+  };
+  const { data: searchResult, isLoading } = useSearch(queryFilters);
+  const {
+    data: mapSearchResult,
+    isLoading: mapLoading,
+    isError: mapError,
+    refetch: retryMap,
+  } = useSearch({ ...queryFilters, pageNum: 1, resultsView: 'map' });
+  const searchKey = searchParamsToString(queryFilters);
+  const mapScopeKey = searchParamsToString({ ...queryFilters, pageNum: 1 });
 
   const results = useMemo(() => searchResult?.data ?? [], [searchResult]);
+  const mapResults = useMemo(
+    () => mapSearchResult?.data ?? [],
+    [mapSearchResult]
+  );
   const [focusedZip, setFocusedZip] = useState<string | null>(null);
   const zipGroups = useMemo(
     () =>
-      groupOnlineZipListings(results, (result) =>
+      groupOnlineZipListings(mapResults, (result) =>
         result.online_only ? result.online_zip : null
       ),
-    [results]
+    [mapResults]
   );
   const zipGroup = zipGroups.find(
     (group) => group.area.postalCode === focusedZip
@@ -101,8 +118,8 @@ export function DirectorySearchContent({
   const totalPages = searchResult?.pagination?.totalPages ?? 1;
 
   const profileIds = useMemo(
-    () => results.map((result) => result._id),
-    [results]
+    () => visibleResults.map((result) => result._id),
+    [visibleResults]
   );
 
   /**
@@ -247,15 +264,29 @@ export function DirectorySearchContent({
   // card is this pin?" was gone before it could be read.
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const pendingPinSelection = useRef<{
+    id: string;
+    scope: string;
+  } | null>(null);
 
   // A new result set means the old scroll position is about a different list,
   // and the old selection is about a business that may not even be in it.
   useEffect(() => {
+    if (!searchResult) return;
     listRef.current?.scrollTo({ top: 0 });
     setHoveredId(null);
-    setSelectedId(null);
+    const pending = pendingPinSelection.current;
+    setSelectedId(
+      pending?.scope === mapScopeKey &&
+        searchResult.data.some((result) => result._id === pending.id)
+        ? pending.id
+        : null
+    );
+    pendingPinSelection.current = null;
+  }, [searchResult, mapScopeKey]);
+  useEffect(() => {
     setFocusedZip(null);
-  }, [searchResult]);
+  }, [searchKey]);
 
   // The map drops its own selection the moment the viewer's location arrives,
   // because it re-frames to their neighbourhood and the chosen pin may not be
@@ -277,15 +308,26 @@ export function DirectorySearchContent({
   // is already on screen from jumping — but on its own it parks the card hard
   // against whichever edge it came from. The breathing room is CSS's job:
   // `.dirsearch-grid > li` carries a `scroll-margin-block` that this honours.
-  const handlePinSelect = useCallback((id: string | null) => {
-    setFocusedZip(null);
-    setSelectedId(id);
-  }, []);
+  const handlePinSelect = useCallback(
+    (id: string | null) => {
+      setFocusedZip(null);
+      setSelectedId(id);
+      pendingPinSelection.current = null;
+      const result = mapResults.find((item) => item._id === id);
+      if (!result?.result_index) return;
+      const page = Math.ceil(result.result_index / params.pageLimit);
+      if (page !== params.pageNum) {
+        pendingPinSelection.current = { id: result._id, scope: mapScopeKey };
+        patch({ p: page === 1 ? null : page.toString() });
+      }
+    },
+    [mapResults, mapScopeKey, params.pageLimit, params.pageNum, patch]
+  );
   useEffect(() => {
-    if (!selectedId) return;
+    if (!selectedId || busy) return;
     const card = document.getElementById(`dirsearch-result-${selectedId}`);
     card?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, [selectedId, focusedZip]);
+  }, [selectedId, focusedZip, searchResult, busy]);
 
   const handleZipSelect = (zip: string) => {
     setFocusedZip((current) => (current === zip ? null : zip));
@@ -337,8 +379,7 @@ export function DirectorySearchContent({
               {zipGroup && (
                 <div className="dirsearch-zip-focus" role="status">
                   <span>
-                    On this page: online businesses based near ZIP{' '}
-                    {zipGroup.area.postalCode}
+                    Online businesses based near ZIP {zipGroup.area.postalCode}
                   </span>
                   <button
                     type="button"
@@ -387,7 +428,12 @@ export function DirectorySearchContent({
                         >
                           <ResultCard
                             result={result}
-                            index={results.indexOf(result) + 1}
+                            index={
+                              result.result_index ??
+                              (params.pageNum - 1) * params.pageLimit +
+                                results.indexOf(result) +
+                                1
+                            }
                             viewerCoords={coords}
                           />
                         </li>
@@ -464,13 +510,17 @@ export function DirectorySearchContent({
               map a remount, and a re-frame, every time the toggle is used. */}
           <aside className="dirsearch-mappane" aria-label="Results on a map">
             <MapPanel
-              results={results}
+              results={mapResults}
               viewerCoords={coords}
               radius={effectiveRadius}
               highlightId={hoveredId}
               onPinSelect={handlePinSelect}
               selectedZip={focusedZip}
               onZipSelect={handleZipSelect}
+              unmappedCount={mapSearchResult?.map?.unmappedCount}
+              loading={mapLoading}
+              failed={mapError || mapSearchResult?.success === false}
+              onRetry={() => void retryMap()}
             />
           </aside>
         </div>
