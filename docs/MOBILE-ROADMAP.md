@@ -134,6 +134,11 @@ links keep their destinations. Visited browsing panes remain mounted behind
 detail pages so returning restores their state. Private queries are scoped to
 the active identity, and changing accounts clears the shared query cache.
 
+The account menu keeps **About Pana** immediately above **Sign Out** in its
+pinned footer. It opens `https://panamia.club/` in a new browser tab on the web,
+or through the existing `@capacitor/browser` plugin on Android and iOS, outside
+the app's WebView. A failed native browser launch shows a localized error.
+
 Event saves require `drizzle/0073_event_bookmarks.sql` **before deploying the
 updated Worker**. They are private, profile-scoped, idempotent bookmarks, not
 RSVPs: saving never changes attendance. Account deletion explicitly removes
@@ -156,8 +161,8 @@ yarn test native-app.spec.ts --project=chromium
 
 The browser command uses the repository's normal configured development server.
 It covers the native/browser gate, real detail URLs, measured card visibility,
-independent maps, Community, private saves, Back priority, and stopping camera
-and microphone tracks when Social becomes inactive.
+independent maps, Community, private saves, account-menu browser links, Back
+priority, and stopping camera and microphone tracks when Social becomes inactive.
 
 ---
 
