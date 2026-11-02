@@ -1,0 +1,127 @@
+.welcomeCards {
+  --home-beat-art: clamp(8.5rem, 12vw, 10rem);
+}
+
+.welcomeCards :global(.beats) {
+  scroll-margin-top: 5rem;
+}
+
+.welcomeCards :global(.beat) {
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.welcomeCards :global(.beat-art) {
+  height: var(--home-beat-art);
+  flex-shrink: 0;
+}
+
+.welcomeCards :global(.beat-sign) {
+  font-size: clamp(1.1rem, 1.65vw, 1.35rem);
+  line-height: 1.25;
+}
+
+.welcomeCards :global(.beat-answer-blocks) {
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--story-ink);
+}
+
+.welcomeCards :global(.beat-answer-blocks) > * + * {
+  margin-top: 1.1rem;
+}
+
+.welcomeCards :global(.beat-answer-blocks strong) {
+  font-weight: 700;
+}
+
+.welcomeCards :global(.beat-definition .beat-aside) {
+  margin-top: 0;
+  font-size: 1rem;
+  color: var(--story-ink);
+}
+
+.welcomeCards :global(.beat-definition dd) {
+  margin-top: 1rem;
+}
+
+.welcomeCards :global(.beat-definition .beat-numbered) {
+  padding-left: 1.5rem;
+}
+
+.welcomeCards :global(.beat-definition li + li) {
+  margin-top: 0.8rem;
+}
+
+.welcomeCards :global(.beat-definition li::marker) {
+  font-weight: 800;
+}
+
+.welcomeCards :global(.beat-example) {
+  border-left: 3px solid var(--beat-accent);
+  border-radius: 0 9px 9px 0;
+  background-color: var(--story-cream);
+  padding: 0.85rem 1rem;
+}
+
+.welcomeCards :global(.beat-body-question) {
+  border-left: 3px solid var(--beat-accent);
+  padding-left: 0.8rem;
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.welcomeCards :global(.beat-toggle) {
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  text-align: left;
+}
+
+.welcomeCards :global(.beat-toggle svg) {
+  flex-shrink: 0;
+}
+
+.welcomeCards :global(.beat-detail) {
+  font-size: 1rem;
+  scroll-margin-top: 5rem;
+}
+
+.welcomeCards :global(.beat-detail-body) {
+  max-height: calc(100svh - var(--mock-chrome-h, 0px) - 8rem);
+}
+
+@media (min-width: 60rem) {
+  .welcomeCards :global(.beats) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    gap: var(--home-beat-gap, 1.25rem);
+    width: min(100% - 2rem, 80rem);
+    overflow-x: clip;
+    scroll-snap-type: none;
+    scroll-padding-inline-start: 0;
+    padding: 0;
+  }
+
+  .welcomeCards :global(.beats-nav) {
+    display: none;
+  }
+}
+
+@media (max-width: 59.99rem) {
+  .welcomeCards :global(.beats) {
+    grid-auto-columns: min(86vw, 24rem);
+  }
+
+  .welcomeCards :global(.beats-nav) {
+    width: max-content;
+    margin-inline: auto;
+    border: 1px solid rgb(2 8 17 / 0.15);
+    border-radius: 999px;
+    background-color: var(--story-cream);
+    padding: 0.45rem 0.65rem;
+    box-shadow: 0 6px 14px rgb(2 8 17 / 0.1);
+  }
+}

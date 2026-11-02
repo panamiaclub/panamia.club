@@ -38,10 +38,18 @@ import { useTranslation } from 'react-i18next';
    Types
    ------------------------------------------------------------------------- */
 
-/** A block inside an opened stop. A tagged union rather than four optional
-    fields, so the body is a `switch` instead of a pile of `&&`. */
+/** A block on a card face or inside an opened stop. The tagged union keeps
+    the renderer exhaustive. */
 export type NoteBlock =
-  | { kind: 'paragraph'; text: string }
+  | { kind: 'paragraph'; text: string; emphasis?: 'strong' }
+  | { kind: 'heading'; text: string }
+  | {
+      kind: 'definition';
+      term: string;
+      pronunciation: string;
+      items: string[];
+    }
+  | { kind: 'example'; text: string }
   | { kind: 'numbered'; label: string; items: string[] }
   | { kind: 'list'; label: string; items: string[] }
   | { kind: 'tags'; label: string; items: string[] };
@@ -97,6 +105,8 @@ export interface StoryBeat {
   aside?: string;
   /** The answer on the face of the building, readable without opening it. */
   answer: string;
+  /** Optional structured face for proposals; the shared text stays intact. */
+  body?: NoteBlock[];
   /** Label on the disclosure, so each stop names its own payoff. */
   more: string;
   /** What is inside, revealed when the stop is opened. */

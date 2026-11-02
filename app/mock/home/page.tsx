@@ -5,12 +5,10 @@ import { HomeMock } from './_components/home-mock';
  *
  * Route: /mock/home
  *
- * Built from the Community Connectors Program deck (2026) and the sketch the
- * panas brought over: search, then an info card of notes, then the three
- * pillars, then the existing point-and-newsletter close. The reasoning for
- * each card — and for the seven live sections this drops — is in
- * `_components/home-mock.tsx`; the copy and its slide-by-slide provenance is
- * in `_data.ts`.
+ * Uses the shared homepage sections with a mock-only Welcome Pana card
+ * proposal. Its copy is under `mock.welcomeCards` in the home locale, and its
+ * layout is scoped in `_components/welcome-cards.module.css`. The live
+ * homepage keeps its existing default cards until the proposal is approved.
  *
  * Noindex because it is a fixture route. It duplicates the real homepage's
  * subject matter almost exactly, so left indexable it would compete with `/`
