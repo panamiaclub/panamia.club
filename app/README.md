@@ -32,7 +32,10 @@ Support Pana renders the approved giving design and retains the
 `#giving-circle` and `#sponsorship` sections. `/donate` preserves query
 parameters when redirecting, including canceled Stripe checkout selections.
 New checkout cancellations return directly to `/support-pana`; the existing
-`/donation/confirmation` route is unchanged.
+`/donation/confirmation` return URL is unchanged. Its thank-you page shares
+Support Pana's palette, community photography, and button styles. One-time,
+monthly, and legacy tier-only links retain their distinct messages; monthly
+copy offers contact help rather than promising automatic account activation.
 
 About section URLs keep the complete page and scroll to the requested section:
 `/about-us/our-story`, `/about-us/why-local`, `/about-us/pillars`,
@@ -149,7 +152,7 @@ RSS and JSON feeds for articles:
 | Route                                 | Description              |
 | ------------------------------------- | ------------------------ |
 | `/affiliate`                          | Affiliate portal         |
-| `/donation/confirmation`              | Post-donation page       |
+| `/donation/confirmation`              | Branded donation thank-you page |
 | `/doc/terms-and-conditions`           | Terms of service         |
 | `/doc/affiliate-terms-and-conditions` | Affiliate terms          |
 | `/become-a-pana`                      | Redirect to listing form |
