@@ -285,9 +285,28 @@ test('the compact bookmark reopens the footer on desktop and short phone screens
     await page.evaluate(() =>
       window.scrollTo({ top: 1500, behavior: 'instant' })
     );
+    await expectOpen(page);
+    const openTop = await bookmark(page).evaluate(
+      (element) => element.getBoundingClientRect().top
+    );
     await page.getByRole('button', { name: 'Hide', exact: true }).click();
     await expectCollapsed(page);
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    const expectedScroll = await page.evaluate((top) => {
+      const searchBottom = document
+        .querySelector('.home-hero-field form[role="search"]')!
+        .getBoundingClientRect().bottom;
+      const mastheadBottom =
+        parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue(
+            '--main-masthead-offset'
+          )
+        ) || 0;
+      return Math.max(
+        0,
+        Math.ceil(Math.max(searchBottom, mastheadBottom) + 16 - top)
+      );
+    }, openTop);
     const tab = bookmark(page);
     await expect(tab).toHaveText('Sign up');
     const bounds = await tab.boundingBox();
@@ -306,13 +325,9 @@ test('the compact bookmark reopens the footer on desktop and short phone screens
     await expect(signup).toBeFocused();
     await expect(signup).toBeInViewport({ ratio: 1 });
     await signup.click({ trial: true });
-    if (viewport.height <= 600) {
-      await expect
-        .poll(() => page.evaluate(() => window.scrollY))
-        .toBeGreaterThan(0);
-    } else {
-      expect(await page.evaluate(() => window.scrollY)).toBe(0);
-    }
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBe(expectedScroll);
   }
 });
 
