@@ -10,6 +10,7 @@ import {
   commerceOrders,
 } from '@/lib/schema';
 import { getStripe, listShopPrices } from '@/lib/shop/stripe';
+import { getOrCreateBillingCustomer } from '@/lib/server/billing';
 import { getShopSettings } from '@/lib/shop/settings';
 import type { ShopCartItem } from '@/lib/shop/types';
 
@@ -252,14 +253,21 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe();
     try {
+      const customerId = session?.user?.id
+        ? await getOrCreateBillingCustomer(stripe, session.user.id)
+        : undefined;
       const checkout = await stripe.checkout.sessions.create({
         mode: kind === 'subscription' ? 'subscription' : 'payment',
         line_items: resolved.map(({ item, price }) => ({
           price: price.id,
           quantity: item.quantity,
         })),
-        customer_email: session?.user?.email ?? undefined,
-        customer_creation: kind === 'merchandise' ? 'always' : undefined,
+        customer: customerId,
+        customer_email: customerId
+          ? undefined
+          : (session?.user?.email ?? undefined),
+        customer_creation:
+          !customerId && kind === 'merchandise' ? 'always' : undefined,
         allow_promotion_codes: true,
         billing_address_collection: 'auto',
         shipping_address_collection:

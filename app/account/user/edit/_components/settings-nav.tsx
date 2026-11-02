@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   AtSign,
+  CreditCard,
   Database,
   KeyRound,
   Megaphone,
@@ -13,7 +14,13 @@ import type { LucideIcon } from 'lucide-react';
 import type { SettingScope } from './settings-primitives';
 
 export type SectionId =
-  'identity' | 'signin' | 'referrals' | 'publishing' | 'messages' | 'data';
+  | 'identity'
+  | 'signin'
+  | 'billing'
+  | 'referrals'
+  | 'publishing'
+  | 'messages'
+  | 'data';
 
 export interface SettingsSection {
   id: SectionId;
@@ -51,6 +58,14 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     lede: 'One email signs you into every surface. Your Nostr keys sign what you publish, and only you hold them.',
     scope: 'everywhere',
     icon: KeyRound,
+  },
+  {
+    id: 'billing',
+    label: 'Subscriptions & donations',
+    heading: 'Subscriptions & donations',
+    lede: 'Manage your recurring support for Pana Mia. Update payment methods, view invoices, or cancel through Stripe without sharing card details with us.',
+    scope: 'www',
+    icon: CreditCard,
   },
   {
     id: 'referrals',

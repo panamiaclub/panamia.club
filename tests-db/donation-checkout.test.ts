@@ -9,6 +9,9 @@ const calls: Stripe.Checkout.SessionCreateParams[] = [];
 let checkoutUrl: string | null =
   'https://checkout.stripe.com/c/pay/cs_test_donation';
 let stripeFailure = false;
+let account: { user: { id: string } } | null = null;
+let billingFailure = false;
+const billingCalls: string[] = [];
 
 class FixtureStripeError extends Error {
   type = 'StripeAPIError';
@@ -42,6 +45,18 @@ class FixtureStripe {
 mock.module(import.meta.resolve('stripe'), {
   exports: { default: FixtureStripe },
 });
+mock.module(import.meta.resolve('../auth.ts'), {
+  namedExports: { auth: async () => account },
+});
+mock.module(import.meta.resolve('../lib/server/billing.ts'), {
+  namedExports: {
+    getOrCreateBillingCustomer: async (_stripe: unknown, userId: string) => {
+      billingCalls.push(userId);
+      if (billingFailure) throw new Error('Fixture billing storage failure');
+      return 'cus_account_donation';
+    },
+  },
+});
 mock.method(globalThis, 'fetch', async () => {
   throw new Error('Unexpected network request in donation checkout tests');
 });
@@ -55,6 +70,9 @@ beforeEach(() => {
   calls.length = 0;
   checkoutUrl = 'https://checkout.stripe.com/c/pay/cs_test_donation';
   stripeFailure = false;
+  account = null;
+  billingFailure = false;
+  billingCalls.length = 0;
 });
 
 after(() => {
@@ -101,6 +119,7 @@ test('one-time checkout lets Stripe collect email and derives membership instead
   assert.equal(params.line_items?.[0].price_data?.unit_amount, 4000);
   assert.equal(params.line_items?.[0].price_data?.recurring, undefined);
   assert.deepEqual(params.metadata, {
+    kind: 'donation',
     comment: 'For our neighbors.',
     dedicated_to: 'Directory',
     membership: '0',
@@ -136,6 +155,16 @@ test('monthly checkout creates a monthly USD price and preserves low-tier recurr
       interval: 'month',
     });
     assert.equal(params.metadata?.membership, String(tier));
+    assert.deepEqual(params.subscription_data?.metadata, {
+      kind: 'donation',
+    });
+    assert.deepEqual(
+      params.line_items?.[0].price_data?.product_data?.metadata,
+      {
+        kind: 'donation',
+        shop_visible: 'false',
+      }
+    );
     const success = new URL(params.success_url!);
     assert.equal(success.pathname, '/donation/confirmation');
     assert.equal(new URL(params.cancel_url!).pathname, '/support-pana');
@@ -165,6 +194,40 @@ test('legacy email prefilling remains supported on any same-origin Pana surface'
   assert.equal(response.status, 200);
   assert.equal(calls[0].customer_email, 'donor@example.test');
   assert.equal(new URL(calls[0].cancel_url!).origin, serving);
+});
+
+test('signed-in gifts reuse the server-owned customer and ignore client ownership claims', async () => {
+  account = { user: { id: 'donor-account' } };
+  for (const isRecurring of [true, false]) {
+    const response = await POST(
+      request({
+        amount: 1500,
+        isRecurring,
+        customerEmail: 'someone-else@example.test',
+        customerId: 'cus_someone_else',
+        userId: 'someone-else',
+      })
+    );
+    assert.equal(response.status, 200);
+    const params = calls.at(-1)!;
+    assert.equal(params.customer, 'cus_account_donation');
+    assert.equal(params.customer_email, undefined);
+    assert.equal(params.metadata?.userId, 'donor-account');
+    assert.equal(
+      params.subscription_data?.metadata?.userId,
+      isRecurring ? 'donor-account' : undefined
+    );
+  }
+  assert.deepEqual(billingCalls, ['donor-account', 'donor-account']);
+});
+
+test('billing linkage failures never create an unlinked signed-in gift', async () => {
+  account = { user: { id: 'donor-account' } };
+  billingFailure = true;
+  const response = await POST(request({ amount: 1500, isRecurring: true }));
+  assert.equal(response.status, 503);
+  assert.equal(calls.length, 0);
+  assert.doesNotMatch((await response.json()).message, /storage failure/);
 });
 
 test('invalid amounts, recurrence, and metadata never reach Stripe', async () => {

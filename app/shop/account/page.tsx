@@ -1,15 +1,17 @@
 import Link from 'next/link';
-import { desc, eq, or } from 'drizzle-orm';
 
 import { auth } from '@/auth';
 import { Button } from '@/components/ui/button';
 import { PortalButton } from '@/components/shop/portal-button';
-import { db } from '@/lib/db';
-import { commerceSubscriptions } from '@/lib/schema';
+import {
+  getBillingUser,
+  listShopSubscriptionsForUser,
+} from '@/lib/server/billing';
 
 export default async function ShopAccountPage() {
   const session = await auth();
-  if (!session?.user?.id || !session.user.email) {
+  const user = session?.user?.id ? await getBillingUser(session.user.id) : null;
+  if (!user) {
     return (
       <main className="container mx-auto px-4 py-20 text-center">
         <h1 className="text-4xl font-black">Manage your membership</h1>
@@ -24,13 +26,7 @@ export default async function ShopAccountPage() {
     );
   }
 
-  const subscriptions = await db.query.commerceSubscriptions.findMany({
-    where: or(
-      eq(commerceSubscriptions.userId, session.user.id),
-      eq(commerceSubscriptions.email, session.user.email.toLowerCase())
-    ),
-    orderBy: desc(commerceSubscriptions.updatedAt),
-  });
+  const subscriptions = await listShopSubscriptionsForUser(user);
 
   return (
     <main className="container mx-auto px-4 py-14">
@@ -62,6 +58,12 @@ export default async function ShopAccountPage() {
                     {subscriptions[0].currentPeriodEnd.toLocaleDateString()}
                   </p>
                 )}
+                <Link
+                  href="/account/user/edit#billing"
+                  className="text-pana-indigo mt-6 inline-block text-sm font-bold underline"
+                >
+                  Manage subscriptions and donations in account settings
+                </Link>
               </div>
               <PortalButton />
             </div>

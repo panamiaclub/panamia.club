@@ -2822,6 +2822,22 @@ export const commerceSubscriptions = pgTable(
   })
 );
 
+export const billingCustomers = pgTable(
+  'billing_customers',
+  {
+    stripeCustomerId: text('stripe_customer_id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    userIdx: index('billing_customers_user_idx').on(table.userId),
+  })
+);
+
 export const stripeWebhookEvents = pgTable('stripe_webhook_events', {
   stripeEventId: text('stripe_event_id').primaryKey(),
   eventType: text('event_type').notNull(),
