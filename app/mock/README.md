@@ -12,6 +12,7 @@ layout only works with invented spacing or colours that are not in
 | Route                     | Description                                                                       |
 | ------------------------- | --------------------------------------------------------------------------------- |
 | `/mock/home`              | Homepage cut to four cards, built from the Connectors deck                        |
+| `/mock/welcome-footer`    | Web-only, first-visit welcome footer over the actual homepage                     |
 | `/mock/profile`           | Personal profile page (pana page) redesign                                        |
 | `/mock/profile-next`      | Pana page, second pass: identity rail left, tabbed content right                  |
 | `/mock/feed`              | Pana Social feed redesign, including the empty feed                               |
@@ -21,13 +22,49 @@ layout only works with invented spacing or colours that are not in
 | `/mock/settings`          | Account settings — one page, either masthead                                      |
 | `/mock/directory`         | Directory search results, pre-map                                                 |
 | `/mock/directory-unified` | One directory theme across businesses, panas, groups and events                   |
-| `/mock/directory-online`  | Online base-ZIP map bubbles, grouped results, and public-location choices          |
+| `/mock/directory-online`  | Online base-ZIP map bubbles, grouped results, and public-location choices         |
 | `/mock/explore`           | Scope moved into the search bar; directory narrowed to businesses                 |
 | `/mock/groups`            | Groups landing and discover, as two steps of one flow                             |
 | `/mock/dms`               | Direct messages, as two competing models behind one switch                        |
 | `/mock/dm-chat`           | Interactive Messages workspace: desktop panes, mobile list/chat, drafts and retry |
 | `/mock/events`            | Events discovery: lanes that say why, not facets to narrow with                   |
 | `/mock/events/host`       | Host an event: the form, answering to the page it feeds                           |
+
+## First-visit welcome footer
+
+`/mock/welcome-footer` previews the same compact, non-modal account prompt
+that the main web homepage ships, using `components/home/welcome-footer.tsx`.
+**Create a Pana account** is its only signup action and opens the existing
+passwordless sign-in page. Directory and newsletter promotions are omitted;
+the preview submits nothing. Its `pana:welcome-footer:mock:v1` browser
+preference is separate from the live homepage's `pana:welcome-footer:v1`, so
+reviewing the mock cannot consume a visitor's real first-time welcome.
+
+The prompt appears on the first anonymous visit in a browser. Later visits
+show only a small **Sign up** bookmark at the bottom-left, even if the visitor
+reloads before collapsing the prompt. Its
+`pana:welcome-footer:mock:v1` local-storage key is isolated from real onboarding.
+One persistent bookmark is the only toggle. It sits on the footer's upper-left
+edge and says **Hide** while the prompt is open; after hiding, it returns to
+the bottom-left and says **Sign up**. There is no separate Collapse button,
+full-width collapsed strip, or leftover bottom padding. Clicking **Sign up**
+reopens the same account prompt. Escape inside the prompt also hides it.
+Keyboard focus moves to the bookmark on hiding and to the account action
+on reopening.
+
+The homepage keeps its original hero and city dimensions. The compact bar
+overlays the town's lower edge rather than shortening or resizing the scene.
+Their combined height adds clearance only at the document's end so the real
+footer links remain reachable; hiding or navigation removes that clearance.
+The bookmark itself reserves no height and does not resize the town.
+
+On short screens, the prompt waits until it can fit below the search with a
+16px gap and below the sticky masthead. A manual reopen scrolls only as much
+as needed to clear the search when space is tight. The existing floating
+bug report control sits beside the prompt rather than covering signup.
+The native Capacitor app and signed-in members never mount the
+panel or bookmark, or record a mock visit. Mobile web browsers can preview the responsive
+layout; this is not native mobile onboarding.
 
 ## Online businesses on the map
 
