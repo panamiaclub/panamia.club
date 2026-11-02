@@ -26,6 +26,36 @@ test.describe('Public Navigation', () => {
     await expect(page.locator('h1').first()).toContainText('The Future');
   });
 
+  for (const viewport of [
+    { width: 1920, height: 1080 },
+    { width: 1366, height: 768 },
+    { width: 390, height: 844 },
+  ]) {
+    test(`homepage tagline scales at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      const res = await page.goto('/');
+      expect(res?.status()).toBe(200);
+
+      const headline = page.locator('.home-hero-field .hero-headline');
+      const tagline = page.locator('.home-hero-field .hero-subheadline');
+      await expect(tagline).toHaveText(
+        'Your Portal for Everything South Florida'
+      );
+      await expect(tagline.locator('strong')).toHaveCSS('font-weight', '700');
+
+      const [headlineSize, taglineSize] = await Promise.all(
+        [headline, tagline].map((locator) =>
+          locator.evaluate((element) =>
+            parseFloat(getComputedStyle(element).fontSize)
+          )
+        )
+      );
+      expect(taglineSize).toBeCloseTo(Math.max(17, headlineSize / 3), 2);
+    });
+  }
+
   test('about page loads', async ({ page }) => {
     const res = await page.goto('/about-us');
     expect(res?.status()).toBe(200);
@@ -139,7 +169,9 @@ test.describe('Public Navigation', () => {
   test('donate page loads', async ({ page }) => {
     const res = await page.goto('/donate');
     expect(res?.status()).toBe(200);
-    await expect(page.locator('h1').first()).toContainText('MAKE A DONATION');
+    await expect(page.locator('h1').first()).toContainText(
+      'The future is local.'
+    );
   });
 
   // /affiliate is a redirect shim: it banks an affiliate code in localStorage

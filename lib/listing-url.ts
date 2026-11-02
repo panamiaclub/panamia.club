@@ -11,3 +11,7 @@ export function listingPublicPath(listing: {
 export function listingSetupPath(profileId: string): string {
   return `/listings/setup?profileId=${encodeURIComponent(profileId)}`;
 }
+
+export function listingPreviewPath(profileId: string): string {
+  return `/admin/listings/${encodeURIComponent(profileId)}/preview`;
+}

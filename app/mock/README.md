@@ -13,6 +13,7 @@ layout only works with invented spacing or colours that are not in
 | ------------------------- | --------------------------------------------------------------------------------- |
 | `/mock/home`              | Homepage cut to four cards, built from the Connectors deck                        |
 | `/mock/welcome-footer`    | Web-only, first-visit welcome footer over the actual homepage                     |
+| `/mock/donate`            | Community-giving story with an interactive one-time/monthly donation preview      |
 | `/mock/profile`           | Personal profile page (pana page) redesign                                        |
 | `/mock/profile-next`      | Pana page, second pass: identity rail left, tabbed content right                  |
 | `/mock/feed`              | Pana Social feed redesign, including the empty feed                               |
@@ -65,6 +66,52 @@ bug report control sits beside the prompt rather than covering signup.
 The native Capacitor app and signed-in members never mount the
 panel or bookmark, or record a mock visit. Mobile web browsers can preview the responsive
 layout; this is not native mobile onboarding.
+
+## Donation preview
+
+`/mock/donate` adapts the storytelling structure of
+[Miami Waterkeeper's A.N.C.H.O.R. page](https://miamiwaterkeeper.org/anchor-program/)
+and the frequency/amount controls of its
+[giving form](https://secure.qgiv.com/for/donatemain), using Pana MIA's existing
+palette, community photography, and original copy. The approved design is now
+live at `/donate`. Both routes render
+`components/donations/donation-experience.tsx` and its shared stylesheet, so the
+mock cannot drift from the live page. Only preview labels, the checkout action,
+and payment-related explanations differ.
+
+One-time and monthly selections have separate, browser-local drafts. Presets
+come from `lib/donations.ts`, including **dePana ($10)**, **Pana Confiado
+($15)**, and **Pana Real ($25)** per month. The lower monthly cards select the
+matching gift and return to the form. Custom USD amounts are validated without
+rounding: $0.50 through $999,999.99, with at most two decimal places. Annual
+totals and the selected monthly level are derived from that same amount.
+
+In the mock, the optional purpose and note fields take sample text only.
+**Continue to preview** opens an accessible summary with explicit one-time or recurring
+language and a Stripe Checkout stand-in, not a success screen. No checkout
+request, payment fields, account lookup, or browser storage is used by the
+mock; all choices reset on reload. No fee-covering policy, new rewards, tax
+receipt language, or quantified impact claims are proposed here.
+Giving controls remain disabled until the client is ready; with JavaScript
+off, the page explains that the interactive preview cannot run rather than
+submitting a native form. The link to the live donation page does not prefetch
+that real route.
+
+The live **Continue to checkout** action calls `/api/create-checkout-session`,
+then opens Stripe's hosted payment page. Email and payment details are collected
+by Stripe, without adding those fields to the approved design. Checkout errors
+are shown in the form, and pending submissions disable the controls. A canceled
+checkout restores the validated amount and frequency from its return URL;
+notes and email are never put in that URL. Native app donations remain one-time
+and mission-only, without the monthly controls or membership section.
+
+Stripe's one-time gifts use
+`mode: 'payment'`; monthly gifts use `mode: 'subscription'` and a monthly
+recurring price. Amounts and optional metadata are validated on the server,
+and membership tiers are derived there rather than trusted from the browser.
+Existing donor receipt and subscription-management processes are unchanged;
+this change does not add donation webhooks, account entitlements, or a new
+Customer Portal.
 
 ## Online businesses on the map
 

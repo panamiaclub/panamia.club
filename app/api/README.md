@@ -332,6 +332,24 @@ links are never copied to the business contact.
 | `/api/admin/shop/media`        | POST      | Upload a product image to R2                     |
 | `/api/admin/shop/refund`       | POST      | Issue a full or partial Stripe refund            |
 
+Donation checkout accepts `amount` as integer USD cents ($0.50 through
+$999,999.99) and a required boolean `isRecurring`. `customerEmail` is optional:
+the current donation UI lets Stripe collect it in hosted Checkout. Optional
+`comment` and `dedicate` strings are trimmed and limited to 500 characters.
+The UI's "Community directory" and "Other" choices retain the existing
+`Directory` and `Other` metadata values.
+The server derives `membership` from the amount and recurrence; a submitted
+`monthlyTier` is not trusted.
+
+Browser Origin must match the serving request origin, including when the page
+is served on another Pana surface. Invalid requests return 400, cross-origin
+requests return 403, and unavailable Stripe checkout returns 503 with a
+donor-safe message. Successful sessions preserve the existing confirmation
+parameters and add explicit `frequency`, including monthly gifts below the
+membership thresholds. Cancel URLs restore amount and frequency only, never
+email or notes. The live UI and `/mock/donate` share their renderer and amount
+rules; only the live page calls this endpoint.
+
 ## CRM / Marketing Data (`/api/crm/*`)
 
 Backs the "Marketing Data (HighLevel)" section of `/account/user/edit`. Each

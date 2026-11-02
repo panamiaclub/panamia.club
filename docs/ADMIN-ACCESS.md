@@ -24,6 +24,20 @@ Server-side gates live in `lib/server/admin-auth.ts`:
 - `checkModeratorAuth()` — the abuse-report queue, and nothing else. Admits
   admins and content moderators.
 
+## Directory listing profiles
+
+Listing names in `/admin/listings` are links. Approved listings open their
+public profile through `/listings/<profileId>`, which redirects to `/p/<handle>`
+when the listing has a handle. Pending and declined listings open
+`/admin/listings/<profileId>/preview` instead.
+
+The preview checks `checkAdminAuth()` before reading the listing and accepts
+only business-intake profiles. It is rendered per request, excluded from
+search indexing, and does not expose unpublished listings through the public
+profile routes. Save, recommend, share, claim, social, photo-upload, and
+booking controls are absent from the preview. Opening it does not publish or
+otherwise change the listing.
+
 ## The roles page
 
 `/admin/users/roles` is the canonical place to see and change staff roles. It

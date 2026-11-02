@@ -113,6 +113,7 @@ interface ProfileViewerProps {
    */
   initialSaves: number;
   initialRecommends: number;
+  preview?: boolean;
   children: ReactNode;
 }
 
@@ -122,6 +123,7 @@ export function ProfileViewer({
   businessLogo,
   initialSaves,
   initialRecommends,
+  preview = false,
   children,
 }: ProfileViewerProps) {
   const { data: session, status } = useSession();
@@ -148,7 +150,7 @@ export function ProfileViewer({
   // the browser cannot read. The signals endpoint already answers it, so the
   // viewer kind is derived from that rather than guessed here.
   useEffect(() => {
-    if (status === 'loading') return;
+    if (preview || status === 'loading') return;
 
     if (!userId) {
       setMaySignal(false);
@@ -187,7 +189,7 @@ export function ProfileViewer({
     return () => {
       cancelled = true;
     };
-  }, [profileId, userId, status]);
+  }, [profileId, userId, status, preview]);
 
   const viewer: ViewerKind =
     status !== 'loading' && !userId
@@ -206,6 +208,7 @@ export function ProfileViewer({
 
   const requirePana = useCallback(
     (action: GateAction) => {
+      if (preview) return false;
       if (viewer === 'pana') return true;
       // Reached by signed-out visitors, and kept as a backstop for business
       // accounts: the UI no longer renders anything they could click, but
@@ -214,7 +217,7 @@ export function ProfileViewer({
       setBlockedAction(action);
       return false;
     },
-    [viewer]
+    [viewer, preview]
   );
 
   const toggleSignal = useCallback(
@@ -269,26 +272,36 @@ export function ProfileViewer({
   const value = useMemo(
     () => ({
       viewer,
-      isPana: viewer === 'pana',
-      showsPanaActions: !resolvedViewer || viewer !== 'directory',
+      isPana: !preview && viewer === 'pana',
+      showsPanaActions: !preview && (!resolvedViewer || viewer !== 'directory'),
+      requirePana,
+      signals,
+      toggleSignal,
+      isOwner: !preview && isOwner,
+    }),
+    [
+      viewer,
+      resolvedViewer,
       requirePana,
       signals,
       toggleSignal,
       isOwner,
-    }),
-    [viewer, resolvedViewer, requirePana, signals, toggleSignal, isOwner]
+      preview,
+    ]
   );
 
   return (
     <ViewerContext.Provider value={value}>
       {children}
-      <SignupDialog
-        action={blockedAction}
-        viewer={viewer}
-        businessName={businessName}
-        businessLogo={businessLogo}
-        onClose={() => setBlockedAction(null)}
-      />
+      {!preview && (
+        <SignupDialog
+          action={blockedAction}
+          viewer={viewer}
+          businessName={businessName}
+          businessLogo={businessLogo}
+          onClose={() => setBlockedAction(null)}
+        />
+      )}
     </ViewerContext.Provider>
   );
 }
