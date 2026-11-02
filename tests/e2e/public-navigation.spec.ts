@@ -67,7 +67,7 @@ test.describe('Public Navigation', () => {
   for (const [path, heading] of [
     ['/our-impact', 'Our Impact'],
     ['/ecosystem', 'Our Ecosystem'],
-    ['/support-pana', 'Support Pana'],
+    ['/support-pana', 'The future is local.'],
     ['/programs', 'Programs'],
   ]) {
     test(`${path} parent page loads`, async ({ page }) => {
@@ -169,6 +169,7 @@ test.describe('Public Navigation', () => {
   test('donate page loads', async ({ page }) => {
     const res = await page.goto('/donate');
     expect(res?.status()).toBe(200);
+    await expect(page).toHaveURL(/^https?:\/\/[^/]+\/support-pana$/);
     await expect(page.locator('h1').first()).toContainText(
       'The future is local.'
     );

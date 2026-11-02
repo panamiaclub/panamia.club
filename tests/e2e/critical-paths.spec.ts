@@ -48,6 +48,7 @@ test.describe('Critical User Paths', () => {
     const res = await page.goto('/donate', { waitUntil: 'domcontentloaded' });
 
     expect(res?.status()).toBe(200);
+    await expect(page).toHaveURL(/^https?:\/\/[^/]+\/support-pana$/);
     await expect(page.locator('h1').first()).toContainText(
       'The future is local.'
     );
@@ -60,7 +61,7 @@ test.describe('Live donation checkout', () => {
     await page.route('**/api/auth/get-session', (route) =>
       route.fulfill({ json: null })
     );
-    await page.goto('/donate', { waitUntil: 'domcontentloaded' });
+    await page.goto('/support-pana', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('[data-donation-page]')).toHaveAttribute(
       'data-donation-ready',
       'true'
@@ -70,7 +71,11 @@ test.describe('Live donation checkout', () => {
   test('uses the exact mock hero, story, monthly cards, and amount controls', async ({
     page,
   }) => {
-    await expect(page).toHaveTitle('Give local | Pana MIA');
+    await expect(page).toHaveTitle('Support Pana | Pana MIA');
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      /\/support-pana$/
+    );
     await expect(page.getByText('Design preview', { exact: true })).toHaveCount(
       0
     );
@@ -182,7 +187,7 @@ test.describe('Live donation checkout', () => {
         comment: 'Keep local growing!',
       },
     ]);
-    await page.goto('/donate', { waitUntil: 'domcontentloaded' });
+    await page.goto('/support-pana', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('[data-donation-page]')).toHaveAttribute(
       'data-donation-ready',
       'true'
@@ -286,7 +291,7 @@ test.describe('Live donation checkout', () => {
     await expect(
       page.getByRole('button', { name: 'Continue to checkout' })
     ).toBeEnabled();
-    await expect(page).toHaveURL(/\/donate$/);
+    await expect(page).toHaveURL(/\/support-pana$/);
     await expect(page.getByRole('dialog')).toHaveCount(0);
     expect(requests).toBe(1);
   });
@@ -305,14 +310,14 @@ test.describe('Live donation checkout', () => {
         'Checkout was canceled. Your gift selection has been restored.'
       )
     ).toBeVisible();
-    await page.goto('/donate?canceled=1&frequency=monthly&amount=1250', {
+    await page.goto('/support-pana?canceled=1&frequency=monthly&amount=1250', {
       waitUntil: 'domcontentloaded',
     });
     await expect(page.getByLabel('Your own amount (USD)')).toHaveValue('12.50');
     await expect(
       page.getByRole('status', { name: 'Gift summary' })
     ).toContainText('$150 over a year - dePana');
-    await page.goto('/donate?canceled=1&frequency=weekly&amount=1e3', {
+    await page.goto('/support-pana?canceled=1&frequency=weekly&amount=1e3', {
       waitUntil: 'domcontentloaded',
     });
     await expect(
@@ -347,6 +352,7 @@ test.describe('Live donation checkout', () => {
       });
     });
     await page.goto('/donate', { waitUntil: 'domcontentloaded' });
+    await expect(page).toHaveURL(/^https?:\/\/[^/]+\/support-pana$/);
     await expect(page.locator('[data-donation-page]')).toHaveAttribute(
       'data-native-donation',
       'true'
@@ -379,6 +385,61 @@ test.describe('Live donation checkout', () => {
       dedicate: '',
       comment: '',
     });
+  });
+
+  test('permanently redirects the legacy URL with query values and fragments intact', async ({
+    page,
+    request,
+  }) => {
+    const legacy =
+      '/donate?canceled=1&frequency=monthly&amount=1250&utm_source=pana%20newsletter&tag=a&tag=b&next=https%3A%2F%2Fexample.test%2F';
+    const response = await request.get(legacy, { maxRedirects: 0 });
+    expect(response.status()).toBe(308);
+    const target = new URL(response.headers().location, page.url());
+    expect(target.pathname).toBe('/support-pana');
+    expect(target.searchParams.get('canceled')).toBe('1');
+    expect(target.searchParams.get('frequency')).toBe('monthly');
+    expect(target.searchParams.get('amount')).toBe('1250');
+    expect(target.searchParams.get('utm_source')).toBe('pana newsletter');
+    expect(target.searchParams.getAll('tag')).toEqual(['a', 'b']);
+    expect(target.searchParams.get('next')).toBe('https://example.test/');
+    await page.goto(`${legacy}#giving-form`, { waitUntil: 'domcontentloaded' });
+    await expect(page).toHaveURL(/\/support-pana\?.*#giving-form$/);
+    await expect(page.getByLabel('Your own amount (USD)')).toHaveValue('12.50');
+  });
+
+  test('keeps giving-circle and sponsorship section links usable', async ({
+    page,
+  }) => {
+    const navigation = page.getByRole('navigation', {
+      name: 'Support Pana sections',
+    });
+    await navigation.getByRole('link', { name: 'Giving Circle' }).click();
+    await expect(page).toHaveURL(/\/support-pana#giving-circle$/);
+    await expect(page.locator('#giving-circle')).toBeInViewport();
+    await expect(
+      page
+        .locator('#giving-circle')
+        .getByRole('link', { name: 'Choose $15 monthly' })
+    ).toBeVisible();
+    await navigation.getByRole('link', { name: 'Sponsorship' }).click();
+    await expect(page).toHaveURL(/\/support-pana#sponsorship$/);
+    await expect(page.locator('#sponsorship')).toBeInViewport();
+    await expect(
+      page.locator('#sponsorship').getByRole('heading', { level: 3 })
+    ).toHaveText(['Program sponsor', 'Event partner', 'Story partner']);
+    await expect(
+      page.getByRole('link', { name: 'Start a sponsorship conversation' })
+    ).toHaveAttribute('href', '/form/contact-us');
+    await page
+      .getByRole('contentinfo')
+      .getByRole('link', {
+        name: 'Donate',
+        exact: true,
+      })
+      .click();
+    await expect(page).toHaveURL(/\/support-pana#giving-form$/);
+    await expect(page.locator('#giving-form')).toBeInViewport();
   });
 });
 

@@ -42,7 +42,7 @@ const STATIC_ROUTES: SitemapEntry[] = [
   // that resolves to a different URL than the one submitted. `/directory` is
   // a real page now and is in `OFFERING_ROUTES` above, so the redirect no
   // longer needs to stand in for it.
-  { url: `${SITE_URL}/donate`, changeFrequency: 'monthly' },
+  { url: `${SITE_URL}/support-pana`, changeFrequency: 'monthly' },
   { url: `${SITE_URL}/shop`, changeFrequency: 'weekly', priority: 0.8 },
   { url: `${SITE_URL}/podcasts`, changeFrequency: 'weekly' },
   { url: `${SITE_URL}/m/discover`, changeFrequency: 'weekly' },

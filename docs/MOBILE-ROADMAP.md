@@ -543,7 +543,8 @@ Push is the highest-value next step for the product regardless of review.
 
 ### Apple guideline 3.2.1(vi) — donations
 
-`/donate` collects money inside the app. Apple only permits that for an
+`/support-pana` (also reached through the legacy `/donate` redirect) collects
+money inside the app. Apple only permits that for an
 approved nonprofit; nonprofit registration alone does not satisfy Apple's
 approval process. Until approval is confirmed, the iOS app must not expose the
 donation flow inside the WebView. Fundraising must remain outside the app, such
@@ -598,8 +599,9 @@ Apple references:
    and verify deep links end to end. The release workflow is ready after the
    Play service account has been granted access.
 4. **Complete Apple's nonprofit approval and donation compliance work.** Do not
-   enable `/donate` in the iOS app until approval is confirmed, fund use is
-   disclosed in-app, and tax-receipt behavior is implemented and verified.
+   enable `/support-pana` or its `/donate` alias in the iOS app until approval
+   is confirmed, fund use is disclosed in-app, and tax-receipt behavior is
+   implemented and verified.
 5. **Finish the `panamia.club` domain migration** before validating donation
    return URLs, deep links, and store-review disclosures on devices.
 6. **Push notifications** — the strongest answer to guideline 4.2 and the
