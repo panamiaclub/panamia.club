@@ -11,6 +11,7 @@ import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
 import { revalidatePath } from 'next/cache';
 import { listingPublicPath } from '@/lib/listing-url';
 import { normalizeUsZip, readOnlineZipArea } from '@/lib/online-zip';
+import { checkAdminAuth } from '@/lib/server/admin-auth';
 import {
   ProfileDescriptions,
   ProfileMentoring,
@@ -252,6 +253,28 @@ export async function getPublicListing(
     with: { user: { columns: { screenname: true, accountType: true } } },
   });
   if (!profile) return null;
+  return transformToLegacyFormat({
+    ...profile,
+    screenname: profile.screenname ?? profile.user?.screenname ?? null,
+    accountType: profile.user?.accountType ?? null,
+  });
+}
+
+/** Unpublished intake listings are readable only after a server-side admin check. */
+export async function getAdminListingPreview(
+  profileId: string
+): Promise<LegacyProfile | null> {
+  if (!(await checkAdminAuth())) return null;
+
+  const profile = await db.query.profiles.findFirst({
+    where: and(
+      eq(profiles.id, profileId),
+      sql`${profiles.status} ->> 'source' = ${BUSINESS_INTAKE_SOURCE}`
+    ),
+    with: { user: { columns: { screenname: true, accountType: true } } },
+  });
+  if (!profile) return null;
+
   return transformToLegacyFormat({
     ...profile,
     screenname: profile.screenname ?? profile.user?.screenname ?? null,

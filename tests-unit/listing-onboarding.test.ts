@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { listingPublicPath, listingSetupPath } from '@/lib/listing-url';
+import {
+  listingPreviewPath,
+  listingPublicPath,
+  listingSetupPath,
+} from '@/lib/listing-url';
 import { listingSetup } from '@/lib/email-templates/listing-setup';
 import { profilePublished } from '@/lib/email-templates/profile-published';
 import { isOnboardingRoute } from '@/lib/onboarding';
@@ -30,6 +34,17 @@ test('business intake and setup are not hijacked by personal screenname onboardi
   assert.equal(isOnboardingRoute('/form/get-listed'), true);
   assert.equal(isOnboardingRoute('/listings/setup'), true);
   assert.equal(isOnboardingRoute('/listings/business-id'), false);
+});
+
+test('unpublished business previews use an encoded admin-only route', () => {
+  assert.equal(
+    listingPreviewPath('business-id'),
+    '/admin/listings/business-id/preview'
+  );
+  assert.equal(
+    listingPreviewPath('a/b?c'),
+    '/admin/listings/a%2Fb%3Fc/preview'
+  );
 });
 
 test('the setup email names the business, escapes HTML, and retains a non-expiring recovery path', () => {
