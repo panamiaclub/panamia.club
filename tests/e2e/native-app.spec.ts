@@ -241,7 +241,7 @@ test('About Pana reports a native browser failure without navigating the app', a
   await page.getByRole('button', { name: /Native Viewer/ }).click();
   await page.getByRole('menuitem', { name: 'About Pana', exact: true }).click();
   await expect(
-    page.getByText("Couldn't open Pana Mia. Please try again.")
+    page.getByText("Couldn't open Pana Mia. Please try again.", { exact: true })
   ).toBeVisible();
   await expect(page).toHaveURL(/\/d$/);
   expect(context.pages()).toHaveLength(1);

@@ -45,14 +45,19 @@ test.describe('Public Navigation', () => {
       );
       await expect(tagline.locator('strong')).toHaveCSS('font-weight', '700');
 
-      const [headlineSize, taglineSize] = await Promise.all(
-        [headline, tagline].map((locator) =>
-          locator.evaluate((element) =>
-            parseFloat(getComputedStyle(element).fontSize)
-          )
-        )
-      );
-      expect(taglineSize).toBeCloseTo(Math.max(17, headlineSize / 3), 2);
+      // Hydration can replace the hero before its font metrics are sampled.
+      await expect
+        .poll(async () => {
+          const [headlineSize, taglineSize] = await Promise.all(
+            [headline, tagline].map((locator) =>
+              locator.evaluate((element) =>
+                parseFloat(getComputedStyle(element).fontSize)
+              )
+            )
+          );
+          return taglineSize - Math.max(17, headlineSize / 3);
+        })
+        .toBeCloseTo(0, 2);
     });
   }
 
