@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, X } from 'lucide-react';
 import type { NoteBlock, StoryBeat } from './content';
 import { BeatSceneArt } from './beat-scenes';
@@ -34,18 +35,16 @@ interface StoryBeatsProps {
  * *is* the answer.
  */
 export function StoryBeats({ beats }: StoryBeatsProps) {
+  const { t } = useTranslation('home');
   // Independent, not one-at-a-time. These are three separate questions, and a
   // visitor comparing "what is a pana" against "why local" should not have to
   // keep closing one to read the other.
   const [open, setOpen] = useState<string[]>([]);
 
   const { railRef, rail, syncRail, nudge } = useRail<HTMLDivElement>('.beat');
+  const hasStructuredBody = beats.some((beat) => beat.body);
   const toggleRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-
-  const toggle = (id: string) =>
-    setOpen((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+  const detailRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const close = (id: string) => {
     setOpen((prev) => prev.filter((item) => item !== id));
@@ -54,8 +53,31 @@ export function StoryBeats({ beats }: StoryBeatsProps) {
     toggleRefs.current[id]?.focus();
   };
 
+  const toggle = (id: string) => {
+    if (open.includes(id)) {
+      close(id);
+      return;
+    }
+    setOpen((prev) => [...prev, id]);
+    requestAnimationFrame(() => {
+      const panel = detailRefs.current[id];
+      panel?.focus({ preventScroll: true });
+      // Keep the opened answer and close control in view on narrow screens.
+      if (hasStructuredBody) {
+        panel?.scrollIntoView({ block: 'start', behavior: 'instant' });
+      }
+    });
+  };
+
+  const navigate = (direction: 1 | -1) => {
+    nudge(direction);
+    if (hasStructuredBody) {
+      railRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    }
+  };
+
   return (
-    <div className="beats-rail">
+    <div className="beats-rail" data-card-count={beats.length}>
       <div className="beats" ref={railRef} onScroll={syncRail}>
         {beats.map((beat) => {
           const isOpen = open.includes(beat.id);
@@ -66,6 +88,7 @@ export function StoryBeats({ beats }: StoryBeatsProps) {
               className="beat"
               data-side={beat.side}
               data-accent={beat.accent}
+              aria-labelledby={`beat-sign-${beat.id}`}
             >
               <div className="beat-art" data-rv>
                 <BeatSceneArt scene={beat.scene} />
@@ -75,10 +98,20 @@ export function StoryBeats({ beats }: StoryBeatsProps) {
                 {/* The question is hung like a shop sign rather than set as a
                     heading, because on a street that is what it is. It stays a
                     real h3 underneath. */}
-                <h3 className="beat-sign">{beat.question}</h3>
+                <h3 id={`beat-sign-${beat.id}`} className="beat-sign">
+                  {beat.question}
+                </h3>
 
                 {beat.aside && <p className="beat-aside">{beat.aside}</p>}
-                <p className="beat-answer">{beat.answer}</p>
+                {beat.body ? (
+                  <div className="beat-answer-blocks">
+                    {beat.body.map((block, index) => (
+                      <BeatBlockView key={index} block={block} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="beat-answer">{beat.answer}</p>
+                )}
 
                 <button
                   type="button"
@@ -108,11 +141,23 @@ export function StoryBeats({ beats }: StoryBeatsProps) {
                 id={`beat-${beat.id}`}
                 className="beat-detail"
                 hidden={!isOpen}
+                ref={(node) => {
+                  detailRefs.current[beat.id] = node;
+                }}
+                tabIndex={-1}
+                role="region"
+                aria-labelledby={`beat-sign-${beat.id}`}
                 onKeyDown={(event) => {
-                  if (event.key === 'Escape') close(beat.id);
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    close(beat.id);
+                  }
                 }}
               >
-                <div className="beat-detail-body">
+                <div
+                  className="beat-detail-body"
+                  tabIndex={isOpen && hasStructuredBody ? 0 : undefined}
+                >
                   {beat.detail.map((block, index) => (
                     <BeatBlockView key={index} block={block} />
                   ))}
@@ -124,7 +169,7 @@ export function StoryBeats({ beats }: StoryBeatsProps) {
                   onClick={() => close(beat.id)}
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">Close</span>
+                  <span className="sr-only">{t('beats.controls.close')}</span>
                 </button>
               </div>
             </section>
@@ -134,10 +179,10 @@ export function StoryBeats({ beats }: StoryBeatsProps) {
 
       <RailNav
         rail={rail}
-        nudge={nudge}
+        nudge={navigate}
         className="beats-nav"
-        prevLabel="Previous question"
-        nextLabel="Next question"
+        prevLabel={t('beats.controls.previousQuestion')}
+        nextLabel={t('beats.controls.nextQuestion')}
       />
     </div>
   );
@@ -146,7 +191,44 @@ export function StoryBeats({ beats }: StoryBeatsProps) {
 function BeatBlockView({ block }: { block: NoteBlock }) {
   switch (block.kind) {
     case 'paragraph':
-      return <p>{block.text}</p>;
+      return (
+        <p>
+          {block.emphasis === 'strong' ? (
+            <strong>{block.text}</strong>
+          ) : (
+            block.text
+          )}
+        </p>
+      );
+
+    case 'heading':
+      return <h4 className="beat-body-question">{block.text}</h4>;
+
+    case 'definition':
+      return (
+        <dl className="beat-definition">
+          <dt className="beat-aside">
+            <span className="sr-only">{block.term} </span>
+            <strong>{block.pronunciation}</strong>
+          </dt>
+          <dd>
+            <ol className="beat-numbered">
+              {block.items.map((item) => (
+                <li key={item}>
+                  <strong>{item}</strong>
+                </li>
+              ))}
+            </ol>
+          </dd>
+        </dl>
+      );
+
+    case 'example':
+      return (
+        <p className="beat-example">
+          <strong>{block.text}</strong>
+        </p>
+      );
 
     case 'numbered':
       return (

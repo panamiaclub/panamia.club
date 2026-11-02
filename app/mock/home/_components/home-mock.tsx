@@ -15,18 +15,8 @@ import { GetInvolvedQuiz } from '@/components/home/get-involved-quiz';
 import { MockControls, type Density } from './mock-controls';
 
 /**
- * The homepage, inside a review harness.
- *
- * This route renders exactly the sections `/` renders — same components, same
- * copy, same stylesheet — with two things added: a control bar, and a switch
- * on the one variable worth arguing about.
- *
- * It holds no copy and no layout of its own on purpose. When this file
- * carried its own version of the page, the mock and the real page were two
- * implementations that happened to agree, and the agreement was maintained by
- * hand. Now the only difference between this route and `/` is the bar at the
- * bottom of the window and which value `data-density` takes, so the mock
- * cannot drift from the thing it is previewing.
+ * The shared homepage inside a density review harness. The approved welcome
+ * cards use the same content, disclosure renderer and stylesheet as `/`.
  *
  * On density: the old site's vertical rhythm was a full-viewport hero plus
  * `py-16 md:py-24` on every band, which is where most of its empty space came

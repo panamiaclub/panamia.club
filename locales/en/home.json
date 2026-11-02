@@ -258,26 +258,25 @@
     "introduction": "Pana MIA Club is South Florida’s first hyper-local connection platform built by and <em>for the community</em>. We are here for the creatives, small business owners, culture keepers, and everyone in between, all for a future that is local, a future <em>for the people</em>."
   },
   "beats": {
-    "panamia": {
-      "question": "What is Pana MIA?",
-      "answer": "A club that connects South Florida to its own: the small businesses, creatives and organizations who make this place what it is.",
-      "more": "Read the mission",
-      "photoAlt": "Panas gathered outdoors in front of hand-painted Pana Mia banners",
-      "mission": "Pana MIA Club serves as a community connector to promote everything local in South Florida — small businesses, creatives, and organizations — in order to achieve a more regenerative future.",
-      "promise": "That is the whole idea. Everything else on this page is a way of doing it."
+    "controls": {
+      "close": "Close",
+      "previousQuestion": "Previous question",
+      "nextQuestion": "Next question"
     },
     "pana": {
-      "question": "What's a pana?",
-      "aside": "/pah·nah/",
-      "answer": "South American and Caribbean slang for friend. Around here it also means someone who shows up for the place they live.",
+      "question": "What is Pana?",
+      "aside": "/pah*nah/",
+      "answer": "South American/Caribbean slang meaning friend.",
       "more": "See the full definition",
       "photoAlt": "Panas around a long dinner table, leaning in together for the photo",
+      "example": "Example: I gotta introduce you to my pana, Jose! He’s the best, always has my back.",
       "definition": {
-        "label": "Pana, noun",
+        "label": "Pana",
         "items": [
           "South American/Caribbean slang meaning friend.",
           "A member of the South Florida community that enjoys engaging with and supporting local community projects, small businesses, and creators.",
-          "Someone that advocates for Pana MIA and the local movement."
+          "Someone involved with Pana MIA Club",
+          "Someone who enjoys a locally-centered lifestyle"
         ]
       },
       "practice": {
@@ -290,6 +289,14 @@
           "Engage in mutual aid projects."
         ]
       }
+    },
+    "futureLocal": {
+      "question": "Why 'The Future is Local'?",
+      "answer": "When we say “The Future is Local” it’s because we believe that in order to build better futures for ourselves and our loved ones– the most transformative impact happens on the local level.",
+      "connectionQuestion": "What binds us together as a culture and community?",
+      "change": "In a place like South Florida, where our one constant is change, it's so easy to lose sight of what connects us.",
+      "home": "Once we begin to see South Florida and its people as our home, we unlock our power to influence the changes that build the future of South Florida as one we can all thrive in.",
+      "more": "Learn more about why “The Future is Local”"
     },
     "why": {
       "question": "Why was Pana MIA started?",

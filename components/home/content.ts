@@ -1,25 +1,10 @@
 /**
  * The homepage's content, assembled from the `home` translation namespace.
  *
- * Every word this page says is lifted from the Community Connectors Program
- * deck (2026) rather than written for the web. That is deliberate: the
- * argument this page makes is that the homepage should say what the
- * organisation already says to the people it onboards, instead of the softer
- * marketing copy it used to carry. Paraphrasing would have quietly lost that
- * argument.
- *
- * Source slides, in deck order:
- *  - "THE LOCAL MOVEMENT"      → the "Why local?" stop, and the benefits ring
- *  - "THE FUTURE IS LOCAL!"    → the mission line in "Why was Pana MIA started?"
- *  - "BUT WHAT IS A PANA?"     → the "What's a pana?" stop, both sides
- *  - "THE FUTURE OF PANA MIA"  → all three pillars and their programme lists
- *  - "FINAL MESSAGE FROM US"   → the ground-zero line
- *
- * Deck wording is kept verbatim where it is already good and only tightened
- * where a slide's line break made it read oddly as a paragraph. Two small
- * fixes are carried silently because they are typos rather than voice:
- * "community project" → "community projects", and "a communities' agency" →
- * "a community's agency".
+ * The welcome cards use the approved homepage copy. The founder card,
+ * supporting notes and pillars retain the Community Connectors Program deck
+ * (2026) content. About Us also uses the local-movement notes, independently
+ * of the three questions shown on the homepage.
  *
  * The split between this file and the `home.json` locale files is copy
  * versus structure. Anything a translator would need to change lives in the JSON;
@@ -38,10 +23,18 @@ import { useTranslation } from 'react-i18next';
    Types
    ------------------------------------------------------------------------- */
 
-/** A block inside an opened stop. A tagged union rather than four optional
-    fields, so the body is a `switch` instead of a pile of `&&`. */
+/** A block on a card face or inside an opened stop. The tagged union keeps
+    the renderer exhaustive. */
 export type NoteBlock =
-  | { kind: 'paragraph'; text: string }
+  | { kind: 'paragraph'; text: string; emphasis?: 'strong' }
+  | { kind: 'heading'; text: string }
+  | {
+      kind: 'definition';
+      term: string;
+      pronunciation: string;
+      items: string[];
+    }
+  | { kind: 'example'; text: string }
   | { kind: 'numbered'; label: string; items: string[] }
   | { kind: 'list'; label: string; items: string[] }
   | { kind: 'tags'; label: string; items: string[] };
@@ -84,12 +77,9 @@ export interface StoryBeat {
       answers the same question keeps the anchor alive rather than dropping
       those visitors at the top of the page. */
   anchor?: string;
-  /** Which side of the street this one sits on. Alternating puts the artwork
-      right, left, right, left as you walk down, instead of four identical
-      rows all arriving from the same direction. */
+  /** Which direction the artwork arrives from. */
   side: 'left' | 'right';
-  /** Panel colour. One red, one warm, one blue, one paper — so the four read
-      as four different buildings rather than a repeated card. */
+  /** Accent shared by the border, sign and disclosure. */
   accent: 'orange' | 'blue' | 'paper' | 'red';
   /** The sign over the door, phrased the way a first-time visitor would ask. */
   question: string;
@@ -97,6 +87,8 @@ export interface StoryBeat {
   aside?: string;
   /** The answer on the face of the building, readable without opening it. */
   answer: string;
+  /** Optional structured preview; `answer` remains available as plain text. */
+  body?: NoteBlock[];
   /** Label on the disclosure, so each stop names its own payoff. */
   more: string;
   /** What is inside, revealed when the stop is opened. */
@@ -138,16 +130,6 @@ export interface Pillar {
    Structure
    ------------------------------------------------------------------------- */
 
-/* One photograph per stop, and all three are of people. The band used to run
-   a fanned collage, a row of portraits and a drawn banner; it is three single
-   frames now because that is what was asked for — pictures, not compositions.
-
-   Picked to be three different kinds of gathering, so three photographic
-   stops in a row do not read as one scene repeated: a crowd outdoors in
-   daylight, a table indoors at night, and two people sitting down. The last
-   is Clari and Anette, which is also the literal answer to the question that
-   stop asks. */
-const PANAMIA_PHOTO_SRC = '/img/impact/filmfest-collab-right.webp';
 const PANA_PHOTO_SRC = '/img/impact/pana-social-dinner.webp';
 const WHY_PHOTO_SRC = '/img/about/clari_and_anette.webp';
 
@@ -215,30 +197,9 @@ export function useStoryBeats(): StoryBeat[] {
   const { t } = useTranslation('home');
   const list = (key: string) =>
     stringList(t(key, { returnObjects: true }) as unknown);
+  const localMovement = useLocalMovementBeat();
 
   return [
-    {
-      id: 'panamia',
-      side: 'right',
-      accent: 'red',
-      question: t('beats.panamia.question'),
-      answer: t('beats.panamia.answer'),
-      more: t('beats.panamia.more'),
-      scene: {
-        kind: 'photo',
-        src: PANAMIA_PHOTO_SRC,
-        alt: t('beats.panamia.photoAlt'),
-      },
-      /* The mission lives here rather than under "why was this started",
-         where it used to sit. It is the answer to what the club *is* — a
-         community connector — so on a stop actually named after the club it
-         is the payoff, while on the origin story it was a second, drier
-         version of a question already answered. It is only said once. */
-      detail: [
-        { kind: 'paragraph', text: t('beats.panamia.mission') },
-        { kind: 'paragraph', text: t('beats.panamia.promise') },
-      ],
-    },
     {
       id: 'pana',
       anchor: 'faq-what-is-a-pana',
@@ -247,6 +208,13 @@ export function useStoryBeats(): StoryBeat[] {
       question: t('beats.pana.question'),
       aside: t('beats.pana.aside'),
       answer: t('beats.pana.answer'),
+      body: [
+        {
+          kind: 'paragraph',
+          text: t('beats.pana.answer'),
+          emphasis: 'strong',
+        },
+      ],
       more: t('beats.pana.more'),
       scene: {
         kind: 'photo',
@@ -255,15 +223,53 @@ export function useStoryBeats(): StoryBeat[] {
       },
       detail: [
         {
-          kind: 'numbered',
-          label: t('beats.pana.definition.label'),
+          kind: 'definition',
+          term: t('beats.pana.definition.label'),
+          pronunciation: t('beats.pana.aside'),
           items: list('beats.pana.definition.items'),
         },
+        { kind: 'example', text: t('beats.pana.example') },
         {
           kind: 'list',
           label: t('beats.pana.practice.label'),
           items: list('beats.pana.practice.items'),
         },
+      ],
+    },
+    {
+      ...localMovement,
+      id: 'future-local',
+      question: t('beats.futureLocal.question'),
+      answer: t('beats.futureLocal.answer'),
+      body: [
+        {
+          kind: 'paragraph',
+          text: t('beats.futureLocal.answer'),
+          emphasis: 'strong',
+        },
+      ],
+      more: t('beats.futureLocal.more'),
+      detail: [
+        {
+          kind: 'paragraph',
+          text: t('beats.futureLocal.answer'),
+          emphasis: 'strong',
+        },
+        {
+          kind: 'heading',
+          text: t('beats.futureLocal.connectionQuestion'),
+        },
+        {
+          kind: 'paragraph',
+          text: t('beats.futureLocal.change'),
+          emphasis: 'strong',
+        },
+        {
+          kind: 'paragraph',
+          text: t('beats.futureLocal.home'),
+          emphasis: 'strong',
+        },
+        ...localMovement.detail,
       ],
     },
     {
@@ -297,29 +303,37 @@ export function useStoryBeats(): StoryBeat[] {
         },
       ],
     },
-    {
-      id: 'local',
-      anchor: 'why-local',
-      side: 'left',
-      accent: 'paper',
-      question: t('beats.local.question'),
-      answer: t('beats.local.answer'),
-      more: t('beats.local.more'),
-      scene: {
-        kind: 'map',
-        src: COUNTY_MAP_SRC,
-        alt: t('beats.local.mapAlt'),
-        counties: [],
-      },
-      detail: [
-        {
-          kind: 'list',
-          label: t('beats.local.effects.label'),
-          items: list('beats.local.effects.items'),
-        },
-      ],
-    },
   ];
+}
+
+/** About Us keeps the local-movement section even when the homepage changes. */
+export function useLocalMovementBeat(): StoryBeat {
+  const { t } = useTranslation('home');
+
+  return {
+    id: 'local',
+    anchor: 'why-local',
+    side: 'left',
+    accent: 'paper',
+    question: t('beats.local.question'),
+    answer: t('beats.local.answer'),
+    more: t('beats.local.more'),
+    scene: {
+      kind: 'map',
+      src: COUNTY_MAP_SRC,
+      alt: t('beats.local.mapAlt'),
+      counties: [],
+    },
+    detail: [
+      {
+        kind: 'list',
+        label: t('beats.local.effects.label'),
+        items: stringList(
+          t('beats.local.effects.items', { returnObjects: true })
+        ),
+      },
+    ],
+  };
 }
 
 /** The three pillars from "The Future of Pana MIA". */
