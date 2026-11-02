@@ -38,6 +38,8 @@ const STOPS: NativeSheetStop[] = ['peek', 'half', 'expanded'];
 
 export default function NativeMapResults({
   items,
+  mapItems = items,
+  unmappedCount,
   label,
   count,
   filterKey,
@@ -51,6 +53,8 @@ export default function NativeMapResults({
   onControlsCovered,
 }: {
   items: NativeResult[];
+  mapItems?: NativeResult[];
+  unmappedCount?: number;
   label: string;
   count: string;
   filterKey: string;
@@ -75,9 +79,9 @@ export default function NativeMapResults({
   const [previewHeight, setPreviewHeight] = useState<number | null>(null);
   const [dragHeight, setDragHeight] = useState<number | null>(null);
   const [view, setView] = useState<MapFrame>(() =>
-    frameForPoints(nativeMapPins(items).map((pin) => pin.coords))
+    frameForPoints(nativeMapPins(mapItems).map((pin) => pin.coords))
   );
-  const pins = useMemo(() => nativeMapPins(items), [items]);
+  const pins = useMemo(() => nativeMapPins(mapItems), [mapItems]);
   const pinKey = pins
     .map((pin) => `${pin.id}:${pin.coords.lat},${pin.coords.lng}`)
     .join('|');
@@ -85,7 +89,7 @@ export default function NativeMapResults({
   latestPins.current = pins;
   const cluster = pins.find((pin) => pin.id === clusterId);
   const results = cluster?.items ?? items;
-  const selected = results.find((item) => item.id === selectedId);
+  const selected = mapItems.find((item) => item.id === selectedId);
   const preview = previewKey === filterKey && Boolean(selected);
   const visible = preview && selected ? [selected] : results;
   const heights = nativeSheetHeights(height, controlsInset);
@@ -293,6 +297,7 @@ export default function NativeMapResults({
   };
 
   const unpinned =
+    unmappedCount ??
     items.length - pins.reduce((total, pin) => total + pin.items.length, 0);
   return (
     <div
@@ -446,7 +451,7 @@ export default function NativeMapResults({
               <NativeResultCard item={item} selected={item.id === selectedId} />
             </div>
           ))}
-          {!preview && footer}
+          {!preview && !cluster && footer}
         </div>
       </section>
       <p className="sr-only" aria-live="polite">

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { installNativeApiFixtures } from './fixtures/native-app-api';
 import { NATIVE_BACK_BUTTON_EVENT } from '@/lib/mobile/native';
+import type { SearchResultsInterface } from '@/lib/query/directory';
 
 test.use({
   viewport: { width: 390, height: 844 },
@@ -16,7 +17,10 @@ test.use({
   },
 });
 
-async function native(page: Page) {
+async function native(
+  page: Page,
+  options: { businesses?: SearchResultsInterface[] } = {}
+) {
   await page.addInitScript(() => {
     window.Capacitor = {
       isNativePlatform: () => true,
@@ -24,7 +28,7 @@ async function native(page: Page) {
     };
     Object.assign(window, { androidBridge: { postMessage: () => {} } });
   });
-  return installNativeApiFixtures(page);
+  return installNativeApiFixtures(page, options);
 }
 
 async function nativeBrowser(
@@ -145,6 +149,55 @@ test('Directory is the native front door, with actual identity and branded categ
     picker.getByRole('menuitem', { name: /Directory/ }).locator('svg')
   ).toBeVisible();
   expect(fixtures.state.unhandled).toEqual([]);
+});
+
+test('native directory maps include all 27 locations beyond the first list page', async ({
+  page,
+}) => {
+  const businesses: SearchResultsInterface[] = Array.from(
+    { length: 47 },
+    (_, index) => ({
+      _id: `business-${index}`,
+      id: `business-${index}`,
+      name: `Business ${index}`,
+      screenname: `business-${index}`,
+      score: 1,
+      score_details: {},
+      details: 'A directory map fixture.',
+      five_words: 'A directory map fixture.',
+      geo: index < 20 ? null : { coordinates: [-80.19 + index * 0.001, 25.76] },
+      images: { primaryCDN: '/logos/pana_logo_long_orange.png' },
+      primary_address: { city: 'Miami' },
+      socials: {},
+    })
+  );
+  const fixtures = await native(page, { businesses });
+  await page.goto('/d');
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(27);
+  await expect(
+    map(page).getByText('20 without map coordinates, included below')
+  ).toBeVisible();
+  await map(page)
+    .getByRole('button', { name: 'Business 46', exact: true })
+    .click();
+  await fitted(page);
+  await expect(map(page).locator('article a').first()).toHaveAttribute(
+    'href',
+    '/p/business-46'
+  );
+  await map(page)
+    .getByRole('button', { name: 'Show all', exact: true })
+    .click();
+  await map(page).getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(map(page).getByText('Page 2 of 3')).toBeVisible();
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(27);
+  expect(
+    fixtures.state.requests.filter(
+      (request) =>
+        request.pathname === '/api/getDirectorySearch' &&
+        new URLSearchParams(request.query).get('v') === 'map'
+    )
+  ).toHaveLength(1);
 });
 
 test('mobile browsers keep the website layout rather than the native tabs', async ({

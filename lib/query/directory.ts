@@ -13,6 +13,7 @@ export interface DirectorySearchParams {
   geolat: number;
   geolng: number;
   radius: DirectoryRadius;
+  resultsView?: 'map';
   sort?: DirectorySort;
   certifiedOnly?: boolean;
   withEventsOnly?: boolean;
@@ -39,6 +40,8 @@ export interface SearchResultsInterface {
   score: number;
   score_details: Record<string, unknown>;
   name: string;
+  /** One-based position in the complete, filtered result set. */
+  result_index?: number;
   screenname: string | null;
   details: string;
   five_words: string;
@@ -80,6 +83,10 @@ export interface SearchResponseInterface {
   success: boolean;
   data: SearchResultsInterface[];
   pagination: SearchPaginationInterface;
+  map?: {
+    totalResults: number;
+    unmappedCount: number;
+  };
 }
 
 const emptyResponse: SearchResponseInterface = {
@@ -101,6 +108,9 @@ export const searchParamsToString = (params: DirectorySearchParams) => {
     qs.append('fcat', params.filterCategories);
   }
   qs.append('radius', params.radius);
+  if (params.resultsView === 'map') {
+    qs.append('v', 'map');
+  }
   // Sent at two decimal places so the edge cache key stays low-cardinality and
   // the CDN never sees a precise location. Omitted entirely when absent, so a
   // visitor who has not shared one produces the same URL as everybody else.

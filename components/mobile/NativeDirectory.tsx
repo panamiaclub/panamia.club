@@ -119,15 +119,20 @@ export default function NativeDirectory({
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  const directory = useSearch(
-    {
-      ...params,
-      searchTerm: term,
-      sort,
-      radius,
-      geolat: location.coords?.lat ?? 0,
-      geolng: location.coords?.lng ?? 0,
-    },
+  const queryFilters = {
+    ...params,
+    searchTerm: term,
+    sort,
+    radius,
+    geolat: location.coords?.lat ?? 0,
+    geolng: location.coords?.lng ?? 0,
+  };
+  const { pageNum: _pageNum, ...mapFilters } = queryFilters;
+  const directory = useSearch(queryFilters, {
+    enabled: active && scope === 'directory',
+  });
+  const directoryMap = useSearch(
+    { ...queryFilters, pageNum: 1, resultsView: 'map' },
     { enabled: active && scope === 'directory' }
   );
   const events = useNativeEvents(term, active && scope === 'event');
@@ -139,6 +144,10 @@ export default function NativeDirectory({
   const businesses = useMemo(
     () => (directory.data?.data ?? []).map(nativeBusiness),
     [directory.data]
+  );
+  const mappedBusinesses = useMemo(
+    () => (directoryMap.data?.data ?? []).map(nativeBusiness),
+    [directoryMap.data]
   );
   const eventItems = useMemo(
     () =>
@@ -313,19 +322,29 @@ export default function NativeDirectory({
         {(scope === 'directory' || mountedMaps.includes('directory')) && (
           <NativeMapResults
             items={businesses}
+            mapItems={mappedBusinesses}
+            unmappedCount={directoryMap.data?.map?.unmappedCount}
             label="Directory"
             count={`${total} ${total === 1 ? 'listing' : 'listings'}`}
             filterKey={JSON.stringify([
               term,
-              params,
+              mapFilters,
               radius,
               sort,
               filterVersion,
             ])}
             active={active && scope === 'directory'}
-            loading={directory.isPending || searching}
-            failed={directory.isError || directory.data?.success === false}
-            onRetry={() => void directory.refetch()}
+            loading={directory.isPending || directoryMap.isPending || searching}
+            failed={
+              directory.isError ||
+              directory.data?.success === false ||
+              directoryMap.isError ||
+              directoryMap.data?.success === false
+            }
+            onRetry={() => {
+              void directory.refetch();
+              void directoryMap.refetch();
+            }}
             viewer={location.coords}
             controlsInset={106}
             onControlsCovered={directoryCovered}

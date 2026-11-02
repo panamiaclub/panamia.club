@@ -89,4 +89,15 @@ describe('directory radius query encoding', () => {
     assert.equal(query.has('geolat'), false);
     assert.equal(query.has('geolng'), false);
   });
+
+  it('distinguishes complete-map requests without changing their filters', () => {
+    const list = new URLSearchParams(searchParamsToString(base));
+    const map = new URLSearchParams(
+      searchParamsToString({ ...base, resultsView: 'map' })
+    );
+    assert.equal(map.get('v'), 'map');
+    assert.equal(list.has('v'), false);
+    map.delete('v');
+    assert.equal(map.toString(), list.toString());
+  });
 });
