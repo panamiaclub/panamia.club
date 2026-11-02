@@ -93,6 +93,7 @@ mock.module(import.meta.resolve('../lib/federation/index.ts'), {
 });
 
 let postsRoute: typeof import('../app/api/social/actors/[username]/posts/route');
+let myPostsRoute: typeof import('../app/api/social/actors/me/posts/route');
 let statusRoute: typeof import('../app/api/social/statuses/[statusId]/route');
 let repliesRoute: typeof import('../app/api/social/statuses/[statusId]/replies/route');
 let NextRequest: typeof import('next/server').NextRequest;
@@ -132,7 +133,15 @@ before(async () => {
     ALTER TABLE social_actors ALTER COLUMN status_count SET DEFAULT 0;
   `);
 
-  for (const id of ['alice', 'bob', 'carol', 'dave', 'erin', 'banned']) {
+  for (const id of [
+    'alice',
+    'bob',
+    'carol',
+    'dave',
+    'erin',
+    'banned',
+    'followers',
+  ]) {
     await db.insert(schema.socialActors).values({
       id,
       username: id,
@@ -238,6 +247,7 @@ before(async () => {
   status = await import('@/lib/federation/wrappers/status');
   group = await import('@/lib/federation/wrappers/group');
   postsRoute = await import('../app/api/social/actors/[username]/posts/route');
+  myPostsRoute = await import('../app/api/social/actors/me/posts/route');
   statusRoute = await import('../app/api/social/statuses/[statusId]/route');
   repliesRoute =
     await import('../app/api/social/statuses/[statusId]/replies/route');
@@ -327,8 +337,6 @@ describe('actual wrapper queries against isolated Postgres', () => {
       'member/recipient',
       'dave',
       [
-        'dm_cc',
-        'dm_dave',
         'group_closed',
         'group_named',
         'group_open',
@@ -341,8 +349,6 @@ describe('actual wrapper queries against isolated Postgres', () => {
       'author without membership',
       'alice',
       [
-        'dm_cc',
-        'dm_dave',
         'followers',
         'followers_cc',
         'group_open',
@@ -360,8 +366,95 @@ describe('actual wrapper queries against isolated Postgres', () => {
         50
       );
       assert.deepEqual(ids(result.statuses), expected);
+      assert.equal(
+        await timeline.getActorPostCount('alice', actor),
+        expected.length
+      );
     });
   }
+
+  it('excludes every DM recipient shape before profile pagination and counting', async () => {
+    const dmRows = [
+      {
+        id: 'z_dm_many',
+        recipientTo: [uri('dave'), uri('bob')],
+      },
+      { id: 'z_dm_empty', recipientTo: [] },
+      { id: 'z_dm_followers_name', recipientTo: [uri('followers')] },
+    ];
+    const dmIds = new Set([
+      'dm_dave',
+      'dm_cc',
+      'expired',
+      'reply_dm',
+      ...dmRows.map((row) => row.id),
+    ]);
+    const viewers = ['alice', 'dave', 'followers'];
+    const counts = await Promise.all(
+      viewers.map((actor) => timeline.getActorPostCount('alice', actor))
+    );
+    await db.insert(schema.socialStatuses).values(
+      dmRows.map((row) => ({
+        actorId: 'alice',
+        uri: `https://visibility.invalid/status/${row.id}`,
+        type: 'Note',
+        published: new Date('2026-02-01'),
+        recipientCc: [],
+        ...row,
+      }))
+    );
+
+    try {
+      for (const [index, actor] of viewers.entries()) {
+        const first = await timeline.getActorPosts(
+          'alice',
+          actor,
+          undefined,
+          1
+        );
+        assert.equal(first.statuses.length, 1);
+        assert.equal(first.nextCursor, first.statuses[0].id);
+        assert.ok(!dmIds.has(first.statuses[0].id));
+        assert.equal(
+          await timeline.getActorPostCount('alice', actor),
+          counts[index]
+        );
+
+        const withReplies = await timeline.getActorPosts(
+          'alice',
+          actor,
+          undefined,
+          50,
+          true
+        );
+        assert.ok(!withReplies.statuses.some((row) => dmIds.has(row.id)));
+      }
+    } finally {
+      for (const row of dmRows) {
+        await db
+          .delete(schema.socialStatuses)
+          .where(eq(schema.socialStatuses.id, row.id));
+      }
+    }
+  });
+
+  it('keeps excluded profile DMs available in Messages', async () => {
+    assert.ok(
+      ids((await timeline.getReceivedDirectMessages('dave')).statuses).includes(
+        'dm_dave'
+      )
+    );
+    assert.ok(
+      ids((await timeline.getSentDirectMessages('alice')).statuses).includes(
+        'dm_dave'
+      )
+    );
+    assert.ok(
+      ids(await timeline.getDirectConversation('dave', 'alice')).includes(
+        'dm_dave'
+      )
+    );
+  });
 
   for (const read of ['getStatus', 'getStatusWithLikeStatus'] as const) {
     it(`${read}: recipient, followers, expiry, and group gates`, async () => {
@@ -529,9 +622,28 @@ describe('real route handlers with session/active-actor boundaries stubbed', () 
     );
     assert.equal(response.status, 200);
     const body = await response.json();
-    assert.ok(ids(body.data.statuses).includes('dm_dave'));
-    assert.ok(ids(body.data.statuses).includes('reply_dm'));
+    assert.ok(!ids(body.data.statuses).includes('dm_dave'));
+    assert.ok(!ids(body.data.statuses).includes('reply_dm'));
+    assert.ok(ids(body.data.statuses).includes('reply_public'));
+    assert.ok(ids(body.data.statuses).includes('group_closed'));
     assert.ok(!ids(body.data.statuses).includes('followers'));
+  });
+
+  it('my posts API keeps sent DMs out of the owner wall', async () => {
+    signedIn = true;
+    viewer = 'alice';
+    const response = await myPostsRoute.GET(
+      new NextRequest('https://visibility.invalid/api?limit=50')
+    );
+    assert.equal(response.status, 200);
+    assert.deepEqual(ids((await response.json()).data.statuses), [
+      'followers',
+      'followers_cc',
+      'group_open',
+      'public',
+      'unlisted',
+      'wrong_followers',
+    ]);
   });
 
   it('single status API returns indistinguishable 404s to unauthorized and actorless sessions', async () => {
@@ -1048,6 +1160,17 @@ describe('new mutual-only posts preserve their circle without becoming messages'
     for (const actorId of [owner, pana]) {
       assert.ok(
         ids((await timeline.getHomeTimeline(actorId)).statuses).includes(rootId)
+      );
+      const profilePosts = await timeline.getActorPosts(
+        owner,
+        actorId,
+        undefined,
+        50
+      );
+      assert.ok(ids(profilePosts.statuses).includes(rootId));
+      assert.equal(
+        await timeline.getActorPostCount(owner, actorId),
+        profilePosts.statuses.length
       );
     }
     assert.ok(

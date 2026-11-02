@@ -3,7 +3,7 @@
  *
  * High-level functions for querying timelines.
  *
- * IMPORTANT: Direct messages are EXCLUDED from Home and Public timelines.
+ * IMPORTANT: Direct messages are EXCLUDED from Home, Public, and profile timelines.
  *
  * @see docs/SOCIAL-ROADMAP.md
  */
@@ -22,7 +22,17 @@ import type {
   PublicSocialActor,
   SocialGroupVisibility,
 } from '@/lib/schema';
-import { and, eq, sql, or, asc, inArray } from 'drizzle-orm';
+import {
+  and,
+  eq,
+  sql,
+  or,
+  asc,
+  inArray,
+  isNotNull,
+  isNull,
+  type SQL,
+} from 'drizzle-orm';
 import { countyShortLabel } from '@/lib/county';
 import { socialConfig } from '../index';
 import { localActorFilter } from '../local-actor';
@@ -36,6 +46,7 @@ import { listMutualFollowIds } from './follow';
 import { STATUS_TYPE_PANAS } from '@/lib/utils/getVisibility';
 import {
   PUBLIC,
+  isPublicStatus,
   jsonbArrayContains,
   notExpired,
   notPanasStatus,
@@ -62,6 +73,40 @@ import {
  */
 function excludeStories() {
   return sql`${socialStatuses.type} <> ${STATUS_TYPE_STORY}`;
+}
+
+/**
+ * Keep non-public posts without treating individual DM recipients as an audience
+ * collection. Group and Panas posts have their own authorization in readableStatus.
+ */
+function excludeDirectMessages(): SQL {
+  return or(
+    isNotNull(socialStatuses.groupId),
+    eq(socialStatuses.type, STATUS_TYPE_PANAS),
+    isPublicStatus(),
+    sql`EXISTS (
+      SELECT 1 FROM social_actors audience
+      WHERE ${socialStatuses.recipientTo} @> to_jsonb(audience.followers_url)
+         OR ${socialStatuses.recipientCc} @> to_jsonb(audience.followers_url)
+    )`
+  )!;
+}
+
+function actorPostsFilter(
+  actorId: string,
+  viewerActorId: string | undefined,
+  viewerGroupIds: string[],
+  includeReplies: boolean = false
+): SQL {
+  return and(
+    eq(socialStatuses.actorId, actorId),
+    isNotNull(socialStatuses.published),
+    includeReplies ? undefined : isNull(socialStatuses.inReplyToId),
+    readableStatus(viewerActorId, viewerGroupIds),
+    notExpired(),
+    excludeStories(),
+    excludeDirectMessages()
+  )!;
 }
 
 /**
@@ -359,16 +404,10 @@ export async function getActorPosts(
   const viewerGroupIds = await getViewerGroupIds(viewerActorId);
 
   const rows = await db.query.socialStatuses.findMany({
-    where: (s, { and, eq, isNotNull, isNull }) =>
-      and(
-        eq(s.actorId, actorId),
-        isNotNull(s.published),
-        includeReplies ? undefined : isNull(s.inReplyToId),
-        readableStatus(viewerActorId, viewerGroupIds),
-        notExpired(),
-        excludeStories(),
-        cursor ? sql`${s.id} < ${cursor}` : undefined
-      ),
+    where: and(
+      actorPostsFilter(actorId, viewerActorId, viewerGroupIds, includeReplies),
+      cursor ? sql`${socialStatuses.id} < ${cursor}` : undefined
+    ),
     with: {
       actor: ACTOR_WITH,
       attachments: true,
@@ -389,6 +428,18 @@ export async function getActorPosts(
   const nextCursor = hasMore ? items[items.length - 1].id : null;
 
   return { statuses: items.map(toStatus), nextCursor };
+}
+
+/** Count the posts the profile wall can display, not the stored DM statuses. */
+export async function getActorPostCount(
+  actorId: string,
+  viewerActorId?: string
+): Promise<number> {
+  const viewerGroupIds = await getViewerGroupIds(viewerActorId);
+  return db.$count(
+    socialStatuses,
+    actorPostsFilter(actorId, viewerActorId, viewerGroupIds)
+  );
 }
 
 /**

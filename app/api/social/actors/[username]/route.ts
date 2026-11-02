@@ -7,6 +7,7 @@ import { auth } from '@/auth';
 import { getActiveProfileWithActor } from '@/lib/server/active-profile';
 import {
   getActorByScreenname,
+  getActorPostCount,
   getFollowRelationship,
   getViewerBlockState,
 } from '@/lib/federation';
@@ -43,6 +44,12 @@ export async function GET(
   // deliberately not reported — see getViewerBlockState.
   const blockState = await getViewerBlockState(viewerActorId, actor.id);
 
+  // The stored statusCount includes DMs; the profile count must match its wall.
+  const statusCount = await getActorPostCount(
+    actor.id,
+    viewerActorId ?? undefined
+  );
+
   return NextResponse.json({
     success: true,
     data: {
@@ -56,7 +63,7 @@ export async function GET(
         iconUrl: actor.iconUrl,
         followingCount: actor.followingCount,
         followersCount: actor.followersCount,
-        statusCount: actor.statusCount,
+        statusCount,
         createdAt: actor.createdAt,
       },
       isFollowing: relationship.isFollowing,

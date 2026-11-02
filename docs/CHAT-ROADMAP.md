@@ -99,6 +99,10 @@ an existing attachment leave too little room above the composer.
   Mobile uses a list/detail flow with Back navigation, including during loading and errors.
 - Conversation filtering is local. **New message** searches the existing actor API by name or
   handle, excludes the viewer, and opens the same gated conversation endpoint as an existing chat.
+- DMs stay out of profile **Posts** lists and counts, including the sender's and recipient's
+  views. Profile filtering happens before pagination and also excludes direct replies when
+  requested. Public, followers-only, Panas, and readable group posts retain their audiences;
+  Messages and authorized DM permalinks remain unchanged.
 - Text and mirrored-GIF drafts are held per conversation in component memory. Reloading, unmounting
   the workspace, signing out, or switching the active profile clears them; browser storage is not used.
 - Each submitted message retains its recipient, text, and attachments while sending or failed.
