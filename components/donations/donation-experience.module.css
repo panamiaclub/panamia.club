@@ -200,8 +200,9 @@
 }
 
 .story,
-.givingCard {
-  scroll-margin-top: 6rem;
+.givingCard,
+.monthlySection {
+  scroll-margin-top: calc(var(--main-masthead-offset, 4rem) + 4rem);
 }
 
 .story h2,

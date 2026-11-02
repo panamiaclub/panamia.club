@@ -34,6 +34,10 @@ import {
   type DonationGift,
 } from '@/lib/donations';
 import { useIsNativeApp } from '@/lib/mobile/use-native-app';
+import {
+  SupportPanaNavigation,
+  SupportPanaSponsorship,
+} from './support-sections';
 import styles from './donation-experience.module.css';
 
 type GiftSelection = { preset: number | null; customAmount: string };
@@ -241,7 +245,7 @@ export function DonationExperience({
           <p>
             <strong>Design preview</strong> &middot; No payments are taken here
           </p>
-          <Link href="/donate" prefetch={false}>
+          <Link href="/support-pana" prefetch={false}>
             Live donation page <ArrowUpRight size={14} aria-hidden="true" />
           </Link>
         </div>
@@ -290,7 +294,13 @@ export function DonationExperience({
         </div>
       </header>
 
-      <section className={styles.givingSection} aria-label="Support Pana MIA">
+      {!previewOnly && !isNativeDonation && <SupportPanaNavigation />}
+
+      <section
+        id={isNativeDonation ? 'giving-circle' : undefined}
+        className={styles.givingSection}
+        aria-label="Support Pana MIA"
+      >
         <div className={styles.givingInner}>
           <div className={styles.story} id="our-impact">
             <p className={styles.eyebrow}>Rooted here. Growing together.</p>
@@ -605,6 +615,7 @@ export function DonationExperience({
 
       {!isNativeDonation && (
         <section
+          id="giving-circle"
           className={styles.monthlySection}
           aria-labelledby="monthly-title"
         >
@@ -650,6 +661,8 @@ export function DonationExperience({
           </div>
         </section>
       )}
+
+      {!previewOnly && <SupportPanaSponsorship />}
 
       <section className={styles.faqSection} aria-labelledby="giving-questions">
         <div className={styles.faqInner}>

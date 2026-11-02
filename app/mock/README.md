@@ -74,10 +74,13 @@ layout; this is not native mobile onboarding.
 and the frequency/amount controls of its
 [giving form](https://secure.qgiv.com/for/donatemain), using Pana MIA's existing
 palette, community photography, and original copy. The approved design is now
-live at `/donate`. Both routes render
+live at `/support-pana`, with `/donate` permanently redirecting there. Both
+the live page and this mock render
 `components/donations/donation-experience.tsx` and its shared stylesheet, so the
 mock cannot drift from the live page. Only preview labels, the checkout action,
-and payment-related explanations differ.
+and payment-related explanations differ. The live page also preserves Support
+Pana's section navigation and sponsorship content. `#giving-circle` opens the
+monthly levels, and `#sponsorship` retains the sponsorship contact options.
 
 One-time and monthly selections have separate, browser-local drafts. Presets
 come from `lib/donations.ts`, including **dePana ($10)**, **Pana Confiado
@@ -101,8 +104,9 @@ The live **Continue to checkout** action calls `/api/create-checkout-session`,
 then opens Stripe's hosted payment page. Email and payment details are collected
 by Stripe, without adding those fields to the approved design. Checkout errors
 are shown in the form, and pending submissions disable the controls. A canceled
-checkout restores the validated amount and frequency from its return URL;
-notes and email are never put in that URL. Native app donations remain one-time
+checkout restores the validated amount and frequency from its `/support-pana`
+return URL; old `/donate` return URLs preserve those values through a redirect.
+Notes and email are never put in that URL. Native app donations remain one-time
 and mission-only, without the monthly controls or membership section.
 
 Stripe's one-time gifts use

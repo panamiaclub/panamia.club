@@ -347,7 +347,9 @@ requests return 403, and unavailable Stripe checkout returns 503 with a
 donor-safe message. Successful sessions preserve the existing confirmation
 parameters and add explicit `frequency`, including monthly gifts below the
 membership thresholds. Cancel URLs restore amount and frequency only, never
-email or notes. The live UI and `/mock/donate` share their renderer and amount
+email or notes. New cancel URLs point to `/support-pana`; existing `/donate`
+returns redirect there with their query values intact. The live Support Pana
+page and `/mock/donate` share their renderer and amount
 rules; only the live page calls this endpoint.
 
 ## CRM / Marketing Data (`/api/crm/*`)

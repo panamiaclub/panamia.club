@@ -20,6 +20,7 @@
     "app/api/profile": "profiles",
     "app/d": "profiles",
     "app/donate": "payments",
+    "app/support-pana": "payments",
     "app/donation": "payments",
     "app/r": "resilience",
     "app/api/relay": "resilience"

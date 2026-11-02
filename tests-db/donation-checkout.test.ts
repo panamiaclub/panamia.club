@@ -108,7 +108,7 @@ test('one-time checkout lets Stripe collect email and derives membership instead
   });
   const cancel = new URL(params.cancel_url!);
   assert.equal(cancel.origin, origin);
-  assert.equal(cancel.pathname, '/donate');
+  assert.equal(cancel.pathname, '/support-pana');
   assert.equal(cancel.searchParams.get('frequency'), 'one-time');
   assert.equal(cancel.searchParams.get('amount'), '4000');
   assert.equal(cancel.searchParams.get('canceled'), '1');
@@ -137,6 +137,8 @@ test('monthly checkout creates a monthly USD price and preserves low-tier recurr
     });
     assert.equal(params.metadata?.membership, String(tier));
     const success = new URL(params.success_url!);
+    assert.equal(success.pathname, '/donation/confirmation');
+    assert.equal(new URL(params.cancel_url!).pathname, '/support-pana');
     assert.equal(success.searchParams.get('frequency'), 'monthly');
     assert.equal(success.searchParams.get('tier'), String(tier));
     assert.equal(success.searchParams.get('amt'), String(amount));
