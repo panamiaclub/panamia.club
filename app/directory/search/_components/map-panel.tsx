@@ -12,10 +12,6 @@ import type { MapBounds } from '@/lib/map/viewport';
 import { isUnoptimizableImageSrc } from '@/lib/image-src';
 import { distanceInMiles, type Coords } from '@/app/p/[user]/_lib/profile-view';
 import {
-  directoryRadiusMiles,
-  type DirectoryRadius,
-} from '@/lib/directory-radius';
-import {
   formatDistance,
   resultMapCoords,
   resultZipArea,
@@ -43,7 +39,6 @@ const FALLBACK_LOGO = '/img/bg_coconut_blue.jpg';
 interface MapPanelProps {
   results: SearchResultsInterface[];
   viewerCoords: Coords | null;
-  radius: DirectoryRadius;
   scopeKey: string;
   onBoundsChange: (bounds: MapBounds | null) => void;
   /**
@@ -86,7 +81,6 @@ interface Pin {
 export function MapPanel({
   results,
   viewerCoords,
-  radius,
   scopeKey,
   onBoundsChange,
   highlightId = null,
@@ -151,10 +145,12 @@ export function MapPanel({
   // identity whenever either of those moves.
   const pointsRef = useRef(points);
   pointsRef.current = points;
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
 
   const mapRef = useRef<HTMLDivElement>(null);
 
-  /** The map's short side, so the radius holds vertically as well as across. */
+  /** The short side keeps the neighbourhood visible in either orientation. */
   const mapSizePx = () => {
     const box = mapRef.current?.getBoundingClientRect();
     const side = box ? Math.min(box.width, box.height) : 0;
@@ -202,20 +198,17 @@ export function MapPanel({
   // when the location actually changes, not whenever the parent re-renders.
   const viewerLat = viewerCoords?.lat ?? null;
   const viewerLng = viewerCoords?.lng ?? null;
-  const radiusMiles = directoryRadiusMiles(radius);
   useEffect(() => {
-    if (viewerLat === null || viewerLng === null || radiusMiles === null) {
+    if (viewerLat === null || viewerLng === null) {
       viewerFramePending.current = false;
       setView(frameForPoints(pointsRef.current));
       setSelectedId(null);
       return;
     }
-    viewerFramePending.current = true;
-    setView(
-      viewerFrame({ lat: viewerLat, lng: viewerLng }, mapSizePx(), radiusMiles)
-    );
+    viewerFramePending.current = loadingRef.current;
+    setView(viewerFrame({ lat: viewerLat, lng: viewerLng }, mapSizePx()));
     setSelectedId(null);
-  }, [viewerLat, viewerLng, radiusMiles]);
+  }, [viewerLat, viewerLng]);
 
   const selected = pins.find((pin) => pin.result._id === selectedId) ?? null;
 

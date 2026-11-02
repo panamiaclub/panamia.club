@@ -643,8 +643,21 @@
 }
 
 .filtersDialog {
+  width: calc(100% - 2rem);
   max-height: 85dvh;
   overflow-y: auto;
+  border: 2px solid var(--color-pana-ink);
+  border-radius: 1.125rem;
+  background: var(--color-pana-cream);
+  color: var(--color-pana-ink);
+}
+
+.filtersDialog :global(.dirsearch-filterpanel) {
+  position: static;
+  width: 100%;
+  max-width: none;
+  max-height: min(24rem, 50dvh);
+  margin-top: 0.5rem;
 }
 
 .filtersDialog > label {
@@ -652,7 +665,11 @@
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
+}
+
+.filtersDialog input[type='checkbox'] {
+  accent-color: var(--color-pana-indigo);
 }
 
 .community {

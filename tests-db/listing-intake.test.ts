@@ -7,6 +7,7 @@ import { getTableConfig } from 'drizzle-orm/pg-core';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/lib/schema';
 import { groupOnlineZipListings, type OnlineZipArea } from '@/lib/online-zip';
+import { getDirectorySearchParams } from '@/app/directory/search/_lib/search-params';
 
 const pg = new PGlite();
 const db = drizzle(pg, { schema });
@@ -1498,6 +1499,55 @@ test('nearby online results use ZIP areas rather than old home coordinates and g
   assert.equal(groups.length, 2);
   assert.ok(groups.every((group) => group.items.length === 1));
   assert.ok(all.data.every((row) => row.geo === null));
+});
+
+test('viewport browsing ignores old radius links with viewer coordinates and retains far and unlocated matches', async () => {
+  await db.insert(schema.profiles).values([
+    {
+      id: 'viewport-near',
+      email: 'viewport-near@test.invalid',
+      name: 'Nearby storefront',
+      active: true,
+      categories: { art: true },
+      addressLat: '25.851',
+      addressLng: '-80.18',
+    },
+    {
+      id: 'viewport-far',
+      email: 'viewport-far@test.invalid',
+      name: 'Broward storefront',
+      active: true,
+      categories: { art: true },
+      addressLat: '26.12',
+      addressLng: '-80.14',
+    },
+    {
+      id: 'viewport-unlocated',
+      email: 'viewport-unlocated@test.invalid',
+      name: 'Unlocated business',
+      active: true,
+      categories: { art: true },
+    },
+  ]);
+  const params = getDirectorySearchParams(
+    new URLSearchParams('radius=5&sort=nearest&fcat=art')
+  );
+  const found = await directory.getSearch({
+    ...params,
+    sort: params.sort ?? 'relevance',
+    geolat: '25.85',
+    geolng: '-80.18',
+    resultsView: 'map',
+  });
+  assert.equal(found.map?.totalResults, 3);
+  assert.deepEqual(
+    found.data.map((row) => row.id),
+    ['viewport-near', 'viewport-far']
+  );
+  assert.deepEqual(
+    found.map?.unmappedResults.map((row) => row.id),
+    ['viewport-unlocated']
+  );
 });
 
 test('complete maps ignore list pagination while preserving filters, positions, and location privacy', async () => {

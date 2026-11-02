@@ -250,9 +250,17 @@ export function createNativeApiFixtures(
     }
     if (path === '/api/getDirectorySearch') {
       const q = (url.searchParams.get('q') ?? '').toLowerCase();
+      const categories = url.searchParams.get('fcat')?.split('+') || [];
       const matching = businesses
-        .filter((item) =>
-          `${item.name} ${item.details}`.toLowerCase().includes(q)
+        .filter(
+          (item) =>
+            `${item.name} ${item.details}`.toLowerCase().includes(q) &&
+            (!categories.length ||
+              categories.some((category) =>
+                item.categories?.includes(category)
+              )) &&
+            (url.searchParams.get('certified') !== 'true' || item.certified) &&
+            (url.searchParams.get('events') !== 'true' || item.nextEvent)
         )
         .map((item, index) => ({ ...item, result_index: index + 1 }));
       const mappable = matching.filter((item) =>

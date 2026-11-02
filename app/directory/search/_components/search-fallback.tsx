@@ -95,21 +95,19 @@ export function SearchFallback() {
                   className="dirsearch-menurow animate-pulse"
                   aria-hidden="true"
                 >
-                  {/* Category, Radius, certification, events and Sort, at
+                  {/* Category, Sort, certification and events, at
                       roughly the widths their real controls occupy. */}
-                  {['w-28', 'w-28', 'w-36', 'w-32', 'w-20'].map(
-                    (width, index) => (
-                      <div
-                        key={`${width}-${index}`}
-                        className={`bg-pana-ink/10 h-[1.9rem] rounded-full ${width}`}
-                      />
-                    )
-                  )}
+                  {['w-28', 'w-44', 'w-36', 'w-32'].map((width, index) => (
+                    <div
+                      key={`${width}-${index}`}
+                      className={`bg-pana-ink/10 h-11 rounded-full ${width}`}
+                    />
+                  ))}
 
                   {/* The List/Map toggle, which the real filter row hides
                       above the split's breakpoint and shows below it. Leaving
                       it out would shift the pills beside it on a phone. */}
-                  <div className="bg-pana-ink/10 ml-auto h-[1.9rem] w-32 rounded-full" />
+                  <div className="bg-pana-ink/10 ml-auto h-8 w-32 rounded-full min-[72rem]:hidden" />
                 </div>
               </div>
             </div>

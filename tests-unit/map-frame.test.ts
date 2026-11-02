@@ -101,7 +101,7 @@ describe('viewerFrame', () => {
     );
   });
 
-  it('frames each selectable radius', () => {
+  it('can frame camera spans independently of discovery filters', () => {
     for (const radius of [5, 10, 25, 50]) {
       const frame = viewerFrame(MIAMI, 600, radius);
       const across = milesAcross(MIAMI.lat, frame.zoom, 600);
@@ -112,7 +112,7 @@ describe('viewerFrame', () => {
     }
   });
 
-  it('is a five-mile radius', () => {
+  it('uses a five-mile initial camera span', () => {
     // Pinned on purpose. This is a product decision, not an implementation
     // detail, so changing it should be a deliberate edit to this line.
     assert.equal(VIEWER_RADIUS_MILES, 5);

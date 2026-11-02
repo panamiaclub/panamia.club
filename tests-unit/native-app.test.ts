@@ -391,6 +391,7 @@ describe('shared URL parsing and measured map sheet', () => {
     assert.equal(params.languages, 'es');
     assert.equal(params.freeOnly, true);
     assert.equal(params.sort, 'name');
+    assert.equal(params.radius, 'all');
     assert.equal(params.certifiedOnly, true);
     assert.equal(params.withEventsOnly, true);
     assert.equal(params.view, 'map');
@@ -401,18 +402,18 @@ describe('shared URL parsing and measured map sheet', () => {
   });
 
   it('keeps exact viewer location off directory request URLs', () => {
-    const params = getDirectorySearchParams(new URLSearchParams());
+    const params = getDirectorySearchParams(new URLSearchParams('radius=5'));
     const query = new URLSearchParams(
       searchParamsToString({
         ...params,
         sort: 'nearest',
-        radius: 'all',
         geolat: 25.761689,
         geolng: -80.191788,
       })
     );
     assert.equal(query.get('geolat'), '25.76');
     assert.equal(query.get('geolng'), '-80.19');
+    assert.equal(query.get('radius'), 'all');
   });
 
   it('fits a selected card with exactly twelve pixels above and below', () => {

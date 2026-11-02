@@ -237,6 +237,241 @@ test('native directory shows complete In map and Online collections with camera-
   ).toHaveLength(1);
 });
 
+test('native location sharing ignores old radius links and can recenter after browsing farther away', async ({
+  page,
+  context,
+}) => {
+  const viewer = { latitude: 25.761689, longitude: -80.191788 };
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation(viewer);
+  const businesses: SearchResultsInterface[] = [
+    ...[
+      { id: 'near', lng: viewer.longitude + 0.005 },
+      { id: 'far', lng: viewer.longitude + 0.18 },
+    ].map(({ id, lng }) => ({
+      _id: id,
+      id,
+      name: id,
+      screenname: id,
+      score: 1,
+      score_details: {},
+      details: '',
+      five_words: '',
+      geo: { coordinates: [lng, viewer.latitude] },
+      images: { primaryCDN: '/logos/pana_logo_long_orange.png' },
+      primary_address: { city: 'Miami' },
+      socials: {},
+    })),
+    {
+      _id: 'unlocated',
+      id: 'unlocated',
+      name: 'Unlocated business',
+      screenname: null,
+      score: 1,
+      score_details: {},
+      details: '',
+      five_words: '',
+      geo: null,
+      images: { primaryCDN: '' },
+      socials: {},
+    },
+  ];
+  const fixtures = await native(page, { businesses });
+  const queries = () =>
+    fixtures.state.requests
+      .filter((request) => request.pathname === '/api/getDirectorySearch')
+      .map((request) => new URLSearchParams(request.query));
+  await page.goto('/d?radius=5');
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Use my location' }).tap();
+  const canvas = map(page).locator('.dirsearch-mapcanvas[data-map-bounds]');
+  const center = async () =>
+    (await canvas.getAttribute('data-map-center'))!.split(',').map(Number);
+  const atViewer = async () =>
+    Math.max(
+      Math.abs((await center())[0] - viewer.latitude),
+      Math.abs((await center())[1] - viewer.longitude)
+    );
+  await expect.poll(atViewer).toBeLessThan(0.000001);
+  await expect.poll(() => queries().at(-1)?.get('sort')).toBe('nearest');
+  expect(queries().every((query) => query.get('radius') === 'all')).toBe(true);
+  expect(queries().at(-1)?.get('geolat')).toBe('25.76');
+  expect(queries().at(-1)?.get('geolng')).toBe('-80.19');
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
+  const online = map(page).getByRole('region', { name: 'Online', exact: true });
+  await expect(online.locator('article')).toHaveCount(1);
+  const requests = queries().length;
+  const box = (await map(page).locator('canvas').boundingBox())!;
+  for (let step = 0; step < 4; step++) {
+    const bounds = JSON.parse(
+      (await canvas.getAttribute('data-map-bounds'))!
+    ) as { west: number; east: number };
+    const farLng = viewer.longitude + 0.18;
+    if (farLng >= bounds.west && farLng <= bounds.east) break;
+    const previous = (await center())[1];
+    await page.mouse.move(box.x + box.width * 0.85, box.y + box.height * 0.55);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.55, {
+      steps: 20,
+    });
+    await page.mouse.up();
+    await expect
+      .poll(async () => (await center())[1])
+      .toBeGreaterThan(previous + 0.01);
+  }
+  await expect
+    .poll(async () => (await center())[1])
+    .toBeGreaterThan(viewer.longitude + 0.08);
+  await expect(
+    map(page)
+      .getByRole('region', { name: 'In map', exact: true })
+      .locator('article[data-result-id="far"]')
+  ).toHaveCount(1);
+  await expect(online.locator('article')).toHaveCount(1);
+  const before = {
+    center: await canvas.getAttribute('data-map-center'),
+    zoom: await canvas.getAttribute('data-map-zoom'),
+  };
+  await map(page).getByRole('button', { name: 'far', exact: true }).tap();
+  await fitted(page);
+  await page.waitForTimeout(550);
+  expect(await canvas.getAttribute('data-map-center')).toBe(before.center);
+  expect(await canvas.getAttribute('data-map-zoom')).toBe(before.zoom);
+  await map(page).getByRole('button', { name: 'Show all', exact: true }).tap();
+  await page.getByRole('button', { name: 'Use my location' }).tap();
+  await expect.poll(atViewer).toBeLessThan(0.000001);
+  expect(queries()).toHaveLength(requests);
+  await expect(online.locator('article')).toHaveCount(1);
+});
+
+for (const viewport of [
+  { width: 390, height: 844 },
+  { width: 740, height: 320 },
+]) {
+  test(`native directory dropdowns keep branded, accessible filters at ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }, testInfo) => {
+    const fixtures = await native(page);
+    await page.setViewportSize(viewport);
+    await page.goto('/d?radius=5');
+    await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
+    await page.getByRole('button', { name: 'Directory filters' }).tap();
+    const dialog = page.getByRole('dialog', { name: 'Directory filters' });
+    await expect(dialog.getByRole('button', { name: /^Radius/ })).toHaveCount(
+      0
+    );
+    const category = dialog.getByRole('button', { name: /^Categories/ });
+    const cream = await category.evaluate(
+      (node) => getComputedStyle(node).backgroundColor
+    );
+    await expect(dialog).toHaveCSS('background-color', cream);
+    await expect(category).toHaveCSS('border-radius', '999px');
+    await category.tap();
+    const menu = dialog.getByRole('menu', {
+      name: 'Categories',
+      exact: true,
+    });
+    await expect(menu).toHaveCSS('background-color', cream);
+    const choices = menu.getByRole('menuitemcheckbox');
+    await choices.first().press('End');
+    await expect(choices.last()).toBeFocused();
+    await expect(choices.last()).toBeInViewport({ ratio: 1 });
+    await choices.last().press('Home');
+    await expect(choices.first()).toBeFocused();
+    await menu
+      .getByRole('menuitemcheckbox', { name: 'Art', exact: true })
+      .tap();
+    await menu
+      .getByRole('menuitemcheckbox', { name: 'Food', exact: true })
+      .tap();
+    await expect(
+      menu.getByRole('menuitemcheckbox', { name: 'Art', exact: true })
+    ).toHaveAttribute('aria-checked', 'true');
+    await menu.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: testInfo.outputPath('native-category-open.png'),
+      animations: 'disabled',
+    });
+    await menu.getByRole('button', { name: 'Clear categories' }).focus();
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    await expect(category).toBeFocused();
+    await category.tap();
+    expect(
+      await page.evaluate((name) => {
+        const event = new Event(name, { cancelable: true });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      }, NATIVE_BACK_BUTTON_EVENT)
+    ).toBe(true);
+    await expect(menu).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    await expect(category).toBeFocused();
+    const sort = dialog.getByRole('button', { name: /^Sort/ });
+    await sort.press('ArrowDown');
+    const sortMenu = dialog.getByRole('menu', { name: 'Sort', exact: true });
+    await expect(
+      sortMenu.getByRole('menuitemradio', { name: /Nearest/ })
+    ).toBeDisabled();
+    await expect(sortMenu).toHaveCSS('background-color', cream);
+    await sortMenu.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: testInfo.outputPath('native-sort-open.png'),
+      animations: 'disabled',
+    });
+    await sortMenu
+      .getByRole('menuitemradio', { name: 'Most recommended', exact: true })
+      .press('Enter');
+    await expect(sortMenu).toHaveCount(0);
+    await dialog.getByRole('checkbox', { name: 'Pana certified only' }).check();
+    await dialog
+      .getByRole('checkbox', { name: 'Hosting upcoming events' })
+      .check();
+    await expect
+      .poll(() => {
+        const request = fixtures.state.requests
+          .filter((item) => item.pathname === '/api/getDirectorySearch')
+          .at(-1)!;
+        const params = new URLSearchParams(request.query);
+        return [
+          params.get('fcat'),
+          params.get('sort'),
+          params.get('certified'),
+          params.get('events'),
+          params.get('radius'),
+        ];
+      })
+      .toEqual(['art+food', 'recommended', 'true', 'true', 'all']);
+    await dialog
+      .getByRole('button', { name: 'Clear filters', exact: true })
+      .tap();
+    await expect(
+      dialog.getByRole('checkbox', { name: 'Pana certified only' })
+    ).not.toBeChecked();
+    await expect(
+      dialog.getByRole('checkbox', { name: 'Hosting upcoming events' })
+    ).not.toBeChecked();
+    await dialog
+      .getByRole('button', { name: 'Show results', exact: true })
+      .tap();
+    await expect(dialog).toHaveCount(0);
+    await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
+    await expect(
+      map(page)
+        .getByRole('region', { name: 'Online', exact: true })
+        .locator('article')
+    ).toHaveCount(1);
+    expect(
+      fixtures.state.requests
+        .filter((item) => item.pathname === '/api/getDirectorySearch')
+        .every(
+          (item) => new URLSearchParams(item.query).get('radius') === 'all'
+        )
+    ).toBe(true);
+  });
+}
+
 test('native In map follows zoom, pan, and resizing while unlocated matches remain in Online', async ({
   page,
 }) => {
