@@ -81,8 +81,8 @@ for (const { name, component } of [
       assert.equal((paragraph.match(/<em>/g) ?? []).length, 2);
       assert.doesNotMatch(paragraph, /<br\b/);
       assert.ok(heading.indexOf('</h2>') < heading.indexOf('<p '));
-      assert.equal((html.match(/class="beat-sign"/g) ?? []).length, 4);
-      assert.equal((html.match(/class="beat-toggle"/g) ?? []).length, 4);
+      assert.equal((html.match(/class="beat-sign"/g) ?? []).length, 3);
+      assert.equal((html.match(/class="beat-toggle"/g) ?? []).length, 3);
     });
   }
 }

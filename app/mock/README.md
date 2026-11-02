@@ -11,7 +11,7 @@ layout only works with invented spacing or colours that are not in
 
 | Route                     | Description                                                                       |
 | ------------------------- | --------------------------------------------------------------------------------- |
-| `/mock/home`              | Homepage cut to four cards, built from the Connectors deck                        |
+| `/mock/home`              | Shared live homepage with three collapsed welcome cards and a density control    |
 | `/mock/welcome-footer`    | Web-only, first-visit welcome footer over the actual homepage                     |
 | `/mock/donate`            | Community-giving story with an interactive one-time/monthly donation preview      |
 | `/mock/profile`           | Personal profile page (pana page) redesign                                        |
@@ -30,6 +30,19 @@ layout only works with invented spacing or colours that are not in
 | `/mock/dm-chat`           | Interactive Messages workspace: desktop panes, mobile list/chat, drafts and retry |
 | `/mock/events`            | Events discovery: lanes that say why, not facets to narrow with                   |
 | `/mock/events/host`       | Host an event: the form, answering to the page it feeds                           |
+
+## Homepage preview
+
+`/mock/home` and `/` render the same homepage sections and styles. The three
+Welcome Pana cards are **What is Pana?**, **Why 'The Future is Local'?**, and
+**Why was Pana MIA started?**. Each starts with a photo or map, its question,
+and a short preview; its disclosure contains the complete copy. Close or
+Escape restores focus to the opening control. The phone rail has next/previous
+controls and retains the same three-card order.
+
+English and Spanish copy lives under `beats` in the home locale. About Us
+retains its separate local-movement section through `useLocalMovementBeat`;
+it does not depend on the homepage keeping a fourth card.
 
 ## First-visit welcome footer
 

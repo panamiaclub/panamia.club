@@ -8516,6 +8516,7 @@ body:has([data-density]) {
    directly under the search — the obvious next thing to do, rather than three
    screens of scrolling that have to be earned. */
 .beats-rail {
+  --home-beat-art: clamp(8.5rem, 12vw, 10rem);
   position: relative;
 }
 
@@ -8564,21 +8565,12 @@ body:has([data-density]) {
 
 .beats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--home-beat-gap, 1.25rem);
-  /* Wider than the other sections because four shopfronts have to stand in
-     the row that used to hold three. At the narrow end of this layout each
-     card is about 265px, which is the floor: any narrower and the questions
-     start wrapping to three lines and the row stops reading as a street. The
-     rail below takes over before that happens. */
-  width: min(100% - 2rem, 84rem);
+  width: min(100% - 2rem, 80rem);
   margin-inline: auto;
-  /* Stretched, so the four shopfronts are the same size whatever their copy
-     does. The signs hang level either way — the shop windows above them are a
-     fixed height — but four cards of four different depths standing in a
-     row read as four unfinished cards rather than as a block of shops.
-     Nothing is lost by it: the open note is drawn over its card rather than
-     pushed under it, so no stop can grow the row it stands in. */
+  scroll-margin-top: calc(var(--main-masthead-offset, 65px) + 1rem);
+  /* Matching heights keep the signs and disclosure controls aligned. */
   align-items: stretch;
   /* The per-side arrival offset pushes a stop sideways mid-animation. `clip`
      rather than `hidden` so no scroll container is created — a scroll
@@ -8599,7 +8591,7 @@ body:has([data-density]) {
   border-top: 10px solid var(--beat-accent, var(--story-orange));
   border-radius: 14px;
   background-color: #fff;
-  padding: clamp(0.9rem, 1.5vw, 1.35rem);
+  padding: clamp(1rem, 2vw, 1.5rem);
   box-shadow: 0 12px 26px rgb(2 8 17 / 0.07);
   /* Keeps the open note inside the card's rounded corners. */
   overflow: hidden;
@@ -8639,6 +8631,7 @@ body:has([data-density]) {
   display: grid;
   place-items: center;
   height: var(--home-beat-art, 12rem);
+  flex-shrink: 0;
   border-radius: 9px;
   background-color: var(--story-cream);
   padding: 0.75rem;
@@ -8666,20 +8659,13 @@ body:has([data-density]) {
   --beat-in: 34px;
 }
 
-/* Below four-across, the row becomes a swipeable rail rather than a stack:
-   the four questions stay one gesture apart instead of four screens, and
-   the half-visible neighbour is the affordance that says so.
-
-   The cutover is 72rem rather than the 60rem it was at three cards. Four
-   columns in 1024px leaves each card about 230px, which is narrower than the
-   artwork wants and tall enough to cost the section its one-screen fit; a
-   rail at that width keeps all four one gesture apart and the section one
-   screen. Laptops that used to get three-across now swipe. */
-@media (max-width: 71.99rem) {
+/* Below three-across, the next visible card and arrow controls advertise the
+   swipe rail without turning the questions into three screens of scrolling. */
+@media (max-width: 59.99rem) {
   .beats {
     grid-template-columns: none;
     grid-auto-flow: column;
-    grid-auto-columns: min(80vw, 22rem);
+    grid-auto-columns: min(86vw, 24rem);
     gap: 1rem;
     width: 100%;
     /* This is exactly the scroll container the desktop layout goes out of its
@@ -8713,6 +8699,13 @@ body:has([data-density]) {
      anyone driving with a mouse. */
   .beats-nav {
     display: flex;
+    width: max-content;
+    margin-inline: auto;
+    border: 1px solid rgb(2 8 17 / 0.15);
+    border-radius: 999px;
+    background-color: var(--story-cream);
+    padding: 0.45rem 0.65rem;
+    box-shadow: 0 6px 14px rgb(2 8 17 / 0.1);
   }
 }
 
@@ -8727,9 +8720,9 @@ body:has([data-density]) {
   box-shadow: 0 8px 20px rgb(2 8 17 / 0.14);
   padding: 0.5rem 1rem;
   color: var(--beat-on-accent, var(--story-ink));
-  font-size: clamp(1.05rem, 1.45vw, 1.3rem);
+  font-size: clamp(1.1rem, 1.65vw, 1.35rem);
   font-weight: 900;
-  line-height: 1.15;
+  line-height: 1.25;
   letter-spacing: -0.01em;
 }
 
@@ -8750,6 +8743,59 @@ body:has([data-density]) {
   margin-bottom: 1.25rem;
 }
 
+.beat-answer-blocks {
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--story-ink);
+}
+
+.beat-answer-blocks > * + * {
+  margin-top: 1.1rem;
+}
+
+.beat-answer-blocks strong {
+  font-weight: 700;
+}
+
+.beat-definition .beat-aside {
+  margin-top: 0;
+  font-size: 1rem;
+  color: var(--story-ink);
+}
+
+.beat-definition dd {
+  margin-top: 1rem;
+}
+
+.beat-definition .beat-numbered {
+  padding-left: 1.5rem;
+}
+
+.beat-definition li + li {
+  margin-top: 0.8rem;
+}
+
+.beat-definition li::marker {
+  font-weight: 800;
+}
+
+.beat-example {
+  border-left: 3px solid var(--beat-accent);
+  border-radius: 0 9px 9px 0;
+  background-color: var(--story-cream);
+  padding: 0.85rem 1rem;
+}
+
+.beat-body-question {
+  border-left: 3px solid var(--beat-accent);
+  padding-left: 0.8rem;
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
 /* Pushed to the floor of the card so the three toggles line up even when the
    answers wrap to different depths. The gap above it is the answer's bottom
    margin, since an auto margin can go to zero. */
@@ -8764,14 +8810,20 @@ body:has([data-density]) {
   padding: 0.45rem 1rem;
   font-size: 0.8125rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
+  line-height: 1.5;
+  text-align: left;
   color: var(--story-ink);
   cursor: pointer;
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
     color 0.2s ease;
+}
+
+.beat-toggle svg {
+  flex-shrink: 0;
 }
 
 .beat-toggle:hover {
@@ -8798,10 +8850,11 @@ body:has([data-density]) {
   background-color: #fff;
   padding: clamp(0.9rem, 1.5vw, 1.35rem);
   padding-top: 2.4rem;
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 500;
   line-height: 1.6;
   color: rgb(2 8 17 / 0.78);
+  scroll-margin-top: calc(var(--main-masthead-offset, 65px) + 1rem);
 }
 
 /* `display: flex` above would otherwise beat the `hidden` attribute's own
@@ -8816,6 +8869,11 @@ body:has([data-density]) {
    the horizontal rail the card is sitting in. */
 .beat-detail-body {
   flex: 1 1 auto;
+  max-height: calc(
+    100svh -
+      max(var(--mock-chrome-h, 0px), var(--welcome-footer-clearance, 0px)) -
+      var(--main-masthead-offset, 65px) - 4rem
+  );
   overflow-y: auto;
   overscroll-behavior: contain;
   border-left: 3px solid var(--beat-accent, var(--story-orange));
@@ -8889,7 +8947,7 @@ body:has([data-density]) {
   color: rgb(2 8 17 / 0.7);
 }
 
-/* --- Stops one, two and three: the photograph --------------------------- */
+/* --- Community and founder photographs --------------------------------- */
 
 /* One picture per card, filling the whole art window.
 
@@ -10268,7 +10326,7 @@ a.pillar-program:hover {
        travel along, so each of these would sit at 0% forever. Turned off
        rather than re-ranged: each one's resting state is its own base style,
        so switching the animation off is what shows the finished artwork. */
-    @media (max-width: 71.99rem) {
+    @media (max-width: 59.99rem) {
       .beat-art,
       .beat-copy,
       .statemap-img {

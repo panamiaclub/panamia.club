@@ -6,8 +6,8 @@ import type { BeatScene } from './content';
 /**
  * The artwork for each stop on the band.
  *
- * Two kinds, one component each. Three of the four stops are a single
- * photograph and share `PhotoScene`; the fourth is the map, which is not the
+ * Two kinds, one component each. Two stops are single photographs and share
+ * `PhotoScene`; the local-future stop is the map, which is not the
  * same job — it arrives on scroll and carries its own caption — so it keeps
  * its own renderer. The union in `content.ts` is what keeps them
  * interchangeable at the call site.
@@ -22,7 +22,7 @@ export function BeatSceneArt({ scene }: { scene: BeatScene }) {
 }
 
 /* -------------------------------------------------------------------------
-   Photo - the first three stops
+   Photos - the community and founders
    ------------------------------------------------------------------------- */
 
 /**
@@ -51,7 +51,7 @@ function PhotoScene({
         src={scene.src}
         alt={scene.alt}
         fill
-        sizes="(max-width: 768px) 80vw, 32vw"
+        sizes="(max-width: 959px) 86vw, 32vw"
         className="beat-photo-img"
       />
     </div>
@@ -59,7 +59,7 @@ function PhotoScene({
 }
 
 /* -------------------------------------------------------------------------
-   Map - "why local?"
+   Map - the local future
    ------------------------------------------------------------------------- */
 
 /**
