@@ -238,7 +238,7 @@
     // This is intentionally separate from FEDERATION_DOMAIN.
     "PANAVERSE_COOKIE_DOMAIN": ".panamia.club",
     "R2_BUCKET_NAME": "panamia-media",
-    "R2_PUBLIC_URL": "https://pub-32ea3903ddd74e92a629c30bcda3b3c5.r2.dev",
+    "R2_PUBLIC_URL": "https://pub-7a44043d91eb404599205d0d892b0ae3.r2.dev",
     "GHL_WORKFLOW_TEST_ID": "6682f160-e9a3-4aff-9f5d-099bd9c3e951",
   },
 

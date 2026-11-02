@@ -26,6 +26,19 @@ on:
   schedule:
     - cron: '0 13 * * *'
   workflow_dispatch:
+    inputs:
+      repair_social_media:
+        description: Repair saved social media URLs only (no schema migrations)
+        type: boolean
+        default: false
+      media_url_from:
+        description: Original R2 public bucket URL
+        type: string
+        default: https://pub-32ea3903ddd74e92a629c30bcda3b3c5.r2.dev
+      media_url_to:
+        description: Verified target R2 public bucket URL
+        type: string
+        default: https://pub-7a44043d91eb404599205d0d892b0ae3.r2.dev
 
 # Never cancel a run that may be mid-migration: an interrupted drizzle-kit
 # migrate leaves the ledger and the schema in an indeterminate state. Queue
@@ -41,7 +54,7 @@ jobs:
     timeout-minutes: 15
     # Scheduled workflows run on forks too, where the secrets are absent and
     # every run would fail noisily.
-    if: github.repository == 'panamiaclub/panamia.club'
+    if: github.repository == 'panamiaclub/panamia.club' && !inputs.repair_social_media
 
     env:
       # GitHub-hosted runners cannot reach the Supabase direct hostname because
@@ -102,3 +115,33 @@ jobs:
       # is visible in the log rather than reassuring.
       - name: Verify no pending migrations
         run: yarn db:check-pending
+
+  repair-media:
+    if: github.repository == 'panamiaclub/panamia.club' && github.event_name == 'workflow_dispatch' && inputs.repair_social_media
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+      MEDIA_URL_FROM: ${{ inputs.media_url_from }}
+      MEDIA_URL_TO: ${{ inputs.media_url_to }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Verify media repair guards
+        run: yarn node --import tsx --test tests-unit/social-media-storage.test.ts
+
+      - name: Repair verified social attachment URLs
+        run: yarn tsx scripts/repair-social-media-urls.ts --from "$MEDIA_URL_FROM" --to "$MEDIA_URL_TO" --apply
