@@ -247,5 +247,88 @@
     "lede": "Recibe nuevos Panas, eventos y despachos en tu correo. Sin ruido.",
     "placeholder": "tu@correo.com",
     "cta": "Suscríbete"
+  },
+  "beats": {
+    "controls": {
+      "close": "Cerrar",
+      "previousQuestion": "Pregunta anterior",
+      "nextQuestion": "Pregunta siguiente"
+    },
+    "pana": {
+      "question": "¿Qué es Pana?",
+      "aside": "/pah*nah/",
+      "answer": "Jerga sudamericana/caribeña que significa amigo.",
+      "more": "Ver la definición completa",
+      "photoAlt": "Panas alrededor de una larga mesa de cena, juntos para la foto",
+      "example": "Ejemplo: ¡Tengo que presentarte a mi pana, Jose! Es el mejor, siempre me respalda.",
+      "definition": {
+        "label": "Pana",
+        "items": [
+          "Jerga sudamericana/caribeña que significa amigo.",
+          "Un miembro de la comunidad del Sur de la Florida que disfruta participar en proyectos comunitarios locales y apoyar a pequeños negocios y creadores.",
+          "Alguien involucrado con Pana MIA Club",
+          "Alguien que disfruta un estilo de vida centrado en lo local"
+        ]
+      },
+      "practice": {
+        "label": "Cómo se ve esto en la práctica",
+        "items": [
+          "Opta por bienes y servicios locales.",
+          "Elige restaurantes locales en lugar de cadenas.",
+          "Mantente al tanto de las noticias y los eventos locales.",
+          "Disfruta de la ecología local y defiende su conservación.",
+          "Participa en proyectos de ayuda mutua."
+        ]
+      }
+    },
+    "futureLocal": {
+      "question": "¿Por qué “El futuro es local”?",
+      "answer": "Cuando decimos “El futuro es local” es porque creemos que, para construir mejores futuros para nosotros y nuestros seres queridos, el impacto más transformador ocurre a nivel local.",
+      "connectionQuestion": "¿Qué nos une como cultura y comunidad?",
+      "change": "En un lugar como el Sur de la Florida, donde nuestra única constante es el cambio, es tan fácil perder de vista lo que nos conecta.",
+      "home": "Cuando empezamos a ver al Sur de la Florida y a su gente como nuestro hogar, desbloqueamos nuestro poder para influir en los cambios que construyen un futuro del Sur de la Florida en el que todos podamos prosperar.",
+      "more": "Conoce más sobre por qué “El futuro es local”"
+    },
+    "why": {
+      "question": "¿Por qué se fundó Pana MIA?",
+      "answer": "Para que nadie con una idea de cómo mejorar el Sur de la Florida tuviera que empezar de cero.",
+      "more": "Lee por qué existe",
+      "photoAlt": "Claribel Avila y Anette Mago, fundadoras de Pana MIA Club, sentadas juntas",
+      "invitation": "Usa esta comunidad para poner en marcha tus ideas, recibir comentarios y desarrollar habilidades, todo en beneficio del Sur de la Florida. No creemos en la competencia y rechazamos la mentalidad de escasez.",
+      "builds": {
+        "label": "Lo que esto construye",
+        "items": [
+          "Resiliencia económica",
+          "Riqueza equitativa",
+          "Beneficios ambientales",
+          "Bienestar comunitario"
+        ]
+      },
+      "values": {
+        "label": "Nuestros valores",
+        "items": [
+          "Colaboración sobre competencia",
+          "Abundancia sobre escasez",
+          "Alegría y cuidado como resistencia",
+          "Crecimiento horizontal",
+          "Respeto mutuo"
+        ]
+      }
+    },
+    "local": {
+      "question": "¿Por qué lo local?",
+      "answer": "Porque las comunidades conocen mejor sus propias necesidades y son las más capacitadas para atenderlas.",
+      "more": "Mira lo que logra lo local",
+      "mapAlt": "Mapa de Florida con los tres condados del Sur de la Florida que abarca Pana MIA resaltados",
+      "effects": {
+        "label": "Apoyar lo local significa",
+        "items": [
+          "Más dinero se queda en la economía regional y llega a los hogares en lugar de a corporaciones globales extractivas.",
+          "Los negocios siguen respondiendo a la comunidad y es más fácil exigirles responsabilidad.",
+          "Arte más auténtico que conserva la cultura del lugar. Debería ser motivo de orgullo que nuestros artistas no pasen hambre.",
+          "Fuentes de alimentos locales que nos hacen a todos más resilientes."
+        ]
+      }
+    }
   }
 }

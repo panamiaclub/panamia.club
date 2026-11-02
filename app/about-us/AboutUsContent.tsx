@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowRight, HeartHandshake, MapPin, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { usePillars, useStoryBeats } from '@/components/home/content';
+import { usePillars, useLocalMovementBeat } from '@/components/home/content';
 import styles from './AboutUsPage.module.css';
 
 const TEAM = [
@@ -61,7 +61,7 @@ function scrollToSection(section: string) {
 export default function AboutUsContent({ section }: { section?: string }) {
   const { t } = useTranslation('about');
   const { t: tHome } = useTranslation('home');
-  const whyLocal = useStoryBeats().find((beat) => beat.id === 'local');
+  const whyLocal = useLocalMovementBeat();
   const pillars = usePillars();
 
   useEffect(() => {

@@ -10,7 +10,6 @@ import Link from 'next/link';
  *  proposal. Nothing else differs between them, so whatever you see move is
  *  the spacing and only the spacing. */
 export type Density = 'compact' | 'roomy';
-export type WelcomeCardsMode = 'current' | 'proposed';
 
 const DENSITIES: { value: Density; label: string; hint: string }[] = [
   { value: 'compact', label: 'Compact', hint: 'The proposal' },
@@ -20,19 +19,15 @@ const DENSITIES: { value: Density; label: string; hint: string }[] = [
 /**
  * Scaffolding, not design — same bar the other mocks carry.
  *
- * The card comparison uses the same defaults as `/` without requiring live
- * database access. The density switch remains independent of the proposal.
+ * The density switch compares the shared homepage's two spacing options
+ * without requiring database access.
  */
 export function MockControls({
   density,
   onDensityChange,
-  cards,
-  onCardsChange,
 }: {
   density: Density;
   onDensityChange: (next: Density) => void;
-  cards: WelcomeCardsMode;
-  onCardsChange: (next: WelcomeCardsMode) => void;
 }) {
   return (
     <div className="bizprofile-mockbar">
@@ -46,38 +41,6 @@ export function MockControls({
           Compare with the live homepage
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
-
-        <div className="flex items-center gap-2">
-          <span
-            className="text-xs font-extrabold tracking-wider uppercase opacity-55"
-            aria-hidden="true"
-          >
-            Cards
-          </span>
-          <div
-            className="mock-switch"
-            role="radiogroup"
-            aria-label="Welcome Pana cards"
-          >
-            {(
-              [
-                { value: 'current', label: 'Current (4)' },
-                { value: 'proposed', label: 'Proposed (3)' },
-              ] as const
-            ).map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={cards === option.value}
-                data-active={cards === option.value}
-                onClick={() => onCardsChange(option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* A radiogroup rather than a checkbox: these are two named options,
             not an on/off, and "compact" being the default should not make

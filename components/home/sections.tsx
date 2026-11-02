@@ -17,7 +17,6 @@ import { SkyClouds, StreetScene } from './scene-art';
 import { PillarPanels } from './pillar-panels';
 import { useIsRail } from './rail';
 import { useStoryBeats, usePillars } from './content';
-import type { StoryBeat } from './content';
 
 /**
  * The homepage, told as one continuous scene.
@@ -271,14 +270,9 @@ function StreetBand() {
    2. The three stops
    ------------------------------------------------------------------------- */
 
-export function HomeBasics({
-  beats: beatsOverride,
-}: {
-  beats?: StoryBeat[];
-} = {}) {
+export function HomeBasics() {
   const { t } = useTranslation('home');
-  const defaultBeats = useStoryBeats();
-  const beats = beatsOverride ?? defaultBeats;
+  const beats = useStoryBeats();
 
   return (
     <section id="what-is-this" className="home-section story-basics">

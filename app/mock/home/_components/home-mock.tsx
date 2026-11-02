@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import ScrollReveal from '@/components/scroll-reveal';
 import {
   HomeFirstScreen,
@@ -13,21 +12,11 @@ import {
   MOCK_HOME_ARTICLES,
 } from '@/components/home/article-rail';
 import { GetInvolvedQuiz } from '@/components/home/get-involved-quiz';
-import { useStoryBeats, type StoryBeat } from '@/components/home/content';
-import {
-  MockControls,
-  type Density,
-  type WelcomeCardsMode,
-} from './mock-controls';
-import styles from './welcome-cards.module.css';
+import { MockControls, type Density } from './mock-controls';
 
 /**
- * The shared homepage inside a review harness. The Welcome Pana proposal is
- * passed as an override; `/` keeps its current four cards. Proposed copy lives
- * under `mock.welcomeCards` in the home namespace, and the three-card layout
- * is scoped to this route rather than changing the shared stylesheet.
- * Closed cards show verbatim previews; their disclosures contain the full
- * proposed copy and the existing supporting notes.
+ * The shared homepage inside a density review harness. The approved welcome
+ * cards use the same content, disclosure renderer and stylesheet as `/`.
  *
  * On density: the old site's vertical rhythm was a full-viewport hero plus
  * `py-16 md:py-24` on every band, which is where most of its empty space came
@@ -39,105 +28,16 @@ import styles from './welcome-cards.module.css';
  */
 export function HomeMock() {
   const [density, setDensity] = useState<Density>('compact');
-  const [cards, setCards] = useState<WelcomeCardsMode>('proposed');
-  const { t } = useTranslation('home');
-  const defaultBeats = useStoryBeats();
-  const getBeat = (id: string) => {
-    const beat = defaultBeats.find((item) => item.id === id);
-    if (!beat) throw new Error(`Missing homepage story beat: ${id}`);
-    return beat;
-  };
-  const pana = getBeat('pana');
-  const local = getBeat('local');
-  const welcomeBeats: StoryBeat[] = [
-    {
-      ...pana,
-      question: t('mock.welcomeCards.pana.question'),
-      aside: t('mock.welcomeCards.pana.pronunciation'),
-      body: [
-        {
-          kind: 'paragraph',
-          text: t('mock.welcomeCards.pana.definitions.friend'),
-          emphasis: 'strong',
-        },
-      ],
-      more: t('beats.pana.more'),
-      detail: [
-        {
-          kind: 'definition',
-          term: t('mock.welcomeCards.pana.term'),
-          pronunciation: t('mock.welcomeCards.pana.pronunciation'),
-          items: [
-            t('mock.welcomeCards.pana.definitions.friend'),
-            t('mock.welcomeCards.pana.definitions.community'),
-            t('mock.welcomeCards.pana.definitions.club'),
-            t('mock.welcomeCards.pana.definitions.lifestyle'),
-          ],
-        },
-        { kind: 'example', text: t('mock.welcomeCards.pana.example') },
-        ...pana.detail.filter((block) => block.kind === 'list'),
-      ],
-    },
-    {
-      ...local,
-      id: 'future-local',
-      question: t('mock.welcomeCards.futureLocal.question'),
-      body: [
-        {
-          kind: 'paragraph',
-          text: t('mock.welcomeCards.futureLocal.belief'),
-          emphasis: 'strong',
-        },
-      ],
-      more: t('mock.welcomeCards.futureLocal.more'),
-      detail: [
-        {
-          kind: 'paragraph',
-          text: t('mock.welcomeCards.futureLocal.belief'),
-          emphasis: 'strong',
-        },
-        {
-          kind: 'heading',
-          text: t('mock.welcomeCards.futureLocal.connectionQuestion'),
-        },
-        {
-          kind: 'paragraph',
-          text: t('mock.welcomeCards.futureLocal.change'),
-          emphasis: 'strong',
-        },
-        {
-          kind: 'paragraph',
-          text: t('mock.welcomeCards.futureLocal.home'),
-          emphasis: 'strong',
-        },
-        ...local.detail,
-      ],
-    },
-    getBeat('why'),
-  ];
   useMockChromeHeight();
 
   return (
     <>
-      <MockControls
-        density={density}
-        onDensityChange={setDensity}
-        cards={cards}
-        onCardsChange={setCards}
-      />
+      <MockControls density={density} onDensityChange={setDensity} />
       <ScrollReveal />
 
       <div className="flex min-h-screen flex-col" data-density={density}>
         <HomeFirstScreen />
-        <div
-          className={cards === 'proposed' ? styles.welcomeCards : undefined}
-          data-welcome-cards={cards}
-        >
-          <HomeBasics
-            key={cards}
-            beats={cards === 'proposed' ? welcomeBeats : undefined}
-          />
-        </div>
+        <HomeBasics />
         <HomePillars />
         <HomeArticleRail initialArticles={MOCK_HOME_ARTICLES} />
         <GetInvolvedQuiz />
@@ -145,10 +45,7 @@ export function HomeMock() {
         {/* Every mock says where it came from, so a screenshot taken out of
             context still names its own route. */}
         <p className="story-colophon py-6 text-center text-xs font-bold tracking-wider uppercase opacity-55">
-          Design mock · /mock/home ·{' '}
-          {cards === 'proposed'
-            ? 'three-card Welcome Pana proposal'
-            : 'current homepage cards'}
+          Design mock · /mock/home · the live homepage in a density harness
         </p>
       </div>
     </>

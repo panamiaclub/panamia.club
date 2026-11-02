@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import home from '../../locales/en/home.json' with { type: 'json' };
+import esHome from '../../locales/es/home.json' with { type: 'json' };
 
 const DEFINITIONS = [
   'South American/Caribbean slang meaning friend.',
@@ -21,11 +22,7 @@ const CARD_TITLES = [
   'Why was Pana MIA started?',
 ];
 
-async function openMock(page: Page) {
-  const response = await page.goto('/mock/home#what-is-this', {
-    waitUntil: 'domcontentloaded',
-  });
-  expect(response?.status()).toBe(200);
+async function waitForMockClient(page: Page) {
   const roomy = page.getByRole('radio', { name: 'Roomy', exact: true });
   const compact = page.getByRole('radio', { name: 'Compact', exact: true });
   // This measured property is published by the mock's client effect.
@@ -42,8 +39,19 @@ async function openMock(page: Page) {
   await expect(compact).toHaveAttribute('aria-checked', 'true');
 }
 
+async function openMock(page: Page) {
+  const response = await page.goto('/mock/home#what-is-this', {
+    waitUntil: 'domcontentloaded',
+  });
+  expect(response?.status()).toBe(200);
+  await waitForMockClient(page);
+}
+
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('i18nextLng', 'en'));
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('i18nextLng'))
+      localStorage.setItem('i18nextLng', 'en');
+  });
   await page.route('**/api/auth/get-session', (route) =>
     route.fulfill({ json: null })
   );
@@ -336,36 +344,23 @@ test('phone disclosures frame their content and close control instead of opening
   }
 });
 
-test('the current comparison renders the unchanged four homepage defaults', async ({
+test('the density harness retains the same three cards and disclosure state', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await openMock(page);
-  const current = page.getByRole('radio', {
-    name: 'Current (4)',
-    exact: true,
-  });
-  await current.click();
-  await expect(current).toHaveAttribute('aria-checked', 'true');
   await expect(page.locator('h1').first()).toContainText('The Future');
   const cards = page.locator('.beats > .beat');
-  await expect(cards).toHaveCount(4);
-  await expect(cards.locator('.beat-sign')).toHaveText([
-    home.beats.panamia.question,
-    home.beats.pana.question,
-    home.beats.why.question,
-    home.beats.local.question,
-  ]);
-  await expect(cards.locator('.beat-answer')).toHaveText([
-    home.beats.panamia.answer,
-    home.beats.pana.answer,
-    home.beats.why.answer,
-    home.beats.local.answer,
-  ]);
-  await expect(page.locator('.beat-answer-blocks')).toHaveCount(0);
-  await expect(cards.nth(1).locator('.beat-aside')).toHaveText(
-    home.beats.pana.aside
+  await expect(cards).toHaveCount(3);
+  await expect(cards.locator('.beat-sign')).toHaveText(CARD_TITLES);
+  await expect(page.getByRole('radio', { name: 'Current (4)' })).toHaveCount(0);
+  await expect(page.getByRole('radio', { name: 'Proposed (3)' })).toHaveCount(
+    0
   );
+  await cards.nth(0).locator('.beat-toggle').click();
+  await page.getByRole('radio', { name: 'Roomy', exact: true }).click();
+  await expect(page.locator('#beat-pana')).toBeVisible();
+  await expect(cards).toHaveCount(3);
   expect(
     await page
       .locator('.beats')
@@ -373,10 +368,51 @@ test('the current comparison renders the unchanged four homepage defaults', asyn
         (element) =>
           getComputedStyle(element).gridTemplateColumns.split(' ').length
       )
-  ).toBe(4);
+  ).toBe(3);
 
-  await page.getByRole('radio', { name: 'Proposed (3)', exact: true }).click();
+  await page.getByRole('radio', { name: 'Compact', exact: true }).click();
   await expect(cards).toHaveCount(3);
   await expect(cards.locator('.beat-sign')).toHaveText(CARD_TITLES);
+  await page
+    .locator('#beat-pana')
+    .getByRole('button', { name: 'Close' })
+    .click();
   await expect(page.locator('.beat-detail:visible')).toHaveCount(0);
+});
+
+test('Spanish cards translate their complete content and disclosure controls', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openMock(page);
+  await page
+    .getByRole('banner')
+    .locator('button[aria-haspopup="dialog"]')
+    .first()
+    .click();
+  // The mock toolbar can cover the drawer footer; use its keyboard action.
+  await page
+    .getByRole('button', { name: 'en Español', exact: true })
+    .press('Enter');
+  const cards = page.locator('.beats > .beat');
+  await expect(cards).toHaveCount(3);
+  await expect(cards.locator('.beat-sign')).toHaveText([
+    esHome.beats.pana.question,
+    esHome.beats.futureLocal.question,
+    esHome.beats.why.question,
+  ]);
+  await expect(
+    page.getByRole('button', { name: 'Pregunta siguiente' })
+  ).toBeEnabled();
+  await cards.nth(0).locator('.beat-toggle').click();
+  const panel = page.locator('#beat-pana');
+  await expect(panel.locator('.beat-numbered > li')).toHaveText(
+    esHome.beats.pana.definition.items
+  );
+  await expect(panel.locator('.beat-example strong')).toHaveText(
+    esHome.beats.pana.example
+  );
+  await panel.getByRole('button', { name: 'Cerrar', exact: true }).click();
+  await expect(panel).toBeHidden();
+  await expect(cards.nth(0).locator('.beat-toggle')).toBeFocused();
 });

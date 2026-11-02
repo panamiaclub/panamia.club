@@ -5,10 +5,9 @@ import { HomeMock } from './_components/home-mock';
  *
  * Route: /mock/home
  *
- * Uses the shared homepage sections with a mock-only Welcome Pana card
- * proposal. Its copy is under `mock.welcomeCards` in the home locale, and its
- * layout is scoped in `_components/welcome-cards.module.css`. The live
- * homepage keeps its existing default cards until the proposal is approved.
+ * Uses the shared homepage sections, including the approved three collapsed
+ * welcome cards. Copy lives in the home locale and styling in app/globals.css;
+ * only the review toolbar and density control differ from the live homepage.
  *
  * Noindex because it is a fixture route. It duplicates the real homepage's
  * subject matter almost exactly, so left indexable it would compete with `/`

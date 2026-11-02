@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, X } from 'lucide-react';
 import type { NoteBlock, StoryBeat } from './content';
 import { BeatSceneArt } from './beat-scenes';
@@ -34,6 +35,7 @@ interface StoryBeatsProps {
  * *is* the answer.
  */
 export function StoryBeats({ beats }: StoryBeatsProps) {
+  const { t } = useTranslation('home');
   // Independent, not one-at-a-time. These are three separate questions, and a
   // visitor comparing "what is a pana" against "why local" should not have to
   // keep closing one to read the other.
@@ -60,7 +62,7 @@ export function StoryBeats({ beats }: StoryBeatsProps) {
     requestAnimationFrame(() => {
       const panel = detailRefs.current[id];
       panel?.focus({ preventScroll: true });
-      // Frame the opened answer above the mock toolbar on narrow screens.
+      // Keep the opened answer and close control in view on narrow screens.
       if (hasStructuredBody) {
         panel?.scrollIntoView({ block: 'start', behavior: 'instant' });
       }
@@ -167,7 +169,7 @@ export function StoryBeats({ beats }: StoryBeatsProps) {
                   onClick={() => close(beat.id)}
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">Close</span>
+                  <span className="sr-only">{t('beats.controls.close')}</span>
                 </button>
               </div>
             </section>
@@ -179,8 +181,8 @@ export function StoryBeats({ beats }: StoryBeatsProps) {
         rail={rail}
         nudge={navigate}
         className="beats-nav"
-        prevLabel="Previous question"
-        nextLabel="Next question"
+        prevLabel={t('beats.controls.previousQuestion')}
+        nextLabel={t('beats.controls.nextQuestion')}
       />
     </div>
   );
