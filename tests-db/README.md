@@ -10,16 +10,19 @@ Kept separate from `tests/` (Playwright, browser) and `tests-relay/`
 
 ## Running
 
-### Donation checkout (no secrets)
+### Donation checkout and account billing (no secrets)
 
 ```
-yarn node --experimental-test-module-mocks --import tsx --test tests-db/donation-checkout.test.ts tests-unit/donations.test.ts
+yarn node --experimental-test-module-mocks --import tsx --test tests-db/donation-checkout.test.ts tests-db/billing.test.ts tests-unit/donations.test.ts
 ```
 
-These suites call the production Checkout handler with only Stripe's network
-boundary replaced. They validate exact cents, one-time/monthly price shapes,
-server-derived membership, optional email, safe return URLs, and explicit
-failure responses. No database, Stripe account, or external network is used.
+These suites call the production Checkout and billing handlers with Stripe's
+network boundary replaced. They validate exact cents, one-time/monthly price
+shapes, server-derived membership, signed-in customer reuse, verified-email
+guest matching, billing ownership, current subscription state, safe portal
+return URLs, and explicit failure responses. Billing uses isolated PGlite to
+apply the real ownership migration and exercise its backfill, unique ownership,
+cascade, and RLS. No external database, Stripe account, or network is used.
 
 ### Directory contact and signup regressions (no secrets)
 

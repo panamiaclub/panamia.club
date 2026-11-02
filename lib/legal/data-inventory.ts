@@ -222,6 +222,7 @@ export const inventory: Record<TableExport, Classification> = {
   commerceOrders: ['payments'],
   commerceOrderItems: ['payments'],
   commerceSubscriptions: ['payments'],
+  billingCustomers: ['payments'],
   commerceShopSettings: NOT_PERSONAL_DATA,
   stripeWebhookEvents: NOT_PERSONAL_DATA,
 

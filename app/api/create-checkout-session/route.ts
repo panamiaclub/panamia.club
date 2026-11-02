@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { z } from 'zod';
+import { auth } from '@/auth';
+import { getOrCreateBillingCustomer } from '@/lib/server/billing';
 import {
   DONATION_AMOUNT_ERROR,
   getMonthlyDonationTier,
@@ -67,6 +69,10 @@ export async function POST(request: NextRequest) {
     });
     const { amount, isRecurring, customerEmail, comment, dedicate } =
       parsed.data;
+    const account = await auth();
+    const customerId = account?.user?.id
+      ? await getOrCreateBillingCustomer(stripe, account.user.id)
+      : undefined;
     const tier = getMonthlyDonationTier(amount, isRecurring);
     const frequency = isRecurring ? 'monthly' : 'one-time';
     const cancelQuery = new URLSearchParams({
@@ -84,6 +90,7 @@ export async function POST(request: NextRequest) {
             currency: 'usd',
             product_data: {
               name: 'Donation',
+              metadata: { kind: 'donation', shop_visible: 'false' },
             },
             unit_amount: amount,
             recurring: isRecurring ? { interval: 'month' } : undefined,
@@ -94,8 +101,21 @@ export async function POST(request: NextRequest) {
       mode: isRecurring ? 'subscription' : 'payment',
       success_url: `${origin}/donation/confirmation?tier=${tier}&amt=${amount}&frequency=${frequency}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/support-pana?${cancelQuery}`,
-      customer_email: customerEmail || undefined,
+      customer: customerId,
+      customer_email: customerId ? undefined : customerEmail || undefined,
+      ...(isRecurring
+        ? {
+            subscription_data: {
+              metadata: {
+                kind: 'donation',
+                ...(account?.user?.id ? { userId: account.user.id } : {}),
+              },
+            },
+          }
+        : {}),
       metadata: {
+        kind: 'donation',
+        ...(account?.user?.id ? { userId: account.user.id } : {}),
         comment,
         dedicated_to: dedicate,
         membership: String(tier),

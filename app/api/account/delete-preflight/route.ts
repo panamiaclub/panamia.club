@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
+import { getOwnedBillingCustomerIds } from '@/lib/server/billing';
 import { eq, and, or, gt, inArray, count } from 'drizzle-orm';
 import {
   users,
@@ -50,6 +51,7 @@ export async function GET() {
   }
 
   const profile = user.profile;
+  const billingCustomerIds = await getOwnedBillingCustomerIds(userId);
   const blockers: string[] = [];
 
   // Check blockers
@@ -187,7 +189,7 @@ export async function GET() {
       },
       mediaFiles,
       thirdParty: {
-        stripe: !!profile?.stripeCustomerId,
+        stripe: billingCustomerIds.length > 0,
         ghl: !!profile?.ghlContactId,
         google: providerIds.includes('google'),
         apple: providerIds.includes('apple'),

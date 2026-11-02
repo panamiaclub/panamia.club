@@ -17,6 +17,7 @@ import { adminEmailList } from '@/lib/server/admin-emails';
 import { syncShopBuyerToGhl } from '@/lib/shop/crm';
 import { getStripe } from '@/lib/shop/stripe';
 import { getShopSettings } from '@/lib/shop/settings';
+import { claimBillingCustomer } from '@/lib/server/billing';
 
 function stripeId(value: string | { id: string } | null): string | null {
   if (!value) return null;
@@ -105,6 +106,15 @@ async function settleOrder(
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  // Donations share this Stripe account but are not commerce orders.
+  if (
+    session.metadata?.kind === 'donation' ||
+    (!session.metadata?.orderId &&
+      session.metadata?.membership !== undefined &&
+      ['monthly', 'one-time'].includes(session.metadata.frequency ?? ''))
+  ) {
+    return;
+  }
   const orderId = session.metadata?.orderId;
   if (!orderId) throw new Error('Checkout Session is missing orderId metadata');
 
@@ -157,6 +167,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     .where(eq(commerceOrders.id, orderId));
 
   if (customerId && order.userId) {
+    await claimBillingCustomer(customerId, order.userId);
     await db
       .update(profiles)
       .set({ stripeCustomerId: customerId })
