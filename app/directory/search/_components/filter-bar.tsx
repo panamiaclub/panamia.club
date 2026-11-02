@@ -9,10 +9,6 @@ import {
 } from 'lucide-react';
 import { profileCategoryList } from '@/lib/lists';
 import type { DirectorySort } from '@/lib/query/directory';
-import {
-  DIRECTORY_RADIUS_OPTIONS,
-  type DirectoryRadius,
-} from '@/lib/directory-radius';
 import { FilterMenu, type FilterMenuOption } from '@/components/ui/filter-menu';
 
 export type ResultView = 'list' | 'map';
@@ -20,7 +16,6 @@ export type ResultView = 'list' | 'map';
 /** The subset of search state this bar owns. */
 export interface FilterState {
   categories: string[];
-  radius: DirectoryRadius;
   certifiedOnly: boolean;
   withEventsOnly: boolean;
   sort: DirectorySort;
@@ -76,17 +71,6 @@ export function FilterBar({
     (category) => ({ value: category.value, label: category.desc })
   );
 
-  const radiusOptions: FilterMenuOption[] = DIRECTORY_RADIUS_OPTIONS.map(
-    (option) => ({
-      value: option.value,
-      label: option.label,
-      disabledReason:
-        option.value !== 'all' && !locationShared
-          ? 'Use your location first'
-          : undefined,
-    })
-  );
-
   const sortOptions: FilterMenuOption[] = SORT_OPTIONS.map((option) => ({
     value: option.key,
     label: option.label,
@@ -98,8 +82,8 @@ export function FilterBar({
         : undefined,
   }));
 
-  // Category selections repeat as removable chips. Radius names itself in its
-  // trigger, while certification and events remain visible as checkboxes.
+  // Category selections repeat as removable chips, while certification and
+  // events remain visible as checkboxes.
   const activeChips: { key: string; label: string; clear: () => void }[] = [
     ...filters.categories.map((value) => ({
       key: `cat:${value}`,
@@ -115,7 +99,6 @@ export function FilterBar({
   ];
   const hasActiveFilters =
     filters.categories.length > 0 ||
-    (locationShared && filters.radius !== 'all') ||
     filters.certifiedOnly ||
     filters.withEventsOnly;
 
@@ -125,29 +108,15 @@ export function FilterBar({
         <div className="dirsearch-menurow">
           <FilterMenu
             label="Category"
+            appearance="surface"
             options={categoryOptions}
             selected={filters.categories}
             onChange={(categories) => onChange({ ...filters, categories })}
           />
 
           <FilterMenu
-            label="Radius"
-            options={radiusOptions}
-            selected={[filters.radius]}
-            single
-            defaultValue={locationShared ? 'all' : filters.radius}
-            caption={
-              locationShared
-                ? undefined
-                : 'Use your location above to enable a distance radius.'
-            }
-            onChange={([radius]) =>
-              onChange({ ...filters, radius: radius as DirectoryRadius })
-            }
-          />
-
-          <FilterMenu
             label="Sort"
+            appearance="surface"
             options={sortOptions}
             selected={[filters.sort]}
             single
@@ -203,7 +172,6 @@ export function FilterBar({
                 onChange({
                   ...filters,
                   categories: [],
-                  radius: locationShared ? 'all' : filters.radius,
                   certifiedOnly: false,
                   withEventsOnly: false,
                 })

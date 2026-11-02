@@ -24,7 +24,10 @@ import {
   NATIVE_BACK_BUTTON_EVENT,
 } from '@/lib/mobile/native';
 import {
+  FALLBACK_MAP_PX,
   frameForPoints,
+  onResultsArrived,
+  viewerFrame,
   type MapFrame,
 } from '@/app/directory/search/_lib/map-frame';
 import type { MapCanvasPin } from '@/app/directory/search/_components/map-canvas';
@@ -71,6 +74,8 @@ export default function NativeMapResults({
   onControlsCovered: (covered: boolean) => void;
 }) {
   const area = useRef<HTMLDivElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
+  const viewerFramePending = useRef(false);
   const heading = useRef<HTMLElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const cardNodes = useRef(new Map<string, HTMLDivElement>());
@@ -91,6 +96,8 @@ export default function NativeMapResults({
     .join('|');
   const latestPins = useRef(pins);
   latestPins.current = pins;
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
   const inMapItems = useMemo(() => {
     const ids = new Set(
       pins
@@ -154,8 +161,29 @@ export default function NativeMapResults({
   }, [filterKey]);
 
   useEffect(() => {
+    const decision = onResultsArrived(
+      viewerFramePending.current,
+      latestPins.current.length
+    );
+    viewerFramePending.current = decision.viewerFramePending;
+    if (!decision.reframe) return;
     setView(frameForPoints(latestPins.current.map((pin) => pin.coords)));
   }, [pinKey, filterKey]);
+
+  // Successful location requests publish a new viewer object, including repeat taps.
+  useEffect(() => {
+    if (!directorySections || !viewer) {
+      viewerFramePending.current = false;
+      return;
+    }
+    const box = viewport.current?.getBoundingClientRect();
+    const side = box ? Math.min(box.width, box.height) : 0;
+    viewerFramePending.current = loadingRef.current;
+    setView(viewerFrame(viewer, side > 0 ? side : FALLBACK_MAP_PX));
+    setSelectedId(null);
+    setClusterId(null);
+    setPreviewKey(null);
+  }, [directorySections, viewer]);
 
   const scrollToSelection = useCallback(() => {
     const card = selectedId ? cardNodes.current.get(selectedId) : null;
@@ -348,6 +376,7 @@ export default function NativeMapResults({
     >
       <div
         className={styles.mapViewport}
+        ref={viewport}
         style={{ bottom: sheetHeight }}
         hidden={height > 0 && sheetHeight >= height}
       >

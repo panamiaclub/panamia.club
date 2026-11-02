@@ -19,12 +19,6 @@ import {
 import { groupOnlineZipListings } from '@/lib/online-zip';
 import { mapContainsPoint, type MapBounds } from '@/lib/map/viewport';
 import { searchPath } from '@/lib/directory-search-path';
-import {
-  DEFAULT_DIRECTORY_RADIUS,
-  effectiveDirectoryRadius,
-  isDirectoryRadius,
-  type DirectoryRadius,
-} from '@/lib/directory-radius';
 import { useViewerLocation } from '@/app/p/[user]/_lib/use-viewer-location';
 import { DirectoryViewerProvider } from './directory-viewer';
 import { SearchBand } from './search-band';
@@ -56,28 +50,16 @@ export function DirectorySearchContent({
   );
 
   // Precise coordinates stay in the browser. Only a 2dp version reaches the
-  // server for radius filtering and ordering — see searchParamsToString.
+  // server for ordering — see searchParamsToString.
   const { coords, status: locationStatus, request } = useViewerLocation();
   const locationShared = coords !== null;
 
-  // A radius without coordinates cannot narrow anything. Keep the configured
-  // URL state private-coordinate-free, but make the effective public fallback
-  // the complete South Florida directory until cached or click-granted
-  // coordinates are available.
-  const effectiveRadius: DirectoryRadius = effectiveDirectoryRadius(
-    params.radius,
-    locationShared
-  );
-
-  // A missing sort means "use the product default for this scope": nearest for
-  // a finite local radius, relevance everywhere else. A valid URL sort remains
-  // explicit and wins, except nearest when there is nothing to measure from.
-  const defaultSort: DirectorySort =
-    locationShared && effectiveRadius !== 'all' ? 'nearest' : 'relevance';
+  // Location changes the default order and camera, never the discovery area.
+  // Explicit sorts still win, except nearest without a point to measure from.
   const sort: DirectorySort =
     params.sort === 'nearest' && !locationShared
       ? 'relevance'
-      : (params.sort ?? defaultSort);
+      : (params.sort ?? (locationShared ? 'nearest' : 'relevance'));
 
   // Pane switching is UI state, not a new search; it must preserve ZIP focus.
   const { view: _view, ...searchFilters } = params;
@@ -86,7 +68,6 @@ export function DirectorySearchContent({
     sort,
     geolat: coords?.lat ?? 0,
     geolng: coords?.lng ?? 0,
-    radius: effectiveRadius,
   };
   const {
     data: searchResult,
@@ -152,6 +133,7 @@ export function DirectorySearchContent({
   const pushSearch = useCallback(
     (term: string, nextParams: URLSearchParams) => {
       nextParams.delete('q');
+      nextParams.delete('radius');
       const qs = nextParams.toString();
       startNavigation(() => {
         router.push(`${searchPath(term)}${qs ? `?${qs}` : ''}`);
@@ -163,6 +145,7 @@ export function DirectorySearchContent({
   const replaceSearch = useCallback(
     (term: string, nextParams: URLSearchParams) => {
       nextParams.delete('q');
+      nextParams.delete('radius');
       const qs = nextParams.toString();
       router.replace(`${searchPath(term)}${qs ? `?${qs}` : ''}`);
     },
@@ -182,7 +165,7 @@ export function DirectorySearchContent({
     [params.searchTerm, pushSearch, searchParams]
   );
 
-  // County filtering was removed from the public directory. Old links remain
+  // County and radius filtering were removed from the directory. Old links remain
   // valid, but stale or invalid state is stripped with replace() so it cannot
   // hide results or linger in copied URLs.
   const rawSearchParams = searchParams?.toString() || '';
@@ -193,8 +176,7 @@ export function DirectorySearchContent({
       next.delete('floc');
       changed = true;
     }
-    const rawRadius = next.get('radius');
-    if (rawRadius !== null && !isDirectoryRadius(rawRadius)) {
+    if (next.has('radius')) {
       next.delete('radius');
       changed = true;
     }
@@ -202,15 +184,10 @@ export function DirectorySearchContent({
       next.delete('sort');
       changed = true;
     }
-    if (locationStatus === 'denied' && params.radius !== 'all') {
-      next.set('radius', 'all');
-      changed = true;
-    }
     if (!changed) return;
     replaceSearch(params.searchTerm, next);
   }, [
     locationStatus,
-    params.radius,
     params.searchTerm,
     params.sort,
     rawSearchParams,
@@ -219,7 +196,6 @@ export function DirectorySearchContent({
 
   const filters: FilterState = {
     categories: splitList(params.filterCategories),
-    radius: params.radius,
     certifiedOnly: params.certifiedOnly,
     withEventsOnly: params.withEventsOnly,
     sort,
@@ -233,12 +209,6 @@ export function DirectorySearchContent({
       // Any change to what is being asked invalidates which page you were on.
       p: null,
     };
-    // Only persist radius when the radius control changed. An unrelated
-    // category or checkbox change must preserve the configured URL mode.
-    if (next.radius !== params.radius) {
-      changes.radius =
-        next.radius === DEFAULT_DIRECTORY_RADIUS ? null : next.radius;
-    }
     // Preserve implicit dynamic defaults across unrelated filter changes.
     // Only write a sort when the visitor actually changed the sort control.
     if (next.sort !== sort) changes.sort = next.sort;
@@ -367,7 +337,6 @@ export function DirectorySearchContent({
                 totalCount={totalResults}
                 loading={busy}
                 locationStatus={locationStatus}
-                radius={effectiveRadius}
                 nearestFirst={sort === 'nearest'}
                 onSearch={handleSearch}
                 onShareLocation={request}
@@ -425,7 +394,6 @@ export function DirectorySearchContent({
                   <EmptyState
                     term={params.searchTerm}
                     filters={filters}
-                    radiusActive={locationShared}
                     onChange={applyFilters}
                     onTermChange={handleSearch}
                   />
@@ -542,7 +510,6 @@ export function DirectorySearchContent({
             <MapPanel
               results={mapResults}
               viewerCoords={coords}
-              radius={effectiveRadius}
               scopeKey={mapScopeKey}
               onBoundsChange={setBounds}
               highlightId={hoveredId}

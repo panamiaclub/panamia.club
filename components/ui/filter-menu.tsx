@@ -4,11 +4,13 @@ import { ChevronDown, Check } from 'lucide-react';
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from 'react';
+import { NATIVE_BACK_BUTTON_EVENT } from '@/lib/mobile/native';
 
 export interface FilterMenuOption {
   value: string;
@@ -44,6 +46,8 @@ interface FilterMenuProps {
   defaultValue?: string;
   /** Shown above the options when the menu is open. */
   caption?: ReactNode;
+  /** Opt in to the masthead's cream surface primitives. */
+  appearance?: 'default' | 'surface';
 }
 
 /**
@@ -89,24 +93,97 @@ export function FilterMenu({
   action = false,
   defaultValue,
   caption,
+  appearance = 'default',
 }: FilterMenuProps) {
+  const surface = appearance === 'surface';
   const closesOnPick = single || action;
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const initialFocus = useRef(0);
   const menuId = useId();
 
   const reachable = options.filter((option) => !option.disabledReason);
 
   useEffect(() => {
     if (!open) return;
-    function onPointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    function onPointerDown(event: PointerEvent) {
+      if (
+        event.target instanceof Node &&
+        !rootRef.current?.contains(event.target)
+      )
+        setOpen(false);
     }
-    document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
+    // Capture before a containing dialog handles Escape at the document.
+    function onEscape(event: KeyboardEvent) {
+      if (
+        event.key !== 'Escape' ||
+        !(event.target instanceof Node) ||
+        !rootRef.current?.contains(event.target)
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+    function onNativeBack(event: Event) {
+      if (event.defaultPrevented) return;
+      event.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+    document.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('keydown', onEscape, true);
+    window.addEventListener(NATIVE_BACK_BUTTON_EVENT, onNativeBack, true);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('keydown', onEscape, true);
+      window.removeEventListener(NATIVE_BACK_BUTTON_EVENT, onNativeBack, true);
+    };
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    itemRefs.current[initialFocus.current]?.focus();
+    if (!surface) return;
+    const root = rootRef.current;
+    const panel = panelRef.current;
+    // Dialogs lay these panels out in flow, inside their own scroll area.
+    if (!root || !panel || getComputedStyle(panel).position !== 'absolute')
+      return;
+
+    const place = () => {
+      const box = root.getBoundingClientRect();
+      const gutter = 16;
+      const gap = 8;
+      const left = Math.max(
+        gutter,
+        Math.min(box.left, window.innerWidth - gutter - panel.offsetWidth)
+      );
+      const below = window.innerHeight - box.bottom - gap - gutter;
+      const above = box.top - gap - gutter;
+      const opensAbove = below < panel.scrollHeight && above > below;
+      Object.assign(panel.style, {
+        left: `${left - box.left}px`,
+        top: opensAbove ? 'auto' : 'calc(100% + 0.5rem)',
+        bottom: opensAbove ? 'calc(100% + 0.5rem)' : 'auto',
+        maxHeight: `min(24rem, ${Math.max(0, opensAbove ? above : below)}px)`,
+      });
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(root);
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [open, surface]);
 
   const focusItem = (index: number) => {
     const bounded = (index + reachable.length) % reachable.length;
@@ -114,8 +191,8 @@ export function FilterMenu({
   };
 
   const openWith = (index: number) => {
+    initialFocus.current = index;
     setOpen(true);
-    window.requestAnimationFrame(() => focusItem(index));
   };
 
   const close = (refocus: boolean) => {
@@ -176,13 +253,6 @@ export function FilterMenu({
         event.preventDefault();
         focusItem(reachable.length - 1);
         break;
-      case 'Escape':
-        event.preventDefault();
-        close(true);
-        break;
-      case 'Tab':
-        setOpen(false);
-        break;
       default:
         break;
     }
@@ -205,11 +275,19 @@ export function FilterMenu({
     !(single && defaultValue !== undefined && selected[0] === defaultValue);
 
   return (
-    <div className="dirsearch-menu" ref={rootRef}>
+    <div
+      className="dirsearch-menu"
+      ref={rootRef}
+      onKeyDown={(event) => {
+        if (open && event.key === 'Tab') setOpen(false);
+      }}
+    >
       <button
         ref={triggerRef}
         type="button"
-        className="dirsearch-menubtn"
+        className={
+          surface ? 'surface-pill dirsearch-filtertrigger' : 'dirsearch-menubtn'
+        }
         data-on={active}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -228,10 +306,15 @@ export function FilterMenu({
 
       {open && (
         <div
+          ref={panelRef}
           id={menuId}
           role="menu"
           aria-label={label}
-          className="dirsearch-menupanel"
+          className={
+            surface
+              ? 'surface-panel dirsearch-filterpanel'
+              : 'dirsearch-menupanel'
+          }
         >
           {caption && <p className="dirsearch-menucaption">{caption}</p>}
 
@@ -239,6 +322,8 @@ export function FilterMenu({
             {options.map((option) => {
               const on = selected.includes(option.value);
               const index = reachable.indexOf(option);
+              const hint =
+                option.hint ?? (surface ? option.disabledReason : undefined);
 
               return (
                 <button
@@ -257,8 +342,13 @@ export function FilterMenu({
                   aria-checked={action ? undefined : on}
                   disabled={Boolean(option.disabledReason)}
                   title={option.disabledReason}
-                  className="dirsearch-menuitem"
+                  className={
+                    surface
+                      ? 'surface-option dirsearch-filteroption'
+                      : 'dirsearch-menuitem'
+                  }
                   data-on={on}
+                  data-current={surface && on ? true : undefined}
                   onClick={() => toggle(option.value)}
                   onKeyDown={(event) => onItemKeyDown(event, index)}
                 >
@@ -268,9 +358,25 @@ export function FilterMenu({
                     </span>
                   )}
                   <span className="min-w-0 flex-1">
-                    <span className="dirsearch-menulabel">{option.label}</span>
-                    {option.hint && (
-                      <span className="dirsearch-menuhint">{option.hint}</span>
+                    <span
+                      className={
+                        surface
+                          ? 'surface-option-name block'
+                          : 'dirsearch-menulabel'
+                      }
+                    >
+                      {option.label}
+                    </span>
+                    {hint && (
+                      <span
+                        className={
+                          surface
+                            ? 'surface-option-blurb'
+                            : 'dirsearch-menuhint'
+                        }
+                      >
+                        {hint}
+                      </span>
                     )}
                   </span>
                 </button>

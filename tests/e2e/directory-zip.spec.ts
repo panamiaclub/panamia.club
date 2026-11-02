@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { SearchResultsInterface } from '@/lib/query/directory';
 import type { OnlineZipArea } from '@/lib/online-zip';
 
@@ -66,6 +66,7 @@ async function fixtures(
   let searchRequests = 0;
   let mapRequests = 0;
   let mapFailures = options.mapFailsOnce ? 1 : 0;
+  const searchQueries: URLSearchParams[] = [];
   const signalBatches: string[][] = [];
   await page.addInitScript(() => localStorage.setItem('i18nextLng', 'en'));
   await page.route('https://fonts.googleapis.com/**', (route) =>
@@ -81,6 +82,7 @@ async function fixtures(
       });
     } else if (path === '/api/getDirectorySearch') {
       searchRequests++;
+      searchQueries.push(url.searchParams);
       const mapView = url.searchParams.get('v') === 'map';
       if (mapView) {
         mapRequests++;
@@ -95,6 +97,9 @@ async function fixtures(
         .filter(
           (result) =>
             result.name.toLowerCase().includes(query) &&
+            (url.searchParams.get('certified') !== 'true' ||
+              result.certified) &&
+            (url.searchParams.get('events') !== 'true' || result.nextEvent) &&
             (!categories.length ||
               categories.some((category) =>
                 result.categories?.includes(category)
@@ -196,6 +201,7 @@ async function fixtures(
   });
   return {
     requests: () => searchRequests,
+    searchQueries: () => searchQueries,
     mapRequests: () => mapRequests,
     signalBatches: () => signalBatches,
   };
@@ -493,6 +499,27 @@ async function unchangedCamera(
   expect(after.center[1]).toBeCloseTo(before.center[1], 7);
 }
 
+async function expectUnobscuredMenu(menu: Locator) {
+  await expect
+    .poll(() =>
+      menu.evaluate((panel) => {
+        const bounds = panel.getBoundingClientRect();
+        return Array.from(panel.querySelectorAll('button')).flatMap(
+          (button) => {
+            const box = button.getBoundingClientRect();
+            const y = box.top + box.height / 2;
+            if (y < bounds.top || y > bounds.bottom) return [];
+            const covered = [box.left + 8, box.right - 8].some(
+              (x) => !panel.contains(document.elementFromPoint(x, y))
+            );
+            return covered ? [button.textContent?.trim()] : [];
+          }
+        );
+      })
+    )
+    .toEqual([]);
+}
+
 test('In map follows actual zoom, pan, and resized bounds without moving known locations into Online', async ({
   page,
 }) => {
@@ -705,3 +732,311 @@ test('saved-state failures are explicit and do not send a signed-in viewer to si
     page.locator('#dirsearch-online [id^="dirsearch-result-"]')
   ).toHaveCount(1);
 });
+
+const viewer = { latitude: 25.761689, longitude: -80.191788 };
+const locationResults = [
+  {
+    ...storefront,
+    geo: { coordinates: [viewer.longitude + 0.005, viewer.latitude] },
+  },
+  {
+    ...otherStorefront,
+    geo: { coordinates: [viewer.longitude + 0.18, viewer.latitude] },
+  },
+  unlocatedPage[0],
+];
+
+test('location sharing on an old radius link recenters without hiding distant or Online matches', async ({
+  page,
+  context,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation(viewer);
+  const observed = await fixtures(page, { results: locationResults });
+  await page.goto('/directory/search?radius=5&floc=old');
+  await expect(page).not.toHaveURL(/[?&](radius|floc)=/);
+  await expect(page.locator('.dirsearch-pin')).toHaveCount(2);
+  await expect(page.getByRole('button', { name: /^Radius/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Use my location' }).click();
+  await waitForFrame(page, [viewer.latitude, viewer.longitude]);
+  await expect(page.locator('.dirsearch-resultcount')).toContainText(
+    'closest first'
+  );
+  await expect
+    .poll(() => observed.searchQueries().at(-1)?.get('geolat'))
+    .toBe('25.76');
+  expect(observed.searchQueries().at(-1)?.get('geolng')).toBe('-80.19');
+  expect(observed.searchQueries().at(-1)?.get('sort')).toBe('nearest');
+  expect(
+    observed.searchQueries().every((query) => query.get('radius') === 'all')
+  ).toBe(true);
+  await expect(page.locator('.dirsearch-pin')).toHaveCount(2);
+  await expect(page.locator('#dirsearch-result-other-storefront')).toHaveCount(
+    0
+  );
+  await expect(
+    page.locator('#dirsearch-online [id^="dirsearch-result-"]')
+  ).toHaveCount(1);
+  const requests = observed.requests();
+  const box = (await page.locator('.dirsearch-mappane canvas').boundingBox())!;
+  for (let step = 0; step < 4; step++) {
+    const bounds = JSON.parse(
+      (await canvas(page).getAttribute('data-map-bounds'))!
+    ) as { west: number; east: number };
+    const farLng = viewer.longitude + 0.18;
+    if (farLng >= bounds.west && farLng <= bounds.east) break;
+    const previous = await camera(page);
+    await page.mouse.move(box.x + box.width * 0.85, box.y + box.height * 0.55);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.55, {
+      steps: 20,
+    });
+    await page.mouse.up();
+    await expect
+      .poll(async () => (await camera(page)).center[1])
+      .toBeGreaterThan(previous.center[1] + 0.01);
+  }
+  await expect
+    .poll(async () => (await camera(page)).center[1])
+    .toBeGreaterThan(viewer.longitude + 0.08);
+  await expect(
+    page.locator('#dirsearch-in-map #dirsearch-result-other-storefront')
+  ).toBeAttached();
+  await expect(
+    page.locator('#dirsearch-online [id^="dirsearch-result-"]')
+  ).toHaveCount(1);
+  const before = await camera(page);
+  await page
+    .getByRole('button', { name: 'other-storefront, South Miami', exact: true })
+    .click();
+  await unchangedCamera(page, before);
+  expect(observed.requests()).toBe(requests);
+  expect(new URL(page.url()).searchParams.has('geolat')).toBe(false);
+  expect(new URL(page.url()).searchParams.has('geolng')).toBe(false);
+});
+
+test('cached location ignores stale radius while preserving an explicit relevance sort', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.addInitScript((coords) => {
+    localStorage.setItem(
+      'pana_viewer_coords',
+      JSON.stringify({
+        lat: coords.latitude,
+        lng: coords.longitude,
+        at: Date.now(),
+      })
+    );
+  }, viewer);
+  const observed = await fixtures(page, { results: locationResults });
+  await page.goto('/directory/search?radius=5&sort=relevance');
+  await waitForFrame(page, [viewer.latitude, viewer.longitude]);
+  await expect(page).not.toHaveURL(/[?&]radius=/);
+  await expect(page).toHaveURL(/[?&]sort=relevance/);
+  await expect(page.locator('.dirsearch-resultcount')).not.toContainText(
+    'closest first'
+  );
+  await expect(page.locator('.dirsearch-pin')).toHaveCount(2);
+  await expect(
+    page.locator('#dirsearch-online [id^="dirsearch-result-"]')
+  ).toHaveCount(1);
+  expect(
+    observed
+      .searchQueries()
+      .every((query) => query.get('radius') === 'all' && !query.has('sort'))
+  ).toBe(true);
+});
+
+test('denied location drops unsupported nearest state without restoring a radius', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        getCurrentPosition: (
+          _success: PositionCallback,
+          failure: PositionErrorCallback
+        ) =>
+          failure({
+            code: 1,
+            message: 'Permission denied',
+            PERMISSION_DENIED: 1,
+            POSITION_UNAVAILABLE: 2,
+            TIMEOUT: 3,
+          }),
+      },
+    });
+  });
+  const observed = await fixtures(page, { results: locationResults });
+  await page.goto('/directory/search?radius=5&sort=nearest');
+  await expect(page.locator('.dirsearch-pin')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Use my location' }).click();
+  await expect(
+    page.getByText('Location unavailable. Showing South Florida.')
+  ).toBeVisible();
+  await expect(page).not.toHaveURL(/[?&](radius|sort)=/);
+  await expect(page.locator('.dirsearch-pin')).toHaveCount(2);
+  await expect(
+    page.locator('#dirsearch-online [id^="dirsearch-result-"]')
+  ).toHaveCount(1);
+  expect(
+    observed
+      .searchQueries()
+      .every((query) => query.get('radius') === 'all' && !query.has('geolat'))
+  ).toBe(true);
+});
+
+for (const viewport of [
+  { width: 1440, height: 1000 },
+  { width: 1152, height: 800 },
+  { width: 390, height: 844 },
+  { width: 320, height: 740 },
+]) {
+  test.describe(`directory dropdowns at ${viewport.width}px`, () => {
+    test.use({ viewport, hasTouch: viewport.width < 600 });
+
+    test('branded triggers and expanded rows preserve keyboard, touch and filter state', async ({
+      page,
+    }, testInfo) => {
+      const observed = await fixtures(page, {
+        results: [
+          {
+            ...storefront,
+            certified: true,
+            nextEvent: {
+              slug: 'fixture-event',
+              title: 'Community gathering',
+              startsAt: new Date(Date.now() + 86400000).toISOString(),
+              timezone: 'America/New_York',
+              online: false,
+              venueCity: 'Miami',
+            },
+          },
+          otherStorefront,
+          unlocatedPage[0],
+        ],
+      });
+      await page.goto('/directory/search');
+      await expect(page.locator('.dirsearch-pin')).toHaveCount(2);
+      const category = page.getByRole('button', { name: /^Category/ });
+      const sort = page.getByRole('button', { name: /^Sort/ });
+      const cream = await page
+        .getByRole('button', {
+          name: 'Search scope, currently Directory',
+          exact: true,
+        })
+        .evaluate((node) => getComputedStyle(node).backgroundColor);
+      await expect(category).toHaveCSS('background-color', cream);
+      await expect(category).toHaveCSS('border-radius', '999px');
+      await expect(category.locator('.dirsearch-menuname')).toHaveCSS(
+        'font-weight',
+        '800'
+      );
+      expect((await category.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      await category.focus();
+      await category.press('ArrowDown');
+      const menu = page.getByRole('menu', { name: 'Category', exact: true });
+      const choices = menu.getByRole('menuitemcheckbox');
+      await expect(choices.first()).toBeFocused();
+      await expect(menu).toHaveCSS('background-color', cream);
+      await expect(menu).toHaveCSS(
+        'border-top-color',
+        await menu.evaluate((node) => getComputedStyle(node).color)
+      );
+      await expect(menu).toBeInViewport({ ratio: 1 });
+      await expectUnobscuredMenu(menu);
+      await choices.first().press('End');
+      await expect(choices.last()).toBeFocused();
+      await choices.last().press('ArrowDown');
+      await expect(choices.first()).toBeFocused();
+      const art = menu.getByRole('menuitemcheckbox', {
+        name: 'Art',
+        exact: true,
+      });
+      await art.focus();
+      await art.press(' ');
+      await expect(art).toHaveAttribute('aria-checked', 'true');
+      await expect(art).toHaveAttribute('data-current', 'true');
+      await expect(art).toHaveCSS('outline-style', 'solid');
+      await menu
+        .getByRole('menuitemcheckbox', { name: 'Food', exact: true })
+        .press(' ');
+      await expect(page).toHaveURL(/[?&]fcat=art%2Bfood/);
+      await expect(menu).toBeVisible();
+      await page.screenshot({
+        path: testInfo.outputPath('category-open.png'),
+        animations: 'disabled',
+      });
+      await menu.getByRole('button', { name: 'Clear category' }).focus();
+      await page.keyboard.press('Escape');
+      await expect(menu).toHaveCount(0);
+      await expect(category).toBeFocused();
+      await expect(category).not.toHaveCSS('background-color', cream);
+
+      if (viewport.width < 600) await category.tap();
+      else await category.click();
+      await menu.getByRole('button', { name: 'Clear category' }).click();
+      await expect(page).not.toHaveURL(/[?&]fcat=/);
+      if (viewport.width < 600) {
+        const box = (await category.boundingBox())!;
+        await page.touchscreen.tap(8, box.y + box.height / 2);
+      } else await category.press('Escape');
+      await expect(menu).toHaveCount(0);
+      await sort.press('ArrowDown');
+      const sortMenu = page.getByRole('menu', { name: 'Sort', exact: true });
+      await expect(sortMenu).toHaveCSS('background-color', cream);
+      await expect(sortMenu).toBeInViewport({ ratio: 1 });
+      await expectUnobscuredMenu(sortMenu);
+      const nearest = sortMenu.getByRole('menuitemradio', {
+        name: /Nearest/,
+      });
+      await expect(nearest).toBeDisabled();
+      await expect(nearest).toContainText('Share your location first');
+      await sortMenu
+        .getByRole('menuitemradio', { name: 'Best match', exact: true })
+        .press('ArrowDown');
+      const recommended = sortMenu.getByRole('menuitemradio', {
+        name: 'Most recommended',
+        exact: true,
+      });
+      await expect(recommended).toBeFocused();
+      await page.screenshot({
+        path: testInfo.outputPath('sort-open.png'),
+        animations: 'disabled',
+      });
+      await recommended.press('End');
+      await page.keyboard.press('Enter');
+      await expect(sortMenu).toHaveCount(0);
+      await expect(sort).toBeFocused();
+      await expect(page).toHaveURL(/[?&]sort=name/);
+      const certified = page.getByRole('checkbox', {
+        name: 'Pana Certified',
+      });
+      await certified.focus();
+      await certified.press(' ');
+      await expect(certified).toBeChecked();
+      await expect(page).toHaveURL(/[?&]certified=true/);
+      await page.getByText('Upcoming events', { exact: true }).click();
+      await expect(page).toHaveURL(/[?&]events=true/);
+      await expect(
+        page.locator('#dirsearch-result-public-storefront')
+      ).toBeVisible();
+      await page.getByRole('button', { name: 'Clear', exact: true }).click();
+      await expect(page).not.toHaveURL(/[?&](fcat|certified|events|radius)=/);
+      await expect(page).toHaveURL(/[?&]sort=name/);
+      await expect(certified).not.toBeChecked();
+      await expect(
+        page.getByRole('checkbox', { name: 'Upcoming events' })
+      ).not.toBeChecked();
+      expect(
+        observed.searchQueries().every((query) => query.get('radius') === 'all')
+      ).toBe(true);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth)
+      ).toBeLessThanOrEqual(viewport.width);
+    });
+  });
+}

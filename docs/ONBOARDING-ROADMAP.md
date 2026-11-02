@@ -301,9 +301,11 @@ It is also redundant. The directory already answers "near me" directly and
 does not need a zip:
 
 - **Distance** comes from shared browser coordinates: `geolat`/`geolng` through
-  `calcDistance` in `lib/geolocation.ts`, driving the finite radius filter and
-  the `nearest` sort. Coordinates are cached for a day and sent to the search
-  API only at two decimal places.
+  `calcDistance` in `lib/geolocation.ts`, driving the `nearest` sort. Coordinates
+  are cached for a day and sent to the search API only at two decimal places.
+- **Area** comes from the visible map bounds. Sharing location centers the
+  camera on the viewer without imposing a hidden radius; old radius links
+  cannot exclude distant or unlocated matches from directory discovery.
 - **No location** means the complete South Florida directory. The browser is
   prompted only after an explicit "Use my location" click; denied, unsupported
   and unavailable location all keep the directory usable without a geographic
@@ -323,7 +325,8 @@ while this work was in flight and re-created the input in
 called "Where you are" whose lede promised "A ZIP code is enough to sort the
 directory and the events near you." That is the same promise the old copy made and the same one nothing kept. The
 directory now keeps location discovery in context: an explicit location CTA,
-finite radius choices when coordinates exist, and all South Florida otherwise.
+nearest sorting when coordinates exist, and viewport-based area discovery
+without a separate radius control.
 
 ---
 

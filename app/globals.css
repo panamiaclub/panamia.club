@@ -5565,6 +5565,11 @@ body {
   border-color: var(--color-pana-indigo);
 }
 
+.dirsearch-checkfilter:has(.dirsearch-checkinput:focus-visible) {
+  outline: 2px solid var(--color-pana-indigo);
+  outline-offset: 2px;
+}
+
 .dirsearch-checkfilter[data-on='true'] {
   background-color: rgb(48 62 140 / 0.08);
   border-color: var(--color-pana-indigo);
@@ -5711,6 +5716,84 @@ body {
 .dirsearch-menuclear:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* Directory menus opt in to the same paper, ink and selected rows as the
+   masthead scope selector. Other FilterMenu callers retain their own skin. */
+.dirsearch-filtertrigger {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.dirsearch-filtertrigger[aria-expanded='true'] {
+  border-color: var(--color-pana-indigo);
+}
+
+.dirsearch-filtertrigger[data-on='true'] {
+  border-color: var(--color-pana-indigo);
+  background-color: var(--color-pana-indigo);
+  color: var(--color-pana-cream);
+}
+
+.dirsearch-filtertrigger .dirsearch-menuvalue {
+  font-weight: 800;
+}
+
+.dirsearch-filterpanel {
+  top: calc(100% + 0.5rem);
+  right: auto;
+  left: 0;
+  z-index: 45;
+  width: 18rem;
+  max-width: calc(100vw - 2rem);
+  max-height: 24rem;
+  padding: 0.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Upward-opening panels must clear the sticky masthead and floating bug button. */
+.dirsearch-filters:has(.dirsearch-filterpanel) {
+  z-index: 45;
+}
+
+.dirsearch-filterpanel .dirsearch-menulist {
+  gap: 0.25rem;
+  max-height: none;
+  overflow: visible;
+}
+
+.dirsearch-filteroption {
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.dirsearch-filtertrigger:focus-visible,
+.dirsearch-filteroption:focus-visible,
+.dirsearch-filterpanel .dirsearch-menuclear:focus-visible {
+  outline: 2px solid var(--color-pana-indigo);
+  outline-offset: 2px;
+}
+
+.dirsearch-filteroption:focus-visible {
+  background-color: var(--surface-tone-soft, rgb(48 62 140 / 0.08));
+}
+
+.dirsearch-filteroption:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dirsearch-filteroption:disabled:hover {
+  background-color: transparent;
+}
+
+.dirsearch-filteroption[data-on='true'] .dirsearch-menutick {
+  border-color: var(--color-pana-indigo);
+  background-color: var(--color-pana-indigo);
 }
 
 /* --- Active filters ----------------------------------------------------- */
@@ -11911,23 +11994,7 @@ body:has(.dirsearch) {
   }
 
   .dirsearch-split .dirsearch-filterinner--menus .dirsearch-menurow {
-    flex-wrap: nowrap;
     gap: 0.4rem;
-  }
-
-  .dirsearch-split .dirsearch-menubtn {
-    min-height: 2.35rem;
-    border-width: 1px;
-    border-color: rgb(2 8 17 / 0.16);
-    border-radius: 0.75rem;
-    background: #fff;
-    color: var(--story-ink);
-  }
-
-  .dirsearch-split .dirsearch-menubtn[data-on='true'] {
-    border-color: var(--story-blue);
-    background: var(--story-blue);
-    color: #fff;
   }
 
   .dirsearch-split .dirsearch-checkfilter {

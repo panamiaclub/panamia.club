@@ -12,11 +12,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { profileCategoryList } from '@/lib/lists';
-import {
-  DIRECTORY_RADIUS_OPTIONS,
-  effectiveDirectoryRadius,
-  isDirectoryRadius,
-} from '@/lib/directory-radius';
 import { searchParamsToString, useSearch } from '@/lib/query/directory';
 import { useMyGroups } from '@/lib/query/social';
 import { useNativeEvents, useNativeGroups } from '@/lib/query/native-app';
@@ -76,12 +71,10 @@ export default function NativeDirectory({
   const location = useViewerLocation();
   const { toast } = useToast();
   const previousLocationStatus = useRef(location.status);
-  const radius = effectiveDirectoryRadius(params.radius, !!location.coords);
   const sort =
     params.sort === 'nearest' && !location.coords
       ? 'relevance'
-      : (params.sort ??
-        (location.coords && radius !== 'all' ? 'nearest' : 'relevance'));
+      : (params.sort ?? (location.coords ? 'nearest' : 'relevance'));
 
   useEffect(() => {
     setMountedMaps((current) =>
@@ -123,7 +116,6 @@ export default function NativeDirectory({
     ...params,
     searchTerm: term,
     sort,
-    radius,
     geolat: location.coords?.lat ?? 0,
     geolng: location.coords?.lng ?? 0,
   };
@@ -416,11 +408,13 @@ export default function NativeDirectory({
           <DialogHeader>
             <DialogTitle>Directory filters</DialogTitle>
             <DialogDescription>
-              Refine the live directory, without changing your search category.
+              Move the map to browse an area. Refine the results here without
+              changing your search category.
             </DialogDescription>
           </DialogHeader>
           <FilterMenu
             label="Categories"
+            appearance="surface"
             options={profileCategoryList.map((category) => ({
               value: category.value,
               label: category.desc,
@@ -435,30 +429,10 @@ export default function NativeDirectory({
             }
           />
           <FilterMenu
-            label="Radius"
-            single
-            selected={[radius]}
-            options={DIRECTORY_RADIUS_OPTIONS.map((option) => ({
-              value: option.value,
-              label: option.label,
-              disabledReason:
-                option.value !== 'all' && !location.coords
-                  ? 'Use your location first'
-                  : undefined,
-            }))}
-            onChange={([value]) => {
-              if (!isDirectoryRadius(value))
-                throw new Error('Unknown directory radius');
-              setParams((current) => ({
-                ...current,
-                pageNum: 1,
-                radius: value,
-              }));
-            }}
-          />
-          <FilterMenu
             label="Sort"
+            appearance="surface"
             single
+            defaultValue="relevance"
             selected={[sort]}
             options={SORTS.map((option) => ({
               ...option,

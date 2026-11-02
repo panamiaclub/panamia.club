@@ -85,7 +85,11 @@ participate in radius/nearest discovery without displaying an exact-distance
 claim on the card.
 
 Web and native directory browsing request `v=map` with the active search,
-category, radius, and other filters, independently of old list pagination.
+category, sort, certification, event, and legacy mentoring filters, independently
+of old list pagination. They always send `radius=all`: the visible map viewport
+is the geographic filter, not a second finite-distance restriction. Old directory
+links containing any `radius` value are ignored and, on the web, normalized out
+of the URL. The API still supports explicit finite radii for other consumers.
 `data` contains the complete mappable collection; `map.unmappedResults` contains
 every matching unlocated listing, retaining global `result_index` values.
 The map request's `mapVersion=2` cache namespace avoids reusing older
@@ -96,6 +100,15 @@ unlocated matches; this is a presentation label, not a claim about services or
 `profiles.onlineOnly`. Known locations outside the viewport never move into
 Online. Before a hidden map is measured, or if WebGL is unavailable, the list
 retains all mappable matches rather than guessing a viewport.
+
+**Use my location** centers the directory map on the viewer's area and defaults
+to nearest sorting unless a sort was explicitly chosen. The initial five-mile
+camera span is only a starting view: panning or zooming beyond it still discovers
+eligible businesses, and unlocated matches remain in Online. Exact viewer
+coordinates stay in the browser; requests use only two-decimal coordinates for
+ordering. Location permission is still requested only after an explicit click.
+Directory Category/Sort menus opt in to the masthead's cream surface primitives;
+other shared FilterMenu callers retain their existing appearance.
 
 Signed-in save/ownership state is fetched for the complete matching collection
 in bounded 60-ID batches, preserving the existing signals endpoint limit.

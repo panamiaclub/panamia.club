@@ -12,6 +12,7 @@ export interface DirectorySearchParams {
   filterCategories: string;
   geolat: number;
   geolng: number;
+  /** Viewport-based directory browsing uses 'all'; other API callers may cap distance. */
   radius: DirectoryRadius;
   resultsView?: 'map';
   sort?: DirectorySort;

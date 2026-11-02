@@ -1,8 +1,4 @@
 import type { Coords } from '@/app/p/[user]/_lib/profile-view';
-import {
-  DEFAULT_DIRECTORY_RADIUS,
-  directoryRadiusMiles,
-} from '@/lib/directory-radius';
 
 /**
  * What the directory map should be looking at.
@@ -27,11 +23,10 @@ export const DEFAULT_CENTER: [number, number] = [26.1, -80.2];
  *
  * A radius, not a width: five miles is visible in every direction, so the
  * frame answers "what is near me" rather than "what is near me, to the east".
- * Five rather than the region-wide default because the question a shared
- * location asks is which of these could I get to now.
+ * This is only an initial camera span, never a restriction on query results.
+ * Panning and zooming remain free to discover businesses beyond it.
  */
-export const VIEWER_RADIUS_MILES =
-  directoryRadiusMiles(DEFAULT_DIRECTORY_RADIUS) ?? 5;
+export const VIEWER_RADIUS_MILES = 5;
 
 /**
  * Stand-in for the map's size when it cannot be measured.
@@ -84,7 +79,7 @@ export function zoomForRadius(
   return clampZoom(Math.log2(milesPerPixelAtZoom0 / milesPerPixelWanted));
 }
 
-/** Centred on the viewer, with the selected radius visible around them. */
+/** Centred on the viewer, with a neighbourhood-sized camera around them. */
 export function viewerFrame(
   coords: Coords,
   sizePx: number,

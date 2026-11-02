@@ -8,7 +8,6 @@ import type { FilterState } from './filter-bar';
 interface EmptyStateProps {
   term: string;
   filters: FilterState;
-  radiusActive: boolean;
   onChange: (next: FilterState) => void;
   onTermChange: (next: string) => void;
 }
@@ -30,20 +29,17 @@ interface EmptyStateProps {
 export function EmptyState({
   term,
   filters,
-  radiusActive,
   onChange,
   onTermChange,
 }: EmptyStateProps) {
   const activeFilterCount =
     filters.categories.length +
-    (radiusActive && filters.radius !== 'all' ? 1 : 0) +
     (filters.certifiedOnly ? 1 : 0) +
     (filters.withEventsOnly ? 1 : 0);
 
   const cleared: FilterState = {
     ...filters,
     categories: [],
-    radius: radiusActive ? 'all' : filters.radius,
     certifiedOnly: false,
     withEventsOnly: false,
   };
