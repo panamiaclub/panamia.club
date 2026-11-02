@@ -38,21 +38,31 @@ test.describe('Public Navigation', () => {
       const res = await page.goto('/');
       expect(res?.status()).toBe(200);
 
-      const headline = page.locator('.home-hero-field .hero-headline');
       const tagline = page.locator('.home-hero-field .hero-subheadline');
       await expect(tagline).toHaveText(
         'Your Portal for Everything South Florida'
       );
       await expect(tagline.locator('strong')).toHaveCSS('font-weight', '700');
 
-      const [headlineSize, taglineSize] = await Promise.all(
-        [headline, tagline].map((locator) =>
-          locator.evaluate((element) =>
+      await expect(async () => {
+        const [headlineSize, taglineSize] = await page.evaluate(() => {
+          const headline = document.querySelector(
+            '.home-hero-field .hero-headline'
+          );
+          const tagline = document.querySelector(
+            '.home-hero-field .hero-subheadline'
+          );
+          if (!headline || !tagline) {
+            throw new Error('The homepage hero is not mounted');
+          }
+          return [headline, tagline].map((element) =>
             parseFloat(getComputedStyle(element).fontSize)
-          )
-        )
-      );
-      expect(taglineSize).toBeCloseTo(Math.max(17, headlineSize / 3), 2);
+          );
+        });
+        expect(Number.isFinite(headlineSize)).toBe(true);
+        expect(Number.isFinite(taglineSize)).toBe(true);
+        expect(taglineSize).toBeCloseTo(Math.max(17, headlineSize / 3), 2);
+      }).toPass({ timeout: 30_000 });
     });
   }
 
