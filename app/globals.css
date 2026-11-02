@@ -8569,7 +8569,7 @@ body:has([data-density]) {
   gap: var(--home-beat-gap, 1.25rem);
   width: min(100% - 2rem, 80rem);
   margin-inline: auto;
-  scroll-margin-top: 5rem;
+  scroll-margin-top: calc(var(--main-masthead-offset, 65px) + 1rem);
   /* Matching heights keep the signs and disclosure controls aligned. */
   align-items: stretch;
   /* The per-side arrival offset pushes a stop sideways mid-animation. `clip`
@@ -8854,7 +8854,7 @@ body:has([data-density]) {
   font-weight: 500;
   line-height: 1.6;
   color: rgb(2 8 17 / 0.78);
-  scroll-margin-top: 5rem;
+  scroll-margin-top: calc(var(--main-masthead-offset, 65px) + 1rem);
 }
 
 /* `display: flex` above would otherwise beat the `hidden` attribute's own
@@ -8869,7 +8869,11 @@ body:has([data-density]) {
    the horizontal rail the card is sitting in. */
 .beat-detail-body {
   flex: 1 1 auto;
-  max-height: calc(100svh - var(--mock-chrome-h, 0px) - 8rem);
+  max-height: calc(
+    100svh -
+      max(var(--mock-chrome-h, 0px), var(--welcome-footer-clearance, 0px)) -
+      var(--main-masthead-offset, 65px) - 4rem
+  );
   overflow-y: auto;
   overscroll-behavior: contain;
   border-left: 3px solid var(--beat-accent, var(--story-orange));

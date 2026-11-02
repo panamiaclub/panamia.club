@@ -35,6 +35,11 @@ test('production and mock use the same welcome cards without overrides', () => {
       /welcome-cards|welcomeBeats|mock\.welcomeCards/
     );
   }
+  const sections = readFileSync(
+    new URL('../components/home/sections.tsx', import.meta.url),
+    'utf8'
+  );
+  assert.match(sections, /i18nKey="basics\.introduction"/);
 });
 
 test('the default content hook returns the three approved cards in order', async () => {

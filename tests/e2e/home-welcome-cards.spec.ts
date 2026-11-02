@@ -416,3 +416,46 @@ test('Spanish cards translate their complete content and disclosure controls', a
   await expect(panel).toBeHidden();
   await expect(cards.nth(0).locator('.beat-toggle')).toBeFocused();
 });
+
+test('the expanded card stays readable above the approved welcome footer on a short phone', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 640 });
+  const response = await page.goto('/mock/welcome-footer#what-is-this', {
+    waitUntil: 'domcontentloaded',
+  });
+  expect(response?.status()).toBe(200);
+  await expect(page.locator('[data-welcome-footer-ready]')).toHaveAttribute(
+    'data-welcome-footer-ready',
+    'true'
+  );
+  await expect(page.locator('.beats > .beat')).toHaveCount(3);
+  await page.locator('.beat-toggle').first().click();
+  const panel = page.locator('#beat-pana');
+  const body = panel.locator('.beat-detail-body');
+  const footer = page.locator('[data-welcome-footer]');
+  const bookmark = page.locator('[data-welcome-bookmark]');
+  await expect(footer).toBeVisible();
+  await expect(bookmark).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Close' })).toBeInViewport();
+  await expect
+    .poll(async () => {
+      const bounds = await body.boundingBox();
+      const footerBounds = await footer.boundingBox();
+      const bookmarkBounds = await bookmark.boundingBox();
+      if (!bounds || !footerBounds || !bookmarkBounds) return false;
+      return (
+        bounds.y + bounds.height <=
+        Math.min(footerBounds.y, bookmarkBounds.y) + 1
+      );
+    })
+    .toBe(true);
+  await body.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(body.locator('li').last()).toBeInViewport();
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+  await expect(page.locator('.beat-toggle').first()).toBeFocused();
+  await expect(footer).toBeVisible();
+});
