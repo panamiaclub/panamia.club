@@ -818,6 +818,7 @@ test('separates conversation filtering from the authenticated new-person picker'
   await expect(
     history(page).getByText('Hola Sofia!', { exact: true })
   ).toHaveCount(1);
+  await expect.poll(() => fixture.posts.length).toBe(1);
   expect(fixture.posts[0].recipientActorIds).toEqual(['sofia']);
   expect(fixture.searchTerms).toContain('sofia');
 });

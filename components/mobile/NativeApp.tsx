@@ -146,7 +146,9 @@ function AppFrame({
   const previousRoot = useRef(rootTab);
   const detail = useRef<HTMLDivElement>(null);
   const activeTab: NativeTab =
-    pathname === profileHref || pathname.startsWith('/account')
+    pathname === profileHref ||
+    pathname.startsWith('/account') ||
+    pathname === '/form/delete-account'
       ? 'profile'
       : (rootTab ?? lastTab);
   const eventSlug = /^\/e\/([^/]+)$/.exec(pathname)?.[1];

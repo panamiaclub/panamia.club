@@ -579,7 +579,7 @@ test('retains failed group sends and retries the same nonce without duplicate me
   ).toHaveCount(1);
   await expect(log(page).getByText('Not sent', { exact: true })).toHaveCount(0);
   await expect(compose(page)).toHaveValue('A newer draft must survive.');
-  expect(fixture.posts).toHaveLength(2);
+  await expect.poll(() => fixture.posts.length).toBe(2);
   expect(fixture.posts[1]).toEqual(fixture.posts[0]);
   expect(fixture.posts[0].input.clientId).toBeTruthy();
   expect(fixture.posts[0].input).not.toHaveProperty('visibility');

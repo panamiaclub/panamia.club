@@ -228,7 +228,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
 
       # wrangler dev reads .dev.vars and injects ALL entries as env bindings (env.KEY)
       # into the Worker. This is how POSTGRES_URL and auth secrets reach the workerd runtime.

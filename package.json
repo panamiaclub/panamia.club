@@ -51,6 +51,8 @@
     "mobile:open:ios": "cap open ios",
     "mobile:run:android": "npx tsx scripts/mobile-run.ts",
     "mobile:bundle:android": "npx tsx scripts/android-bundle.ts",
+    "mobile:bundle:ios": "npx tsx scripts/ios-bundle.ts",
+    "mobile:sideload:ios": "npx tsx scripts/ios-sideload.ts",
     "mobile:run:ios": "cap run ios"
   },
   "dependencies": {

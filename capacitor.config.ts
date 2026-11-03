@@ -75,7 +75,20 @@ const config: CapacitorConfig = {
    * of the site; under mobile/ it is obvious at a glance which files are the
    * shell and which are the product. */
   android: { path: 'mobile/android' },
-  ios: { path: 'mobile/ios' },
+  ios: {
+    path: 'mobile/ios',
+    contentInset: 'never',
+    preferredContentMode: 'mobile',
+    backgroundColor: '#fff7ec',
+    // iOS uses email links; do not ship the Android-only Google sign-in SDK.
+    includePlugins: [
+      '@capacitor/app',
+      '@capacitor/browser',
+      '@capacitor/network',
+      '@capacitor/splash-screen',
+      '@capacitor/status-bar',
+    ],
+  },
 
   server: {
     /* Setting this is what makes the shell a shell: the WebView loads the

@@ -10,6 +10,17 @@
   color: var(--color-pana-ink, #110d0d);
 }
 
+:global(html[data-native-platform='ios']) .app {
+  top: var(--native-viewport-top, 0px);
+  bottom: auto;
+  height: var(--native-viewport-height, 100dvh);
+}
+
+:global(html[data-native-platform='ios'][data-native-keyboard]) .bottomNav,
+:global(html[data-native-platform='ios'][data-native-keyboard]) .categoryRow {
+  display: none;
+}
+
 .app [hidden] {
   display: none !important;
 }
@@ -92,6 +103,20 @@
   padding: 5px 8px max(5px, env(safe-area-inset-bottom));
   border-top: 1px solid rgb(17 13 13 / 0.12);
   background: var(--color-pana-cream);
+}
+
+:global(html[data-native-platform='ios']) .bottomNav {
+  padding-bottom: calc(5px + env(safe-area-inset-bottom));
+}
+
+:global(html[data-native-platform='ios']) .chips button,
+:global(html[data-native-platform='ios']) .viewTabs > button {
+  min-height: 44px;
+}
+
+:global(html[data-native-platform='ios']) .locate {
+  width: 44px;
+  height: 44px;
 }
 
 .navItem {
