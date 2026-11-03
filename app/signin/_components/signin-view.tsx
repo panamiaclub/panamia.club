@@ -486,6 +486,9 @@ function SignInPageContent({
           <Link href="/legal/privacy" className="hover:underline">
             {t('privacyLink')}
           </Link>
+          <Link href="/signin/reviewer" className="hover:underline">
+            {t('reviewerSignIn')}
+          </Link>
         </nav>
       </footer>
     </div>

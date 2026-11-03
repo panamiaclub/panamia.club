@@ -145,6 +145,84 @@ test.describe('sign-in hydration', () => {
       page.getByRole('button', { name: 'Send sign-in link', exact: true })
     ).toBeDisabled();
   });
+
+  test('review credentials cannot be submitted before hydration or through a GET form', async ({
+    page,
+  }) => {
+    await page.goto('/signin/reviewer');
+    await expect(page.locator('form')).toHaveAttribute('method', 'post');
+    await expect(page.getByLabel('Review account email')).toBeDisabled();
+    await expect(page.getByLabel('Review account password')).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Sign in for review' })
+    ).toBeDisabled();
+  });
+});
+
+test.describe('dedicated app reviewer sign-in', () => {
+  test('the native Social tab redirects signed-out reviewers to sign-in instead of a screen failure', async ({
+    page,
+  }) => {
+    await nativeBridge(page);
+    await page.goto('/s');
+    await expect(page).toHaveURL(/\/signin\?callbackUrl=%2Fs$/);
+    await expect(
+      page.getByRole('link', { name: 'App reviewer sign-in' })
+    ).toBeVisible();
+    await expect(page.getByText('This screen could not open')).toHaveCount(0);
+  });
+
+  test('is discoverable in the app and submits credentials only in the POST body', async ({
+    page,
+  }) => {
+    await nativeBridge(page);
+    await page.goto('/signin');
+    await page.getByRole('link', { name: 'App reviewer sign-in' }).click();
+    await expect(page).toHaveURL(/\/signin\/reviewer$/);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      'content',
+      /noindex/
+    );
+    const requests: { method: string; url: string; body: unknown }[] = [];
+    await page.route('**/api/auth/sign-in/email', async (route) => {
+      requests.push({
+        method: route.request().method(),
+        url: route.request().url(),
+        body: route.request().postDataJSON(),
+      });
+      await route.fulfill({
+        status: 401,
+        json: {
+          code: 'INVALID_EMAIL_OR_PASSWORD',
+          message: 'Invalid email or password.',
+        },
+      });
+    });
+    const password = 'browser-review-test-not-for-production-2026';
+    await page
+      .getByLabel('Review account email')
+      .fill('play-review@panamia.club');
+    await page.getByLabel('Review account password').fill(password);
+    await page.getByRole('button', { name: 'Sign in for review' }).click();
+    await expect(page.getByRole('alert')).toHaveText(
+      'Invalid email or password.'
+    );
+    expect(requests).toEqual([
+      {
+        method: 'POST',
+        url: 'http://127.0.0.1:3000/api/auth/sign-in/email',
+        body: {
+          email: 'play-review@panamia.club',
+          password,
+          callbackURL: '/d',
+        },
+      },
+    ]);
+    expect(page.url()).not.toContain(password);
+    await expect(
+      page.getByRole('button', { name: 'Sign in for review' })
+    ).toBeEnabled();
+  });
 });
 
 test.describe('native Google sign-in', () => {

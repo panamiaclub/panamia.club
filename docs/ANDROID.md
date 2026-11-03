@@ -200,6 +200,18 @@ mobile\android\app\build\outputs\bundle\release\app-release.aab
 
 ## First Google Play release
 
+Public submission also requires live policy pages without draft placeholders:
+`https://panamia.club/legal/privacy`, its public `#delete-account` instructions,
+and the child-safety standards at
+`https://panamia.club/legal/terms#child-safety`. The policy JSON is the version
+source of truth; a major version change renews applicable consent gates.
+Public support, privacy and safety reports go to `hola@panamia.club`.
+
+Set app access to include the dedicated reviewer login described in
+[Sign-in documentation](./SIGNIN.md#google-play-reviewer-access), and verify it
+against the production deployment before submission. Do not send reviewers a
+magic link or require access to a private inbox.
+
 1. Create the app in [Google Play Console](https://play.google.com/console/) and
    choose package name `social.pana.app`.
 2. Enroll in **Play App Signing** and upload the `.aab` to **Internal testing**.

@@ -597,9 +597,8 @@ export const accounts = pgTable(
       withTimezone: true,
     }),
     scope: text('scope'),
-    // Declared by better-auth's account model and required to exist, but never
-    // written: emailAndPassword is not configured in auth.ts, so sign-in is
-    // magic-link and OAuth only. See 0034_account_issuer_rollback.
+    // Used only by the operator-issued Play review account. Public members
+    // continue to use magic links and OAuth; password signup is disabled.
     password: text('password'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),

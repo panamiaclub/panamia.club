@@ -35,6 +35,7 @@
   "turnstileError": "Verificación no está configurada. Por favor, contacta al soporte.",
   "loading": "Cargando...",
   "privacyLink": "Política de Privacidad",
+  "reviewerSignIn": "Acceso para revisores de la app",
   "footerNavLabel": "Enlaces del sitio",
   "goToMain": "Ir a {{main}}",
   "partOfPanaverse": "{{surface}} es parte de {{main}}. Una sola cuenta Pana sirve para ambos."

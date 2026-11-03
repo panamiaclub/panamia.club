@@ -12,7 +12,12 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import {
+  unstable_rethrow,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from 'next/navigation';
 import {
   ArrowLeft,
   Bug,
@@ -61,7 +66,9 @@ class PaneBoundary extends Component<
   { failed: boolean }
 > {
   state = { failed: false };
-  static getDerivedStateFromError() {
+  static getDerivedStateFromError(error: unknown) {
+    // Redirects and access fallbacks belong to the framework's route boundary.
+    unstable_rethrow(error);
     return { failed: true };
   }
   componentDidCatch(error: Error) {
