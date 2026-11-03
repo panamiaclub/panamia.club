@@ -360,9 +360,19 @@ export default function TermsPage() {
             threaten, harass, stalk, discriminate against, exploit, or defraud
             someone; publish private information without authority; impersonate
             another person; or use the service for spam, scams, malware,
-            unauthorized access, or evading restrictions. Do not publish illegal
-            sexual content, non-consensual intimate imagery, or content that
-            promotes or facilitates exploitation or violence.
+            unauthorized access, or evading restrictions. Do not publish
+            pornography, sexually explicit content, content intended to be
+            sexually gratifying, non-consensual intimate imagery, gratuitous
+            graphic real-world violence, or content that promotes or facilitates
+            exploitation or violence.
+          </p>
+          <p>
+            Lawful nonsexual nudity may be permitted only in a clearly justified
+            educational, documentary, scientific, or artistic context and must
+            not be gratuitous. This exception never permits child sexual abuse
+            or exploitation, non-consensual intimate imagery, or other illegal
+            content. Graphic real-world violence is permitted only in
+            non-gratuitous newsworthy coverage.
           </p>
           <p>
             Only publish material you have the right to share and license.

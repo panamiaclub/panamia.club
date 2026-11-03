@@ -56,3 +56,32 @@ test('public policies contain actionable deletion and child-safety sections with
   assert.match(privacyPage, /record it with the/);
   assert.doesNotMatch(privacyPage, /disable any non-essential analytics/);
 });
+
+test('core and upload policies enforce consistent nudity and violence restrictions', () => {
+  const termsPage = readFileSync(
+    new URL('../app/legal/terms/page.tsx', import.meta.url),
+    'utf8'
+  );
+  const uploads = moduleDefinitions.find((module) => module.id === 'uploads');
+  assert.ok(uploads);
+  for (const source of [termsPage, uploads.terms.join(' ')]) {
+    const text = source.replace(/\s+/g, ' ');
+    assert.match(
+      text,
+      /pornography, sexually explicit content, content intended to be sexually gratifying/
+    );
+    assert.match(text, /gratuitous graphic real-world violence/);
+    assert.match(
+      text,
+      /Lawful nonsexual nudity may be permitted only in a clearly justified educational, documentary, scientific, or artistic context and must not be gratuitous/
+    );
+    assert.match(
+      text,
+      /This exception never permits child sexual abuse or exploitation, non-consensual intimate imagery, or other illegal content/
+    );
+    assert.match(
+      text,
+      /Graphic real-world violence is permitted only in non-gratuitous newsworthy coverage/
+    );
+  }
+});

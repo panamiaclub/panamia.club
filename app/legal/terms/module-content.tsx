@@ -109,7 +109,7 @@ export const moduleDefinitions: ModuleDefinition[] = [
     id: 'uploads',
     title: 'Uploads',
     summary:
-      'Published uploads must use a supported Creative Commons instrument (CC BY, CC BY-SA, or CC0). Uploads are stored on Cloudflare R2 and normally follow the retention class of their parent content. Illegal or infringing material is prohibited.',
+      'Published uploads must use a supported Creative Commons instrument (CC BY, CC BY-SA, or CC0). Uploads are stored on Cloudflare R2 and normally follow the retention class of their parent content. Pornography, sexually explicit material, gratuitous graphic violence, illegal material, and infringement are prohibited.',
     items: [
       'Supported formats (JPEG, PNG, WebP, GIF)',
       'CC license required on all uploads',
@@ -120,7 +120,9 @@ export const moduleDefinitions: ModuleDefinition[] = [
       'Prohibited content (CSAM, copyright infringement, etc.)',
     ],
     terms: [
-      'Only upload files you are authorized to provide and license. A publication license does not cure copyright infringement, a privacy violation, or abuse. Do not upload malware, illegal sexual material, non-consensual intimate imagery, or child sexual abuse material.',
+      'Only upload files you are authorized to provide and license. A publication license does not cure copyright infringement, a privacy violation, or abuse. Do not upload malware, pornography, sexually explicit content, content intended to be sexually gratifying, non-consensual intimate imagery, gratuitous graphic real-world violence, or child sexual abuse material.',
+      'Lawful nonsexual nudity may be permitted only in a clearly justified educational, documentary, scientific, or artistic context and must not be gratuitous. This exception never permits child sexual abuse or exploitation, non-consensual intimate imagery, or other illegal content.',
+      'Graphic real-world violence is permitted only in non-gratuitous newsworthy coverage.',
       'File types and limits depend on the feature and may change for safety or operational reasons. Media is hosted through our infrastructure providers and normally follows its parent content’s retention. Moderation, legally required retention, brief caching, and independent remote copies can affect removal. Report prohibited material without downloading or redistributing it.',
     ],
   },
