@@ -78,6 +78,13 @@ export async function PATCH(request: Request) {
     );
   }
 
+  if (channel === 'Email') {
+    await db
+      .update(profiles)
+      .set({ emailOptedOut: suppressed })
+      .where(eq(profiles.id, profile.id));
+  }
+
   if (!profile.ghlContactId) {
     return NextResponse.json(
       { success: false, error: 'No GHL contact linked to this profile' },

@@ -25,6 +25,7 @@ import {
 import { relations, sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import type { ChatAttachment } from '@/lib/chat';
+import type { ListingRefreshState } from '@/lib/listing-refresh';
 
 // =============================================================================
 // Enums
@@ -894,6 +895,8 @@ export const profiles = pgTable(
     addressGooglePlaceId: text('address_google_place_id'),
     addressHours: text('address_hours'),
     active: boolean('active').notNull().default(false),
+    lastReviewedAt: timestamp('last_reviewed_at', { withTimezone: true }),
+    emailOptedOut: boolean('email_opted_out').notNull().default(false),
     /**
      * When Pana Mia certified this listing, or NULL if it has not been.
      *
@@ -1151,6 +1154,85 @@ export const profileSignals = pgTable(
       table.kind
     ),
   })
+);
+
+export const listingRefreshCycles = pgTable(
+  'listing_refresh_cycles',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    state: text('state')
+      .$type<ListingRefreshState>()
+      .notNull()
+      .default('queued'),
+    reminderCount: integer('reminder_count').notNull().default(0),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    dueAt: timestamp('due_at', { withTimezone: true }),
+    nextReminderAt: timestamp('next_reminder_at', { withTimezone: true }),
+    lastSentAt: timestamp('last_sent_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    pausedAt: timestamp('paused_at', { withTimezone: true }),
+    holdReason: text('hold_reason'),
+    createdByUserId: text('created_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    confirmedByUserId: text('confirmed_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex('listing_refresh_current_unique')
+      .on(table.profileId)
+      .where(sql`${table.state} IN ('queued', 'active', 'held', 'paused')`),
+    index('listing_refresh_due_idx').on(
+      table.state,
+      table.nextReminderAt,
+      table.dueAt
+    ),
+  ]
+);
+
+export const listingRefreshDeliveries = pgTable(
+  'listing_refresh_deliveries',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    cycleId: text('cycle_id')
+      .notNull()
+      .references(() => listingRefreshCycles.id, { onDelete: 'cascade' }),
+    round: integer('round').notNull(),
+    status: text('status')
+      .$type<'sending' | 'sent' | 'failed' | 'cancelled'>()
+      .notNull(),
+    recipientHash: text('recipient_hash').notNull(),
+    routingHash: text('routing_hash').notNull(),
+    stopTokenHash: text('stop_token_hash').notNull(),
+    attemptedAt: timestamp('attempted_at', { withTimezone: true })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    errorCode: text('error_code'),
+  },
+  (table) => [
+    uniqueIndex('listing_refresh_sending_unique')
+      .on(table.cycleId, table.round, table.recipientHash)
+      .where(sql`${table.status} = 'sending'`),
+    uniqueIndex('listing_refresh_sent_unique')
+      .on(table.cycleId, table.round, table.recipientHash)
+      .where(sql`${table.status} = 'sent'`),
+    index('listing_refresh_delivery_cycle_idx').on(table.cycleId),
+  ]
 );
 
 // =============================================================================

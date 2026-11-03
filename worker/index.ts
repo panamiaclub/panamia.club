@@ -22,6 +22,10 @@ import { assertPanaverseConfigured } from '../lib/panaverse/boot';
 import { runExpiryPurge } from '../lib/jobs/purge-expired';
 import { beginJobRun, completeJobRun, PURGE_JOB } from '../lib/jobs/ledger';
 import { recordSyntheticRun } from '../lib/jobs/synthetic-check';
+import {
+  runListingRefreshes,
+  LISTING_REFRESH_JOB,
+} from '../lib/jobs/listing-refresh';
 import { getDmStream } from '../lib/dm-stream';
 import { resolveUserIdFromHeaders } from '../auth';
 import { getActiveProfileWithActor } from '../lib/server/active-profile';
@@ -298,6 +302,7 @@ export default {
    */
   async scheduled(event: { cron: string }, env: Env): Promise<void> {
     getStorage(env);
+    getEmail(env);
 
     // Awaited rather than handed to ctx.waitUntil, and errors are rethrown.
     // Both matter for observability: waitUntil lets the handler return before
@@ -352,6 +357,23 @@ export default {
         await completeJobRun(run, {
           ok: false,
           report: { error: message },
+          errorCount: 1,
+        });
+        throw error;
+      }
+      const refreshRun = await beginJobRun(LISTING_REFRESH_JOB, event.cron);
+      try {
+        const report = await runListingRefreshes();
+        console.log('[listing-refresh]', JSON.stringify(report));
+        await completeJobRun(refreshRun, {
+          ok: report.errors === 0,
+          report,
+          errorCount: report.errors,
+        });
+      } catch (error) {
+        await completeJobRun(refreshRun, {
+          ok: false,
+          report: { failed: true },
           errorCount: 1,
         });
         throw error;

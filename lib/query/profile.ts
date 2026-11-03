@@ -5,24 +5,54 @@ import i18n from '@/lib/i18n';
 
 import { ProfileInterface } from '@/lib/interfaces';
 import { directorySearchKey } from '@/lib/query/directory';
+import { useSession } from '@/lib/auth-client';
 
 export const profileQueryKey = ['profile'];
 export const profilePublicQueryKey = 'publicProfile';
 
-export async function fetchProfile() {
+export function profileEditorUrl(path: string, listingId?: string): string {
+  return listingId !== undefined
+    ? `${path}?listingId=${encodeURIComponent(listingId)}`
+    : path;
+}
+
+async function postProfileUpdate(
+  path: string,
+  updates: unknown,
+  listingId?: string
+) {
+  const response = await axios.post<{ success: boolean; error?: string }>(
+    profileEditorUrl(path, listingId),
+    updates
+  );
+  if (!response.data.success) {
+    throw new Error(
+      response.data.error || i18n.t('profileUpdateFailed', { ns: 'toast' })
+    );
+  }
+  return response;
+}
+
+export async function fetchProfile(listingId?: string) {
   console.log('fetchProfile');
   const profile = await axios
-    .get('/api/getProfile', {
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-    })
+    .get<{ data?: ProfileInterface }>(
+      profileEditorUrl('/api/getProfile', listingId),
+      {
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+      }
+    )
     .catch((error: Error) => {
       console.log(error.name, error.message);
       throw error;
     });
   if (profile?.data?.data) {
+    if (listingId !== undefined && profile.data.data.id !== listingId) {
+      throw new Error('The requested business listing could not be loaded.');
+    }
     return profile.data.data;
   }
   throw new Error('No profile data returned');
@@ -50,10 +80,16 @@ export async function fetchPublicProfile(handle: string) {
   throw new Error('No profile data returned');
 }
 
-export const useProfile = () => {
+export const useProfile = (listingId?: string) => {
+  const { data: session, status } = useSession();
   return useQuery<ProfileInterface, Error>({
-    queryKey: profileQueryKey,
-    queryFn: () => fetchProfile(),
+    queryKey:
+      listingId !== undefined
+        ? [...profileQueryKey, 'listing', listingId, session?.user?.id]
+        : profileQueryKey,
+    queryFn: () => fetchProfile(listingId),
+    enabled: listingId === undefined || status === 'authenticated',
+    retry: listingId !== undefined ? false : undefined,
   });
 };
 
@@ -95,11 +131,11 @@ export const useMutateDefaultLicense = () => {
   });
 };
 
-export const useMutateProfileContact = () => {
+export const useMutateProfileContact = (listingId?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (updates: unknown) => {
-      return axios.post('/api/profile/saveContact', updates);
+      return postProfileUpdate('/api/profile/saveContact', updates, listingId);
     },
     onSuccess: () => {
       toast({
@@ -108,7 +144,7 @@ export const useMutateProfileContact = () => {
       });
       return queryClient.invalidateQueries({
         queryKey: profileQueryKey,
-        exact: true,
+        exact: false,
       });
     },
     onError: () => {
@@ -147,11 +183,11 @@ export const useMutateProfileGenteDePana = () => {
   });
 };
 
-export const useMutateProfileDesc = () => {
+export const useMutateProfileDesc = (listingId?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (updates: unknown) => {
-      return axios.post('/api/profile/saveDesc', updates);
+      return postProfileUpdate('/api/profile/saveDesc', updates, listingId);
     },
     onSuccess: () => {
       toast({
@@ -160,7 +196,7 @@ export const useMutateProfileDesc = () => {
       });
       return queryClient.invalidateQueries({
         queryKey: profileQueryKey,
-        exact: true,
+        exact: false,
       });
     },
     onError: () => {
@@ -173,11 +209,11 @@ export const useMutateProfileDesc = () => {
   });
 };
 
-export const useMutateProfileSocial = () => {
+export const useMutateProfileSocial = (listingId?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (updates: unknown) => {
-      return axios.post('/api/profile/saveSocial', updates);
+      return postProfileUpdate('/api/profile/saveSocial', updates, listingId);
     },
     onSuccess: () => {
       toast({
@@ -186,7 +222,7 @@ export const useMutateProfileSocial = () => {
       });
       return queryClient.invalidateQueries({
         queryKey: profileQueryKey,
-        exact: true,
+        exact: false,
       });
     },
     onError: () => {
@@ -199,20 +235,11 @@ export const useMutateProfileSocial = () => {
   });
 };
 
-export const useMutateProfileAddress = () => {
+export const useMutateProfileAddress = (listingId?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (updates: unknown) => {
-      const response = await axios.post<{ success: boolean; error?: string }>(
-        '/api/profile/saveAddress',
-        updates
-      );
-      if (!response.data.success) {
-        throw new Error(
-          response.data.error || i18n.t('profileUpdateFailed', { ns: 'toast' })
-        );
-      }
-      return response;
+      return postProfileUpdate('/api/profile/saveAddress', updates, listingId);
     },
     onSuccess: () => {
       toast({
@@ -222,7 +249,7 @@ export const useMutateProfileAddress = () => {
       return Promise.all([
         queryClient.invalidateQueries({
           queryKey: profileQueryKey,
-          exact: true,
+          exact: false,
         }),
         queryClient.invalidateQueries({ queryKey: [directorySearchKey] }),
         queryClient.invalidateQueries({ queryKey: [profilePublicQueryKey] }),
@@ -241,11 +268,15 @@ export const useMutateProfileAddress = () => {
   });
 };
 
-export const useMutateProfileCategories = () => {
+export const useMutateProfileCategories = (listingId?: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (updates: unknown) => {
-      return axios.post('/api/profile/saveCategories', updates);
+      return postProfileUpdate(
+        '/api/profile/saveCategories',
+        updates,
+        listingId
+      );
     },
     onSuccess: () => {
       toast({
@@ -254,7 +285,7 @@ export const useMutateProfileCategories = () => {
       });
       return queryClient.invalidateQueries({
         queryKey: profileQueryKey,
-        exact: true,
+        exact: false,
       });
     },
     onError: () => {

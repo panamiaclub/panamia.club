@@ -86,7 +86,7 @@ export function extractCoordinates(
  * Transform Drizzle profile to legacy format for page components
  * This provides backward compatibility during migration
  */
-function transformToLegacyFormat(
+export function transformToLegacyFormat(
   profile: Record<string, unknown> & {
     descriptions?: unknown;
     mentoring?: unknown;

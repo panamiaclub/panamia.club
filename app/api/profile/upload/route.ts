@@ -5,8 +5,11 @@ import { db } from '@/lib/db';
 import { profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { deleteFile, uploadFile } from '@/lib/blob/api';
-import { getActiveProfileId } from '@/lib/server/active-profile';
-import { ensureProfile } from '@/lib/server/profile';
+import {
+  getActiveProfileId,
+  getEditableProfile,
+} from '@/lib/server/active-profile';
+import { ensureProfile, revalidatePublicListing } from '@/lib/server/profile';
 import { syncActorFromProfile } from '@/lib/federation/wrappers/actor';
 
 const cacheRand = () => {
@@ -19,10 +22,10 @@ export async function POST(request: NextRequest) {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json({
-      success: false,
-      error: 'No user session available',
-    });
+    return NextResponse.json(
+      { success: false, error: 'No user session available' },
+      { status: 401 }
+    );
   }
 
   /* Resolve the same row the rest of the account does. This looked the profile
@@ -34,7 +37,21 @@ export async function POST(request: NextRequest) {
      another, and several rows can share an email, so findFirst could pick a
      different one on either side. Writing where the page is looking is the
      difference between a saved picture appearing and vanishing. */
-  const activeId = await getActiveProfileId(session.user.id);
+  const listingId = request.nextUrl.searchParams.get('listingId');
+  const scopedListing =
+    listingId !== null
+      ? await getEditableProfile(session.user.id, listingId)
+      : null;
+  if (listingId !== null && !scopedListing) {
+    return NextResponse.json(
+      { success: false, error: 'You do not manage that business listing.' },
+      { status: 403 }
+    );
+  }
+  const activeId =
+    listingId !== null
+      ? scopedListing?.id
+      : await getActiveProfileId(session.user.id);
 
   const existingProfile = activeId
     ? await db.query.profiles.findFirst({
@@ -200,6 +217,7 @@ export async function POST(request: NextRequest) {
       .returning();
 
     console.log('save');
+    revalidatePublicListing(existingProfile.id, existingProfile.screenname);
 
     /* Pana Social draws avatars from social_actors.icon_url, a copy of the
        picture kept alongside the actor because federation serves it to other

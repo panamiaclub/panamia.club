@@ -23,11 +23,6 @@ const IDENTIFIER_PREFIX = 'listing-claim';
 /** Long enough to be unguessable, short enough that a stale link stops working. */
 const TOKEN_TTL_MS = 60 * 60 * 1000;
 
-export interface ClaimTokenTarget {
-  profileId: string;
-  userId: string;
-}
-
 /**
  * The token is bound to BOTH the listing and the requesting account. Anyone who
  * intercepts the link still cannot claim the business into their own account —
@@ -62,38 +57,43 @@ export async function createClaimToken(
   return token;
 }
 
-/**
- * Redeem a token. Returns null for anything not currently valid — unknown,
- * already used, or expired — without distinguishing them to the caller, since
- * the difference is only useful to someone probing.
- */
+export type ClaimTokenRedemption =
+  | { outcome: 'accepted'; profileId: string; userId: string }
+  | { outcome: 'wrong-account' }
+  | { outcome: 'invalid' };
+
+/** Lock and burn a valid token once, only for the account that requested it. */
 export async function consumeClaimToken(
-  token: string
-): Promise<ClaimTokenTarget | null> {
-  if (!token) return null;
+  token: string,
+  requestingUserId: string
+): Promise<ClaimTokenRedemption> {
+  if (!token) return { outcome: 'invalid' };
 
-  // The identifier filter is load-bearing: it scopes the lookup to our own
-  // rows so a better-auth token passed in here is never matched or deleted.
-  const row = await db.query.verification.findFirst({
-    where: and(
-      eq(verification.value, token),
-      like(verification.identifier, `${IDENTIFIER_PREFIX}:%`)
-    ),
+  return db.transaction(async (tx): Promise<ClaimTokenRedemption> => {
+    const [row] = await tx
+      .select()
+      .from(verification)
+      .where(
+        and(
+          eq(verification.value, token),
+          like(verification.identifier, `${IDENTIFIER_PREFIX}:%`)
+        )
+      )
+      .limit(1)
+      .for('update');
+    if (!row) return { outcome: 'invalid' };
+
+    const [, profileId, userId] = row.identifier.split(':');
+    if (row.expiresAt.getTime() <= Date.now() || !profileId || !userId) {
+      await tx.delete(verification).where(eq(verification.id, row.id));
+      return { outcome: 'invalid' };
+    }
+    // A wrong-account visit must not spend the real requester's proof.
+    if (userId !== requestingUserId) return { outcome: 'wrong-account' };
+
+    await tx.delete(verification).where(eq(verification.id, row.id));
+    return { outcome: 'accepted', profileId, userId };
   });
-
-  if (!row) return null;
-
-  // Burn it before validating expiry — a token that reaches this point is
-  // spent either way, and that keeps redemption single-use under a double
-  // click or a mail client that prefetches links.
-  await db.delete(verification).where(eq(verification.id, row.id));
-
-  if (row.expiresAt.getTime() < Date.now()) return null;
-
-  const [, profileId, userId] = row.identifier.split(':');
-  if (!profileId || !userId) return null;
-
-  return { profileId, userId };
 }
 
 /**

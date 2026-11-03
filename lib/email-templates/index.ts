@@ -9,6 +9,7 @@ import { contactReceived } from './contact-received';
 import { adminContact } from './admin-contact';
 import { listingClaim } from './listing-claim';
 import { listingSetup } from './listing-setup';
+import { listingRefresh } from './listing-refresh';
 import { shopOrder } from './shop-order';
 import { adminShopOrder } from './admin-shop-order';
 
@@ -24,6 +25,7 @@ export type TemplateId =
   | 'contact.received'
   | 'listing.claim'
   | 'listing.setup'
+  | 'listing.refresh'
   | 'shop.order'
   | 'admin.shop_order';
 
@@ -45,6 +47,7 @@ const templates: Record<TemplateId, TemplateRenderer> = {
   'contact.received': contactReceived,
   'listing.claim': listingClaim,
   'listing.setup': listingSetup,
+  'listing.refresh': listingRefresh,
   'shop.order': shopOrder,
   'admin.shop_order': adminShopOrder,
 };

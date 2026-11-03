@@ -37,6 +37,49 @@ account-email-change, and screenname handlers. Shared inboxes must not merge
 identities, transfer ownership, approve the wrong listing, or update another
 profile's mentoring data. Login emails and personal identity slots remain unique.
 
+### Existing listing review and claims (no secrets)
+
+```
+yarn node --experimental-test-module-mocks --import tsx --test tests-db/listing-review.test.ts tests-db/listing-intake.test.ts tests-db/magic-link.test.ts
+```
+
+The review suite uses the same isolated PGlite approach and exercises the real
+claim, verification, ownership, private-read, editing and photo-upload handlers.
+Mail delivery, image storage, social-actor provisioning and ZIP lookup are
+mocked; it never sends a real message or connects to an external database.
+Coverage includes public-preview privacy, account-bound single-use tokens,
+anonymous/wrong-account recovery, explicit correct-business authorization across
+all editors, multiple managed listings, login/contact separation, preservation
+of untouched information, and online/mobile location privacy. Browser coverage
+in `tests/e2e/listing-review.spec.ts` follows the complete guided journey with
+isolated API fixtures.
+
+The same review suite covers operator-only seven-day invitation issuance,
+hashed storage, HttpOnly context, read-only scanners, explicit chosen-account
+acceptance, expiry/revocation/contact changes, current-session confirmation and
+atomic consumption/ownership under storage failures or concurrent requests.
+`magic-link.test.ts` exercises the real Better Auth passwordless handler with
+an in-memory adapter and mocked delivery: only the chosen login is created or
+signed in, its callback retains the exact invitation target without carrying
+business proof, and expired login links keep their recovery destination.
+
+### Listing reminder lifecycle (no secrets)
+
+```
+yarn node --experimental-test-module-mocks --import tsx --test tests-db/listing-refresh.test.ts tests-db/listing-review.test.ts tests-db/listing-intake.test.ts tests-unit/listing-refresh.test.ts tests-unit/email.test.ts
+```
+
+The lifecycle suite applies `0076_listing_refresh.sql` in isolated PGlite.
+It checks explicit admin-only enrollment, real day-7/14/21/28 sends, the day-30
+hide threshold, duplicate job invocations, delivery failures and abandoned
+acknowledgements, opt-outs and CRM Email DND, late-notice grace, server-confirmed
+completion, unchanged personal identities/other businesses, directory-map
+visibility, secure overdue claim/recovery, and staff-decision precedence.
+Email and CRM boundaries are mocked; no production campaign, contacts,
+credentials, or listing changes are used. The browser review suite also covers
+the final confirmation, overdue restoration, opt-out scanners and explicit
+administrative start controls.
+
 ### Isolated status visibility regression (no secrets)
 
 ```

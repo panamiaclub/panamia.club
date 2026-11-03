@@ -59,6 +59,32 @@ someone actually administers the listing; a handle alone is not a claim.
 Business managers do not need a personal social profile to use their dashboard.
 No migration or reassignment of existing approved businesses is required.
 
+Existing businesses also have a focused review journey, starting at
+`/listings/claim/start?id={profileId}` and continuing, after ownership
+verification, at `/listings/review?id={profileId}`. It reuses the account
+editors with an explicitly authorized listing scope rather than changing the
+active identity. Public previews exclude private contact and pending-owner
+information. Business contact edits never change `users.email` or the human's
+personal profile. See `docs/ONBOARDING-ROADMAP.md` for the journey and recovery
+behavior.
+
+An operator-issued seven-day inbox invitation can replace the extra business
+verification email for existing listings. It is not an account magic link:
+visitors choose their Pana login, then explicitly accept the listing-specific
+proof. Fragment/HttpOnly context keeps the invitation out of sign-in callbacks.
+Hashed proof, current-contact validation, admin-only issuance/revocation and
+atomic `profile_owners` acceptance preserve the same separation and do not
+select a different active identity.
+
+Final listing confirmation is server-recorded in `profiles.lastReviewedAt`,
+separate from ownership and personal account setup. Explicitly enrolled renewal
+cycles can issue weekly reminders and pause an unanswered listing after a
+30-day notice window. `listing_refresh_cycles` and hashed
+`listing_refresh_deliveries` track that lifecycle without importing recipients
+or changing login identities. Only an overdue-review pause can be restored by
+confirmation; staff decisions remain authoritative. See the renewal section in
+`docs/ONBOARDING-ROADMAP.md`.
+
 ### The two tables
 
 | Table      | Role                        | Created when                      |
@@ -71,7 +97,9 @@ and **nullable** (migration `0022`). Nullability supports two real flows:
 
 - **Unclaimed profiles** — an admin-imported listing that predates its account.
   `claimProfileForUser()` in `auth.ts` attaches it on first sign-in by matching
-  `profiles.email` against the user's email.
+  `profiles.email` against the user's email. This does **not** apply to listings
+  marked `status.source = 'business_intake'`; those use explicit ownership
+  verification and `profile_owners`, without consuming a personal identity slot.
 - **Tombstoned profiles** — account deletion nulls `user_id` to sever the
   cascade so the record survives for attribution.
 

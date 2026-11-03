@@ -122,6 +122,24 @@ describe('transactional email delivery', () => {
 
     assert.equal(messages.length, 0);
   });
+  test('reminders cannot treat a development log as confirmed email delivery', async () => {
+    process.env.EMAIL_ENV = 'DEV';
+    await assert.rejects(
+      sendTemplateEmail(
+        'listing.refresh',
+        {
+          businessName: 'A Bakery',
+          reviewUrl: 'https://panamia.club/listings/review?id=test',
+          stopUrl:
+            'https://panamia.club/listings/reminders/stop?cycleId=test#token=fixture',
+        },
+        'owner@example.test',
+        { requireDelivery: true }
+      ),
+      /delivery is disabled/
+    );
+    assert.equal(messages.length, 0);
+  });
 });
 
 describe('transactional email branding', () => {

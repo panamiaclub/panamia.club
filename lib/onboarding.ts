@@ -73,7 +73,11 @@ export function isOnboardingRoute(
     pathname.startsWith('/welcome') ||
     pathname.startsWith('/signin') ||
     pathname === '/form/get-listed' ||
-    pathname === '/listings/setup'
+    pathname === '/listings/setup' ||
+    pathname.startsWith('/listings/claim') ||
+    pathname === '/listings/invite' ||
+    pathname.startsWith('/listings/reminders') ||
+    pathname === '/listings/review'
   );
 }
 
