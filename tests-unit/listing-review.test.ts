@@ -15,6 +15,12 @@ import {
   changedProfileTextFields,
   listSelectedCategories,
 } from '@/lib/profile';
+import {
+  LISTING_INVITATION_DAYS,
+  isListingInvitationState,
+  listingInvitationPath,
+  readListingInvitationFragment,
+} from '@/lib/listing-invitation';
 
 test('listing entry, review and editor destinations carry only the explicitly selected profile ID', () => {
   const id = 'public-id /?&';
@@ -104,4 +110,52 @@ test('review text patches preserve untouched nulls, missing fields, casing and u
     ),
     { details: '' }
   );
+});
+
+test('invitation fragments keep proof out of stable return URLs and reject extra redirect or proof inputs', () => {
+  const token = 'ab'.repeat(32);
+  assert.equal(LISTING_INVITATION_DAYS, 7);
+  assert.equal(readListingInvitationFragment(`#token=${token}`), token);
+  for (const hash of [
+    '',
+    '#token=unknown',
+    '#token=' + 'a'.repeat(63),
+    '#token=' + token + '&next=//foreign.test',
+    '#token=' + token + '&token=' + token,
+  ]) {
+    assert.equal(readListingInvitationFragment(hash), null);
+  }
+  const path = listingInvitationPath('public-id &next=//foreign.test');
+  const url = new URL(path, 'https://directory.test.invalid');
+  assert.equal(url.pathname, '/listings/invite');
+  assert.equal(url.searchParams.get('id'), 'public-id &next=//foreign.test');
+  assert.equal(url.searchParams.size, 1);
+  assert.equal(url.hash, '');
+  assert.equal(isOnboardingRoute('/listings/invite'), true);
+});
+
+test('only scoped, valid invitation inspection responses can show a confirmation action', () => {
+  const available = {
+    profileId: 'id',
+    state: 'available',
+    expiresAt: '2026-11-09T00:00:00Z',
+  };
+  assert.equal(isListingInvitationState(available, 'id'), true);
+  assert.equal(isListingInvitationState(available, 'other-id'), false);
+  assert.equal(
+    isListingInvitationState({ ...available, expiresAt: 'not-a-date' }, 'id'),
+    false
+  );
+  assert.equal(
+    isListingInvitationState({ ...available, state: 'claimed' }, 'id'),
+    false
+  );
+  assert.equal(
+    isListingInvitationState(
+      { profileId: 'id', state: 'owned', expiresAt: null },
+      'id'
+    ),
+    true
+  );
+  assert.equal(isListingInvitationState(null, 'id'), false);
 });

@@ -68,6 +68,14 @@ information. Business contact edits never change `users.email` or the human's
 personal profile. See `docs/ONBOARDING-ROADMAP.md` for the journey and recovery
 behavior.
 
+An operator-issued seven-day inbox invitation can replace the extra business
+verification email for existing listings. It is not an account magic link:
+visitors choose their Pana login, then explicitly accept the listing-specific
+proof. Fragment/HttpOnly context keeps the invitation out of sign-in callbacks.
+Hashed proof, current-contact validation, admin-only issuance/revocation and
+atomic `profile_owners` acceptance preserve the same separation and do not
+select a different active identity.
+
 ### The two tables
 
 | Table      | Role                        | Created when                      |

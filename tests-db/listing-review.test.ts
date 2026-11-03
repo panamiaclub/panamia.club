@@ -6,6 +6,13 @@ import { getTableConfig } from 'drizzle-orm/pg-core';
 import { eq } from 'drizzle-orm';
 import { NextRequest } from 'next/server';
 import * as schema from '@/lib/schema';
+import {
+  LISTING_INVITATION_DAYS,
+  listingInvitationIdentifier,
+  listingInvitationPath,
+  readListingInvitationFragment,
+} from '@/lib/listing-invitation';
+import { LISTING_INVITATION_COOKIE } from '@/lib/server/listing-invitation-request';
 
 const pg = new PGlite();
 const db = drizzle(pg, { schema });
@@ -15,7 +22,15 @@ const listingId = 'review-business';
 const secondId = 'another-managed-business';
 const accountEmail = 'ana@personal.test.invalid';
 const businessEmail = 'hello@business.test.invalid';
-let session: { user: { id: string; email: string; name: string } } | null;
+let session: {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    isAdmin?: boolean;
+    isContentModerator?: boolean;
+  };
+} | null;
 let activeId: string | null = null;
 let mailFails = false;
 let zipUnavailable = false;
@@ -116,6 +131,10 @@ let address: typeof import('../app/api/profile/saveAddress/route');
 let photos: typeof import('../app/api/profile/upload/route');
 let tokens: typeof import('../lib/server/listing-claim');
 let publicProfiles: typeof import('../lib/server/profile');
+let invitationAdmin: typeof import('../app/api/admin/listings/[id]/invitation/route');
+let invitationContextApi: typeof import('../app/api/listings/invitations/context/route');
+let invitationApi: typeof import('../app/api/listings/invitations/route');
+let invitations: typeof import('../lib/server/listing-invitations');
 const originalHost = process.env.NEXT_PUBLIC_HOST_URL;
 
 before(async () => {
@@ -150,6 +169,12 @@ before(async () => {
   photos = await import('../app/api/profile/upload/route');
   tokens = await import('../lib/server/listing-claim');
   publicProfiles = await import('../lib/server/profile');
+  invitationAdmin =
+    await import('../app/api/admin/listings/[id]/invitation/route');
+  invitationContextApi =
+    await import('../app/api/listings/invitations/context/route');
+  invitationApi = await import('../app/api/listings/invitations/route');
+  invitations = await import('../lib/server/listing-invitations');
 });
 
 beforeEach(async () => {
@@ -812,4 +837,764 @@ test('business details remain manageable without a ZIP, and mobile confirmation 
   assert.equal(row?.addressLng, null);
   assert.equal(row?.addressGooglePlaceId, null);
   assert.equal(row?.geo, null);
+});
+
+function invitationRequest(
+  path: string,
+  body?: Record<string, unknown>,
+  context?: string,
+  method = body ? 'POST' : 'GET',
+  origin = 'https://directory.test.invalid'
+) {
+  return new NextRequest(`https://directory.test.invalid${path}`, {
+    method,
+    headers: {
+      Origin: origin,
+      'Content-Type': 'application/json',
+      ...(context
+        ? {
+            Cookie: `${LISTING_INVITATION_COOKIE}=${encodeURIComponent(context)}`,
+          }
+        : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+}
+
+async function issueInvitation(id = listingId) {
+  const previous = session;
+  session = {
+    user: { id: userId, email: accountEmail, name: 'Operator', isAdmin: true },
+  };
+  try {
+    const response = await invitationAdmin.POST(
+      invitationRequest(`/api/admin/listings/${id}/invitation`, {}),
+      { params: Promise.resolve({ id }) }
+    );
+    assert.equal(response.status, 201);
+    const data = await response.json();
+    const url = new URL(data.invitationUrl);
+    const token = readListingInvitationFragment(url.hash);
+    assert.ok(token);
+    assert.equal(url.searchParams.get('id'), id);
+    return { response, data, token };
+  } finally {
+    session = previous;
+  }
+}
+
+async function keepInvitation(token: string, id = listingId) {
+  const response = await invitationContextApi.POST(
+    invitationRequest('/api/listings/invitations/context', {
+      profileId: id,
+      token,
+    })
+  );
+  assert.equal(response.status, 200);
+  const context = response.cookies.get(LISTING_INVITATION_COOKIE)?.value;
+  assert.ok(context);
+  return { response, context };
+}
+
+function acceptInvitation(
+  context: string,
+  overrides: Record<string, unknown> = {}
+) {
+  return invitationApi.POST(
+    invitationRequest(
+      '/api/listings/invitations',
+      {
+        profileId: listingId,
+        action: 'accept',
+        expectedOwnerId: session?.user.id,
+        expectedOwnerEmail: session?.user.email,
+        ...overrides,
+      },
+      context
+    )
+  );
+}
+
+test('invitation issuance and revocation require an admin and never infer proof from a public listing, inbox or owner role', async () => {
+  const before = await db.select().from(schema.profiles);
+  for (const user of [
+    null,
+    { id: userId, email: businessEmail, name: 'Owner inbox' },
+    {
+      id: userId,
+      email: accountEmail,
+      name: 'Moderator',
+      isContentModerator: true,
+    },
+  ]) {
+    session = user ? { user } : null;
+    assert.equal(
+      (
+        await invitationAdmin.POST(
+          invitationRequest('/api/admin/listings/test/invitation', {}),
+          { params: Promise.resolve({ id: listingId }) }
+        )
+      ).status,
+      403
+    );
+    assert.equal(
+      (
+        await invitationAdmin.DELETE(
+          invitationRequest(
+            '/api/admin/listings/test/invitation',
+            undefined,
+            undefined,
+            'DELETE'
+          ),
+          { params: Promise.resolve({ id: listingId }) }
+        )
+      ).status,
+      403
+    );
+  }
+  assert.equal((await db.select().from(schema.verification)).length, 0);
+  assert.deepEqual(await db.select().from(schema.profiles), before);
+  assert.equal(emails.length, 0);
+});
+
+test('an operator issues one hashed seven-day proof for the exact listing contact, never a personal login', async () => {
+  const beforeProfiles = await db.select().from(schema.profiles);
+  const beforeUsers = await db.select().from(schema.users);
+  const { response, data, token } = await issueInvitation();
+  assert.equal(data.recipient, businessEmail);
+  const url = new URL(data.invitationUrl);
+  assert.equal(url.pathname, '/listings/invite');
+  assert.equal(
+    `${url.pathname}${url.search}`,
+    listingInvitationPath(listingId)
+  );
+  assert.equal(url.searchParams.size, 1);
+  assert.equal(url.searchParams.has('token'), false);
+  assert.equal(url.searchParams.has('email'), false);
+  assert.equal(url.origin, 'https://directory.test.invalid');
+  const expiry = Date.parse(data.expiresAt) - Date.now();
+  assert.ok(expiry > LISTING_INVITATION_DAYS * 24 * 60 * 60 * 1000 - 10_000);
+  assert.ok(expiry <= LISTING_INVITATION_DAYS * 24 * 60 * 60 * 1000);
+  const [stored] = await db.select().from(schema.verification);
+  assert.equal(stored.identifier, listingInvitationIdentifier(listingId));
+  assert.doesNotMatch(
+    stored.value,
+    new RegExp(`${token}|${businessEmail}|${accountEmail}`)
+  );
+  const record = JSON.parse(stored.value);
+  assert.match(record.tokenHash, /^[a-f0-9]{64}$/);
+  assert.notEqual(record.tokenHash, token);
+  assert.match(record.contactHash, /^[a-f0-9]{64}$/);
+  assert.equal(record.issuedBy, userId);
+  assert.match(response.headers.get('cache-control') ?? '', /no-store/);
+  assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+  assert.deepEqual(await db.select().from(schema.profiles), beforeProfiles);
+  assert.deepEqual(await db.select().from(schema.users), beforeUsers);
+  assert.equal(emails.length, 0);
+});
+
+test('issuance derives the business recipient from storage and rejects inactive, personal, missing and already-owned targets', async () => {
+  session = {
+    user: { id: userId, email: accountEmail, name: 'Admin', isAdmin: true },
+  };
+  for (const [id, expected] of [
+    [personalId, 404],
+    ['legacy-source-id', 404],
+    [secondId, 409],
+  ] as const) {
+    assert.equal(
+      (
+        await invitationAdmin.POST(
+          invitationRequest('/api/admin/listings/test/invitation', {
+            email: 'attacker@test.invalid',
+          }),
+          { params: Promise.resolve({ id }) }
+        )
+      ).status,
+      expected
+    );
+  }
+  const valid = await invitationAdmin.POST(
+    invitationRequest('/api/admin/listings/test/invitation', {
+      email: 'attacker@test.invalid',
+      recipient: 'attacker@test.invalid',
+    }),
+    { params: Promise.resolve({ id: listingId }) }
+  );
+  assert.equal(valid.status, 201);
+  assert.equal((await valid.json()).recipient, businessEmail);
+  await db
+    .update(schema.profiles)
+    .set({ active: false })
+    .where(eq(schema.profiles.id, listingId));
+  assert.equal(
+    (
+      await invitationAdmin.POST(
+        invitationRequest('/api/admin/listings/test/invitation', {}),
+        { params: Promise.resolve({ id: listingId }) }
+      )
+    ).status,
+    404
+  );
+  assert.equal(emails.length, 0);
+});
+
+test('a bad public origin cannot replace or revoke a valid invitation or grant ownership', async () => {
+  const { token } = await issueInvitation();
+  const { context } = await keepInvitation(token);
+  session = {
+    user: { id: userId, email: accountEmail, name: 'Admin', isAdmin: true },
+  };
+  const before = await db.select().from(schema.verification);
+  for (const origin of ['https://foreign.test.invalid', 'null', '']) {
+    assert.equal(
+      (
+        await invitationAdmin.POST(
+          invitationRequest(
+            '/api/admin/listings/test/invitation',
+            {},
+            undefined,
+            'POST',
+            origin
+          ),
+          { params: Promise.resolve({ id: listingId }) }
+        )
+      ).status,
+      403
+    );
+    assert.equal(
+      (
+        await invitationAdmin.DELETE(
+          invitationRequest(
+            '/api/admin/listings/test/invitation',
+            undefined,
+            undefined,
+            'DELETE',
+            origin
+          ),
+          { params: Promise.resolve({ id: listingId }) }
+        )
+      ).status,
+      403
+    );
+    assert.equal(
+      (
+        await invitationContextApi.POST(
+          invitationRequest(
+            '/api/listings/invitations/context',
+            { profileId: listingId, token },
+            undefined,
+            'POST',
+            origin
+          )
+        )
+      ).status,
+      403
+    );
+    assert.equal(
+      (
+        await invitationApi.POST(
+          invitationRequest(
+            '/api/listings/invitations',
+            {
+              profileId: listingId,
+              action: 'accept',
+              expectedOwnerId: userId,
+              expectedOwnerEmail: accountEmail,
+            },
+            context,
+            'POST',
+            origin
+          )
+        )
+      ).status,
+      403
+    );
+  }
+  assert.deepEqual(await db.select().from(schema.verification), before);
+  assert.equal((await db.select().from(schema.profileOwners)).length, 1);
+});
+
+test('inspection and scanner context are read-only, with no accounts, claims, email, actor or private-contact exposure', async () => {
+  const { token } = await issueInvitation();
+  session = null;
+  const beforeProfiles = await db.select().from(schema.profiles);
+  const beforeUsers = await db.select().from(schema.users);
+  const beforeTokens = await db.select().from(schema.verification);
+  const { response, context } = await keepInvitation(token);
+  const cookie = response.headers.get('set-cookie') ?? '';
+  assert.match(cookie, /HttpOnly/);
+  assert.match(cookie, /SameSite=lax/i);
+  assert.match(cookie, /Path=\/api\/listings\/invitations/);
+  assert.doesNotMatch(cookie, /Domain=/i);
+  assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+  for (let i = 0; i < 3; i += 1) {
+    const lookup = await invitationApi.GET(
+      invitationRequest(
+        `/api/listings/invitations?profileId=${listingId}`,
+        undefined,
+        context
+      )
+    );
+    assert.equal(lookup.status, 200);
+    assert.equal(lookup.headers.has('set-cookie'), false);
+    const data = await lookup.json();
+    assert.deepEqual(Object.keys(data).sort(), [
+      'expiresAt',
+      'profileId',
+      'state',
+    ]);
+    assert.equal(data.state, 'available');
+    assert.doesNotMatch(
+      JSON.stringify(data),
+      new RegExp(
+        `${token}|hello@|private-business-phone|pending-private@|pendingOwnerEmail`
+      )
+    );
+  }
+  assert.deepEqual(await db.select().from(schema.profiles), beforeProfiles);
+  assert.deepEqual(await db.select().from(schema.users), beforeUsers);
+  assert.deepEqual(await db.select().from(schema.verification), beforeTokens);
+  assert.equal((await db.select().from(schema.profileOwners)).length, 1);
+  assert.equal(emails.length, 0);
+  assert.equal(preparedActors.length, 0);
+});
+
+test('production invitation context is Secure and cannot carry business proof to the login or active-profile cookie', async () => {
+  const { token } = await issueInvitation();
+  const previous = process.env.NODE_ENV;
+  Object.assign(process.env, { NODE_ENV: 'production' });
+  try {
+    const { response } = await keepInvitation(token);
+    const cookie = response.headers.get('set-cookie') ?? '';
+    assert.match(cookie, /Secure/);
+    assert.match(cookie, /HttpOnly/);
+    assert.match(cookie, /Path=\/api\/listings\/invitations/);
+    assert.doesNotMatch(cookie, /session_token|pana_active_profile|Domain=/);
+  } finally {
+    if (previous === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV');
+    else Object.assign(process.env, { NODE_ENV: previous });
+  }
+});
+
+test('a valid invitation supports a different chosen login, explicit acceptance and the real exact-business review/save path', async () => {
+  const { token } = await issueInvitation();
+  const personal = await getRow(personalId);
+  const otherBusiness = await getRow(secondId);
+  const users = await db.select().from(schema.users);
+  session = null;
+  const { context } = await keepInvitation(token);
+  assert.equal((await acceptInvitation(context)).status, 401);
+  assert.equal((await db.select().from(schema.verification)).length, 1);
+  session = { user: { id: userId, email: accountEmail, name: 'Ana Person' } };
+  assert.notEqual(session.user.email, businessEmail);
+  activeId = secondId;
+  const accepted = await acceptInvitation(context, {
+    token: 'not-a-login-token',
+    next: 'https://foreign.test.invalid',
+    reviewPath: '/account',
+  });
+  assert.equal(accepted.status, 200);
+  assert.deepEqual(await accepted.json(), {
+    success: true,
+    profileId: listingId,
+    reviewPath: `/listings/review?id=${listingId}`,
+  });
+  assert.match(accepted.headers.get('set-cookie') ?? '', /Max-Age=0/);
+  assert.doesNotMatch(
+    accepted.headers.get('set-cookie') ?? '',
+    /session_token|pana_active_profile/
+  );
+  assert.equal((await db.select().from(schema.verification)).length, 0);
+  assert.deepEqual(preparedActors, [listingId]);
+  const review = await reader.GET(
+    request(`/api/getProfile?listingId=${listingId}`)
+  );
+  assert.equal(review.status, 200);
+  const { data } = await review.json();
+  assert.equal(data.id, listingId);
+  assert.equal(data.email, businessEmail);
+  assert.equal(data.name, 'Ana Bakery');
+  assert.equal(
+    (
+      await description.POST(
+        request(editPath('saveDesc'), {
+          details: 'Updated from the business invitation',
+        })
+      )
+    ).status,
+    200
+  );
+  assert.equal((await getRow(listingId))?.userId, null);
+  assert.equal((await getRow(listingId))?.email, businessEmail);
+  assert.deepEqual(await getRow(personalId), personal);
+  assert.deepEqual(await getRow(secondId), otherBusiness);
+  assert.deepEqual(await db.select().from(schema.users), users);
+  assert.equal(activeId, secondId);
+  assert.equal(emails.length, 0);
+});
+
+test('acceptance needs explicit confirmation and current account ID/email; stale sessions do not consume proof', async () => {
+  const { token } = await issueInvitation();
+  const { context } = await keepInvitation(token);
+  for (const body of [
+    { action: 'open' },
+    { action: null },
+    { expectedOwnerId: 'other-account' },
+    { expectedOwnerId: null },
+    { expectedOwnerEmail: 'old@personal.test.invalid' },
+    { expectedOwnerEmail: null },
+  ]) {
+    const response = await acceptInvitation(context, body);
+    assert.equal(response.status, 'action' in body ? 400 : 409);
+  }
+  session = {
+    user: {
+      id: 'other-account',
+      email: 'other@personal.test.invalid',
+      name: 'Other',
+    },
+  };
+  assert.equal(
+    (
+      await acceptInvitation(context, {
+        expectedOwnerId: userId,
+        expectedOwnerEmail: accountEmail,
+      })
+    ).status,
+    409
+  );
+  assert.equal((await db.select().from(schema.verification)).length, 1);
+  assert.equal((await db.select().from(schema.profileOwners)).length, 1);
+  // A deliberate fresh confirmation may choose this other Pana; the proof is
+  // business-scoped, not an invitation to impersonate an existing login.
+  assert.equal((await acceptInvitation(context)).status, 200);
+  const [owner] = await db
+    .select()
+    .from(schema.profileOwners)
+    .where(eq(schema.profileOwners.profileId, listingId));
+  assert.equal(owner.userId, 'other-account');
+});
+
+test('missing, tampered, hash-as-token, wrong-business and query-only proof cannot claim any listing', async () => {
+  const { token } = await issueInvitation();
+  const [stored] = await db.select().from(schema.verification);
+  const tokenHash = JSON.parse(stored.value).tokenHash;
+  for (const presented of [
+    '',
+    'unknown',
+    tokenHash,
+    'a'.repeat(64),
+    null,
+    123,
+  ]) {
+    const response = await invitationContextApi.POST(
+      invitationRequest('/api/listings/invitations/context', {
+        profileId: listingId,
+        token: presented,
+      })
+    );
+    assert.ok([400, 410].includes(response.status));
+  }
+  const queryOnly = await invitationApi.GET(
+    invitationRequest(
+      `/api/listings/invitations?profileId=${listingId}&token=${token}`
+    )
+  );
+  assert.equal(queryOnly.status, 410);
+  assert.equal(
+    (
+      await invitationApi.POST(
+        invitationRequest('/api/listings/invitations', {
+          profileId: listingId,
+          action: 'accept',
+          expectedOwnerId: userId,
+          expectedOwnerEmail: accountEmail,
+          token,
+        })
+      )
+    ).status,
+    409
+  );
+  for (const context of [
+    'not-json',
+    JSON.stringify({ profileId: personalId, token }),
+    JSON.stringify({ profileId: secondId, token }),
+    JSON.stringify({ profileId: listingId, token: 'a'.repeat(64) }),
+  ]) {
+    assert.ok([409, 410].includes((await acceptInvitation(context)).status));
+  }
+  assert.equal((await db.select().from(schema.verification)).length, 1);
+  assert.equal((await db.select().from(schema.profileOwners)).length, 1);
+});
+
+test('expiry and revocation affect only listing invitations and read-only expiry checks never delete tokens', async () => {
+  const { token } = await issueInvitation();
+  const { context } = await keepInvitation(token);
+  const legacy = await tokens.createClaimToken(listingId, userId);
+  await db.insert(schema.verification).values({
+    identifier: 'magic-link:test-user',
+    value: 'unrelated-login-token',
+    expiresAt: new Date(Date.now() + 60_000),
+  });
+  await db
+    .update(schema.verification)
+    .set({ expiresAt: new Date(0) })
+    .where(
+      eq(schema.verification.identifier, listingInvitationIdentifier(listingId))
+    );
+  const before = await db.select().from(schema.verification);
+  assert.equal(
+    (
+      await invitationApi.GET(
+        invitationRequest(
+          `/api/listings/invitations?profileId=${listingId}`,
+          undefined,
+          context
+        )
+      )
+    ).status,
+    410
+  );
+  assert.equal((await acceptInvitation(context)).status, 410);
+  assert.deepEqual(await db.select().from(schema.verification), before);
+  session = {
+    user: { id: userId, email: accountEmail, name: 'Operator', isAdmin: true },
+  };
+  assert.equal(
+    (
+      await invitationAdmin.DELETE(
+        invitationRequest(
+          '/api/admin/listings/test/invitation',
+          undefined,
+          undefined,
+          'DELETE'
+        ),
+        { params: Promise.resolve({ id: listingId }) }
+      )
+    ).status,
+    200
+  );
+  assert.equal((await db.select().from(schema.verification)).length, 2);
+  assert.equal((await redeem(legacy)).status, 200);
+  assert.equal((await db.select().from(schema.verification)).length, 1);
+});
+
+test('the invitation accepts the seven-day response window but stops exactly at its stored deadline', async (t) => {
+  const start = Date.UTC(2026, 10, 2, 12);
+  t.mock.timers.enable({ apis: ['Date'], now: start });
+  const { data, token } = await issueInvitation();
+  const lifetime = LISTING_INVITATION_DAYS * 86_400_000;
+  assert.equal(Date.parse(data.expiresAt), start + lifetime);
+  t.mock.timers.tick(lifetime - 1);
+  const valid = await invitations.inspectListingInvitation(listingId, token);
+  assert.ok('state' in valid && valid.state === 'available');
+  t.mock.timers.tick(1);
+  const expired = await invitations.inspectListingInvitation(listingId, token);
+  assert.ok('success' in expired && expired.code === 'invalid_invitation');
+  const context = JSON.stringify({ profileId: listingId, token });
+  assert.equal((await acceptInvitation(context)).status, 410);
+  assert.equal((await db.select().from(schema.verification)).length, 1);
+  assert.equal((await db.select().from(schema.profileOwners)).length, 1);
+});
+
+test('reissuing rotates only this business proof, never makes two invitations redeemable', async () => {
+  const first = await issueInvitation();
+  const legacy = await tokens.createClaimToken(listingId, userId);
+  const second = await issueInvitation();
+  assert.notEqual(first.token, second.token);
+  const previous = await invitations.inspectListingInvitation(
+    listingId,
+    first.token
+  );
+  assert.ok('success' in previous && previous.success === false);
+  const expiredContext = JSON.stringify({
+    profileId: listingId,
+    token: first.token,
+  });
+  assert.equal((await acceptInvitation(expiredContext)).status, 410);
+  const { context } = await keepInvitation(second.token);
+  assert.equal((await acceptInvitation(context)).status, 200);
+  assert.equal((await db.select().from(schema.verification)).length, 1);
+  // The original account-specific token remains account-bound; it only opens
+  // the existing manager's review, never grants a different account.
+  session = {
+    user: { id: 'other-account', email: businessEmail, name: 'Other' },
+  };
+  assert.equal((await redeem(legacy)).status, 403);
+});
+
+test('invitation acceptance rolls back ownership, pending fields and consumption together when storage fails', async () => {
+  const { token } = await issueInvitation();
+  const { context } = await keepInvitation(token);
+  const before = await getRow(listingId);
+  await pg.exec(`
+    CREATE FUNCTION refuse_invitation_deletion() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'Fixture invitation deletion outage'; END;
+    $$;
+    CREATE TRIGGER refuse_invitation_deletion BEFORE DELETE ON verification_tokens
+    FOR EACH ROW WHEN (OLD.identifier LIKE 'listing-invitation:%')
+    EXECUTE FUNCTION refuse_invitation_deletion();
+  `);
+  try {
+    assert.equal((await acceptInvitation(context)).status, 500);
+    assert.equal((await db.select().from(schema.profileOwners)).length, 1);
+    assert.equal((await db.select().from(schema.verification)).length, 1);
+    assert.deepEqual(await getRow(listingId), before);
+    assert.equal(preparedActors.length, 0);
+  } finally {
+    await pg.exec(
+      'DROP TRIGGER refuse_invitation_deletion ON verification_tokens; DROP FUNCTION refuse_invitation_deletion();'
+    );
+  }
+  assert.equal((await acceptInvitation(context)).status, 200);
+  assert.equal((await db.select().from(schema.verification)).length, 0);
+});
+
+test('concurrent acceptance by two accounts grants exactly one owner and spends the proof once', async () => {
+  const { token } = await issueInvitation();
+  const results = await Promise.all([
+    invitations.acceptListingInvitation(listingId, token, userId),
+    invitations.acceptListingInvitation(listingId, token, 'other-account'),
+  ]);
+  assert.equal(results.filter((result) => result.success).length, 1);
+  assert.equal(
+    results.filter(
+      (result) => !result.success && result.code === 'already_claimed'
+    ).length,
+    1
+  );
+  assert.equal(
+    (await db.select().from(schema.profileOwners)).filter(
+      (owner) => owner.profileId === listingId
+    ).length,
+    1
+  );
+  assert.equal((await db.select().from(schema.verification)).length, 0);
+});
+
+test('existing managers can review a used, expired or missing invitation without creating another owner', async () => {
+  const { token } = await issueInvitation();
+  const { context } = await keepInvitation(token);
+  assert.equal((await acceptInvitation(context)).status, 200);
+  const before = await db.select().from(schema.profileOwners);
+  const lookup = await invitationApi.GET(
+    invitationRequest(`/api/listings/invitations?profileId=${listingId}`)
+  );
+  assert.deepEqual(await lookup.json(), {
+    profileId: listingId,
+    state: 'owned',
+    expiresAt: null,
+  });
+  assert.equal((await acceptInvitation('invalid-context')).status, 200);
+  assert.deepEqual(await db.select().from(schema.profileOwners), before);
+  session = {
+    user: { id: 'other-account', email: businessEmail, name: 'Other' },
+  };
+  assert.equal(
+    (
+      await invitationApi.GET(
+        invitationRequest(
+          `/api/listings/invitations?profileId=${listingId}`,
+          undefined,
+          context
+        )
+      )
+    ).status,
+    409
+  );
+  assert.equal((await acceptInvitation(context)).status, 409);
+});
+
+test('current contact, named setup and publication changes invalidate stale invitations without editing identity', async () => {
+  const { token } = await issueInvitation();
+  const { context } = await keepInvitation(token);
+  const personal = await getRow(personalId);
+  for (const update of [
+    { email: 'changed-business@test.invalid' },
+    { pendingOwnerEmail: 'new-pending-owner@test.invalid' },
+    { active: false },
+  ]) {
+    const current = await getRow(listingId);
+    assert.ok(current);
+    await db
+      .update(schema.profiles)
+      .set(update)
+      .where(eq(schema.profiles.id, listingId));
+    assert.ok([404, 410].includes((await acceptInvitation(context)).status));
+    await db
+      .update(schema.profiles)
+      .set({
+        email: current.email,
+        pendingOwnerEmail: current.pendingOwnerEmail,
+        active: current.active,
+      })
+      .where(eq(schema.profiles.id, listingId));
+  }
+  assert.equal((await db.select().from(schema.profileOwners)).length, 1);
+  assert.deepEqual(await getRow(personalId), personal);
+  assert.equal((await db.select().from(schema.verification)).length, 1);
+});
+
+test('successful legacy claims revoke outstanding invitation proof, including after later ownership removal', async () => {
+  const { token } = await issueInvitation();
+  const legacy = await tokens.createClaimToken(listingId, userId);
+  assert.equal((await redeem(legacy)).status, 200);
+  assert.equal((await db.select().from(schema.verification)).length, 0);
+  await db
+    .delete(schema.profileOwners)
+    .where(eq(schema.profileOwners.profileId, listingId));
+  const context = JSON.stringify({ profileId: listingId, token });
+  assert.equal((await acceptInvitation(context)).status, 410);
+  assert.equal((await db.select().from(schema.profileOwners)).length, 1);
+});
+
+test('a real business-contact edit permanently revokes an outstanding invitation even if the old address is restored', async () => {
+  const { token } = await issueInvitation();
+  await ownListing();
+  assert.equal(
+    (
+      await contact.POST(
+        request(editPath('saveContact'), {
+          email: 'new-business-contact@test.invalid',
+        })
+      )
+    ).status,
+    200
+  );
+  assert.equal((await db.select().from(schema.verification)).length, 0);
+  assert.equal(
+    (
+      await contact.POST(
+        request(editPath('saveContact'), {
+          email: businessEmail,
+        })
+      )
+    ).status,
+    200
+  );
+  await db
+    .delete(schema.profileOwners)
+    .where(eq(schema.profileOwners.profileId, listingId));
+  assert.equal(
+    (await acceptInvitation(JSON.stringify({ profileId: listingId, token })))
+      .status,
+    410
+  );
+  assert.equal((await getRow(personalId))?.email, accountEmail);
+});
+
+test('concurrent issuance and acceptance are serialized without leaving usable proof after a claim', async () => {
+  const { token } = await issueInvitation();
+  const [replacement, acceptance] = await Promise.all([
+    invitations.issueListingInvitation(listingId, userId),
+    invitations.acceptListingInvitation(listingId, token, userId),
+  ]);
+  assert.ok(replacement.success !== acceptance.success);
+  if (acceptance.success)
+    assert.equal((await db.select().from(schema.verification)).length, 0);
+  else {
+    assert.equal(acceptance.code, 'invalid_invitation');
+    assert.equal((await db.select().from(schema.profileOwners)).length, 1);
+  }
 });

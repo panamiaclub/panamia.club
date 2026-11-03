@@ -2,7 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { profiles } from '@/lib/schema';
+import { profiles, verification } from '@/lib/schema';
+import { listingInvitationIdentifier } from '@/lib/listing-invitation';
 import { eq } from 'drizzle-orm';
 import { getEditableProfile } from '@/lib/server/active-profile';
 import { describeDbError } from '@/lib/server/db-error';
@@ -78,17 +79,36 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const [updatedProfile] = await db
-      .update(profiles)
-      .set({
-        ...(contactEmail ? { email: contactEmail } : {}),
-        ...('phone_number' in body
-          ? { phoneNumber: phone_number || null }
-          : {}),
-        ...('pronouns' in body ? { pronouns: pronounsStr } : {}),
-      })
-      .where(eq(profiles.id, existingProfile.id))
-      .returning();
+    const updatedProfile = await db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({ email: profiles.email })
+        .from(profiles)
+        .where(eq(profiles.id, existingProfile.id))
+        .for('update');
+      if (!current) throw new Error('The edited profile no longer exists.');
+      const [updated] = await tx
+        .update(profiles)
+        .set({
+          ...(contactEmail ? { email: contactEmail } : {}),
+          ...('phone_number' in body
+            ? { phoneNumber: phone_number || null }
+            : {}),
+          ...('pronouns' in body ? { pronouns: pronounsStr } : {}),
+        })
+        .where(eq(profiles.id, existingProfile.id))
+        .returning();
+      if (contactEmail && contactEmail !== current.email.trim().toLowerCase()) {
+        await tx
+          .delete(verification)
+          .where(
+            eq(
+              verification.identifier,
+              listingInvitationIdentifier(existingProfile.id)
+            )
+          );
+      }
+      return updated;
+    });
 
     revalidatePublicListing(existingProfile.id, existingProfile.screenname);
     return NextResponse.json(

@@ -179,6 +179,7 @@ const tables = [
   schema.users,
   schema.profiles,
   schema.profileOwners,
+  schema.verification,
   schema.articles,
   schema.recommendationLists,
   schema.recommendationListItems,

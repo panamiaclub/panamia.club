@@ -6,6 +6,10 @@ const businessEmail = 'hello@bakery.test';
 const entryPath = `/listings/claim/start?id=${listingId}`;
 const reviewPath = `/listings/review?id=${listingId}`;
 const verificationPath = `/listings/claim?token=claim-token&id=${listingId}`;
+const invitationToken = 'ab'.repeat(32);
+const invitationReturn = `/listings/invite?id=${listingId}`;
+const invitationPath = `${invitationReturn}#token=${invitationToken}`;
+const invitationCookie = 'pana_listing_invitation';
 const image = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a0u8AAAAASUVORK5CYII=',
   'base64'
@@ -25,11 +29,18 @@ async function fixtures(
     newAccount?: boolean;
     hasAddress?: boolean;
     unpublished?: boolean;
+    invitationError?: 'expired' | 'revoked' | 'contact_changed';
+    accountChangesOnAccept?: boolean;
+    invitationResponseId?: string;
+    invitationPreviewFailure?: boolean;
   } = {}
 ) {
   let signedIn = options.signedIn === true;
   let accountId = options.wrongAccount ? 'wrong-account' : 'review-account';
   let owned = options.owned === true;
+  let ownedBy = owned ? accountId : null;
+  let currentAccountEmail = accountEmail;
+  let switchOnAccept = options.accountChangesOnAccept === true;
   let used = false;
   const signIns: Record<string, unknown>[] = [];
   const claims: string[] = [];
@@ -41,6 +52,9 @@ async function fixtures(
     body: Record<string, unknown>;
   }> = [];
   const switches: string[] = [];
+  const invitationContexts: Record<string, unknown>[] = [];
+  const invitationLookups: string[] = [];
+  const invitationAcceptances: Record<string, unknown>[] = [];
   const profile: Record<string, unknown> = {
     id: listingId,
     userId: null,
@@ -114,7 +128,7 @@ async function fixtures(
               },
               user: {
                 id: accountId,
-                email: accountEmail,
+                email: currentAccountEmail,
                 name: 'Ana Person',
                 emailVerified: true,
               },
@@ -144,6 +158,134 @@ async function fixtures(
           },
         },
       });
+    } else if (path === '/api/listings/invitations/context') {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      invitationContexts.push(body);
+      if (
+        body.profileId !== listingId ||
+        body.token !== invitationToken ||
+        options.invitationError
+      ) {
+        await route.fulfill({
+          status: 410,
+          json: {
+            code: 'invalid_invitation',
+            error:
+              'This invitation has expired, was replaced or used, or no longer matches the business contact.',
+          },
+        });
+      } else if (owned || options.otherOwner) {
+        await route.fulfill({
+          status: 409,
+          json: {
+            code: 'already_claimed',
+            error: 'This business is already managed by another account.',
+          },
+        });
+      } else {
+        await route.fulfill({
+          json: {
+            profileId: listingId,
+            state: 'available',
+            expiresAt: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+          },
+          headers: {
+            'Set-Cookie': `${invitationCookie}=${encodeURIComponent(JSON.stringify(body))}; Path=/api/listings/invitations; HttpOnly; SameSite=Lax`,
+          },
+        });
+      }
+    } else if (
+      path === '/api/listings/invitations' &&
+      route.request().method() === 'GET'
+    ) {
+      invitationLookups.push(route.request().url());
+      const cookie = (await route.request().allHeaders()).cookie ?? '';
+      if (owned && signedIn && ownedBy === accountId) {
+        await route.fulfill({
+          json: { profileId: listingId, state: 'owned', expiresAt: null },
+        });
+      } else if (owned || options.otherOwner) {
+        await route.fulfill({
+          status: 409,
+          json: {
+            code: 'already_claimed',
+            error: 'This business is already managed by another account.',
+          },
+        });
+      } else if (
+        !cookie.includes(`${invitationCookie}=`) ||
+        options.invitationError
+      ) {
+        await route.fulfill({
+          status: 410,
+          json: {
+            code: 'invalid_invitation',
+            error:
+              'This invitation has expired, was replaced or used, or no longer matches the business contact.',
+          },
+        });
+      } else {
+        await route.fulfill({
+          json: {
+            profileId: listingId,
+            state: 'available',
+            expiresAt: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+          },
+        });
+      }
+    } else if (path === '/api/listings/invitations') {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      invitationAcceptances.push(body);
+      if (switchOnAccept) {
+        switchOnAccept = false;
+        accountId = 'deliberately-chosen-other-account';
+        currentAccountEmail = 'other@personal.test';
+      }
+      if (
+        body.expectedOwnerId !== accountId ||
+        body.expectedOwnerEmail !== currentAccountEmail
+      ) {
+        await route.fulfill({
+          status: 409,
+          json: {
+            code: 'account_changed',
+            error:
+              'Your sign-in changed. Reload and confirm the account you want to use.',
+          },
+        });
+      } else if (
+        !signedIn ||
+        body.action !== 'accept' ||
+        body.profileId !== listingId
+      ) {
+        await route.fulfill({
+          status: 401,
+          json: {
+            error: 'Sign in with your chosen Pana account before confirming.',
+          },
+        });
+      } else if (owned || options.otherOwner) {
+        await route.fulfill({
+          status: 409,
+          json: {
+            code: 'already_claimed',
+            error: 'This business is already managed by another account.',
+          },
+        });
+      } else {
+        owned = true;
+        ownedBy = accountId;
+        await route.fulfill({
+          json: {
+            success: true,
+            profileId: options.invitationResponseId ?? listingId,
+            reviewPath: 'https://untrusted-redirect.test',
+          },
+          headers: {
+            'Set-Cookie': `${invitationCookie}=; Path=/api/listings/invitations; HttpOnly; SameSite=Lax; Max-Age=0`,
+          },
+        });
+      }
     } else if (path === '/api/profile/switch') {
       if (route.request().method() === 'POST') {
         switches.push(route.request().postData() ?? '');
@@ -194,6 +336,16 @@ async function fixtures(
           json: { success: true, sentTo: 'h••••@bakery.test' },
         });
       } else {
+        if (options.invitationPreviewFailure) {
+          await route.fulfill({
+            status: 503,
+            json: {
+              error:
+                'Could not load this business. Check again before confirming ownership.',
+            },
+          });
+          return;
+        }
         await route.fulfill({
           json: {
             profileId: listingId,
@@ -359,9 +511,13 @@ async function fixtures(
     writes,
     switches,
     profile,
+    invitationContexts,
+    invitationLookups,
+    invitationAcceptances,
     signIn() {
       signedIn = true;
       accountId = 'review-account';
+      currentAccountEmail = accountEmail;
     },
   };
 }
@@ -992,4 +1148,386 @@ test('the mobile review keeps photos unchanged and offers exact-business complet
     fullPage: true,
   });
   expect(fixture.writes).toHaveLength(0);
+});
+
+test('invitation opening and scanner inspection never sign in, claim, email or expose private contacts and proof in network URLs', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { newAccount: true });
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
+  await page.goto(invitationPath);
+  await expect(
+    page.getByRole('heading', {
+      name: 'Review and claim your listing',
+      exact: true,
+    })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Ana Bakery', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('link', {
+      name: 'Choose my Pana account and sign in',
+      exact: true,
+    })
+  ).toBeVisible();
+  await expect(page).toHaveURL(
+    new RegExp(`/listings/invite\\?id=${listingId}$`)
+  );
+  await expect(page.getByText(businessEmail, { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByText('private-business-phone', { exact: true })
+  ).toHaveCount(0);
+  await expect(
+    page.getByText('pending-private@personal.test', { exact: true })
+  ).toHaveCount(0);
+  expect(fixture.invitationContexts).toEqual([
+    { profileId: listingId, token: invitationToken },
+  ]);
+  expect(fixture.invitationAcceptances).toHaveLength(0);
+  expect(fixture.signIns).toHaveLength(0);
+  expect(fixture.claims).toHaveLength(0);
+  expect(fixture.verifications).toHaveLength(0);
+  expect(fixture.writes).toHaveLength(0);
+  expect(
+    requests.every(
+      (url) => !url.includes(invitationToken) && !url.includes(businessEmail)
+    )
+  ).toBe(true);
+  expect(await page.evaluate(() => document.cookie)).not.toContain(
+    invitationCookie
+  );
+  const cookie = (await page.context().cookies()).find(
+    (item) => item.name === invitationCookie
+  );
+  expect(cookie?.httpOnly).toBe(true);
+  expect(cookie?.path).toBe('/api/listings/invitations');
+  await page.reload();
+  await expect(
+    page.getByRole('link', {
+      name: 'Choose my Pana account and sign in',
+      exact: true,
+    })
+  ).toBeVisible();
+  expect(fixture.invitationContexts).toHaveLength(1);
+  expect(fixture.invitationAcceptances).toHaveLength(0);
+});
+
+test('an invitation returns through chosen-account passwordless sign-in to explicit claim and exact-business review without a second ownership email', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { newAccount: true });
+  await page.goto(invitationPath);
+  const choose = page.getByRole('link', {
+    name: 'Choose my Pana account and sign in',
+    exact: true,
+  });
+  await expect(choose).toBeVisible();
+  const signInUrl = new URL(
+    (await choose.getAttribute('href')) ?? '',
+    'https://fixture.test'
+  );
+  expect(signInUrl.searchParams.get('callbackUrl')).toBe(invitationReturn);
+  expect(signInUrl.href).not.toContain(invitationToken);
+  await choose.click();
+  await expect(
+    page.getByRole('heading', { name: 'Welcome to Pana MIA', exact: true })
+  ).toBeVisible();
+  const emailOption = page.getByRole('button', {
+    name: 'Sign in with email',
+    exact: true,
+  });
+  if (await emailOption.isVisible()) await emailOption.click();
+  await page.getByPlaceholder('your@email.com').fill(accountEmail);
+  await page
+    .getByRole('button', { name: 'Send sign-in link', exact: true })
+    .click();
+  await expect.poll(() => fixture.signIns.length).toBe(1);
+  expect(fixture.signIns[0].email).toBe(accountEmail);
+  expect(fixture.signIns[0].callbackURL).not.toContain(invitationToken);
+  const callback = new URL(String(fixture.signIns[0].callbackURL));
+  expect(`${callback.pathname}${callback.search}`).toBe(invitationReturn);
+  fixture.signIn();
+  await page.goto(invitationReturn);
+  await expect(page.getByTestId('invitation-account')).toHaveText(accountEmail);
+  await expect(
+    page.getByRole('button', { name: 'Confirm claim and review', exact: true })
+  ).toBeVisible();
+  expect(page.url()).not.toContain('/welcome');
+  expect(fixture.invitationAcceptances).toHaveLength(0);
+  await page
+    .getByRole('button', { name: 'Confirm claim and review', exact: true })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Review Ana Bakery', exact: true })
+  ).toBeVisible();
+  await expect(page).toHaveURL(
+    new RegExp(`/listings/review\\?id=${listingId}$`)
+  );
+  expect(fixture.invitationAcceptances).toEqual([
+    {
+      profileId: listingId,
+      action: 'accept',
+      expectedOwnerId: 'review-account',
+      expectedOwnerEmail: accountEmail,
+    },
+  ]);
+  expect(fixture.claims).toHaveLength(0);
+  expect(fixture.verifications).toHaveLength(0);
+  expect(fixture.switches).toHaveLength(0);
+  expect(
+    (await page.context().cookies()).some(
+      (cookie) => cookie.name === invitationCookie
+    )
+  ).toBe(false);
+  await page
+    .getByRole('link', { name: 'Review description', exact: true })
+    .click();
+  await expect(page.getByLabel('Business name', { exact: true })).toHaveValue(
+    'Ana Bakery'
+  );
+  await page
+    .getByLabel('About this business', { exact: true })
+    .fill('Refreshed through the invitation');
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expect(
+    page.getByRole('checkbox', { name: 'Food', exact: true })
+  ).toBeChecked();
+  expect(fixture.writes[0]).toMatchObject({
+    listingId,
+    path: '/api/profile/saveDesc',
+    body: { details: 'Refreshed through the invitation' },
+  });
+});
+
+test('a signed-in visitor confirms the clearly named account, or switches accounts without spending the invitation', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { signedIn: true, wrongAccount: true });
+  await page.goto(invitationPath);
+  await expect(page.getByTestId('invitation-account')).toHaveText(accountEmail);
+  await expect(
+    page.getByRole('button', { name: 'Confirm claim and review', exact: true })
+  ).toBeVisible();
+  expect(fixture.invitationAcceptances).toHaveLength(0);
+  await page
+    .getByRole('button', { name: 'Use a different Pana account', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/signin\?callbackUrl=/);
+  expect(new URL(page.url()).searchParams.get('callbackUrl')).toBe(
+    invitationReturn
+  );
+  expect(fixture.invitationAcceptances).toHaveLength(0);
+  fixture.signIn();
+  await page.goto(invitationReturn);
+  await expect(
+    page.getByRole('button', { name: 'Confirm claim and review', exact: true })
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Confirm claim and review', exact: true })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Review Ana Bakery', exact: true })
+  ).toBeVisible();
+  expect(fixture.invitationAcceptances[0].expectedOwnerId).toBe(
+    'review-account'
+  );
+  expect(fixture.invitationContexts).toHaveLength(1);
+});
+
+test('a changed session cannot silently accept; reloading identifies the new account and still requires confirmation', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    accountChangesOnAccept: true,
+  });
+  await page.goto(invitationPath);
+  await expect(page.getByTestId('invitation-account')).toHaveText(accountEmail);
+  await page
+    .getByRole('button', { name: 'Confirm claim and review', exact: true })
+    .click();
+  await expect(page.getByRole('alert')).toContainText('Your sign-in changed');
+  await expect(page).toHaveURL(
+    new RegExp(`/listings/invite\\?id=${listingId}$`)
+  );
+  expect(fixture.invitationAcceptances).toHaveLength(1);
+  await page
+    .getByRole('button', {
+      name: 'Reload and confirm my account again',
+      exact: true,
+    })
+    .click();
+  await expect(page.getByTestId('invitation-account')).toHaveText(
+    'other@personal.test'
+  );
+  expect(fixture.invitationAcceptances).toHaveLength(1);
+  await page
+    .getByRole('button', { name: 'Confirm claim and review', exact: true })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Review Ana Bakery', exact: true })
+  ).toBeVisible();
+  expect(fixture.invitationAcceptances[1]).toMatchObject({
+    expectedOwnerId: 'deliberately-chosen-other-account',
+    expectedOwnerEmail: 'other@personal.test',
+  });
+  expect(fixture.switches).toHaveLength(0);
+});
+
+for (const invitationError of [
+  'expired',
+  'revoked',
+  'contact_changed',
+] as const) {
+  test(`a ${invitationError} invitation keeps public context and returns to the stable verification path`, async ({
+    page,
+  }) => {
+    const fixture = await fixtures(page, { signedIn: true, invitationError });
+    await page.goto(invitationPath);
+    await expect(page.getByRole('alert')).toContainText(
+      'expired, was replaced or used'
+    );
+    await expect(
+      page.getByRole('heading', { name: 'Ana Bakery', exact: true })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', {
+        name: 'Confirm claim and review',
+        exact: true,
+      })
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('link', { name: 'Return to this listing', exact: true })
+    ).toHaveAttribute('href', entryPath);
+    expect(fixture.invitationAcceptances).toHaveLength(0);
+    expect(fixture.claims).toHaveLength(0);
+  });
+}
+
+test('already-authorized owners review directly even after proof was consumed or expired; other accounts never gain another owner', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    invitationError: 'expired',
+  });
+  await page.goto(invitationPath);
+  await expect(
+    page.getByRole('link', { name: 'Review your listing', exact: true })
+  ).toHaveAttribute('href', reviewPath);
+  await expect(
+    page.getByRole('button', { name: 'Confirm claim and review', exact: true })
+  ).toHaveCount(0);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect(fixture.invitationAcceptances).toHaveLength(0);
+  expect(fixture.claims).toHaveLength(0);
+});
+
+test('a business claimed by someone else is not accepted by invitation inspection or account sign-in', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { signedIn: true, otherOwner: true });
+  await page.goto(invitationPath);
+  await expect(page.getByRole('alert')).toContainText(
+    'managed by another account'
+  );
+  await expect(
+    page.getByRole('button', { name: 'Confirm claim and review', exact: true })
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', {
+      name: 'Use a different Pana account',
+      exact: true,
+    })
+  ).toBeVisible();
+  expect(fixture.invitationAcceptances).toHaveLength(0);
+  expect(fixture.claims).toHaveLength(0);
+});
+
+test('missing context, a query-only token and malformed invitation links do not authorize or consume a claim', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { signedIn: true });
+  await page.goto(invitationReturn);
+  await expect(page.getByRole('alert')).toContainText(
+    'expired, was replaced or used'
+  );
+  await page.goto(`${invitationReturn}&token=${invitationToken}`);
+  await expect(page.getByRole('alert')).toContainText(
+    'expired, was replaced or used'
+  );
+  await page.goto(`${invitationReturn}#token=bad-proof`);
+  await expect(page.getByRole('alert')).toContainText('invalid proof');
+  await page.goto('/listings/invite');
+  await expect(page.getByRole('alert')).toContainText('No listing selected');
+  expect(fixture.invitationContexts).toHaveLength(0);
+  expect(fixture.invitationAcceptances).toHaveLength(0);
+  expect(fixture.signIns).toHaveLength(0);
+});
+
+test('a mismatched invitation acceptance response cannot navigate to another business or an external destination', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    invitationResponseId: 'other-business',
+  });
+  await page.goto(invitationPath);
+  await expect(
+    page.getByRole('button', { name: 'Confirm claim and review', exact: true })
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Confirm claim and review', exact: true })
+    .click();
+  await expect(page.getByRole('alert')).toContainText(
+    'Could not confirm ownership'
+  );
+  await expect(page).toHaveURL(
+    new RegExp(`/listings/invite\\?id=${listingId}$`)
+  );
+  expect(fixture.invitationAcceptances).toHaveLength(1);
+});
+
+test('an unavailable business preview cannot show a generic invitation confirmation for an unknown target', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    invitationPreviewFailure: true,
+  });
+  await page.goto(invitationPath);
+  await expect(page.getByRole('alert')).toContainText(
+    'Could not load this business'
+  );
+  await expect(
+    page.getByRole('button', { name: 'Confirm claim and review', exact: true })
+  ).toHaveCount(0);
+  expect(fixture.invitationAcceptances).toHaveLength(0);
+});
+
+test('the mobile invitation is keyboard accessible, identifies the account and keeps its action within the viewport', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { signedIn: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(invitationPath);
+  await expect(page.getByTestId('invitation-account')).toHaveText(accountEmail);
+  const confirm = page.getByRole('button', {
+    name: 'Confirm claim and review',
+    exact: true,
+  });
+  await expect(confirm).toBeVisible();
+  await confirm.focus();
+  await expect(confirm).toBeFocused();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
+  ).toBe(true);
+  expect(fixture.invitationAcceptances).toHaveLength(0);
 });

@@ -40,7 +40,7 @@ profile's mentoring data. Login emails and personal identity slots remain unique
 ### Existing listing review and claims (no secrets)
 
 ```
-yarn node --experimental-test-module-mocks --import tsx --test tests-db/listing-review.test.ts tests-db/listing-intake.test.ts
+yarn node --experimental-test-module-mocks --import tsx --test tests-db/listing-review.test.ts tests-db/listing-intake.test.ts tests-db/magic-link.test.ts
 ```
 
 The review suite uses the same isolated PGlite approach and exercises the real
@@ -53,6 +53,15 @@ all editors, multiple managed listings, login/contact separation, preservation
 of untouched information, and online/mobile location privacy. Browser coverage
 in `tests/e2e/listing-review.spec.ts` follows the complete guided journey with
 isolated API fixtures.
+
+The same review suite covers operator-only seven-day invitation issuance,
+hashed storage, HttpOnly context, read-only scanners, explicit chosen-account
+acceptance, expiry/revocation/contact changes, current-session confirmation and
+atomic consumption/ownership under storage failures or concurrent requests.
+`magic-link.test.ts` exercises the real Better Auth passwordless handler with
+an in-memory adapter and mocked delivery: only the chosen login is created or
+signed in, its callback retains the exact invitation target without carrying
+business proof, and expired login links keep their recovery destination.
 
 ### Isolated status visibility regression (no secrets)
 

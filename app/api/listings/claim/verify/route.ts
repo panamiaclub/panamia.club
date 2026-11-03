@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { consumeClaimToken } from '@/lib/server/listing-claim';
 import { claimUnownedProfile } from '@/lib/server/profile-owners';
-import { createActorForProfile } from '@/lib/federation';
-import { revalidatePublicListing } from '@/lib/server/profile';
+import { prepareClaimedListing } from '@/lib/server/claimed-listing';
 import { getEditableProfile } from '@/lib/server/active-profile';
 import { listingReviewPath } from '@/lib/listing-url';
 
@@ -105,32 +104,7 @@ export async function POST(request: NextRequest) {
     }
 
     const profile = { id: target.profileId, name: result.name };
-    revalidatePublicListing(profile.id, result.screenname);
-
-    // Prepare the listing's social identity at claim time, without waiting for
-    // the owner to visit /s as the business. Claiming is the consent signal, and
-    // the row federates nothing until the owner actually posts.
-    //
-    // Deliberately isolated from the outer catch: ownership is already
-    // committed by this point, so letting an actor failure surface as a 500
-    // would tell the owner the claim failed and send them back into a retry
-    // that can only 409. A listing with no handle simply gets no actor.
-    try {
-      const actorResult = await createActorForProfile(profile.id);
-      if (!actorResult.success) {
-        console.warn(
-          '[listings/claim/verify] no actor for profile %s: %s',
-          profile.id,
-          actorResult.error
-        );
-      }
-    } catch (actorError) {
-      console.error(
-        '[listings/claim/verify] actor creation failed for profile %s',
-        profile.id,
-        actorError
-      );
-    }
+    await prepareClaimedListing(profile.id, result.screenname);
 
     return NextResponse.json({
       success: true,

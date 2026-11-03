@@ -113,6 +113,70 @@ listing and the permanent management/review URL for that exact business.
 This is a product UI path only. It does not create, schedule or send a campaign,
 import contacts, bulk-claim businesses, or modify existing listings on arrival.
 
+### Inbox invitation shortcut (operator-issued, not an account login)
+
+An operator may prepare a distinct invitation for a published, unclaimed intake
+listing. The delivery contract is
+`/listings/invite?id={publicProfileId}#token={opaqueInvitation}`. Deliver that URL
+privately **only to the business contact returned by issuance**; do not publish
+it, log it, drop its fragment, or copy it to another address. The plain stable
+claim/review URLs above remain the non-secret recovery and management routes.
+
+The invitation lasts **seven days from issuance**, independently of the existing
+30-minute passwordless sign-in link and one-hour account-bound ownership email.
+It proves access to the business inbox for one listing; it cannot log in as or
+impersonate a personal account. Opening it, including scanner/preview loads,
+performs no account creation, ownership grant, email send or token consumption.
+
+The raw invitation is carried in a URL fragment, not a query string sent to
+servers or third parties. The client checks it through a same-origin JSON POST
+and retains it in a host-only, HttpOnly, SameSite=Lax cookie scoped to the
+invitation API (Secure in production). This only preserves context: inspection
+is read-only and does not spend the proof. The fragment is removed from the
+address bar. No invitation proof or business email is put into login callbacks,
+browser storage, public API responses or analytics. Passwordless sign-in returns
+to `/listings/invite?id={publicProfileId}` on the same origin; use the same
+browser, or reopen the original invitation in the browser already signed in.
+
+Signed-in visitors see the account that would manage the listing and can change
+accounts before **Confirm claim and review**. Signed-out visitors choose their
+own Pana email through the existing passwordless form and explicitly confirm
+after returning. Business and personal emails can differ. A valid invitation
+replaces the second business-inbox verification email, not the chosen account's
+sign-in. Existing public claim links without invitations keep their original
+account-bound verification. Already-authorized managers may go directly to the
+stable review route even when the invitation has been used or expired.
+
+Authenticated acceptance checks the displayed account ID/email again and locks
+the listing before its invitation. Ownership and invitation consumption commit
+together using the shared first-claim helper; an outage rolls both back.
+Inspection and acceptance check current contact, pending setup and ownership
+state. A contact edit or successful first claim revokes outstanding invitation
+proof. Reissue/revoke operations use the same listing lock, so concurrent
+requests cannot produce two first owners or two usable invitations.
+
+Issuance plumbing (no delivery or campaign execution):
+
+- `POST /api/admin/listings/{profileId}/invitation`: admin session and same-origin
+  request required. Reads the actual current business contact, replaces any
+  prior invitation for that listing, and returns the URL, recipient and expiry.
+  A caller-supplied recipient/email cannot change the destination.
+- `DELETE /api/admin/listings/{profileId}/invitation`: admin-only revocation.
+  This does not touch passwordless or existing account-bound claim tokens.
+- `POST /api/listings/invitations/context`: validates the fragment and stages
+  browser context only. `GET /api/listings/invitations?profileId={id}` is read-only.
+- `POST /api/listings/invitations`: requires the current session, explicit
+  acceptance and its expected account ID/email; grants only the scoped listing
+  and returns its exact review path. It never changes the active identity.
+
+Only hashes of the invitation and bound inbox fields are stored, namespaced in
+the existing verification table. An admin receives the raw delivery URL once;
+normal inspection never returns it or private contacts. Replaced, revoked,
+expired, contact-changed and wrong-context links offer the stable claim path
+or support; changed sessions must reload and confirm again. No production
+invitations are minted by development/testing, and campaign delivery remains
+subject to separate approval.
+
 ### What happens on a first sign-in
 
 | Step                   | Where       | Effect                                                                                                      |

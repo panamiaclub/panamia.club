@@ -75,6 +75,7 @@ export function isOnboardingRoute(
     pathname === '/form/get-listed' ||
     pathname === '/listings/setup' ||
     pathname.startsWith('/listings/claim') ||
+    pathname === '/listings/invite' ||
     pathname === '/listings/review'
   );
 }
