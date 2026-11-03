@@ -226,6 +226,8 @@ jobs:
             echo "::error::xcodebuild succeeded but $APP does not exist."
             exit 1
           fi
+          plutil -extract UIDeviceFamily json -o - "$APP/Info.plist" |
+            python3 -c 'import json, sys; assert json.load(sys.stdin) == [1], "Simulator must target iPhone only."'
           echo "Built $APP ($(du -sh "$APP" | cut -f1))"
 
       - name: Verify unsigned device release archive
@@ -248,6 +250,8 @@ jobs:
           APP="build/PanaMia.xcarchive/Products/Applications/App.app"
           test -d "$APP"
           test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist")" = social.pana.app
+          plutil -extract UIDeviceFamily json -o - "$APP/Info.plist" |
+            python3 -c 'import json, sys; assert json.load(sys.stdin) == [1], "Release archive must target iPhone only."'
           find "$APP" -name PrivacyInfo.xcprivacy -print > build/privacy-manifests.txt
           test -s build/privacy-manifests.txt || { echo "::error::SDK privacy manifests are missing from the release archive."; exit 1; }
 

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import config from '../capacitor.config';
 import {
+  assertIphoneOnlyDeviceFamily,
   assertIosProductionServer,
   hasAppleAppAssociation,
   iosExportOptions,
@@ -67,6 +68,40 @@ test('a release cannot accidentally point at a development or preview deployment
     'https://member@panamia.club',
   ]) {
     assert.throws(() => assertIosProductionServer(url));
+  }
+});
+
+test('the first release targets iPhone in both native configurations', () => {
+  const project = readFileSync(
+    new URL('../mobile/ios/App/App.xcodeproj/project.pbxproj', import.meta.url),
+    'utf8'
+  );
+  const families = [
+    ...project.matchAll(/TARGETED_DEVICE_FAMILY\s*=\s*([^;]+);/g),
+  ].map((match) => match[1].trim());
+  assert.deepEqual(families, ['1', '1']);
+});
+
+test('archive and exported IPA validation reject iPad or malformed device families', () => {
+  assert.doesNotThrow(() => assertIphoneOnlyDeviceFamily([1]));
+  for (const family of [
+    undefined,
+    null,
+    1,
+    '1',
+    {},
+    [],
+    [2],
+    [1, 2],
+    [1, 1],
+    [1, 3],
+    ['1'],
+    [true],
+  ]) {
+    assert.throws(
+      () => assertIphoneOnlyDeviceFamily(family),
+      /UIDeviceFamily \[1\]/
+    );
   }
 });
 

@@ -178,10 +178,12 @@ You do not have to _own_ that Mac, though. CI builds the iOS app on a
 GitHub-hosted macOS runner on every relevant change — see
 [Continuous integration](#continuous-integration) below.
 
-For iPhone/iPad device testing, signing, TestFlight, and App Store preparation,
+For iPhone device testing, signing, TestFlight, and App Store preparation,
 see [iOS Device Testing and Publishing](./IOS.md). The shared native UI includes
 iOS keyboard-viewport handling, safe areas, and WebView history gestures;
-Android keeps its existing UI and hardware-back behavior.
+Android keeps its existing UI and hardware-back behavior. The first App Store
+release targets iPhone only; responsive tablet UI is preserved for the website
+and any future native iPad release.
 
 ```bash
 yarn mobile                # build + install + launch on Android (one command)

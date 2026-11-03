@@ -79,6 +79,25 @@ export function assertIosProductionServer(url: string | undefined): void {
   }
 }
 
+export function assertIphoneOnlyDeviceFamily(value: unknown): void {
+  if (!Array.isArray(value) || value.length !== 1 || value[0] !== 1) {
+    throw new Error(
+      'iPhone-only releases require UIDeviceFamily [1]. Check TARGETED_DEVICE_FAMILY in the iOS project.'
+    );
+  }
+}
+
+function verifyIphoneOnlyBundle(infoPlist: string): void {
+  const family: unknown = JSON.parse(
+    execFileSync(
+      'plutil',
+      ['-extract', 'UIDeviceFamily', 'json', '-o', '-', infoPlist],
+      { encoding: 'utf8' }
+    )
+  );
+  assertIphoneOnlyDeviceFamily(family);
+}
+
 export function hasAppleAppAssociation(
   value: unknown,
   teamId: string
@@ -237,6 +256,9 @@ async function main(): Promise<void> {
     ],
     { cwd: ROOT, stdio: 'inherit' }
   );
+  verifyIphoneOnlyBundle(
+    join(archive, 'Products', 'Applications', 'App.app', 'Info.plist')
+  );
   execFileSync(
     'xcodebuild',
     [
@@ -259,7 +281,18 @@ async function main(): Promise<void> {
     throw new Error(
       `Expected exactly one exported IPA in ${exported}; found ${packages.length}.`
     );
-  console.log(`\nApp Store package: ${join(exported, packages[0])}`);
+  const packagePath = join(exported, packages[0]);
+  const exportedInfo = join(output, 'Exported-Info.plist');
+  writeFileSync(
+    exportedInfo,
+    execFileSync('/usr/bin/unzip', [
+      '-p',
+      packagePath,
+      'Payload/App.app/Info.plist',
+    ])
+  );
+  verifyIphoneOnlyBundle(exportedInfo);
+  console.log(`\nApp Store package: ${packagePath}`);
 }
 
 if (
