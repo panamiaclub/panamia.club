@@ -1,45 +1,47 @@
-import { emailLayout, escape } from './layout';
+import { button, emailLayout, escape, listingEmailStyles } from './layout';
 
 export function listingClaim(params: Record<string, unknown>) {
-  const businessName = escape(String(params.businessName || 'your business'));
+  const businessName = String(params.businessName || 'your business');
   const claimUrl = String(params.claimUrl || '');
-  const requesterEmail = escape(String(params.requesterEmail || ''));
+  const requesterEmail = String(params.requesterEmail || '');
+  const instructions =
+    'If that was you, use the same Pana account and confirm below. The link works once and expires in an hour. Claiming gives that account access to edit this business; it does not change your personal login.';
+  const reviewGuidance =
+    'If you are completing a listing review, finish with "Confirm business information" after claiming.';
+  const safety =
+    "If you don't recognise this, ignore this email and nothing changes. Whoever asked cannot get access without this link.";
 
   return {
-    subject: `Confirm you run ${String(params.businessName || 'this business')} — Pana MIA`,
+    subject: `Confirm you run ${String(params.businessName || 'this business')} — PanaMia`,
     html: emailLayout({
-      title: 'Claim your listing',
-      preheader: `Confirm you manage ${businessName} on Pana MIA.`,
+      variant: 'listing',
+      title: 'Confirm you manage this listing',
+      preheader: `Confirm you manage ${businessName} on PanaMia.`,
       body: `
-        <h2 style="margin: 0 0 20px 0; color: #111827; font-size: 22px; font-weight: 600;">Claim your listing</h2>
-        <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-          Someone signed in as <strong>${requesterEmail}</strong> and asked to manage the Pana MIA listing for <strong>${businessName}</strong>.
+        <h1 class="listing-heading" style="${listingEmailStyles.heading}">Confirm you manage this listing</h1>
+        <p style="${listingEmailStyles.paragraph}">
+          Someone signed in as <strong>${escape(requesterEmail)}</strong> and asked to manage the PanaMia listing for <strong>${escape(businessName)}</strong>.
         </p>
-        <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-          If that was you, confirm below and the listing is yours to edit. The link works once and expires in an hour.
-        </p>
-        <p style="margin: 0 0 24px 0;">
-          <a href="${escape(claimUrl)}" style="display: inline-block; background-color: #f28444; color: #1f2937; padding: 14px 28px; border-radius: 9999px; text-decoration: none; font-weight: 700; font-size: 16px;">Yes, this is my business</a>
-        </p>
-        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-          If you don't recognise this, ignore this email and nothing changes. Whoever asked cannot get access without this link.
-        </p>`,
+        <p style="${listingEmailStyles.paragraph}">${escape(instructions)}</p>
+        ${button('Yes, this is my business', claimUrl, 'listing')}
+        <p style="${listingEmailStyles.note}">${escape(reviewGuidance)}</p>
+        <p style="${listingEmailStyles.note}">${escape(safety)}</p>`,
     }),
     text: [
-      'Claim your listing — Pana MIA',
-      '=============================',
+      'Confirm you manage this listing - PanaMia',
       '',
-      `Someone signed in as ${String(params.requesterEmail || '')} and asked to manage`,
-      `the Pana MIA listing for ${String(params.businessName || 'this business')}.`,
+      `Someone signed in as ${requesterEmail} and asked to manage`,
+      `the PanaMia listing for ${businessName}.`,
       '',
-      'If that was you, confirm here. The link works once and expires in an hour:',
+      instructions,
+      'Yes, this is my business:',
       claimUrl,
       '',
-      "If you don't recognise this, ignore this email and nothing changes.",
-      'Whoever asked cannot get access without this link.',
+      reviewGuidance,
+      safety,
       '',
       '---',
-      'Pana MIA · panamia.club · hola@panamia.club',
+      'PanaMia - panamia.club - hola@panamia.club',
     ].join('\n'),
   };
 }
