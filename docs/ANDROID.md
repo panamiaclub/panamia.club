@@ -228,6 +228,16 @@ and the child-safety standards at
 source of truth; a major version change renews applicable consent gates.
 Public support, privacy and safety reports go to `hola@panamia.club`.
 
+Data safety includes the controlled WebView, server-side transfers, and SDKs,
+not just Android permissions. Apply sharing exemptions only to verified
+service-provider processing, expected user-initiated transfers, qualifying
+legal transfers, or fully anonymous data. Cloudflare's Turnstile notice also
+describes independent use of security signals to improve bot detection; the
+hosting/CRM processor exemption does not establish "No data shared" for those
+signals. Remote Google Fonts requests also transmit connection/browser
+information. Disclose the applicable technical/security data and purposes
+without classifying every account, content, or payment record as shared.
+
 Set app access to include the dedicated reviewer login described in
 [Sign-in documentation](./SIGNIN.md#google-play-reviewer-access), and verify it
 against the production deployment before submission. Do not send reviewers a
@@ -239,11 +249,12 @@ magic link or require access to a private inbox.
 3. Complete the store listing, content rating, target audience, ads, data
    safety, app access, privacy-policy, and account-deletion declarations.
 4. Add testers and install the Play-signed build from its opt-in link.
-5. In **Setup → App integrity → App signing**, copy both SHA-256 certificate
-   fingerprints: the **app signing key** and the **upload key**.
-6. Set `ANDROID_APP_CERT_FINGERPRINTS` to both comma-separated fingerprints in
+5. In **Setup → App integrity → App signing**, copy all applicable SHA-256
+   certificate fingerprints: the **app signing certificates**, including
+   original and upgraded keys when present, and the **upload key**.
+6. Set `ANDROID_APP_CERT_FINGERPRINTS` to those comma-separated fingerprints in
    the deployed Worker environment, redeploy, and verify that
-   `https://panamia.club/.well-known/assetlinks.json` contains both.
+   `https://panamia.club/.well-known/assetlinks.json` contains all of them.
 7. Test sign-in, deep links, account deletion, offline launch, donations, and
    external links on the Play-installed build before promoting it.
 

@@ -193,6 +193,29 @@ export default function PrivacyPolicyPage() {
             information, for delivery, security, and traffic analysis.
           </p>
           <p>
+            Protected forms use Cloudflare Turnstile, which receives IP
+            addresses, TLS fingerprints, browser information, the site origin,
+            and form-action identifiers. It processes security signals on our
+            behalf to detect bots. Cloudflare also uses these signals
+            independently to improve its bot-detection capabilities, as
+            described in its{' '}
+            <a href="https://www.cloudflare.com/turnstile-privacy-policy/">
+              Turnstile privacy notice
+            </a>
+            .
+          </p>
+          <p>
+            Google Fonts requests send your IP address, browser and operating
+            system information, and referring-site information to Google for
+            font delivery and security. These requests can occur before you sign
+            in. Google states in its{' '}
+            <a href="https://fonts.google.com/faq#privacy">
+              Fonts privacy information
+            </a>{' '}
+            that this service does not set cookies or use this information to
+            create end-user profiles or for targeted advertising.
+          </p>
+          <p>
             We do not sell personal information or use it for cross-context
             behavioral advertising. We also process limited records for safety,
             fraud prevention, legal obligations, and establishing or defending

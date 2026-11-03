@@ -85,3 +85,26 @@ test('core and upload policies enforce consistent nudity and violence restrictio
     );
   }
 });
+
+test('privacy discloses independent security processing and remote font requests', () => {
+  const source = readFileSync(
+    new URL('../app/legal/privacy/page.tsx', import.meta.url),
+    'utf8'
+  ).replace(/\s+/g, ' ');
+  assert.match(source, /Cloudflare Turnstile/);
+  assert.match(source, /IP addresses, TLS fingerprints/);
+  assert.match(
+    source,
+    /also uses these signals independently to improve its bot-detection capabilities/
+  );
+  assert.match(
+    source,
+    /https:\/\/www\.cloudflare\.com\/turnstile-privacy-policy\//
+  );
+  assert.match(
+    source,
+    /Google Fonts requests send your IP address, browser and operating system information/
+  );
+  assert.match(source, /These requests can occur before you sign in/);
+  assert.match(source, /https:\/\/fonts\.google\.com\/faq#privacy/);
+});
