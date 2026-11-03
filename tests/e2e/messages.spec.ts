@@ -825,7 +825,7 @@ test('separates conversation filtering from the authenticated new-person picker'
 test('reports an incoming message in-app without exposing an attachment picker', async ({
   page,
 }) => {
-  await openMessages(page);
+  const fixture = await openMessages(page);
   await row(page, 'J. Downs').click();
   await history(page)
     .locator('[data-chat-message-id="last-existing"]')
@@ -846,6 +846,18 @@ test('reports an incoming message in-app without exposing an attachment picker',
   await expect(
     history(page).getByText('See you Saturday!', { exact: true })
   ).toBeVisible();
+  await input(page, 'J. Downs').fill(
+    'The composer still works after reporting.'
+  );
+  await conversation(page)
+    .getByRole('button', { name: 'Send message', exact: true })
+    .click();
+  await expect.poll(() => fixture.posts.length).toBe(1);
+  await expect(
+    history(page).getByText('The composer still works after reporting.', {
+      exact: true,
+    })
+  ).toHaveCount(1);
 });
 
 test('the user report menu hands keyboard focus to a private report without accepting the request', async ({

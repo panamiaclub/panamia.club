@@ -287,10 +287,10 @@ export default function BugReportDialog() {
       }}
     >
       {!native && !appPreview && (
-        <>
+        <div className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 flex items-center gap-2">
           <Button
             type="button"
-            className="bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 rounded-full shadow-lg"
+            className="bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 rounded-full shadow-lg"
             aria-label="Report a safety concern"
             onClick={() =>
               openSafetyReport({
@@ -305,7 +305,7 @@ export default function BugReportDialog() {
           <DialogTrigger asChild>
             <Button
               type="button"
-              className="bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 rounded-full shadow-lg"
+              className="bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 rounded-full shadow-lg"
               aria-label="Report a bug"
               onClick={() => {
                 if (safety) {
@@ -320,7 +320,7 @@ export default function BugReportDialog() {
               <span className="hidden sm:inline">Report a bug</span>
             </Button>
           </DialogTrigger>
-        </>
+        </div>
       )}
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
