@@ -173,6 +173,26 @@ public App Store. Wait for Apple processing, complete export-compliance question
 and assign internal TestFlight testers. External testing may require Beta App Review.
 Never commit signing files, API keys, or their Base64 contents.
 
+## App Review sign-in
+
+Ordinary iOS members continue to use email links. Authorized reviewers can open
+**App reviewer sign-in** from the sign-in page, or visit `/signin/reviewer`
+inside the app, and use the dedicated `play-review@panamia.club` account.
+The legacy address is shared with Google Play review; no Google sign-in,
+mailbox access, MFA, or App Store Connect team membership is required.
+
+Provisioning and password rotation use the existing **Play Review Account**
+workflow on trusted `main`; see [reviewer access](./SIGNIN.md#app-store-and-google-play-reviewer-access).
+Verify repeated login and a non-admin session before submitting the app.
+Keep **Sign-in required** selected in App Store Connect, put the credential in
+its App Review username/password fields, and describe the navigation steps in
+review notes without copying the password there. Do not substitute an expiring
+email link or a founder/admin account.
+
+The account has no staff permissions and is not published as a resident or
+business listing. Rotation revokes its sessions; update both stores' review
+credentials after a confirmed rotation.
+
 ## Device and review checklist
 
 - On a notched iPhone and an iPad, test portrait/landscape, all four tabs,

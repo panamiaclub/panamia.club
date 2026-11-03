@@ -13,13 +13,14 @@ export default function ReviewerSignInPage() {
       <h1 className="text-3xl font-bold">App reviewer sign-in</h1>
       <p className="text-muted-foreground text-sm">
         For authorized app reviewers. Use the dedicated credentials supplied in
-        Play Console. This account does not have administrator access.
+        App Store Connect or Play Console. This account does not have
+        administrator access.
       </p>
       <ReviewerSignInForm />
       <p className="text-muted-foreground text-sm">
         Members should use{' '}
         <Link href="/signin" className="font-semibold underline">
-          Google or an email sign-in link
+          the standard sign-in page
         </Link>
         . By continuing, you agree to our{' '}
         <Link href="/legal/terms" className="underline">
