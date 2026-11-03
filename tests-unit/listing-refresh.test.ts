@@ -8,6 +8,7 @@ import {
   refreshStopPath,
 } from '@/lib/listing-refresh';
 import { renderTemplate } from '@/lib/email-templates';
+import { escape } from '@/lib/email-templates/layout';
 
 test('review deadlines use explicit thirty-day and seven-day elapsed intervals', () => {
   const start = new Date('2026-11-03T12:00:00Z');
@@ -84,4 +85,92 @@ test('final reminder copy requires confirmation, explains recoverable hiding and
   assert.match(mail.text, /No private home address or invented ZIP/);
   assert.match(mail.text, /delivery-reference/);
   assert.match(mail.html, /temporary pause, not a deletion/);
+});
+
+test('every refresh stage preserves personalized proof links, deadline and complete text disclosures', () => {
+  const name = 'Neighborhood & Makers <business> "Studio"';
+  const reviewUrl =
+    'https://preview.invalid/listings/invite?id=business&source=notice#token=fixture-proof';
+  const stopUrl =
+    'https://preview.invalid/listings/reminders/stop?cycleId=cycle&source=notice#token=fixture-proof';
+  const stages = [
+    {
+      flags: {},
+      subject: 'Review your PanaMia listing',
+      heading: "Let's refresh",
+    },
+    {
+      flags: { reminderNotice: true },
+      subject: 'Listing review reminder',
+      heading: 'A friendly reminder',
+    },
+    {
+      flags: { reminderNotice: true, finalNotice: true },
+      subject: 'Final listing reminder',
+      heading: 'A last reminder',
+    },
+  ];
+  for (const stage of stages) {
+    const mail = renderTemplate('listing.refresh', {
+      ...stage.flags,
+      businessName: name,
+      reviewUrl,
+      stopUrl,
+      deadline: '2027-05-18',
+      deliveryId: 'safe-fixture-reference',
+    });
+    assert.ok(mail.subject.startsWith(stage.subject));
+    assert.ok(mail.text.startsWith(stage.heading));
+    for (const copy of [
+      name,
+      '2027-05-18',
+      'business contact or belongs to an account that manages',
+      'weekly',
+      'temporarily hidden after 2027-05-18',
+      'temporary pause, not a deletion',
+      'Signing in or claiming alone does not finish the review.',
+      '"Confirm business information"',
+      'location or ZIP only if appropriate',
+      'No private home address or invented ZIP is required.',
+      'Use the Pana account that manages it.',
+      'verify access to the business inbox and choose your own Pana account.',
+      'Your personal login email can be different from the business contact.',
+      'Private invitation links work once and expire after seven days.',
+      'an authorized manager can review and confirm it to restore it.',
+      'Staff decisions remain separate.',
+      'Stopping reminders does not confirm your listing',
+      'not treated as an ignored notice.',
+      'safe-fixture-reference',
+    ]) {
+      assert.ok(mail.html.includes(escape(copy)), `HTML missing: ${copy}`);
+      assert.ok(mail.text.includes(copy), `plain text missing: ${copy}`);
+    }
+    for (const url of [reviewUrl, stopUrl]) {
+      assert.equal(mail.html.split(`href="${escape(url)}"`).length - 1, 1);
+      assert.ok(
+        mail.html.includes(
+          `href="${escape(url)}" rel="noreferrer" referrerpolicy="no-referrer"`
+        )
+      );
+      assert.ok(mail.text.includes(url));
+    }
+    assert.doesNotMatch(mail.html, /<business>|&amp;amp; Makers/);
+  }
+});
+
+test('owned listing URLs and strict notice flags are not converted into invitation links', () => {
+  const reviewUrl = 'https://preview.invalid/listings/review?id=owned-business';
+  const mail = renderTemplate('listing.refresh', {
+    businessName: 'Owned Studio',
+    reviewUrl,
+    stopUrl:
+      'https://preview.invalid/listings/reminders/stop?cycleId=cycle#token=fixture-proof',
+    deadline: '2027-05-18',
+    reminderNotice: 'true',
+    finalNotice: 'true',
+  });
+  assert.match(mail.subject, /^Review your PanaMia listing:/);
+  assert.ok(mail.html.includes(`href="${reviewUrl}"`));
+  assert.ok(mail.text.includes(reviewUrl));
+  assert.doesNotMatch(mail.html, /\/listings\/invite\?/);
 });

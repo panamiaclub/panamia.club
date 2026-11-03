@@ -51,6 +51,8 @@
     "mobile:open:ios": "cap open ios",
     "mobile:run:android": "npx tsx scripts/mobile-run.ts",
     "mobile:bundle:android": "npx tsx scripts/android-bundle.ts",
+    "mobile:bundle:ios": "npx tsx scripts/ios-bundle.ts",
+    "mobile:sideload:ios": "npx tsx scripts/ios-sideload.ts",
     "mobile:run:ios": "cap run ios"
   },
   "dependencies": {
@@ -137,7 +139,7 @@
     "@electric-sql/pglite": "^0.5.13",
     "@kartore/glyphore": "^0.2.0",
     "@playwright/test": "^1.64.1",
-    "@types/node": "26.6.5",
+    "@types/node": "26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/react-is": "^19",

@@ -4020,6 +4020,28 @@ html.native-app body {
   padding-top: env(safe-area-inset-top);
 }
 
+html.native-app[data-native-platform='ios']:has([data-native-app]),
+html.native-app[data-native-platform='ios'] body:has([data-native-app]) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Smaller form text makes WebKit zoom the entire app when a field is focused. */
+html.native-app[data-native-platform='ios']
+  :where(input:not([type='checkbox']):not([type='radio']), textarea, select) {
+  font-size: max(16px, 1em);
+}
+
+html.native-app[data-native-platform='ios'] [data-story-composer] {
+  top: calc(
+    var(--native-viewport-top, 0px) + var(--native-viewport-height, 100dvh) / 2
+  );
+  max-height: calc(
+    var(--native-viewport-height, 100dvh) - env(safe-area-inset-top) -
+      env(safe-area-inset-bottom) - 2rem
+  );
+}
+
 .panaverse-masthead {
   padding-left: max(1.125rem, env(safe-area-inset-left));
   padding-right: max(1.125rem, env(safe-area-inset-right));

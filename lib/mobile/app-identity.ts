@@ -16,14 +16,18 @@
  * not exist, which presents as "links just open in the browser" with nothing
  * in any log.
  *
- * Kept free of imports on purpose. The Capacitor CLI evaluates
- * capacitor.config.ts outside the app's build, so it does not resolve the `@/`
- * aliases the rest of the codebase uses; a dependency here would be a
- * dependency that works everywhere except in the tool that needs it most.
+ * Uses only dependency-free relative imports. The Capacitor CLI evaluates
+ * capacitor.config.ts outside the app's build, so imports here must not rely
+ * on the application's `@/` aliases.
  */
+
+import { DEFAULT_ROOT_DOMAIN } from '../panaverse/root-domain';
 
 /**
  * Reverse-DNS of PANAVERSE_ROOT_DOMAIN (panamia.club), matching the convention
  * both stores expect.
  */
 export const MOBILE_APP_ID = 'social.pana.app';
+
+// Both surfaces use paths on the root host while the social subdomain is disabled.
+export const IOS_UNIVERSAL_LINK_HOSTS = [DEFAULT_ROOT_DOMAIN] as const;

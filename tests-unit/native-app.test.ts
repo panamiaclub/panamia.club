@@ -140,6 +140,8 @@ describe('native navigation', () => {
       '/g/coffee',
       '/groups/new',
       '/account',
+      '/account/privacy',
+      '/form/delete-account',
     ]) {
       assert.equal(nativeRootForPath(path), null, path);
       assert.equal(usesNativeAppLayout(path), true, path);

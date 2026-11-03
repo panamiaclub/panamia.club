@@ -223,6 +223,8 @@
     // ActivityPub identities remain @user@pana.social even though the website
     // currently serves from panamia.club.
     "PANAVERSE_ROOT_DOMAIN": "panamia.club",
+    // Organization App ID prefix for iOS Universal Links.
+    "APPLE_APP_TEAM_ID": "RT9836SANW",
     // Off while the surface subdomains are not healthy. With this "0",
     // cross-surface links stay on panamia.club and use their route prefixes
     // instead of sending members to a hostname that returns Cloudflare 522.

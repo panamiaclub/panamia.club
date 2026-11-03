@@ -272,6 +272,7 @@ async function prepare(profileId: string, cycleId: string, base: URL) {
             base
           ).toString(),
           deadline: deadline.toISOString().slice(0, 10),
+          reminderNotice: round > 0,
           finalNotice: round === LISTING_REMINDER_COUNT,
         },
       });
