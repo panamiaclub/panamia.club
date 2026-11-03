@@ -75,6 +75,10 @@ sign-in. Posts, profiles, stories, and incoming direct or group messages also
 have contextual report actions. These open the same report dialog without
 navigating away from the current screen.
 
+Browser reporting controls stay disabled until their dialog handlers are ready.
+On the homepage they become compact icon buttons beside the signup footer,
+without covering the signup action.
+
 Reports include the reporter's contact details, a reason, the relevant link,
 and a description. No attachments are accepted, including for child-safety
 reports. The server verifies Turnstile, derives any signed-in identity from the

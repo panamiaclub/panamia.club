@@ -43,6 +43,7 @@ export default function BugReportDialog() {
   const pathname = usePathname() || '/';
   const appPreview =
     pathname === '/mock/app' || pathname.startsWith('/mock/app/');
+  const [reportReady, setReportReady] = useState(false);
   const [open, setOpen] = useState(false);
   const [reportType, setReportType] = useState<'bug' | 'safety'>('bug');
   const [targetType, setTargetType] = useState('other');
@@ -113,6 +114,7 @@ export default function BugReportDialog() {
     };
     if (native) window.addEventListener(OPEN_BUG_REPORT_EVENT, showBug);
     window.addEventListener(OPEN_SAFETY_REPORT_EVENT, showSafety);
+    setReportReady(true);
     return () => {
       window.removeEventListener(OPEN_BUG_REPORT_EVENT, showBug);
       window.removeEventListener(OPEN_SAFETY_REPORT_EVENT, showSafety);
@@ -287,9 +289,13 @@ export default function BugReportDialog() {
       }}
     >
       {!native && !appPreview && (
-        <div className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 flex items-center gap-2">
+        <div
+          data-report-controls
+          className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 flex items-center gap-2"
+        >
           <Button
             type="button"
+            disabled={!reportReady}
             className="bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 rounded-full shadow-lg"
             aria-label="Report a safety concern"
             onClick={() =>
@@ -300,11 +306,14 @@ export default function BugReportDialog() {
             }
           >
             <Flag className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Report a safety concern</span>
+            <span data-report-label className="hidden sm:inline">
+              Report a safety concern
+            </span>
           </Button>
           <DialogTrigger asChild>
             <Button
               type="button"
+              disabled={!reportReady}
               className="bg-pana-indigo text-pana-cream hover:bg-pana-indigo/90 rounded-full shadow-lg"
               aria-label="Report a bug"
               onClick={() => {
@@ -317,7 +326,9 @@ export default function BugReportDialog() {
               }}
             >
               <Bug className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Report a bug</span>
+              <span data-report-label className="hidden sm:inline">
+                Report a bug
+              </span>
             </Button>
           </DialogTrigger>
         </div>

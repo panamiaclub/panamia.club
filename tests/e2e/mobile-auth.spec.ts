@@ -124,6 +124,21 @@ test('native safety reports retain their draft after an error and submit without
 test.describe('sign-in hydration', () => {
   test.use({ javaScriptEnabled: false });
 
+  test('report controls cannot accept taps before their dialog handlers are ready', async ({
+    page,
+  }) => {
+    await page.goto('/d');
+    await expect(
+      page.getByRole('button', {
+        name: 'Report a safety concern',
+        exact: true,
+      })
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Report a bug', exact: true })
+    ).toBeDisabled();
+  });
+
   test('sign-in controls cannot accept taps before event handlers are ready', async ({
     page,
   }) => {
