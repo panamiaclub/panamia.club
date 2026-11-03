@@ -163,6 +163,13 @@ export default function PrivacyPolicyPage() {
             deleting your account.
           </p>
           <p>
+            A safety report includes your contact details, the reason for the
+            report, the relevant user or content link, and your description.
+            These reports are kept in our private support queue and routed to
+            our safety contact. The safety-report form does not accept
+            attachments; do not submit suspected child sexual abuse material.
+          </p>
+          <p>
             Google, and Apple where enabled, supply identity information when
             you choose their sign-in option. Password credentials, such as a
             designated app-review account, are stored as hashes. Native sign-in

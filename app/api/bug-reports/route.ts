@@ -9,6 +9,13 @@ import { verifyTurnstile } from '@/lib/turnstile';
 import { sendTemplateEmail } from '@/lib/email';
 import { notifyStaffOfContactSubmission } from '@/lib/server/contact-notify';
 import { CONTACT_CATEGORY_LABELS } from '@/lib/contact-categories';
+import {
+  isSafetyReportReason,
+  isSafetyReportTargetType,
+  SAFETY_REPORT_REASONS,
+  SAFETY_REPORT_TARGETS,
+  safetyReportUrl,
+} from '@/lib/safety-report';
 
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 const SCREENSHOT_TYPES = new Map([
@@ -44,18 +51,77 @@ export async function POST(request: NextRequest) {
     form = await request.formData();
   } catch {
     return NextResponse.json(
-      { error: 'The bug report could not be read.' },
+      { error: 'The report could not be read.' },
       { status: 400 }
+    );
+  }
+
+  const reportType = form.get('reportType') ?? 'bug';
+  if (reportType !== 'bug' && reportType !== 'safety') {
+    return NextResponse.json(
+      { error: 'Choose a valid report type.' },
+      { status: 400 }
+    );
+  }
+  const isSafetyReport = reportType === 'safety';
+  if (
+    isSafetyReport &&
+    (request.headers.get('sec-fetch-site') === 'cross-site' ||
+      (request.headers.has('origin') &&
+        request.headers.get('origin') !== new URL(request.url).origin))
+  ) {
+    return NextResponse.json(
+      { error: 'Send the report from the Pana Mia app or website.' },
+      { status: 403 }
     );
   }
 
   const name = textField(form, 'name');
   const email = textField(form, 'email').toLowerCase();
   const message = textField(form, 'message');
-  const pageUrl = safePageUrl(textField(form, 'pageUrl'));
+  const pageUrl = isSafetyReport
+    ? safetyReportUrl(textField(form, 'pageUrl'))
+    : safePageUrl(textField(form, 'pageUrl'));
   const viewport = textField(form, 'viewport').slice(0, 100) || null;
   const locale = textField(form, 'locale').slice(0, 50);
   const turnstileToken = textField(form, 'turnstileToken');
+  const targetType = textField(form, 'targetType');
+  const targetUrl = safetyReportUrl(textField(form, 'targetUrl'));
+  const reason = textField(form, 'reason');
+  let storedMessage = message;
+
+  if (isSafetyReport) {
+    if (
+      !isSafetyReportTargetType(targetType) ||
+      !targetUrl ||
+      !isSafetyReportReason(reason)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Choose a safety reason and provide a valid user or content URL.',
+        },
+        { status: 400 }
+      );
+    }
+    if ([...form.values()].some((value) => value instanceof File)) {
+      return NextResponse.json(
+        {
+          error:
+            'Safety reports do not accept attachments. Send a link and description instead.',
+        },
+        { status: 400 }
+      );
+    }
+    storedMessage = [
+      'Safety report',
+      `Reason: ${SAFETY_REPORT_REASONS[reason]}`,
+      `Report about: ${SAFETY_REPORT_TARGETS[targetType]}`,
+      `Reported URL: ${targetUrl}`,
+      '',
+      message,
+    ].join('\n');
+  }
 
   if (name.length < 2 || name.length > 75) {
     return NextResponse.json(
@@ -154,49 +220,59 @@ export async function POST(request: NextRequest) {
       .values({
         name,
         email,
-        message,
-        category: 'technical',
+        message: storedMessage,
+        category: isSafetyReport ? 'safety' : 'technical',
         userId,
         screenname,
         pageUrl,
         screenshotUrl,
-        userAgent: userAgentParts.join('\n'),
-        viewport,
+        userAgent: isSafetyReport ? null : userAgentParts.join('\n'),
+        viewport: isSafetyReport ? null : viewport,
       })
       .returning({ id: contactSubmissions.id });
     submissionId = inserted.id;
   } catch (error) {
     if (screenshotUrl) await deleteFile(screenshotUrl);
-    console.error('Database error saving bug report:', error);
+    console.error(
+      'Database error saving report:',
+      isSafetyReport
+        ? { name: error instanceof Error ? error.name : 'UnknownError' }
+        : error
+    );
     return NextResponse.json(
       { error: 'The report could not be saved. Please try again later.' },
       { status: 500 }
     );
   }
 
-  sendTemplateEmail(
+  const category = isSafetyReport ? 'safety' : 'technical';
+  const receipt = sendTemplateEmail(
     'contact.received',
     {
       name,
-      category: CONTACT_CATEGORY_LABELS.technical,
-      message,
+      category: CONTACT_CATEGORY_LABELS[category],
+      message: isSafetyReport
+        ? `Your safety report was received for review. Reference: ${submissionId}. Do not send suspected child sexual abuse material.`
+        : message,
     },
     email
-  ).catch((error) => console.error('Bug report receipt email error:', error));
+  ).catch((error) => console.error('Report receipt email error:', error));
 
-  notifyStaffOfContactSubmission({
+  const staffNotification = notifyStaffOfContactSubmission({
     id: submissionId,
     name,
     email,
-    category: 'technical',
+    category,
     screenname,
     isAuthenticated: userId !== null,
-  }).catch((error) =>
-    console.error('Bug report staff notification error:', error)
-  );
+  }).catch((error) => console.error('Report staff notification error:', error));
+
+  if (isSafetyReport) await Promise.all([receipt, staffNotification]);
 
   return NextResponse.json({
     success: true,
-    message: 'Thanks — your bug report has been sent.',
+    message: isSafetyReport
+      ? 'Your safety report has been received for review.'
+      : 'Thanks — your bug report has been sent.',
   });
 }

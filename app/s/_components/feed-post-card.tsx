@@ -229,6 +229,7 @@ export function FeedPostCard({ status }: { status: SocialStatusDisplay }) {
       <footer className="border-pana-indigo/7 bg-pana-indigo/4 flex flex-wrap items-center gap-x-2 border-t px-3 py-1.5 sm:px-4">
         <PostActions
           statusId={status.id}
+          statusUri={status.uri}
           actorUsername={status.actor.username}
           liked={status.liked}
           likesCount={status.likesCount}

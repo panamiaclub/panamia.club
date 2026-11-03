@@ -340,6 +340,7 @@ export const contactSubmissionCategory = pgEnum('contact_submission_category', [
   'press',
   'technical',
   'other',
+  'safety',
 ]);
 
 export const relayReportStatus = pgEnum('relay_report_status', [

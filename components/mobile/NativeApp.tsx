@@ -21,6 +21,7 @@ import {
 import {
   ArrowLeft,
   Bug,
+  Flag,
   MessageCircle,
   Store,
   UserRound,
@@ -36,6 +37,7 @@ import { IdentityMenu } from '@/components/account/identity-menu';
 import { NotificationsMenu } from '@/components/account/notifications-menu';
 import { ActingAsBar } from '@/components/account/acting-as-bar';
 import { OPEN_BUG_REPORT_EVENT } from '@/lib/mobile/native';
+import { openSafetyReport } from '@/lib/safety-report';
 import { cn } from '@/lib/utils';
 import {
   NATIVE_TABS,
@@ -224,6 +226,19 @@ function AppFrame({
             {eventSlug && eventSlug !== 'new' && (
               <NativeEventSave slug={decodeURIComponent(eventSlug)} />
             )}
+            <button
+              type="button"
+              className={styles.iconButton}
+              aria-label="Report a safety concern"
+              onClick={() =>
+                openSafetyReport({
+                  type: 'other',
+                  url: window.location.origin + window.location.pathname,
+                })
+              }
+            >
+              <Flag size={19} aria-hidden="true" />
+            </button>
             <button
               type="button"
               className={styles.iconButton}

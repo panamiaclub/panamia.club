@@ -68,6 +68,27 @@ These are deployed web changes, not a new APK requirement. Apply
 app. Saving an event is a private bookmark, not an RSVP. Normal browsers keep
 the existing website navigation.
 
+## In-app safety reports
+
+The app header's **Report a safety concern** control is available without
+sign-in. Posts, profiles, stories, and incoming direct or group messages also
+have contextual report actions. These open the same report dialog without
+navigating away from the current screen.
+
+Reports include the reporter's contact details, a reason, the relevant link,
+and a description. No attachments are accepted, including for child-safety
+reports. The server verifies Turnstile, derives any signed-in identity from the
+session, and saves the report in the existing private support queue under
+**Safety / abusive content or users**. Staff can filter and action these at
+`/admin/contactus`; notifications go to `hola@panamia.club`. Safety receipt
+emails do not repeat the reported content or link.
+
+Apply `drizzle/0077_safety_reports.sql` through the normal migration journal
+before deploying this interface. Reporting does not automatically remove
+content or block a user; the operator must review and act on reports under the
+published safety standards. Existing blocking, muting, and bug reports remain
+separate.
+
 ## Native Google sign-in
 
 The Android Google button uses Credential Manager, not OAuth inside the WebView.

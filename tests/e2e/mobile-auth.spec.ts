@@ -126,6 +126,122 @@ function calls(page: Page) {
   );
 }
 
+async function testTurnstile(page: Page) {
+  await page.route('**/api/config/turnstile', (route) =>
+    route.fulfill({ json: { siteKey: 'mobile-auth-test-site-key' } })
+  );
+  await page.route(
+    'https://challenges.cloudflare.com/turnstile/v0/api.js?*',
+    (route) =>
+      route.fulfill({
+        contentType: 'application/javascript',
+        body: `window.turnstile = {
+          render: function (element, options) {
+            queueMicrotask(function () { options.callback('mobile-auth-test-token'); });
+            return 'mobile-auth-test-widget';
+          },
+          reset: function () {},
+          remove: function () {}
+        };`,
+      })
+  );
+}
+
+test('native safety reports retain their draft after an error and submit without attachments or navigation', async ({
+  page,
+}) => {
+  await nativeBridge(page);
+  await testTurnstile(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const requests: Record<string, FormDataEntryValue>[] = [];
+  await page.route('**/api/bug-reports', async (route) => {
+    const form = await new Request(route.request().url(), {
+      method: 'POST',
+      headers: route.request().headers(),
+      body: route.request().postData() ?? '',
+    }).formData();
+    requests.push(Object.fromEntries(form));
+    await route.fulfill(
+      requests.length === 1
+        ? {
+            status: 503,
+            json: { error: 'Safety reports are temporarily unavailable.' },
+          }
+        : {
+            json: {
+              success: true,
+              message: 'Your safety report has been received for review.',
+            },
+          }
+    );
+  });
+  await page.goto('/d');
+  await page
+    .getByRole('button', { name: 'Report a safety concern', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Report a safety concern',
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('form')).toHaveAttribute('method', 'post');
+  await expect(dialog.locator('input[type=file]')).toHaveCount(0);
+  await expect(
+    dialog.getByText(/do not copy, download, or attach/)
+  ).toBeVisible();
+  await dialog.getByLabel('Name', { exact: true }).fill('Safety Test Reporter');
+  await dialog
+    .getByLabel('Email', { exact: true })
+    .fill('reporter@example.test');
+  await dialog.getByLabel('Safety reason').selectOption('child_safety');
+  await dialog
+    .getByLabel('What happened?')
+    .fill('Readiness test only; no real incident or illegal material.');
+  const send = dialog.getByRole('button', { name: 'Send report', exact: true });
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(
+    page.getByText('Safety reports are temporarily unavailable.')
+  ).toBeVisible();
+  await expect(dialog.getByLabel('What happened?')).toHaveValue(
+    'Readiness test only; no real incident or illegal material.'
+  );
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(
+    page.getByText('Safety report received', { exact: true })
+  ).toBeVisible();
+  await expect(dialog).toHaveCount(0);
+  expect(new URL(page.url()).pathname).toBe('/d');
+  expect(requests).toHaveLength(2);
+  expect(requests[0]).toMatchObject({
+    reportType: 'safety',
+    targetType: 'other',
+    reason: 'child_safety',
+    name: 'Safety Test Reporter',
+    email: 'reporter@example.test',
+    turnstileToken: 'mobile-auth-test-token',
+  });
+  expect(requests[0]).not.toHaveProperty('screenshot');
+  expect(requests[0]).not.toHaveProperty('viewport');
+  expect(requests[0]).not.toHaveProperty('locale');
+  await page.getByRole('button', { name: 'Report a bug', exact: true }).click();
+  const bug = page.getByRole('dialog', { name: 'Report a bug', exact: true });
+  await bug
+    .getByLabel('What happened?')
+    .fill('Keep this ordinary bug report draft when closing the dialog.');
+  await page.keyboard.press('Escape');
+  await expect(bug).toHaveCount(0);
+  await page.getByRole('button', { name: 'Report a bug', exact: true }).click();
+  await expect(bug.getByLabel('What happened?')).toHaveValue(
+    'Keep this ordinary bug report draft when closing the dialog.'
+  );
+  await page.keyboard.press('Escape');
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth)
+  ).toBeLessThanOrEqual(390);
+});
+
 test.describe('sign-in hydration', () => {
   test.use({ javaScriptEnabled: false });
 
@@ -387,24 +503,7 @@ test.describe('app email-link handoff', () => {
     baseURL,
   }) => {
     await nativeBridge(page, { googlePlugin: false });
-    await page.route('**/api/config/turnstile', (route) =>
-      route.fulfill({ json: { siteKey: 'mobile-auth-test-site-key' } })
-    );
-    await page.route(
-      'https://challenges.cloudflare.com/turnstile/v0/api.js?*',
-      (route) =>
-        route.fulfill({
-          contentType: 'application/javascript',
-          body: `window.turnstile = {
-            render: function (element, options) {
-              queueMicrotask(function () { options.callback('mobile-auth-test-token'); });
-              return 'mobile-auth-test-widget';
-            },
-            reset: function () {},
-            remove: function () {}
-          };`,
-        })
-    );
+    await testTurnstile(page);
     await page.route('**/api/auth/verify-turnstile', (route) =>
       route.fulfill({ json: { success: true } })
     );

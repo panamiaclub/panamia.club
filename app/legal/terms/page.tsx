@@ -371,7 +371,8 @@ export default function TermsPage() {
             messages or bypass access controls.
           </p>
           <p>
-            Report concerns using{' '}
+            Use the in-app Report a safety concern, Report post, Report message,
+            or user-report controls. You can also use{' '}
             <Link href="/form/contact-us">Contact Us inside the app</Link> or{' '}
             <a href="mailto:hola@panamia.club">hola@panamia.club</a>. Include
             the relevant profile, post, or event link and a description, but do
@@ -392,10 +393,10 @@ export default function TermsPage() {
             These rules apply even though membership is limited to adults.
           </p>
           <p>
-            Use the in-app Contact Us form or hola@panamia.club to report a
-            concern. Include identifying context or a link, but do not download,
-            forward, or attach suspected CSAM. If a child is in immediate
-            danger, contact local emergency services.
+            Use Report a safety concern in the app, the Contact Us form, or
+            hola@panamia.club to report a concern. Include identifying context
+            or a link, but do not download, forward, or attach suspected CSAM.
+            If a child is in immediate danger, contact local emergency services.
           </p>
           <p>
             We review safety reports, remove or disable access to identified

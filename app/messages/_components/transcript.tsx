@@ -11,6 +11,7 @@ import {
   ArrowDown,
   ArrowLeft,
   Clock3,
+  Flag,
   Globe,
   Info,
   MessageCircle,
@@ -24,6 +25,7 @@ import { SafeHtml } from '@/components/safe-html';
 import { AttachmentGrid } from '@/components/social/AttachmentGrid';
 import styles from '@/components/messages/workspace.module.css';
 import { DIRECT_THREAD_REFUSED } from '@/lib/dm-refusal';
+import { openSafetyReport } from '@/lib/safety-report';
 import type {
   ChatMessage,
   GroupChatRoom,
@@ -545,6 +547,7 @@ function Bubble({
   const expiresIn = expiresInLabel(message.expiresAt);
   return (
     <div
+      id={`message-${message.id}`}
       data-chat-message-id={message.id}
       className={`flex max-w-full flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}
     >
@@ -560,6 +563,21 @@ function Bubble({
       )}
       <div className="flex max-w-full items-center gap-2">
         {expiresIn && <ExpiryChip expiresIn={expiresIn} />}
+        {!mine && (
+          <button
+            type="button"
+            className={styles.iconButton}
+            aria-label="Report message"
+            onClick={() =>
+              openSafetyReport({
+                type: 'content',
+                url: `${window.location.href.split('#')[0]}#message-${encodeURIComponent(message.id)}`,
+              })
+            }
+          >
+            <Flag className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
         {message.canDelete && onRemove && (
           <button
             type="button"

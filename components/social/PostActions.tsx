@@ -2,12 +2,14 @@
 
 import { Button } from '@/components/ui/button';
 import { useLikePost, useUnlikePost } from '@/lib/query/social';
-import { Heart, MessageCircle, Share2 } from 'lucide-react';
+import { Flag, Heart, MessageCircle, Share2 } from 'lucide-react';
+import { openSafetyReport } from '@/lib/safety-report';
 import { toast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
 
 interface PostActionsProps {
   statusId: string;
+  statusUri: string;
   actorUsername: string;
   liked: boolean;
   likesCount: number;
@@ -22,6 +24,7 @@ interface PostActionsProps {
 
 export function PostActions({
   statusId,
+  statusUri,
   actorUsername,
   liked,
   likesCount,
@@ -150,6 +153,20 @@ export function PostActions({
         onClick={handleShare}
       >
         <Share2 className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-label="Report post"
+        className={actionClass}
+        onClick={() =>
+          openSafetyReport({
+            type: 'content',
+            url: statusUri,
+          })
+        }
+      >
+        <Flag className="h-4 w-4" aria-hidden="true" />
       </Button>
     </div>
   );

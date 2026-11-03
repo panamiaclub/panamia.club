@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import type { SocialStatusDisplay } from '@/lib/interfaces';
+import type { StoryTray } from '@/lib/federation/wrappers/stories';
 
 const PUBLIC = 'https://www.w3.org/ns/activitystreams#Public';
 const actor = {
@@ -37,6 +38,7 @@ async function openFeed(
     replies?: SocialStatusDisplay[];
     root?: Partial<SocialStatusDisplay>;
     before?: SocialStatusDisplay[];
+    stories?: StoryTray;
     failReplies?: (url: URL) => boolean;
   } = {}
 ) {
@@ -124,9 +126,19 @@ async function openFeed(
       return json({
         success: true,
         data: {
-          fixture: { hasStories: false, hasUnseen: false, isOwner: true },
+          fixture: {
+            hasStories: Boolean(options.stories),
+            hasUnseen: options.stories?.hasUnseen ?? false,
+            isOwner: options.stories?.isOwner ?? true,
+          },
         },
       });
+    }
+    if (path === '/api/social/actors/fixture/stories' && options.stories) {
+      return json({ success: true, data: options.stories });
+    }
+    if (/^\/api\/social\/stories\/[^/]+\/view$/.test(path)) {
+      return json({ success: true });
     }
     if (path === '/api/social/actors/fixture/panas') {
       return json({ success: true, data: { actors: [], count: 0 } });
@@ -204,6 +216,93 @@ async function openFeed(
   await expect(card).toBeVisible();
   return { card, posts, replyRequests };
 }
+
+test('posts and nested comments report their canonical content link without leaving the feed', async ({
+  page,
+}) => {
+  const { card } = await openFeed(page);
+  const url = page.url();
+  await card
+    .getByRole('button', { name: 'Report post', exact: true })
+    .first()
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Report a safety concern',
+    exact: true,
+  });
+  await expect(dialog.getByLabel('User or content URL')).toHaveValue(
+    'https://localhost/p/fixture/root-post'
+  );
+  await expect(dialog.locator('input[type=file]')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await card
+    .getByRole('button', { name: 'Open conversation, 2 comments', exact: true })
+    .click();
+  await card
+    .getByRole('listitem')
+    .first()
+    .getByRole('button', { name: 'Report post', exact: true })
+    .first()
+    .click();
+  await expect(dialog.getByLabel('User or content URL')).toHaveValue(
+    'https://localhost/p/fixture/first-comment'
+  );
+  await expect(page).toHaveURL(url);
+});
+
+test("reporting another user's story stops the viewer and keeps its exact story reference", async ({
+  page,
+}) => {
+  const stories: StoryTray = {
+    actor: {
+      id: actor.id,
+      username: actor.username,
+      displayName: actor.name,
+      iconUrl: null,
+    },
+    hasUnseen: true,
+    isOwner: false,
+    stories: [
+      {
+        id: 'safety-story',
+        caption: 'A synthetic story for readiness testing.',
+        contentWarning: null,
+        publishedAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+        media: {
+          id: 'story-photo',
+          type: 'image',
+          mediaType: 'image/webp',
+          url: '/img/impact/zine-series.webp',
+          name: 'Story test photo',
+        },
+        seen: false,
+        viewCount: null,
+      },
+    ],
+  };
+  await openFeed(page, { stories });
+  await page
+    .getByRole('button', { name: 'Watch stories from fixture', exact: true })
+    .first()
+    .click();
+  await page
+    .getByRole('button', { name: 'Report this story', exact: true })
+    .click();
+  await expect(
+    page.getByRole('dialog', { name: 'Stories from Fixture Pana', exact: true })
+  ).toHaveCount(0);
+  const report = page.getByRole('dialog', {
+    name: 'Report a safety concern',
+    exact: true,
+  });
+  await expect(report).toBeVisible();
+  await expect(report.getByLabel('User or content URL')).toHaveValue(
+    new URL('/p/fixture/safety-story', page.url()).href
+  );
+  await expect(report.locator('input[type=file]')).toHaveCount(0);
+});
 
 test('two comments preview in place, timestamps do not navigate, and warning media stays hidden', async ({
   page,

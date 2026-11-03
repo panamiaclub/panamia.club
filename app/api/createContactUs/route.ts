@@ -51,6 +51,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const isSafetyReport = category === 'safety';
+  if (
+    isSafetyReport &&
+    (request.headers.get('sec-fetch-site') === 'cross-site' ||
+      (request.headers.has('origin') &&
+        request.headers.get('origin') !== new URL(request.url).origin))
+  ) {
+    return NextResponse.json(
+      { error: 'Send the report from the Pana Mia app or website.' },
+      { status: 403 }
+    );
+  }
+
   // Turnstile is required for everyone, signed in or not — the widget is shown
   // unconditionally on the form. A session cookie is not a bot check, and
   // gating on it meant the only submissions that skipped verification were the
@@ -107,7 +120,12 @@ export async function POST(request: NextRequest) {
       .returning({ id: contactSubmissions.id });
     submissionId = inserted.id;
   } catch (error) {
-    console.error('Database error saving contact form:', error);
+    console.error(
+      'Database error saving contact form:',
+      isSafetyReport
+        ? { name: error instanceof Error ? error.name : 'UnknownError' }
+        : error
+    );
     return NextResponse.json(
       {
         error:
@@ -117,24 +135,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Receipt to the sender, echoing back what we received. Fire-and-forget: the
-  // submission is already saved, so a mail failure must not turn a successful
-  // send into an error the user would retry.
-  sendTemplateEmail(
+  // Safety receipts deliberately exclude sensitive reported content.
+  const receipt = sendTemplateEmail(
     'contact.received',
     {
       name: cleanName,
       category: CONTACT_CATEGORY_LABELS[category],
-      message: message.trim(),
+      message: isSafetyReport
+        ? `Your safety report was received for review. Reference: ${submissionId}. Do not send suspected child sexual abuse material.`
+        : message.trim(),
     },
     cleanEmail
   ).catch((err) => console.error('Contact receipt email error:', err));
 
-  // Staff notification, routed by category. Also fire-and-forget, and for the
-  // same reason: until now nobody on the team was told a submission had
-  // arrived, so failing the request when the alert fails would trade a silent
-  // gap for a loud one on the sender's side.
-  notifyStaffOfContactSubmission({
+  const staffNotification = notifyStaffOfContactSubmission({
     id: submissionId,
     name: cleanName,
     email: cleanEmail,
@@ -142,6 +156,8 @@ export async function POST(request: NextRequest) {
     screenname,
     isAuthenticated: userId !== null,
   }).catch((err) => console.error('Contact staff notification error:', err));
+
+  if (isSafetyReport) await Promise.all([receipt, staffNotification]);
 
   return NextResponse.json(
     {

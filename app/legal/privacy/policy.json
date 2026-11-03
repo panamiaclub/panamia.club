@@ -644,6 +644,8 @@
             "email",
             "message",
             "category",
+            "safety_reason",
+            "reported_user_or_content_url",
             "screenname",
             "user_id",
             "page_url",
@@ -653,15 +655,15 @@
           "source": "user_action",
           "purpose": "support_history",
           "retention": "indefinite",
-          "note": "Messages sent through the Contact Us form or bug report dialog. Bug reports may include the page URL, browser and screen details, and a screenshot the sender chooses to attach. Kept indefinitely and not tied to an account: most arrive from people who are not signed in, and the app remains the record of an inquiry even after it has been routed to our CRM, where the working copy may be removed at any time.",
+          "note": "Messages sent through Contact Us, bug reports, or safety reports. A safety report includes a reason and reported user or content URL, and does not accept attachments. Bug reports may include the page URL, browser and screen details, and a screenshot the sender chooses to attach. Kept indefinitely and not tied to an account: most arrive from people who are not signed in, and the app remains the record of an inquiry even after eligible inquiries have been routed to our CRM, where the working copy may be removed at any time.",
           "display": {
             "icon": "mail",
             "source": "You write to us",
             "purpose": "Support history",
             "retention": "Kept indefinitely",
-            "sharedWith": "Site operators, GoHighLevel",
-            "prose": "Contact Us inquiries and bug reports — your name, email address, the message you wrote, and what it was about. A bug report also includes the page where it happened and basic browser, language, and screen-size details; it can include a screenshot if you choose to attach one. Retained indefinitely as the support record. Inquiries other than technical reports are also copied to our CRM so whoever answers them can work from the tool they already use; that copy may be removed at any time, and the record here is the one that persists.",
-            "blurb": "Messages and bug reports you send us, including optional screenshots and basic device context, kept as the lasting support record."
+            "sharedWith": "Site operators; GoHighLevel for general inquiries",
+            "prose": "Contact Us inquiries, bug reports, and safety reports — your name, email address, the message you wrote, and what it was about. A safety report includes a reason and the reported user or content link, and does not accept attachments. A bug report also includes the page where it happened and basic browser, language, and screen-size details; it can include a screenshot if you choose to attach one. Retained indefinitely as the support record. General inquiries may be routed to our CRM for follow-up; bug reports and safety reports are not automatically forwarded there. A CRM copy may be removed at any time, and the record here is the one that persists.",
+            "blurb": "Contact messages, bug reports, and private safety reports, kept as the lasting support record. Only bug reports accept optional screenshots and device context."
           }
         }
       ]
