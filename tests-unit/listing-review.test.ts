@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   LISTING_REVIEW_STEPS,
   isClaimListingContext,
+  listingReviewFinishPath,
+  listingReviewNavigation,
   listingReviewStepPath,
 } from '@/lib/listing-review';
 import {
@@ -68,6 +70,31 @@ test('a public claim response must identify the requested listing and validate m
   );
   assert.equal(isClaimListingContext({ name: 'Bakery' }, 'public-id'), false);
   assert.equal(isClaimListingContext(null, 'public-id'), false);
+});
+
+test('wizard Back and Continue stay on adjacent exact-business steps, with only Photos leading to confirmation', () => {
+  const id = 'public-id /?&';
+  for (const [index, step] of LISTING_REVIEW_STEPS.entries()) {
+    const navigation = listingReviewNavigation(id, step.key);
+    const previous = LISTING_REVIEW_STEPS[index - 1];
+    const next = LISTING_REVIEW_STEPS[index + 1];
+    assert.equal(
+      navigation.backHref,
+      previous
+        ? `/account/profile/${previous.key}?listingId=public-id%20%2F%3F%26`
+        : '/listings/claim/start?id=public-id%20%2F%3F%26'
+    );
+    assert.equal(
+      navigation.nextHref,
+      next
+        ? `/account/profile/${next.key}?listingId=public-id%20%2F%3F%26`
+        : '/listings/review?id=public-id%20%2F%3F%26&complete=1'
+    );
+  }
+  assert.equal(
+    listingReviewFinishPath(id),
+    '/listings/review?id=public-id%20%2F%3F%26&complete=1'
+  );
 });
 
 test('claim and review do not force personal social onboarding', () => {

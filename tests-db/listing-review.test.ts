@@ -131,6 +131,7 @@ let contact: typeof import('../app/api/profile/saveContact/route');
 let socials: typeof import('../app/api/profile/saveSocial/route');
 let address: typeof import('../app/api/profile/saveAddress/route');
 let photos: typeof import('../app/api/profile/upload/route');
+let reviewApi: typeof import('../app/api/listings/review/route');
 let tokens: typeof import('../lib/server/listing-claim');
 let publicProfiles: typeof import('../lib/server/profile');
 let invitationAdmin: typeof import('../app/api/admin/listings/[id]/invitation/route');
@@ -169,6 +170,7 @@ before(async () => {
   socials = await import('../app/api/profile/saveSocial/route');
   address = await import('../app/api/profile/saveAddress/route');
   photos = await import('../app/api/profile/upload/route');
+  reviewApi = await import('../app/api/listings/review/route');
   tokens = await import('../lib/server/listing-claim');
   publicProfiles = await import('../lib/server/profile');
   invitationAdmin =
@@ -726,6 +728,82 @@ test('entry, verification and all real editors preserve untouched values and the
     /contact@|private-business-phone|pendingOwnerEmail/
   );
   assert.ok(invalidated.includes(`/listings/${listingId}`));
+  assert.equal(updated?.lastReviewedAt, null);
+  const stateResponse = await reviewApi.GET(
+    request(`/api/listings/review?profileId=${listingId}`)
+  );
+  assert.equal(stateResponse.status, 200);
+  const state = await stateResponse.json();
+  assert.equal(state.profileId, listingId);
+  assert.equal(state.lastReviewedAt, null);
+  assert.equal(
+    (
+      await reviewApi.GET(
+        request(
+          `/api/listings/review?profileId=${listingId}&complete=1&confirmed=1`
+        )
+      )
+    ).status,
+    200
+  );
+  assert.equal((await getRow(listingId))?.lastReviewedAt, null);
+  const confirmation = await reviewApi.POST(
+    invitationRequest('/api/listings/review', {
+      profileId: listingId,
+      cycleId: state.cycle?.id ?? null,
+      action: 'confirm',
+      confirmed: true,
+      expectedOwnerId: userId,
+      expectedOwnerEmail: accountEmail,
+    })
+  );
+  assert.equal(confirmation.status, 200);
+  assert.equal((await confirmation.json()).profileId, listingId);
+  assert.ok((await getRow(listingId))?.lastReviewedAt);
+  assert.deepEqual(await getRow(personalId), personal);
+  assert.deepEqual(await getRow(secondId), second);
+  assert.deepEqual(
+    await db.query.users.findFirst({ where: eq(schema.users.id, userId) }),
+    account
+  );
+  assert.equal(activeId, secondId);
+});
+
+test('an explicitly scoped direct-owned business contact stays separate from the owner login', async () => {
+  await db.insert(schema.users).values({
+    id: 'direct-owner',
+    name: 'Direct Owner',
+    email: 'direct@personal.test.invalid',
+    accountType: 'directory',
+  });
+  await db
+    .update(schema.profiles)
+    .set({ userId: 'direct-owner' })
+    .where(eq(schema.profiles.id, listingId));
+  session = {
+    user: {
+      id: 'direct-owner',
+      name: 'Direct Owner',
+      email: 'direct@personal.test.invalid',
+    },
+  };
+  const personal = await getRow(personalId);
+  const account = await db.query.users.findFirst({
+    where: eq(schema.users.id, 'direct-owner'),
+  });
+  const response = await contact.POST(
+    request(editPath('saveContact'), { email: 'new@business.test.invalid' })
+  );
+  assert.equal(response.status, 200);
+  assert.equal((await getRow(listingId))?.email, 'new@business.test.invalid');
+  assert.deepEqual(
+    await db.query.users.findFirst({
+      where: eq(schema.users.id, 'direct-owner'),
+    }),
+    account
+  );
+  assert.deepEqual(await getRow(personalId), personal);
+  assert.equal(activeId, personalId);
 });
 
 test('online review retains approximate ZIP semantics and clears private street coordinates', async () => {
@@ -1229,6 +1307,29 @@ test('a valid invitation supports a different chosen login, explicit acceptance 
   );
   assert.equal((await getRow(listingId))?.userId, null);
   assert.equal((await getRow(listingId))?.email, businessEmail);
+  assert.deepEqual(await getRow(personalId), personal);
+  assert.deepEqual(await getRow(secondId), otherBusiness);
+  assert.deepEqual(await db.select().from(schema.users), users);
+  assert.equal(activeId, secondId);
+  assert.equal(emails.length, 0);
+  assert.equal((await getRow(listingId))?.lastReviewedAt, null);
+  const reviewState = await reviewApi.GET(
+    request(`/api/listings/review?profileId=${listingId}`)
+  );
+  assert.equal(reviewState.status, 200);
+  assert.equal((await reviewState.json()).lastReviewedAt, null);
+  const completed = await reviewApi.POST(
+    invitationRequest('/api/listings/review', {
+      profileId: listingId,
+      cycleId: null,
+      action: 'confirm',
+      confirmed: true,
+      expectedOwnerId: userId,
+      expectedOwnerEmail: accountEmail,
+    })
+  );
+  assert.equal(completed.status, 200);
+  assert.ok((await getRow(listingId))?.lastReviewedAt);
   assert.deepEqual(await getRow(personalId), personal);
   assert.deepEqual(await getRow(secondId), otherBusiness);
   assert.deepEqual(await db.select().from(schema.users), users);
