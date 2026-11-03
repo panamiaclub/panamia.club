@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   let contactEmail: string | undefined;
   if (email != null) {
-    if (existingProfile.userId === session.user.id) {
+    if (listingId === null && existingProfile.userId === session.user.id) {
       if (email !== existingProfile.email) {
         return NextResponse.json(
           {

@@ -1,10 +1,20 @@
 import { expect, test, type Page } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 const listingId = 'public-business-id';
 const accountEmail = 'ana@personal.test';
 const businessEmail = 'hello@bakery.test';
 const entryPath = `/listings/claim/start?id=${listingId}`;
 const reviewPath = `/listings/review?id=${listingId}`;
+const locationPath = `/account/profile/address?listingId=${listingId}`;
+const wizardSteps = [
+  ['address', 'Location'],
+  ['desc', 'Description'],
+  ['categories', 'Categories'],
+  ['contact', 'Private contact'],
+  ['social', 'Public links'],
+  ['images', 'Photos'],
+] as const;
 const verificationPath = `/listings/claim?token=claim-token&id=${listingId}`;
 const invitationToken = 'ab'.repeat(32);
 const invitationReturn = `/listings/invite?id=${listingId}`;
@@ -53,16 +63,28 @@ async function fixtures(
     invitationPreviewFailure?: boolean;
     refreshState?: 'active' | 'paused' | 'held';
     reviewFailure?: boolean;
+    reviewStateFailure?: boolean;
+    wrongReviewState?: boolean;
+    descriptionFailure?: boolean;
+    uploadFailure?: boolean;
     staffSuspended?: boolean;
     admin?: boolean;
   } = {}
 ) {
   let signedIn = options.signedIn === true;
+  const font = process.env.LISTING_REVIEW_VISUAL_FONT
+    ? await readFile(process.env.LISTING_REVIEW_VISUAL_FONT)
+    : null;
+  const fontUrl = font
+    ? new URL('/__listing-review-font.woff2', test.info().project.use.baseURL)
+        .href
+    : null;
   let accountId = options.wrongAccount ? 'wrong-account' : 'review-account';
   let owned = options.owned === true;
   let ownedBy = owned ? accountId : null;
   let currentAccountEmail = accountEmail;
   let switchOnAccept = options.accountChangesOnAccept === true;
+  let reviewStateFailure = options.reviewStateFailure === true;
   let used = false;
   const signIns: Record<string, unknown>[] = [];
   const claims: string[] = [];
@@ -127,12 +149,25 @@ async function fixtures(
   };
 
   await page.addInitScript(() => localStorage.setItem('i18nextLng', 'en'));
+  if (font) {
+    await page.route('**/__listing-review-font.woff2', (route) =>
+      route.fulfill({ contentType: 'font/woff2', body: font })
+    );
+  }
   await page.route(
     (url) => url.protocol === 'https:',
     (route) => {
       const url = new URL(route.request().url());
-      if (url.hostname === 'fonts.googleapis.com') {
-        return route.fulfill({ contentType: 'text/css', body: '' });
+      if (
+        url.hostname === 'fonts.googleapis.com' &&
+        url.pathname.startsWith('/css')
+      ) {
+        return route.fulfill({
+          contentType: 'text/css',
+          body: font
+            ? `@font-face { font-family: 'Nunito'; font-style: normal; font-weight: 400 900; font-display: swap; src: url('${fontUrl}') format('woff2'); }`
+            : '',
+        });
       }
       if (url.hostname === 'files.test.invalid') {
         return route.fulfill({ contentType: 'image/png', body: image });
@@ -200,7 +235,12 @@ async function fixtures(
       });
     } else if (path === '/api/listings/review') {
       if (route.request().method() === 'GET') {
-        if (
+        if (reviewStateFailure) {
+          await route.fulfill({
+            status: 503,
+            json: { error: 'Review status is temporarily unavailable.' },
+          });
+        } else if (
           !owned ||
           !signedIn ||
           url.searchParams.get('profileId') !== listingId
@@ -212,7 +252,9 @@ async function fixtures(
         } else {
           await route.fulfill({
             json: {
-              profileId: listingId,
+              profileId: options.wrongReviewState
+                ? 'second-business'
+                : listingId,
               lastReviewedAt: profile.lastReviewedAt,
               remindersOptedOut,
               cycle: reviewCycle,
@@ -602,6 +644,16 @@ async function fixtures(
     } else if (path.startsWith('/api/profile/save')) {
       const body = route.request().postDataJSON() as Record<string, unknown>;
       writes.push({ path, listingId: url.searchParams.get('listingId'), body });
+      if (path === '/api/profile/saveDesc' && options.descriptionFailure) {
+        await route.fulfill({
+          status: 503,
+          json: {
+            success: false,
+            error: 'Description storage is temporarily unavailable.',
+          },
+        });
+        return;
+      }
       if (path === '/api/profile/saveAddress' && options.addressFailure) {
         await route.fulfill({
           status: 503,
@@ -664,6 +716,16 @@ async function fixtures(
         listingId: url.searchParams.get('listingId'),
         body: { uploaded: true },
       });
+      if (options.uploadFailure) {
+        await route.fulfill({
+          status: 503,
+          json: {
+            success: false,
+            error: 'Photo storage is temporarily unavailable.',
+          },
+        });
+        return;
+      }
       profile.images = {
         primaryCDN: 'https://files.test.invalid/new-logo.png',
         gallery1CDN: 'https://files.test.invalid/gallery.png',
@@ -695,6 +757,9 @@ async function fixtures(
       accountId = 'review-account';
       currentAccountEmail = accountEmail;
     },
+    restoreReviewStatus() {
+      reviewStateFailure = false;
+    },
   };
 }
 
@@ -705,6 +770,32 @@ function expectListingReads(reads: string[]) {
     .filter((id) => id !== null);
   expect(scoped.length).toBeGreaterThan(0);
   expect(scoped.every((id) => id === listingId)).toBe(true);
+}
+
+async function expectWizard(page: Page, position: number, name = 'Ana Bakery') {
+  const label = wizardSteps[position - 1][1];
+  await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+  await expect(
+    page.getByText(`Step ${position} of 6: ${label}`, { exact: true })
+  ).toBeVisible();
+  const navigation = page.getByRole('navigation', {
+    name: 'Listing review',
+    exact: true,
+  });
+  await expect(navigation.getByRole('link')).toHaveCount(6);
+  await expect(
+    navigation.getByRole('link', { name: `${position}. ${label}`, exact: true })
+  ).toHaveAttribute('aria-current', 'step');
+  await expect(
+    page.getByRole('link', { name: 'Review location first', exact: true })
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('progressbar', {
+      name: 'Listing review position',
+      exact: true,
+    })
+  ).toHaveAttribute('value', String(position));
 }
 
 async function confirmReview(page: Page) {
@@ -796,16 +887,14 @@ test('anonymous entry, Pana sign-in, explicit verification and all prefilled rev
   await expect(review).toHaveAttribute('href', reviewPath);
   expect(fixture.verifications).toEqual([{ token: 'claim-token' }]);
   await review.click();
-  await expect(
-    page.getByRole('heading', { name: 'Review Ana Bakery', exact: true })
-  ).toBeVisible();
+  await expectWizard(page, 1);
+  await expect(page).toHaveURL(
+    new RegExp(`/account/profile/address\\?listingId=${listingId}$`)
+  );
   await page.screenshot({
     path: test.info().outputPath('listing-review-desktop.png'),
     fullPage: true,
   });
-  await page
-    .getByRole('link', { name: 'Review location first', exact: true })
-    .click();
   await expect(
     page.getByRole('radio', {
       name: 'Keep current location details for now',
@@ -827,6 +916,7 @@ test('anonymous entry, Pana sign-in, explicit verification and all prefilled rev
   await expect(page).toHaveURL(
     new RegExp(`/account/profile/desc\\?listingId=${listingId}$`)
   );
+  await expectWizard(page, 2);
   await expect(
     page.getByLabel('Short description', { exact: true })
   ).toHaveValue('Fresh bread and pastries');
@@ -845,6 +935,7 @@ test('anonymous entry, Pana sign-in, explicit verification and all prefilled rev
   await expect(
     page.getByRole('checkbox', { name: 'Food', exact: true })
   ).toBeChecked();
+  await expectWizard(page, 3);
   await page.getByRole('checkbox', { name: 'Services', exact: true }).check();
   await page
     .getByRole('button', { name: 'Save and continue', exact: true })
@@ -852,6 +943,7 @@ test('anonymous entry, Pana sign-in, explicit verification and all prefilled rev
   await expect(
     page.getByLabel('Listing contact email', { exact: true })
   ).toHaveValue(businessEmail);
+  await expectWizard(page, 4);
   await expect(page.getByLabel('Phone Number', { exact: true })).toHaveValue(
     'private-business-phone'
   );
@@ -865,6 +957,7 @@ test('anonymous entry, Pana sign-in, explicit verification and all prefilled rev
   await expect(page.getByLabel('Instagram', { exact: true })).toHaveValue(
     'anabakery'
   );
+  await expectWizard(page, 5);
   await page
     .getByLabel('Website', { exact: true })
     .fill('https://new-bakery.test');
@@ -874,12 +967,18 @@ test('anonymous entry, Pana sign-in, explicit verification and all prefilled rev
   await expect(
     page.getByRole('img', { name: 'Primary', exact: true })
   ).toHaveAttribute('src', 'https://files.test.invalid/old-logo.png');
+  await expectWizard(page, 6);
   await page
     .locator('#images_primary')
     .setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: image });
   await page
-    .getByRole('button', { name: 'Save photos and finish', exact: true })
+    .getByRole('button', { name: 'Save and continue', exact: true })
     .click();
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+  expect(fixture.profile.lastReviewedAt).toBeNull();
+  await expect(
+    page.getByRole('navigation', { name: 'Listing review', exact: true })
+  ).toBeVisible();
   await confirmReview(page);
   await expect(
     page.getByRole('heading', { name: 'Your review is complete', exact: true })
@@ -924,9 +1023,7 @@ test('an existing owner reviews the business directly while a different managed 
   await page
     .getByRole('link', { name: 'Review your listing', exact: true })
     .click();
-  await page
-    .getByRole('link', { name: 'Review description', exact: true })
-    .click();
+  await page.getByRole('link', { name: '2. Description', exact: true }).click();
   await expect(page.getByLabel('Business name', { exact: true })).toHaveValue(
     'Ana Bakery'
   );
@@ -991,7 +1088,7 @@ test('untouched descriptions, categories and private contact stay unchanged and 
     .click();
   await expect(
     page.getByRole('button', {
-      name: 'Keep current photos and finish',
+      name: 'Continue to confirmation',
       exact: true,
     })
   ).toBeVisible();
@@ -1025,7 +1122,7 @@ test('missing location can be left unconfirmed without inventing a ZIP or online
   ).toBeChecked();
   await page
     .getByRole('button', {
-      name: 'Keep current location and continue',
+      name: 'Keep location and continue',
       exact: true,
     })
     .click();
@@ -1055,10 +1152,10 @@ test('an unpublished business stays manageable without offering a broken public 
   await page
     .getByRole('link', { name: 'Review your listing', exact: true })
     .click();
-  await page.getByRole('link', { name: 'Review photos', exact: true }).click();
+  await page.getByRole('link', { name: '6. Photos', exact: true }).click();
   await page
     .getByRole('button', {
-      name: 'Keep current photos and finish',
+      name: 'Continue to confirmation',
       exact: true,
     })
     .click();
@@ -1324,7 +1421,7 @@ test('the mobile review keeps photos unchanged and offers exact-business complet
   ).toBeVisible();
   await page
     .getByRole('button', {
-      name: 'Keep current photos and finish',
+      name: 'Continue to confirmation',
       exact: true,
     })
     .click();
@@ -1456,11 +1553,9 @@ test('an invitation returns through chosen-account passwordless sign-in to expli
   await page
     .getByRole('button', { name: 'Confirm claim and review', exact: true })
     .click();
-  await expect(
-    page.getByRole('heading', { name: 'Review Ana Bakery', exact: true })
-  ).toBeVisible();
+  await expectWizard(page, 1);
   await expect(page).toHaveURL(
-    new RegExp(`/listings/review\\?id=${listingId}$`)
+    new RegExp(`/account/profile/address\\?listingId=${listingId}$`)
   );
   expect(fixture.invitationAcceptances).toEqual([
     {
@@ -1478,9 +1573,7 @@ test('an invitation returns through chosen-account passwordless sign-in to expli
       (cookie) => cookie.name === invitationCookie
     )
   ).toBe(false);
-  await page
-    .getByRole('link', { name: 'Review description', exact: true })
-    .click();
+  await page.getByRole('link', { name: '2. Description', exact: true }).click();
   await expect(page.getByLabel('Business name', { exact: true })).toHaveValue(
     'Ana Bakery'
   );
@@ -1526,9 +1619,7 @@ test('a signed-in visitor confirms the clearly named account, or switches accoun
   await page
     .getByRole('button', { name: 'Confirm claim and review', exact: true })
     .click();
-  await expect(
-    page.getByRole('heading', { name: 'Review Ana Bakery', exact: true })
-  ).toBeVisible();
+  await expectWizard(page, 1);
   expect(fixture.invitationAcceptances[0].expectedOwnerId).toBe(
     'review-account'
   );
@@ -1565,9 +1656,7 @@ test('a changed session cannot silently accept; reloading identifies the new acc
   await page
     .getByRole('button', { name: 'Confirm claim and review', exact: true })
     .click();
-  await expect(
-    page.getByRole('heading', { name: 'Review Ana Bakery', exact: true })
-  ).toBeVisible();
+  await expectWizard(page, 1);
   expect(fixture.invitationAcceptances[1]).toMatchObject({
     expectedOwnerId: 'deliberately-chosen-other-account',
     expectedOwnerEmail: 'other@personal.test',
@@ -1846,6 +1935,7 @@ test('owners can opt out of review reminders without confirming, hiding, or edit
     refreshState: 'active',
   });
   await page.goto(reviewPath);
+  await page.locator('summary').filter({ hasText: 'Review reminders' }).click();
   await page
     .getByRole('button', { name: 'Stop listing-review reminders', exact: true })
     .click();
@@ -1919,4 +2009,639 @@ test('admin preview does not enroll a campaign; starting the selected listing re
   });
   expect(fixture.profile.active).toBe(true);
   expect(fixture.claims).toHaveLength(0);
+});
+
+test('Back, step pills, reload and final management links stay in the exact-business wizard', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    refreshState: 'active',
+  });
+  await page.goto(reviewPath);
+  await expectWizard(page, 1);
+  await expect(
+    page.getByRole('link', { name: 'Back to listing', exact: true })
+  ).toHaveAttribute('href', entryPath);
+  await page
+    .getByRole('button', { name: 'Keep location and continue', exact: true })
+    .click();
+  await expectWizard(page, 2);
+  await expect(
+    page.getByRole('link', { name: 'Back', exact: true })
+  ).toHaveAttribute('href', locationPath);
+  await page.goBack();
+  await expectWizard(page, 1);
+  await page.goForward();
+  await expectWizard(page, 2);
+  await page.getByRole('link', { name: 'Back', exact: true }).click();
+  await expectWizard(page, 1);
+  await page.getByRole('link', { name: '2. Description', exact: true }).click();
+  await page
+    .getByLabel('About this business', { exact: true })
+    .fill('Saved without changing the active identity');
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expectWizard(page, 3);
+  await page.getByRole('link', { name: 'Back', exact: true }).click();
+  await expectWizard(page, 2);
+  await page.reload();
+  await expectWizard(page, 2);
+  await expect(
+    page.getByLabel('About this business', { exact: true })
+  ).toHaveValue('Saved without changing the active identity');
+  for (const [index, [key, label]] of wizardSteps.entries()) {
+    const link = page
+      .getByRole('navigation', { name: 'Listing review', exact: true })
+      .getByRole('link', { name: `${index + 1}. ${label}`, exact: true });
+    await expect(link).toHaveAttribute(
+      'href',
+      `/account/profile/${key}?listingId=${listingId}`
+    );
+  }
+  await page.getByRole('link', { name: '6. Photos', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Continue to confirmation', exact: true })
+    .click();
+  await expect(page.getByText('Final check', { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Listing review', exact: true })
+      .getByRole('link')
+  ).toHaveCount(6);
+  await page.getByRole('link', { name: 'Back to photos', exact: true }).click();
+  await expectWizard(page, 6);
+  await page
+    .getByRole('button', { name: 'Continue to confirmation', exact: true })
+    .click();
+  await expect(page.getByText('Final check', { exact: true })).toBeVisible();
+  await page.reload();
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+  expect(fixture.profile.lastReviewedAt).toBeNull();
+  await confirmReview(page);
+  await page.reload();
+  await expect(
+    page.getByRole('heading', { name: 'Your review is complete', exact: true })
+  ).toBeVisible();
+  expect(fixture.reviewConfirmations).toHaveLength(1);
+  await page
+    .getByRole('link', { name: 'Manage this business', exact: true })
+    .click();
+  await expectWizard(page, 1);
+  expect(fixture.switches).toHaveLength(0);
+  expectListingReads(fixture.reads);
+});
+
+for (const [index, [key]] of wizardSteps.entries()) {
+  test(`a signed-out ${key} deep link returns to the same business and section after sign-in`, async ({
+    page,
+  }) => {
+    const fixture = await fixtures(page, { owned: true });
+    const path = `/account/profile/${key}?listingId=${listingId}`;
+    await page.goto(path);
+    const signIn = page.getByRole('link', {
+      name: 'Sign in to continue',
+      exact: true,
+    });
+    await expect(signIn).toBeVisible();
+    expect(
+      new URL(
+        (await signIn.getAttribute('href')) ?? '',
+        'http://fixture.test'
+      ).searchParams.get('callbackUrl')
+    ).toBe(path);
+    expect(fixture.writes).toHaveLength(0);
+    expect(fixture.reviewConfirmations).toHaveLength(0);
+    fixture.signIn();
+    await page.goto(path);
+    await expectWizard(page, index + 1);
+    expectListingReads(fixture.reads);
+    expect(fixture.switches).toHaveLength(0);
+  });
+}
+
+test('empty, missing and personal listing scopes never become personal editors on any step', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { signedIn: true, owned: true });
+  for (const scope of ['', 'missing-business', 'personal-id']) {
+    for (const [key] of wizardSteps) {
+      await page.goto(`/account/profile/${key}?listingId=${scope}`);
+      await expect(
+        page.getByRole('heading', {
+          name: 'This business could not be opened',
+          exact: true,
+        })
+      ).toBeVisible();
+      await expect(page.locator('main form')).toHaveCount(0);
+    }
+  }
+  expect(fixture.writes).toHaveLength(0);
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+  expect(fixture.switches).toHaveLength(0);
+});
+
+test('failed description and photo saves preserve the form and never advance to confirmation', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    descriptionFailure: true,
+    uploadFailure: true,
+  });
+  await page.goto(`/account/profile/desc?listingId=${listingId}`);
+  await page
+    .getByLabel('About this business', { exact: true })
+    .fill('Keep this unsaved draft visible');
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole('alert')
+      .filter({ hasText: 'Could not save this business description.' })
+  ).toBeVisible();
+  await expectWizard(page, 2);
+  await expect(
+    page.getByLabel('About this business', { exact: true })
+  ).toHaveValue('Keep this unsaved draft visible');
+  expect(
+    (fixture.profile.descriptions as Record<string, unknown>).details
+  ).toBe('Our existing description');
+  await page.getByRole('link', { name: '6. Photos', exact: true }).click();
+  await page
+    .locator('#images_primary')
+    .setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: image });
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole('alert')
+      .filter({ hasText: 'Photo storage is temporarily unavailable.' })
+  ).toBeVisible();
+  await expectWizard(page, 6);
+  await expect(
+    page.getByRole('img', { name: 'Primary', exact: true })
+  ).toHaveAttribute('src', 'https://files.test.invalid/old-logo.png');
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+  expect(fixture.profile.lastReviewedAt).toBeNull();
+});
+
+test('a pending photo save cannot pull the owner back after they navigate to another section', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { signedIn: true, owned: true });
+  let finishUpload: (() => void) | undefined;
+  const uploaded = new Promise<void>((resolve) => {
+    finishUpload = resolve;
+  });
+  await page.route(
+    '**/api/profile/upload?listingId=public-business-id',
+    async (route) => {
+      await uploaded;
+      await route.fulfill({ json: { success: true } });
+    }
+  );
+  await page.goto(`/account/profile/images?listingId=${listingId}`);
+  await page
+    .locator('#images_primary')
+    .setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: image });
+  const uploadRequest = page.waitForRequest(
+    (request) => new URL(request.url()).pathname === '/api/profile/upload'
+  );
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  expect(
+    new URL((await uploadRequest).url()).searchParams.get('listingId')
+  ).toBe(listingId);
+  await page.getByRole('link', { name: '2. Description', exact: true }).click();
+  await expectWizard(page, 2);
+  const uploadResponse = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === '/api/profile/upload'
+  );
+  const refetchedProfile = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname === '/api/getProfile' &&
+      url.searchParams.get('listingId') === listingId
+    );
+  });
+  finishUpload?.();
+  await uploadResponse;
+  await (await refetchedProfile).finished();
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => resolve(null)))
+  );
+  await expectWizard(page, 2);
+  await expect(page).toHaveURL(
+    new RegExp(`/account/profile/desc\\?listingId=${listingId}$`)
+  );
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+});
+
+for (const wrongReviewState of [false, true]) {
+  test(`unavailable or wrong-business review state disables final confirmation (${wrongReviewState})`, async ({
+    page,
+  }) => {
+    const fixture = await fixtures(page, {
+      signedIn: true,
+      owned: true,
+      refreshState: 'active',
+      reviewStateFailure: !wrongReviewState,
+      wrongReviewState,
+    });
+    await page.goto(`${reviewPath}&complete=1&confirmed=1`);
+    await expect(page.getByRole('alert')).toContainText(
+      'Could not load the review status for this business.'
+    );
+    await expect(
+      page.getByRole('button', {
+        name: 'Confirm business information',
+        exact: true,
+      })
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('checkbox', { name: /I reviewed this business/ })
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('heading', {
+        name: 'Your review is complete',
+        exact: true,
+      })
+    ).toHaveCount(0);
+    expect(fixture.reviewConfirmations).toHaveLength(0);
+    if (!wrongReviewState) {
+      fixture.restoreReviewStatus();
+      await page
+        .getByRole('button', { name: 'Reload review status', exact: true })
+        .click();
+      await expect(
+        page.getByRole('checkbox', { name: /I reviewed this business/ })
+      ).toBeEnabled();
+      await confirmReview(page);
+      expect(fixture.reviewConfirmations).toHaveLength(1);
+    }
+  });
+}
+
+test('a held cycle stays visible throughout the wizard and ends only with explicit confirmation', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    refreshState: 'held',
+  });
+  await page.goto(reviewPath);
+  for (const [index, [, label]] of wizardSteps.entries()) {
+    if (index > 0)
+      await page
+        .getByRole('link', { name: `${index + 1}. ${label}`, exact: true })
+        .click();
+    await expectWizard(page, index + 1);
+    await expect(
+      page.getByRole('complementary', { name: 'Review status', exact: true })
+    ).toContainText('This hold does not count as ignoring the review.');
+  }
+  await page
+    .getByRole('button', { name: 'Continue to confirmation', exact: true })
+    .click();
+  expect(fixture.profile.lastReviewedAt).toBeNull();
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+  await confirmReview(page);
+  expect(fixture.reviewConfirmations[0].cycleId).toBe('review-cycle');
+  expect(fixture.profile.active).toBe(true);
+  expect(fixture.profile.addressPostalCode).toBeNull();
+  expect(fixture.writes).toHaveLength(0);
+});
+
+test('multiple managed business tabs and saves keep their own scope without changing the active identity', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { signedIn: true, owned: true });
+  const otherId = 'second-business';
+  const otherProfile = {
+    ...fixture.profile,
+    id: otherId,
+    name: 'Other Managed Business',
+    email: 'hello@other-business.test',
+    descriptions: { details: 'Other business introduction' },
+  };
+  const otherWrites: Record<string, unknown>[] = [];
+  await page.route('**/api/getProfile?listingId=second-business', (route) =>
+    route.fulfill({ json: { success: true, data: otherProfile } })
+  );
+  await page.route(
+    '**/api/listings/review?profileId=second-business',
+    (route) =>
+      route.fulfill({
+        json: {
+          profileId: otherId,
+          lastReviewedAt: null,
+          remindersOptedOut: false,
+          cycle: null,
+        },
+      })
+  );
+  await page.route(
+    '**/api/profile/saveDesc?listingId=second-business',
+    async (route) => {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      otherWrites.push(body);
+      otherProfile.descriptions.details = String(body.details);
+      await route.fulfill({ json: { success: true } });
+    }
+  );
+  await page.goto(`/account/profile/desc?listingId=${otherId}`);
+  await expectWizard(page, 2, 'Other Managed Business');
+  for (const [index, [key, label]] of wizardSteps.entries()) {
+    await expect(
+      page
+        .getByRole('navigation', { name: 'Listing review', exact: true })
+        .getByRole('link', { name: `${index + 1}. ${label}`, exact: true })
+    ).toHaveAttribute('href', `/account/profile/${key}?listingId=${otherId}`);
+  }
+  await page
+    .getByLabel('About this business', { exact: true })
+    .fill('Only the second business changes');
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expectWizard(page, 3, 'Other Managed Business');
+  await page.goto(reviewPath);
+  await expectWizard(page, 1);
+  await page.getByRole('link', { name: '2. Description', exact: true }).click();
+  await expect(
+    page.getByLabel('About this business', { exact: true })
+  ).toHaveValue('Our existing description');
+  expect(otherWrites).toEqual([
+    { details: 'Only the second business changes' },
+  ]);
+  expect(fixture.writes).toHaveLength(0);
+  expect(fixture.switches).toHaveLength(0);
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+});
+
+test('ordinary personal editors keep their existing frame, controls and unscoped save behavior', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { signedIn: true, owned: true });
+  const personalProfile = {
+    ...fixture.profile,
+    id: 'personal-id',
+    userId: 'review-account',
+    name: 'Ana Person',
+    email: accountEmail,
+    descriptions: { details: 'My personal introduction' },
+    pronouns: { sheher: true },
+  };
+  const writes: Record<string, unknown>[] = [];
+  await page.route('**/api/profile/switch', (route) =>
+    route.fulfill({
+      json: {
+        data: [{ ...personalProfile, isPersonal: true, role: 'owner' }],
+        activeProfileId: 'personal-id',
+        pendingInvitations: [],
+      },
+    })
+  );
+  await page.route(
+    (url) =>
+      url.pathname === '/api/getProfile' && !url.searchParams.has('listingId'),
+    (route) => route.fulfill({ json: { success: true, data: personalProfile } })
+  );
+  await page.route('**/api/profile/saveDesc', async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    writes.push(body);
+    personalProfile.descriptions.details = String(body.details);
+    await route.fulfill({ json: { success: true } });
+  });
+  const titles = [
+    'Profile - Edit Address and Geolocation',
+    'Profile - Edit Description',
+    'Profile - Edit Categories',
+    'Profile - Edit Contact Info',
+    'Profile - Edit Links and Socials',
+    'Profile - Edit Images',
+  ];
+  for (const [index, [key]] of wizardSteps.entries()) {
+    await page.goto(`/account/profile/${key}`);
+    await expect(
+      page.getByRole('heading', { name: titles[index], exact: true })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('navigation', { name: 'Listing review', exact: true })
+    ).toHaveCount(0);
+    const save = page.getByRole('button', {
+      name: 'Save Changes',
+      exact: true,
+    });
+    await expect(save).toBeVisible();
+    expect(
+      await save.evaluate(
+        (element) => getComputedStyle(element).backgroundColor
+      )
+    ).not.toBe('rgb(242, 132, 68)');
+    if (key === 'contact') {
+      await expect(
+        page.getByLabel('Pana account email', { exact: true })
+      ).toHaveValue(accountEmail);
+      await expect(
+        page.getByLabel('Pana account email', { exact: true })
+      ).toBeDisabled();
+    }
+  }
+  await page.goto('/account/profile/desc');
+  await page
+    .getByLabel('Details', { exact: true })
+    .fill('Only my personal introduction changes');
+  await page.getByRole('button', { name: 'Save Changes', exact: true }).click();
+  await expect(
+    page.getByText('Profile updated successfully!', { exact: true })
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/account\/profile\/desc$/);
+  expect(writes).toHaveLength(1);
+  expect(writes[0].details).toBe('Only my personal introduction changes');
+  expect(
+    (fixture.profile.descriptions as Record<string, unknown>).details
+  ).toBe('Our existing description');
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+});
+
+for (const viewport of [
+  { width: 1280, height: 900, label: 'desktop' },
+  { width: 390, height: 844, label: 'mobile' },
+]) {
+  test(`actual ${viewport.label} wizard screens use the site palette, touch-sized pills and readable actions`, async ({
+    page,
+  }) => {
+    const fixture = await fixtures(page, {
+      signedIn: true,
+      owned: true,
+      refreshState: 'held',
+    });
+    await page.setViewportSize(viewport);
+    await page.goto(reviewPath);
+    for (const [index, [key, label]] of wizardSteps.entries()) {
+      if (index > 0)
+        await page
+          .getByRole('link', { name: `${index + 1}. ${label}`, exact: true })
+          .click();
+      await expectWizard(page, index + 1);
+      await page.evaluate(() => document.fonts.ready);
+      if (process.env.LISTING_REVIEW_VISUAL_FONT) {
+        expect(
+          await page.evaluate(() =>
+            Array.from(document.fonts).some(
+              (face) =>
+                face.family.replace(/["']/g, '') === 'Nunito' &&
+                face.status === 'loaded'
+            )
+          )
+        ).toBe(true);
+      }
+      const main = page.getByRole('main');
+      expect(
+        await main.evaluate(
+          (element) => getComputedStyle(element).backgroundColor
+        )
+      ).toBe('rgb(255, 247, 236)');
+      const current = page
+        .getByRole('navigation', { name: 'Listing review', exact: true })
+        .locator('[aria-current="step"]');
+      expect(
+        await current.evaluate(
+          (element) => getComputedStyle(element).backgroundColor
+        )
+      ).toBe('rgb(48, 62, 140)');
+      for (const pill of await page
+        .getByRole('navigation', { name: 'Listing review', exact: true })
+        .getByRole('link')
+        .all()) {
+        expect((await pill.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+      }
+      const primary = page.locator('main form button[type="submit"]');
+      expect((await primary.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+      expect(
+        await primary.evaluate(
+          (element) => getComputedStyle(element).backgroundColor
+        )
+      ).toBe('rgb(242, 132, 68)');
+      expect(
+        await primary.evaluate((element) => getComputedStyle(element).color)
+      ).toBe('rgb(17, 13, 13)');
+      if (viewport.label === 'mobile') {
+        await page.keyboard.press('Escape');
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({
+          path: test.info().outputPath(`wizard-${key}-mobile-top.png`),
+        });
+      }
+      await primary.focus();
+      await expect(primary).toBeFocused();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth
+        )
+      ).toBe(true);
+      await page.screenshot({
+        path: test.info().outputPath(`wizard-${key}-${viewport.label}.png`),
+        fullPage: viewport.label === 'desktop',
+      });
+    }
+    await page
+      .getByRole('button', { name: 'Continue to confirmation', exact: true })
+      .click();
+    await expect(page.getByText('Final check', { exact: true })).toBeVisible();
+    await page.screenshot({
+      path: test.info().outputPath(`wizard-confirm-${viewport.label}.png`),
+      fullPage: viewport.label === 'desktop',
+    });
+    expect(fixture.writes).toHaveLength(0);
+    expect(fixture.reviewConfirmations).toHaveLength(0);
+  });
+}
+
+test('a signed-out final-check link returns to that same check without claiming or confirming on sign-in', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { owned: true, refreshState: 'active' });
+  const path = `${reviewPath}&complete=1&confirmed=1`;
+  await page.goto(path);
+  const signIn = page.getByRole('link', {
+    name: 'Sign in to continue',
+    exact: true,
+  });
+  await expect(signIn).toBeVisible();
+  expect(
+    new URL(
+      (await signIn.getAttribute('href')) ?? '',
+      'http://fixture.test'
+    ).searchParams.get('callbackUrl')
+  ).toBe(path);
+  fixture.signIn();
+  await page.goto(path);
+  await expect(page.getByText('Final check', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Your review is complete', exact: true })
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', {
+      name: 'Confirm business information',
+      exact: true,
+    })
+  ).toBeDisabled();
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+  expect(fixture.claims).toHaveLength(0);
+  expect(fixture.profile.lastReviewedAt).toBeNull();
+});
+
+test('a long business name and final controls fit a narrow mobile screen, including dark theme', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    refreshState: 'active',
+  });
+  const longName =
+    'A very long neighborhood business name with a singlelongunbrokensyntheticwordforlayout';
+  fixture.profile.name = longName;
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
+  await page.goto(reviewPath);
+  await expectWizard(page, 1, longName);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
+  ).toBe(true);
+  await page.screenshot({
+    path: test.info().outputPath('wizard-narrow-dark-mobile-top.png'),
+  });
+  await page.getByRole('link', { name: '6. Photos', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Continue to confirmation', exact: true })
+    .click();
+  const confirmation = page.getByRole('button', {
+    name: 'Confirm business information',
+    exact: true,
+  });
+  await expect(confirmation).toBeVisible();
+  expect((await confirmation.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
+  ).toBe(true);
+  await confirmation.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: test.info().outputPath('wizard-narrow-dark-mobile.png'),
+  });
+  expect(fixture.reviewConfirmations).toHaveLength(0);
 });

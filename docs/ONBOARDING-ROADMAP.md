@@ -98,9 +98,13 @@ expired/used-link recovery.
 Already-authorized owners go directly to `/listings/review?id={profileId}`,
 not an "already claimed" dead end. Owners can still use the permanent entry
 when their listing is not public; other visitors cannot preview it, and the
-review does not offer a broken public destination. The review reuses the address, description,
-category, private contact, public link and photo editors, in that order. Each
-editor carries `listingId` explicitly and checks `profile_owners` (or the
+review does not offer a broken public destination. The canonical review entry
+checks access and redirects straight to Location, with no separate card
+overview. One branded six-step wizard reuses the address, description, category,
+private contact, public link and photo editors, in that order. The existing
+`/account/profile/{step}?listingId={profileId}` deep links keep their section,
+including after sign-in and reload. Each editor carries `listingId` explicitly
+and checks `profile_owners` (or the
 existing direct ownership link) again on reads and writes. Invalid, foreign or
 personal profile scopes never fall back to the currently active identity.
 The journey does not switch the active-profile cookie.
@@ -111,8 +115,25 @@ provide a public visiting address/ZIP, choose an approximate online base ZIP, or
 remove a previous address for a mobile/appointment-based business. No private
 home address or guessed ZIP is required. Online ZIP validation and street/point
 privacy use the existing address API. Saving each section continues to the next;
-photos can be kept unchanged. The completion page links to the updated public
-listing and the permanent management/review URL for that exact business.
+Back returns to the preceding step and the six pills allow direct navigation.
+The first Back exits to the selected listing's permanent entry. Keeping location
+or photos unchanged uses the same continue action rather than a second save
+button. Saving, skipping and switching steps never confirm the review.
+
+After Photos, `/listings/review?id={profileId}&complete=1` opens the final check
+inside the same wizard frame, with a read-only summary and Back to photos. It
+does not mark anything complete on arrival. Only the authenticated **Confirm
+business information** POST can save `lastReviewedAt`, complete the current
+reminder cycle and restore an eligible overdue-review pause; staff restrictions
+remain authoritative. The success screen is backed by the server's review state,
+not `complete` or `confirmed` query parameters alone. It links to the updated
+public listing when available and the exact business's management wizard.
+
+Cream/ink surfaces, orange actions, indigo step pills and progress are scoped to
+listing-review mode; ordinary personal editors retain their account styling and
+save behavior. Review deadlines, holds and errors stay in the wizard. Reminder
+preferences are available in a compact disclosure without changing campaign or
+visibility policies.
 
 This is a product UI path only. It does not create, schedule or send a campaign,
 import contacts, bulk-claim businesses, or modify existing listings on arrival.
