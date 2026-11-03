@@ -76,6 +76,10 @@ a different business contact gets a receipt without the sign-in link. Connected
 owners receive future decisions at their current account email. Sign-in and setup
 links stay private to that account.
 
+Invitation/reminder proof pages and their private APIs select `no-referrer`
+in the global proxy: the runtime applies proxy headers after route headers.
+Route-owned cache directives and public directory/map policies are unchanged.
+
 ### Review and claim an existing listing
 
 The permanent entry for an existing directory business is
