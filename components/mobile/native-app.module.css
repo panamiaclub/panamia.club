@@ -314,6 +314,35 @@
   border-color: var(--color-pana-pink);
 }
 
+.pin[data-approximate] {
+  border-style: dashed;
+}
+
+.pin[data-online-zip] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  min-width: 112px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 2px solid var(--color-pana-indigo);
+  border-radius: 999px;
+  background: white;
+  color: var(--color-pana-indigo);
+  font-size: 12px;
+}
+
+.pin[data-online-zip] strong {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 11px;
+}
+
 .pin[aria-pressed='true'] {
   outline: 3px solid var(--color-pana-ink);
   outline-offset: 2px;
@@ -407,6 +436,31 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 12px;
+}
+
+.resultSection {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.resultSection + .resultSection {
+  margin-top: 12px;
+  padding-top: 20px;
+  border-top: 1px solid rgb(17 13 13 / 0.18);
+}
+
+.resultSection h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.resultSectionCopy {
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .card {
@@ -614,8 +668,21 @@
 }
 
 .filtersDialog {
+  width: calc(100% - 2rem);
   max-height: 85dvh;
   overflow-y: auto;
+  border: 2px solid var(--color-pana-ink);
+  border-radius: 1.125rem;
+  background: var(--color-pana-cream);
+  color: var(--color-pana-ink);
+}
+
+.filtersDialog :global(.dirsearch-filterpanel) {
+  position: static;
+  width: 100%;
+  max-width: none;
+  max-height: min(24rem, 50dvh);
+  margin-top: 0.5rem;
 }
 
 .filtersDialog > label {
@@ -623,7 +690,11 @@
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
+}
+
+.filtersDialog input[type='checkbox'] {
+  accent-color: var(--color-pana-indigo);
 }
 
 .community {

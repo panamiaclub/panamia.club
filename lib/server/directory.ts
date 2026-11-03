@@ -6,6 +6,9 @@ import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
 import { ProfileDescriptions, ProfileMentoring } from '@/lib/interfaces';
 import { extractCoordinates } from './profile';
 import { calcDistance } from '@/lib/geolocation';
+import { normalizeUsZip, type OnlineZipArea } from '@/lib/online-zip';
+import { getDirectoryZipAreasForProfiles } from './online-zip';
+import { claimedProfileIds } from './profile-owners';
 import { countyList, profileCategoryList } from '@/lib/lists';
 import {
   effectiveDirectoryRadius,
@@ -325,7 +328,7 @@ export const getSearch = async ({
   geolat,
   geolng,
   radius,
-  resultsView: _resultsView,
+  resultsView,
   sort = 'relevance',
   certifiedOnly,
   withEventsOnly,
@@ -334,6 +337,7 @@ export const getSearch = async ({
   languages,
   freeOnly,
 }: SearchInterface) => {
+  const mapView = resultsView === 'map';
   const viewerLat = Number(geolat);
   const viewerLng = Number(geolng);
   const hasViewerLocation =
@@ -351,7 +355,15 @@ export const getSearch = async ({
     return {
       success: true,
       data: [],
-      pagination: { page: pageNum, limit: pageLimit, total: 0, totalPages: 0 },
+      pagination: {
+        page: mapView ? 1 : pageNum,
+        limit: mapView ? 1 : pageLimit,
+        total: 0,
+        totalPages: 0,
+      },
+      map: mapView
+        ? { totalResults: 0, unmappedCount: 0, unmappedResults: [] }
+        : undefined,
     };
   }
 
@@ -378,6 +390,8 @@ export const getSearch = async ({
       userId: true,
       primaryImageCdn: true,
       addressLocality: true,
+      addressPostalCode: true,
+      addressCountry: true,
       // extractCoordinates reads the columns first and falls back to the
       // legacy `geo` blob, so it needs all three.
       addressLat: true,
@@ -449,23 +463,28 @@ export const getSearch = async ({
     filtered = filtered.filter((p) => p.panaCertifiedAt != null);
   }
 
-  // A finite radius describes places the viewer can visit. Online-only
-  // listings and listings without coordinates therefore do not match it.
+  // Online businesses always use a coarse ZIP, never a private street point.
+  // Other listings may use their existing ZIP only when no exact point exists.
+  const zipAreas = await getDirectoryZipAreasForProfiles(
+    filtered.filter(
+      (profile) =>
+        profile.onlineOnly === true || extractCoordinates(profile) === null
+    )
+  );
+  // A finite radius includes public points and approximate ZIP areas.
+  // An unlocated listing remains All-areas-only.
   // Without usable viewer coordinates the public fallback is the full South
   // Florida directory, even if a stale client asks for a finite radius.
   const locationContext = {
     hasViewerLocation,
     viewerLat,
     viewerLng,
+    zipAreas,
   };
   const effectiveRadius = effectiveDirectoryRadius(radius, hasViewerLocation);
   if (effectiveRadius !== 'all') {
     filtered = filtered.filter((p) =>
-      matchesDirectoryRadius(
-        distanceFor(p, locationContext),
-        effectiveRadius,
-        p.onlineOnly === true
-      )
+      matchesDirectoryRadius(distanceFor(p, locationContext), effectiveRadius)
     );
   }
 
@@ -497,20 +516,47 @@ export const getSearch = async ({
 
   const total = ordered.length;
   const skip = pageNum > 1 ? (pageNum - 1) * pageLimit : 0;
-  const data = await enrichPage(
-    ordered.slice(skip, skip + pageLimit),
-    countsForSort
+  const indexed = ordered.map((profile, index) => ({
+    profile,
+    resultIndex: index + 1,
+  }));
+  const selected = mapView ? indexed : indexed.slice(skip, skip + pageLimit);
+  const enriched = await enrichPage(
+    selected.map(({ profile }) => profile),
+    countsForSort,
+    zipAreas
   );
+  const results = enriched.map((result, index) => ({
+    ...result,
+    result_index: selected[index].resultIndex,
+  }));
+  const mappable = (result: (typeof results)[number]) =>
+    result.geo !== null ||
+    result.online_zip !== null ||
+    result.zip_area !== null;
+  const data = mapView ? results.filter(mappable) : results;
+  const unmappedResults = mapView
+    ? results.filter((result) => !mappable(result))
+    : [];
 
   return {
     success: true,
     data,
     pagination: {
-      page: pageNum,
-      limit: pageLimit,
-      total,
-      totalPages: Math.ceil(total / pageLimit),
+      page: mapView ? 1 : pageNum,
+      limit: mapView ? Math.max(data.length, 1) : pageLimit,
+      total: mapView ? data.length : total,
+      totalPages: mapView
+        ? Number(data.length > 0)
+        : Math.ceil(total / pageLimit),
     },
+    map: mapView
+      ? {
+          totalResults: total,
+          unmappedCount: unmappedResults.length,
+          unmappedResults,
+        }
+      : undefined,
   };
 };
 
@@ -524,6 +570,7 @@ interface LocationContext {
   hasViewerLocation: boolean;
   viewerLat: number;
   viewerLng: number;
+  zipAreas: Map<string, OnlineZipArea | null>;
 }
 
 /**
@@ -536,16 +583,25 @@ interface LocationContext {
  * decimal places, about a kilometre — which is plenty to order a list and not
  * enough to place somebody's home.
  *
- * Online-only businesses are excluded deliberately rather than by accident:
- * the address on file for one is usually the owner's home, so measuring to it
- * is both misleading and a privacy leak.
+ * Online listings use only a verified ZIP area. An older address or geo point
+ * is never substituted, since it may identify the owner's home.
  */
 function distanceFor(p: ProfileRow, ctx: LocationContext): number | null {
   if (!ctx.hasViewerLocation) return null;
-  if (p.onlineOnly === true) return null;
+  if (p.onlineOnly === true) {
+    const area = ctx.zipAreas.get(p.id);
+    return area
+      ? calcDistance(ctx.viewerLat, ctx.viewerLng, area.lat, area.lng)
+      : null;
+  }
 
   const coordinates = extractCoordinates(p);
-  if (!coordinates) return null;
+  if (!coordinates) {
+    const area = ctx.zipAreas.get(p.id);
+    return area
+      ? calcDistance(ctx.viewerLat, ctx.viewerLng, area.lat, area.lng)
+      : null;
+  }
 
   const [lng, lat] = coordinates;
   return calcDistance(ctx.viewerLat, ctx.viewerLng, lat, lng);
@@ -610,25 +666,24 @@ function sortProfiles(
 }
 
 /**
- * Join the extra data onto one page of results.
- *
- * Only ever called with the slice being rendered. Running this over the whole
- * filtered set would issue the same three queries against thousands of ids to
- * throw all but twenty rows away.
+ * Enrich one list page, or the complete map-browsing collection including the
+ * unlocated results shown beneath the viewport-filtered list.
  */
 async function enrichPage(
   rows: ProfileRow[],
-  precomputedCounts: Map<string, DirectorySignalCounts> | null = null
+  precomputedCounts: Map<string, DirectorySignalCounts> | null = null,
+  zipAreas: Map<string, OnlineZipArea | null> = new Map()
 ) {
   if (rows.length === 0) return [];
 
   const ids = rows.map((row) => row.id);
-  const [counts, avatars, nextEvents] = await Promise.all([
+  const [counts, avatars, nextEvents, claimed] = await Promise.all([
     // Already in hand when sorting by recommendations — re-reading the same
     // rows a second time would be the only cost of that sort worth avoiding.
     precomputedCounts ?? getSignalCountsForProfiles(ids),
     getRecommenderAvatarsForProfiles(ids),
     getNextEventForHosts(ids),
+    claimedProfileIds(ids),
   ]);
 
   return rows.map((row) =>
@@ -636,6 +691,8 @@ async function enrichPage(
       counts: counts.get(row.id) ?? { saves: 0, recommends: 0 },
       recommenderAvatars: avatars.get(row.id) ?? [],
       nextEvent: nextEvents.get(row.id) ?? null,
+      zipArea: zipAreas.get(row.id) ?? null,
+      claimed: claimed.has(row.id),
     })
   );
 }
@@ -652,6 +709,8 @@ function transformProfile(
     counts: DirectorySignalCounts;
     recommenderAvatars: string[];
     nextEvent: DirectoryEvent | null;
+    zipArea: OnlineZipArea | null;
+    claimed: boolean;
   }
 ) {
   const descriptions = p.descriptions as ProfileDescriptions | null;
@@ -665,7 +724,8 @@ function transformProfile(
   const screenname =
     (p.screenname as string | null) || p.user?.screenname || null;
 
-  const coordinates = extractCoordinates(p);
+  const online = p.onlineOnly === true;
+  const coordinates = online ? null : extractCoordinates(p);
 
   return {
     _id: p.id,
@@ -683,20 +743,24 @@ function transformProfile(
     // both places.
     coverImage: gallery.gallery1CDN ?? null,
     primary_address: {
-      city: p.addressLocality,
+      city: online ? (extra.zipArea?.city ?? null) : p.addressLocality,
+      zipcode: online
+        ? normalizeUsZip(p.addressPostalCode)
+        : p.addressPostalCode,
     },
     geo: coordinates ? { type: 'Point', coordinates } : null,
     // Carried into search results so a card can suppress "x miles away". An
     // online-only business has no location to visit, and its address on file
     // is typically the owner's home — measuring a distance to it is both
     // wrong and a privacy leak.
-    online_only: p.onlineOnly === true,
+    online_only: online,
+    online_zip: online ? extra.zipArea : null,
+    zip_area: !online && !coordinates ? extra.zipArea : null,
     categories: categoryKeys(p.categories),
     counties: countyKeys(p.counties),
     certified: p.panaCertifiedAt != null,
-    // A listing with a handle has been claimed and has a profile page; one
-    // without has neither, and gets the claim CTA instead.
-    claimed: screenname != null,
+    // Ownership and the public URL are separate: a handle is not proof of claim.
+    claimed: extra.claimed,
     saves: extra.counts.saves,
     recommends: extra.counts.recommends,
     recommenderAvatars: extra.recommenderAvatars,

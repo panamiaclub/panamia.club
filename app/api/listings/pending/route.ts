@@ -5,6 +5,10 @@ import {
   declinePendingInvitation,
 } from '@/lib/server/pending-listing-owner';
 import { createActorForProfile } from '@/lib/federation';
+import { db } from '@/lib/db';
+import { profiles } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
+import { revalidatePublicListing } from '@/lib/server/profile';
 
 /**
  * Answer a pending listing invitation: "someone listed this and said it's
@@ -86,6 +90,11 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: { screenname: true },
+    });
+    revalidatePublicListing(profileId, profile?.screenname);
 
     // Give the listing its social actor, the same way the explicit claim flow
     // does, so its Updates section works from the moment it is accepted.

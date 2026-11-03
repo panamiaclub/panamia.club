@@ -148,7 +148,7 @@ export default function LinksPage() {
             asChild
           >
             <Link
-              href="/donate"
+              href="/support-pana"
               className="flex items-center justify-center gap-2"
             >
               <Heart className="h-5 w-5" aria-hidden="true" />

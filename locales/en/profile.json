@@ -22,7 +22,8 @@
     "distance_one": "{{count}} mile away",
     "distance_other": "{{count}} miles away",
     "distanceDenied": "Location off",
-    "onlineOnly": "Online only"
+    "onlineOnly": "Online business",
+    "baseZip": "Based near ZIP {{zip}}"
   },
   "gate": {
     "eyebrow": {
@@ -89,6 +90,14 @@
     "claimHeading": "Is this yours?",
     "claimBody": "Claim this listing to post updates, add photos, and reply to the panas who save you.",
     "claimCta": "Claim this listing"
+  },
+  "locationForm": {
+    "addressNote": "A public street address provides directions for visitors. Online businesses instead need a base ZIP, without publishing a street address.",
+    "onlineLabel": "Online business, without a public storefront",
+    "onlineNote": "Your listing shows an approximate ZIP-area bubble, not an exact address or mileage. Delivery and pickup details must be confirmed with the business.",
+    "baseZip": "Business base ZIP code",
+    "baseZipNote": "Required for online businesses. Only the five-digit ZIP area is public; do not enter a home address or exact coordinates.",
+    "invalidZip": "Please enter a valid five-digit ZIP code for where your online business is based."
   },
   "location": {
     "eyebrow": "Visit",

@@ -332,6 +332,33 @@ npx wrangler r2 bucket create panamia-media-preview
 
 Enable **Public Development URL** on `panamia-media` in the Cloudflare dashboard to get `R2_PUBLIC_URL`. Create an R2 API token (R2 → Manage R2 API Tokens, Object Read & Write) for `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`. The `R2_BUCKET` binding in `wrangler.jsonc` is used automatically in Workers — credentials are only needed for presigned URL generation and local Node.js dev.
 
+Verify the public URL against the bucket in the **same Cloudflare account as
+the Worker**, rather than reusing a URL from another account:
+
+```bash
+yarn wrangler r2 bucket dev-url get panamia-media
+```
+
+Keep `wrangler.jsonc`'s production `R2_PUBLIC_URL` aligned with that result.
+GitHub's `R2_BUCKET_NAME` and `R2_PUBLIC_URL` variables belong to the separate
+preview bucket used by browser tests; do not replace them with production
+values. A successful native R2 upload does not verify its public URL; a
+mismatched origin stores the file successfully but returns a link that 404s.
+
+Changing the setting does not change URLs already saved in posts. The
+**Database Migrations** workflow has a manual **repair_social_media** option
+that repairs only saved social attachment links and skips schema migrations.
+It checks the same object key and media type in the target bucket before
+writing, leaves unavailable objects and other hosts untouched, and commits
+the verified changes in one transaction. For a local dry run:
+
+```bash
+POSTGRES_URL=... yarn tsx scripts/repair-social-media-urls.ts --from https://pub-OLD.r2.dev --to https://pub-NEW.r2.dev
+```
+
+Use the complete public bucket URLs. Add `--apply` only after reviewing the
+dry run; no objects are moved or deleted.
+
 ### Build Locally
 
 ```bash

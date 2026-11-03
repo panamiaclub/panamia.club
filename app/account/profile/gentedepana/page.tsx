@@ -156,7 +156,7 @@ export default function AccountProfileGenteDePana() {
                   grassroots organization. This means many small donors. You can
                   check out the{' '}
                   <Link
-                    href="/donate/"
+                    href="/support-pana#giving-circle"
                     className="text-blue-600 hover:underline"
                   >
                     membership tiers

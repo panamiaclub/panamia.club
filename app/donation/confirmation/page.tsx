@@ -2,91 +2,107 @@
 
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { CheckCircle2, Heart } from 'lucide-react';
+import { ArrowRight, Heart, Repeat2, Sun } from 'lucide-react';
+import styles from '@/components/donations/donation-experience.module.css';
 
 function DonationConfirmationContent() {
   const searchParams = useSearchParams();
-  const tier = searchParams?.get('tier')
-    ? parseInt(searchParams.get('tier')!)
-    : 0;
-  const _amt = searchParams?.get('amt')
-    ? parseInt(searchParams.get('amt')!)
-    : 0;
-  const isRecurring = tier > 0;
+  const rawTier = searchParams?.get('tier');
+  const tier = rawTier ? Number.parseInt(rawTier, 10) : 0;
+  const frequency = searchParams?.get('frequency');
+  const isRecurring = frequency === 'monthly' || (!frequency && tier > 0);
 
   return (
-    <div className="from-background to-muted/20 flex min-h-screen flex-col bg-gradient-to-b">
-      <div className="container mx-auto max-w-3xl px-4 py-12">
-        {/* Success Icon */}
-        <div className="mb-8 flex justify-center">
-          <div className="rounded-full bg-green-100 p-6 dark:bg-green-900/20">
-            <CheckCircle2 className="h-16 w-16 text-green-600 dark:text-green-400" />
+    <main
+      className={`${styles.page} ${styles.confirmationPage}`}
+      data-donation-thanks
+    >
+      <div className={styles.confirmationInner}>
+        <header className={styles.confirmationHero}>
+          <div>
+            <span className={styles.confirmationMark} aria-hidden="true">
+              <Heart size={30} />
+            </span>
+            <p className={styles.eyebrow}>For the love of local</p>
+            <h1 className={styles.confirmationTitle}>
+              Muchísimas <span>Gracias!</span>
+            </h1>
+            <h2 className={styles.confirmationSubtitle}>
+              {isRecurring
+                ? tier > 0
+                  ? 'Thank you so much for becoming a Gente dePana!'
+                  : 'Thank you so much for your monthly support!'
+                : 'Thank you so much for your contribution!'}
+            </h2>
           </div>
-        </div>
 
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="mb-4 text-4xl font-bold">Muchísimas Gracias!</h1>
-          <h2 className="text-muted-foreground text-2xl">
-            {isRecurring
-              ? 'Thank you so much for becoming a Gente dePana!'
-              : 'Thank you so much for your contribution!'}
-          </h2>
-        </div>
+          <figure className={styles.heroPhoto}>
+            <Image
+              src="/img/impact/community-group.webp"
+              alt="Panas gathered together at a local community event."
+              width={1600}
+              height={886}
+              sizes="(max-width: 767px) 100vw, 50vw"
+              priority
+            />
+            <div className={styles.photoStamp} aria-hidden="true">
+              <Sun size={28} />
+              <span>Growing together</span>
+            </div>
+            <figcaption>Real people. Shared roots. South Florida.</figcaption>
+          </figure>
+        </header>
 
-        {/* Confirmation Content */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Heart className="text-pana-pink h-6 w-6" aria-hidden="true" />
-              Your Support Makes a Difference
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isRecurring && (
-              <div className="bg-pana-blue/10 rounded-lg p-4">
-                <p className="text-sm">
-                  You will be receiving a confirmation email from us soon with
-                  your monthly donation amount and the perks associated with
-                  your subscription. These features should be activated in your
-                  account shortly.
-                </p>
-              </div>
-            )}
+        <section
+          className={styles.confirmationCard}
+          aria-labelledby="gift-impact-title"
+        >
+          <div className={styles.confirmationHeading}>
+            <span className={styles.cardHeart}>
+              <Heart size={23} aria-hidden="true" />
+            </span>
+            <h3 id="gift-impact-title">Your support makes a difference.</h3>
+          </div>
+          <p className={styles.confirmationLead}>
+            Your generosity helps local culture, community technology, and the
+            connections that make South Florida feel like home keep growing.
+            We&apos;re glad you&apos;re part of it, pana.
+          </p>
+          {isRecurring && (
+            <div className={styles.confirmationMonthly} data-monthly-thanks>
+              <Repeat2 size={22} aria-hidden="true" />
+              <p>
+                Your monthly support gives us room to plan, build, and keep
+                showing up. For help managing your gift, reach out to the team
+                below.
+              </p>
+            </div>
+          )}
+          <p className={styles.confirmationContact}>
+            Questions about your gift? We&apos;re here for you at{' '}
+            <Link href="mailto:gentede@panamia.club">gentede@panamia.club</Link>
+            .
+          </p>
+        </section>
 
-            <p className="text-lg font-medium">
-              Your support makes all the difference in our ability to reach and
-              support the local South Florida community. Your generosity helps
-              us achieve our vision!
-            </p>
-
-            <p className="text-muted-foreground">
-              If you have any questions or comments, please feel free to contact
-              us at{' '}
-              <Link
-                href="mailto:gentede@panamia.club"
-                className="text-pana-blue hover:underline"
-              >
-                gentede@panamia.club
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-          <Button size="lg" asChild>
-            <Link href="/">Return to Home</Link>
-          </Button>
-          <Button size="lg" variant="outline" asChild>
-            <Link href="/directory/search">Explore Directory</Link>
-          </Button>
-        </div>
+        <nav className={styles.confirmationActions} aria-label="After giving">
+          <Link href="/" className={styles.primaryButton}>
+            Return to Home <ArrowRight size={18} aria-hidden="true" />
+          </Link>
+          <Link
+            href="/directory/search"
+            className={`${styles.primaryButton} ${styles.secondaryButton}`}
+          >
+            Explore Directory <ArrowRight size={18} aria-hidden="true" />
+          </Link>
+        </nav>
+        <p className={styles.confirmationSignoff}>
+          The future is local. Thanks for being part of it.
+        </p>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -94,9 +110,12 @@ export default function DonationConfirmationPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          <p className="text-muted-foreground text-lg">Loading...</p>
-        </div>
+        <main
+          className={`${styles.page} ${styles.confirmationPage} ${styles.confirmationLoading}`}
+        >
+          <Heart size={30} aria-hidden="true" />
+          <p role="status">Loading your thank-you page...</p>
+        </main>
       }
     >
       <DonationConfirmationContent />

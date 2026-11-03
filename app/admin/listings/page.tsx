@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import Link from 'next/link';
 
 import { useAdminGate } from '@/components/Admin/gate';
 import { AdminPageHeader, Panel, StatBand } from '@/components/Admin/parts';
 import PageMeta from '@/components/PageMeta';
 import { ADMIN_CHROME } from '@/lib/admin/theme';
+import { listingPreviewPath, listingPublicPath } from '@/lib/listing-url';
 import {
   FLAG_LABEL,
   FLAG_NOTE,
@@ -151,7 +153,7 @@ export default function AdminListingsPage() {
           setActionError(
             `${listing.name} was ${
               decision === 'approve' ? 'approved' : 'declined'
-            }, but the notification email could not be sent.`
+            }, but one or more notification emails could not be sent.`
           );
         }
       } catch (error) {
@@ -185,7 +187,7 @@ export default function AdminListingsPage() {
       if (tagFilter && !row.tags.includes(tagFilter)) return false;
       if (flagFilter === 'flagged' && row.flags.length === 0) return false;
       if (flagFilter === 'unflagged' && row.flags.length > 0) return false;
-      if (flagFilter === 'unclaimed' && row.pendingOwnerEmail) return false;
+      if (flagFilter === 'unclaimed' && row.claimed) return false;
       return true;
     });
   }, [pending, query, tagFilter, flagFilter]);
@@ -366,7 +368,24 @@ export default function AdminListingsPage() {
                     {row.decision}
                   </span>
                   <span className="min-w-[12rem] leading-snug font-bold">
-                    {row.name}
+                    <Link
+                      href={
+                        row.decision === 'approved'
+                          ? listingPublicPath(row)
+                          : listingPreviewPath(row.id)
+                      }
+                      className="hover:text-pana-navy underline underline-offset-4"
+                    >
+                      {row.name}
+                    </Link>
+                    {row.decision === 'approved' && (
+                      <Link
+                        href={`/admin/listings/${encodeURIComponent(row.id)}/refresh`}
+                        className="mt-1 block text-xs font-bold underline"
+                      >
+                        Review renewal
+                      </Link>
+                    )}
                     {row.locality && (
                       <span className="text-pana-ink/60 font-normal">
                         {' '}
@@ -439,7 +458,12 @@ function ListingRow({
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-[16rem] flex-1">
           <h3 className="text-xl leading-tight font-extrabold">
-            {listing.name}
+            <Link
+              href={listingPreviewPath(listing.id)}
+              className="hover:text-pana-navy underline underline-offset-4"
+            >
+              {listing.name}
+            </Link>
           </h3>
           <p className="text-pana-ink/70 mt-1 text-sm">
             {listing.fiveWords || 'No summary given'}
@@ -460,9 +484,11 @@ function ListingRow({
             {overdue ? ' · over the window' : ''}
           </p>
           <p className="text-pana-ink/50 mt-0.5 text-xs">
-            {listing.pendingOwnerEmail
-              ? `Claimed by ${listing.pendingOwnerEmail}`
-              : 'Nobody has claimed this listing'}
+            {listing.claimed
+              ? 'Connected to a Pana account'
+              : listing.pendingOwnerEmail
+                ? `Setup pending for ${listing.pendingOwnerEmail}`
+                : 'Nobody has claimed this listing'}
           </p>
         </div>
       </div>

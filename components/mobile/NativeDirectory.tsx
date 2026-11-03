@@ -12,12 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { profileCategoryList } from '@/lib/lists';
-import {
-  DIRECTORY_RADIUS_OPTIONS,
-  effectiveDirectoryRadius,
-  isDirectoryRadius,
-} from '@/lib/directory-radius';
-import { useSearch } from '@/lib/query/directory';
+import { searchParamsToString, useSearch } from '@/lib/query/directory';
 import { useMyGroups } from '@/lib/query/social';
 import { useNativeEvents, useNativeGroups } from '@/lib/query/native-app';
 import { nativeBusiness, nativeEvent, nativeGroup } from '@/lib/mobile/browse';
@@ -76,12 +71,10 @@ export default function NativeDirectory({
   const location = useViewerLocation();
   const { toast } = useToast();
   const previousLocationStatus = useRef(location.status);
-  const radius = effectiveDirectoryRadius(params.radius, !!location.coords);
   const sort =
     params.sort === 'nearest' && !location.coords
       ? 'relevance'
-      : (params.sort ??
-        (location.coords && radius !== 'all' ? 'nearest' : 'relevance'));
+      : (params.sort ?? (location.coords ? 'nearest' : 'relevance'));
 
   useEffect(() => {
     setMountedMaps((current) =>
@@ -119,15 +112,15 @@ export default function NativeDirectory({
     return () => window.clearTimeout(timer);
   }, [query]);
 
+  const queryFilters = {
+    ...params,
+    searchTerm: term,
+    sort,
+    geolat: location.coords?.lat ?? 0,
+    geolng: location.coords?.lng ?? 0,
+  };
   const directory = useSearch(
-    {
-      ...params,
-      searchTerm: term,
-      sort,
-      radius,
-      geolat: location.coords?.lat ?? 0,
-      geolng: location.coords?.lng ?? 0,
-    },
+    { ...queryFilters, pageNum: 1, resultsView: 'map' },
     { enabled: active && scope === 'directory' }
   );
   const events = useNativeEvents(term, active && scope === 'event');
@@ -137,6 +130,14 @@ export default function NativeDirectory({
     viewerKey,
   });
   const businesses = useMemo(
+    () =>
+      [
+        ...(directory.data?.data ?? []),
+        ...(directory.data?.map?.unmappedResults ?? []),
+      ].map(nativeBusiness),
+    [directory.data]
+  );
+  const mappedBusinesses = useMemo(
     () => (directory.data?.data ?? []).map(nativeBusiness),
     [directory.data]
   );
@@ -181,8 +182,7 @@ export default function NativeDirectory({
   );
   const searching = term !== query.trim();
   const categories = params.filterCategories.split('+').filter(Boolean);
-  const total = directory.data?.pagination.total ?? 0;
-  const totalPages = directory.data?.pagination.totalPages ?? 1;
+  const total = directory.data?.map?.totalResults ?? 0;
   const scopeLabel =
     scope === 'directory'
       ? 'Directory'
@@ -313,55 +313,24 @@ export default function NativeDirectory({
         {(scope === 'directory' || mountedMaps.includes('directory')) && (
           <NativeMapResults
             items={businesses}
+            mapItems={mappedBusinesses}
+            unmappedCount={directory.data?.map?.unmappedCount}
+            directorySections
             label="Directory"
             count={`${total} ${total === 1 ? 'listing' : 'listings'}`}
             filterKey={JSON.stringify([
-              term,
-              params,
-              radius,
-              sort,
+              searchParamsToString({ ...queryFilters, pageNum: 1 }),
               filterVersion,
             ])}
             active={active && scope === 'directory'}
             loading={directory.isPending || searching}
             failed={directory.isError || directory.data?.success === false}
-            onRetry={() => void directory.refetch()}
+            onRetry={() => {
+              void directory.refetch();
+            }}
             viewer={location.coords}
             controlsInset={106}
             onControlsCovered={directoryCovered}
-            footer={
-              totalPages > 1 ? (
-                <div className={styles.pagination}>
-                  <button
-                    type="button"
-                    disabled={params.pageNum <= 1}
-                    onClick={() =>
-                      setParams((current) => ({
-                        ...current,
-                        pageNum: current.pageNum - 1,
-                      }))
-                    }
-                  >
-                    Previous
-                  </button>
-                  <span>
-                    Page {params.pageNum} of {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={params.pageNum >= totalPages}
-                    onClick={() =>
-                      setParams((current) => ({
-                        ...current,
-                        pageNum: current.pageNum + 1,
-                      }))
-                    }
-                  >
-                    Next
-                  </button>
-                </div>
-              ) : null
-            }
           />
         )}
       </div>
@@ -439,11 +408,13 @@ export default function NativeDirectory({
           <DialogHeader>
             <DialogTitle>Directory filters</DialogTitle>
             <DialogDescription>
-              Refine the live directory, without changing your search category.
+              Move the map to browse an area. Refine the results here without
+              changing your search category.
             </DialogDescription>
           </DialogHeader>
           <FilterMenu
             label="Categories"
+            appearance="surface"
             options={profileCategoryList.map((category) => ({
               value: category.value,
               label: category.desc,
@@ -458,30 +429,10 @@ export default function NativeDirectory({
             }
           />
           <FilterMenu
-            label="Radius"
-            single
-            selected={[radius]}
-            options={DIRECTORY_RADIUS_OPTIONS.map((option) => ({
-              value: option.value,
-              label: option.label,
-              disabledReason:
-                option.value !== 'all' && !location.coords
-                  ? 'Use your location first'
-                  : undefined,
-            }))}
-            onChange={([value]) => {
-              if (!isDirectoryRadius(value))
-                throw new Error('Unknown directory radius');
-              setParams((current) => ({
-                ...current,
-                pageNum: 1,
-                radius: value,
-              }));
-            }}
-          />
-          <FilterMenu
             label="Sort"
+            appearance="surface"
             single
+            defaultValue="relevance"
             selected={[sort]}
             options={SORTS.map((option) => ({
               ...option,

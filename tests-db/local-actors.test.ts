@@ -9,6 +9,7 @@ import * as schema from '@/lib/schema';
 const pg = new PGlite();
 const db = drizzle(pg, { schema });
 const domain = 'current.invalid';
+const PUBLIC = 'https://www.w3.org/ns/activitystreams#Public';
 const actorUri = (username: string, host = domain) =>
   `https://${host}/p/${username}`;
 let signedIn = true;
@@ -16,6 +17,7 @@ let signedInUserId = 'viewer-account';
 let actors: typeof import('@/lib/federation/wrappers/actor');
 let follows: typeof import('@/lib/federation/wrappers/follow');
 let blocks: typeof import('@/lib/federation/wrappers/block-filter');
+let timeline: typeof import('@/lib/federation/wrappers/timeline');
 
 mock.module(import.meta.resolve('../lib/db.ts'), {
   namedExports: { db },
@@ -45,6 +47,9 @@ mock.module(import.meta.resolve('../lib/federation/index.ts'), {
     getActorByScreenname: (
       ...args: Parameters<typeof actors.getActorByScreenname>
     ) => actors.getActorByScreenname(...args),
+    getActorPostCount: (
+      ...args: Parameters<typeof timeline.getActorPostCount>
+    ) => timeline.getActorPostCount(...args),
     createFollow: (...args: Parameters<typeof follows.createFollow>) =>
       follows.createFollow(...args),
     deleteFollow: (...args: Parameters<typeof follows.deleteFollow>) =>
@@ -74,6 +79,9 @@ before(async () => {
     schema.users,
     schema.profiles,
     schema.socialActors,
+    schema.socialStatuses,
+    schema.socialGroups,
+    schema.socialGroupMembers,
     schema.socialFollows,
     schema.socialBlocks,
     schema.notifications,
@@ -88,6 +96,7 @@ before(async () => {
   actors = await import('@/lib/federation/wrappers/actor');
   follows = await import('@/lib/federation/wrappers/follow');
   blocks = await import('@/lib/federation/wrappers/block-filter');
+  timeline = await import('@/lib/federation/wrappers/timeline');
   actorRoute = await import('../app/api/social/actors/[username]/route');
   followRoute =
     await import('../app/api/social/actors/[username]/follow/route');
@@ -104,6 +113,9 @@ beforeEach(async () => {
   await db.delete(schema.notifications);
   await db.delete(schema.socialBlocks);
   await db.delete(schema.socialFollows);
+  await db.delete(schema.socialStatuses);
+  await db.delete(schema.socialGroupMembers);
+  await db.delete(schema.socialGroups);
   await db.delete(schema.socialActors);
   await db.delete(schema.profiles);
   await db.delete(schema.users);
@@ -224,6 +236,38 @@ test('the profile actor API returns a legacy identity without its signing key', 
   assert.equal(data.actor.uri, actorUri('legacy', 'legacy.invalid'));
   assert.equal(data.isSelf, false);
   assert.equal('privateKey' in data.actor, false);
+});
+
+test('profile post counts exclude existing DMs and match the visible wall', async () => {
+  await db
+    .update(schema.socialActors)
+    .set({ statusCount: 3 })
+    .where(eq(schema.socialActors.id, 'legacy'));
+  await db.insert(schema.socialStatuses).values(
+    [
+      { id: 'wall_post', recipientTo: [PUBLIC] },
+      { id: 'wall_dm', recipientTo: [actorUri('viewer')] },
+      {
+        id: 'wall_reply',
+        recipientTo: [PUBLIC],
+        inReplyToId: 'wall_post',
+      },
+    ].map((row) => ({
+      actorId: 'legacy',
+      uri: `https://legacy.invalid/status/${row.id}`,
+      type: 'Note',
+      published: new Date('2026-01-01'),
+      recipientCc: [],
+      ...row,
+    }))
+  );
+
+  for (const authenticated of [true, false]) {
+    signedIn = authenticated;
+    const response = await actorRoute.GET(request(), params());
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).data.actor.statusCount, 1);
+  }
 });
 
 test('a new local member can follow a legacy member through the actual API', async () => {

@@ -146,7 +146,7 @@ describe('info site content', () => {
       { id: 'events', href: '/e' },
       { id: 'connectors', href: '/connectors' },
       { id: 'listing', href: '/form/get-listed' },
-      { id: 'support', href: '/donate' },
+      { id: 'support', href: '/support-pana' },
     ]);
   });
 
@@ -158,6 +158,19 @@ describe('info site content', () => {
       );
     }
     assert.deepEqual(keys(en).sort(), keys(es).sort());
+  });
+
+  test('preserves the printed zine QR URL with a permanent redirect', async () => {
+    assert.ok(nextConfig.redirects);
+    const redirects = await nextConfig.redirects();
+    assert.deepEqual(
+      redirects.find((entry) => entry.source === '/linkedin-bio'),
+      {
+        source: '/linkedin-bio',
+        destination: '/info',
+        permanent: true,
+      }
+    );
   });
 
   test('preserves the old newsletter signup URL with a permanent redirect', async () => {

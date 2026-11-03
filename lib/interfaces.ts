@@ -8,9 +8,11 @@ export interface PronounsInterface {
 }
 
 export interface ProfileStatusInterface {
-  submitted?: Date;
-  approved?: Date;
-  published?: Date;
+  submitted?: Date | string;
+  approved?: Date | string;
+  published?: Date | string;
+  declined?: Date | string;
+  source?: string;
   notes?: string;
 }
 
@@ -130,10 +132,11 @@ export interface ProfileInterface {
   /** Hex x-only Nostr pubkey, set once the profile completes relay enrollment. */
   nostrPubkey?: string;
   active?: boolean;
+  lastReviewedAt?: string | null;
   /**
-   * True when the business has no location to visit. Suppresses distance on
-   * the public profile and in directory search. Owner-set; never inferred
-   * from a missing address.
+   * True for an online business without a public storefront. Suppresses exact
+   * distance and directions; the directory may show its approximate base ZIP.
+   * Owner-set, never inferred from a missing street address.
    */
   online_only?: boolean;
   /** Drizzle/raw schema name — present when the API returns the unmapped row. */
@@ -141,6 +144,8 @@ export interface ProfileInterface {
   status?: ProfileStatusInterface;
   locally_based: string;
   details: string;
+  /** Raw JSONB returned by the owner-scoped profile API. */
+  descriptions?: ProfileDescriptions;
   background?: string;
   hearaboutus?: string;
   affiliate?: string;

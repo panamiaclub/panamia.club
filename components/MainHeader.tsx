@@ -1,6 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+} from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useSession } from '@/lib/auth-client';
 import Link from 'next/link';
@@ -33,13 +40,13 @@ const NAV_ITEMS: NavItemDefinition[] = [
     labelKey: 'nav.siteMenu.aboutPana',
     href: '/about-us',
     children: [
-      { labelKey: 'nav.siteMenu.ourStory', href: '/about-us#our-story' },
+      { labelKey: 'nav.siteMenu.ourStory', href: '/about-us/our-story' },
       {
         labelKey: 'nav.siteMenu.meetTheTeam',
-        href: '/about-us#meet-the-team',
+        href: '/about-us/meet-the-team',
       },
-      { labelKey: 'nav.siteMenu.whyLocal', href: '/about-us#why-local' },
-      { labelKey: 'nav.siteMenu.pillars', href: '/about-us#pillars' },
+      { labelKey: 'nav.siteMenu.whyLocal', href: '/about-us/why-local' },
+      { labelKey: 'nav.siteMenu.pillars', href: '/about-us/pillars' },
     ],
   },
   {
@@ -148,6 +155,25 @@ const NAV_ITEMS: NavItemDefinition[] = [
   { labelKey: 'nav.siteMenu.shop', href: '/shop' },
 ];
 
+function scrollToCurrentAboutSection(event: MouseEvent<HTMLAnchorElement>) {
+  const { pathname } = event.currentTarget;
+  if (
+    pathname !== window.location.pathname ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  document
+    .getElementById(pathname.slice('/about-us/'.length))
+    ?.scrollIntoView({ behavior: 'instant', block: 'start' });
+}
+
 export default function MainHeader({
   isProductionSite,
 }: {
@@ -158,11 +184,40 @@ export default function MainHeader({
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const isShopRoute = pathname === '/shop' || pathname.startsWith('/shop/');
-  const showDirectoryJoin = pathname === '/' || pathname === '/mock/home';
+  const showDirectoryJoin =
+    pathname === '/' ||
+    pathname === '/mock/home' ||
+    pathname === '/mock/welcome-footer';
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+  const mastheadRef = useRef<HTMLDivElement>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+
+  useEffect(() => {
+    const masthead = mastheadRef.current;
+    if (!masthead) return;
+
+    const root = document.documentElement;
+    const publishOffset = () => {
+      const top = parseFloat(getComputedStyle(masthead).top);
+      root.style.setProperty(
+        '--main-masthead-offset',
+        `${masthead.getBoundingClientRect().height + top}px`
+      );
+    };
+
+    publishOffset();
+    const observer = new ResizeObserver(publishOffset);
+    observer.observe(masthead, { box: 'border-box' });
+    window.addEventListener('resize', publishOffset);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', publishOffset);
+      root.style.removeProperty('--main-masthead-offset');
+    };
+  }, []);
 
   // The public site menu is identical for every visitor. Account destinations
   // remain in the identity menu rather than changing this list after sign-in.
@@ -177,6 +232,9 @@ export default function MainHeader({
         collapseLabel: t('nav.collapseSubmenu', {
           label: t(item.labelKey),
         }),
+        onSelect: item.href.startsWith('/about-us/')
+          ? scrollToCurrentAboutSection
+          : undefined,
         children: item.children?.map(translateItem),
       });
 
@@ -234,7 +292,7 @@ export default function MainHeader({
             </div>
           )}
         {/* Centered masthead: menu (left) · logo (center) · actions (right) */}
-        <div className={styles.masthead}>
+        <div ref={mastheadRef} className={styles.masthead}>
           <div className={styles.mastheadInner}>
             <div className={styles.mastheadLeft}>
               <button

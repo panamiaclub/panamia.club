@@ -12,6 +12,8 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Public listing destinations](#public-listing-destinations)
+- [Online base ZIPs](#online-base-zips)
 - [How Search Works Today](#how-search-works-today)
 - [Measured Failures](#measured-failures)
 - [Why It Is Like This](#why-it-is-like-this)
@@ -50,6 +52,80 @@ The required extensions are already available on the database — they are simpl
 - Searching events, articles, or pana social posts — profiles only, for now
 
 ---
+
+## Public listing destinations
+
+Approved listings are browsable before claiming: search cards, map selections,
+native cards, featured feed entries, and recommendation lists use `/p/{handle}`
+when available or `/listings/{profileId}` otherwise. Claim actions are separate
+from browsing, and ownership badges use actual `profile_owners` / `userId`
+links rather than guessing from a screenname. Pending and withdrawn listings
+remain unavailable publicly.
+
+## Online base ZIPs
+
+Online listings declare a required five-digit US **base ZIP**, independently
+of any delivery, shipping, or service area. Intake and location editing resolve
+an approximate ZIP point and store it in `profiles.geo.zipArea`; exact street
+coordinates are never used for an online map marker.
+
+`getSearch()` includes online listings in finite-radius and nearest discovery
+using that coarse ZIP point. An older online listing can resolve an existing
+valid ZIP, but never falls back to its old address coordinates. Missing or
+unavailable ZIP locations remain discoverable in All-areas mode with explicit
+map-unavailable messaging.
+
+Listings with an existing valid US ZIP but no exact public coordinates can
+also use that cached ZIP-area lookup. Their `zip_area` is separate from exact
+`geo.coordinates` and from an online-only listing's `online_zip`: lookup does
+not update the profile, infer a ZIP, or change its online-only status. Dashed
+photo pins, accessible names, previews, and cards explicitly label these as
+**approximate ZIP areas**, not exact business addresses. Approximate locations
+participate in radius/nearest discovery without displaying an exact-distance
+claim on the card.
+
+Web and native directory browsing request `v=map` with the active search,
+category, sort, certification, event, and legacy mentoring filters, independently
+of old list pagination. They always send `radius=all`: the visible map viewport
+is the geographic filter, not a second finite-distance restriction. Old directory
+links containing any `radius` value are ignored and, on the web, normalized out
+of the URL. The API still supports explicit finite radii for other consumers.
+`data` contains the complete mappable collection; `map.unmappedResults` contains
+every matching unlocated listing, retaining global `result_index` values.
+The map request's `mapVersion=2` cache namespace avoids reusing older
+browser/edge responses that do not contain the unlocated collection.
+The first list section, **In map**, uses actual MapLibre bounds, including
+pan/zoom, initial framing, and map resizing. **Online** remains below it for
+unlocated matches; this is a presentation label, not a claim about services or
+`profiles.onlineOnly`. Known locations outside the viewport never move into
+Online. Before a hidden map is measured, or if WebGL is unavailable, the list
+retains all mappable matches rather than guessing a viewport.
+
+**Use my location** centers the directory map on the viewer's area and defaults
+to nearest sorting unless a sort was explicitly chosen. The initial five-mile
+camera span is only a starting view: panning or zooming beyond it still discovers
+eligible businesses, and unlocated matches remain in Online. Exact viewer
+coordinates stay in the browser; requests use only two-decimal coordinates for
+ordering. Location permission is still requested only after an explicit click.
+Directory Category/Sort menus opt in to the masthead's cream surface primitives;
+other shared FilterMenu callers retain their existing appearance.
+
+Signed-in save/ownership state is fetched for the complete matching collection
+in bounded 60-ID batches, preserving the existing signals endpoint limit.
+Viewport changes do not refetch that viewer-specific collection.
+
+Individual directory pins show only a business photo/fallback and retain
+selection and accessible labels. Selecting a business opens/selects its card
+without changing map center or zoom or navigating to a list page. The full
+map query and intentional search/filter framing never depend on the
+viewport-filtered list. Events retain their existing shared-map behavior.
+
+Online-only businesses still share one globe bubble per base ZIP, never a
+private street point. Selecting a ZIP focuses the corresponding In map
+collection without removing the Online section or moving the camera. It does
+not generate directions or imply that delivery or pickup is offered. Postal
+coordinates come from GeoNames through Zippopotam.us, are attributed under
+CC BY 4.0, and are cached for 30 days.
 
 ## How Search Worked Before Phase 1
 

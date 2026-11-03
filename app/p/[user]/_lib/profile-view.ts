@@ -9,6 +9,7 @@
  *
  * Everything in this module is pure. The database work happens in page.tsx.
  */
+import { normalizeUsZip } from '@/lib/online-zip';
 
 import type { LegacyProfile } from '@/lib/server/profile';
 import type { ProfileSocialsInterface } from '@/lib/interfaces';
@@ -50,14 +51,13 @@ export interface ProfileView {
   region: string | null;
   coords: Coords | null;
   /**
-   * True when the business has nowhere to visit.
-   *
-   * Distinct from `coords === null`, which only means we do not know where it
-   * is — a storefront mid-onboarding, or an address that failed to geocode.
-   * Those should still offer a distance once their address lands. This says
-   * the question does not apply at all.
+   * Online business without a public storefront. Exact street distance and
+   * directions are suppressed; local discovery can use the public base ZIP.
+   * Never inferred from missing coordinates on an unfinished storefront.
    */
   onlineOnly: boolean;
+  /** Public five-digit base ZIP for an online business, when provided. */
+  baseZip?: string | null;
   certified: boolean;
   categories: string[];
   links: ProfileLink[];
@@ -229,11 +229,17 @@ export function toProfileView(
     city: clean(profile.primary_address?.city),
     region: clean(profile.primary_address?.state),
     coords:
-      Array.isArray(coordinates) && coordinates.length >= 2
+      profile.onlineOnly !== true &&
+      Array.isArray(coordinates) &&
+      coordinates.length >= 2
         ? { lng: coordinates[0], lat: coordinates[1] }
         : null,
     certified: profile.panaCertifiedAt != null,
     onlineOnly: profile.onlineOnly === true,
+    baseZip:
+      profile.onlineOnly === true
+        ? normalizeUsZip(profile.primary_address?.zipcode)
+        : null,
     categories: buildCategories(profile.categories),
     links: buildLinks(profile.socials),
     gallery,

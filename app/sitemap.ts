@@ -4,6 +4,7 @@ import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
 import { PANA_OFFERINGS } from '@/lib/panaverse/offerings';
 import { getInfoCanonicalUrl } from '@/lib/info-site';
+import { listingPublicPath } from '@/lib/listing-url';
 
 type SitemapEntry = {
   url: string;
@@ -41,7 +42,7 @@ const STATIC_ROUTES: SitemapEntry[] = [
   // that resolves to a different URL than the one submitted. `/directory` is
   // a real page now and is in `OFFERING_ROUTES` above, so the redirect no
   // longer needs to stand in for it.
-  { url: `${SITE_URL}/donate`, changeFrequency: 'monthly' },
+  { url: `${SITE_URL}/support-pana`, changeFrequency: 'monthly' },
   { url: `${SITE_URL}/shop`, changeFrequency: 'weekly', priority: 0.8 },
   { url: `${SITE_URL}/podcasts`, changeFrequency: 'weekly' },
   { url: `${SITE_URL}/m/discover`, changeFrequency: 'weekly' },
@@ -65,6 +66,7 @@ export default async function sitemap(): Promise<SitemapEntry[]> {
     }),
     db
       .select({
+        id: profiles.id,
         screenname: sql<
           string | null
         >`COALESCE(${profiles.screenname}, ${users.screenname})`,
@@ -82,7 +84,6 @@ export default async function sitemap(): Promise<SitemapEntry[]> {
       .leftJoin(users, eq(profiles.userId, users.id))
       .where(
         and(
-          sql`COALESCE(${profiles.screenname}, ${users.screenname}) IS NOT NULL`,
           // Also the gate on unapproved submissions: /form/get-listed
           // writes active: false until a human approves it, and
           // delete-account's tombstone clears it. Not merely a liveness check.
@@ -107,7 +108,7 @@ export default async function sitemap(): Promise<SitemapEntry[]> {
   }));
 
   const profileRoutes: SitemapEntry[] = publicProfiles.map((p) => ({
-    url: `${SITE_URL}/p/${p.screenname}`,
+    url: new URL(listingPublicPath(p), SITE_URL).toString(),
     lastModified: p.updatedAt ?? undefined,
     changeFrequency: 'monthly',
     priority: 0.6,

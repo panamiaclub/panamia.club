@@ -85,7 +85,9 @@ export default function GlobalFooter() {
                 <Link href="/support-pana">{t('footer.supportPana')}</Link>
               </li>
               <li>
-                <Link href="/donate">{t('footer.donate')}</Link>
+                <Link href="/support-pana#giving-form">
+                  {t('footer.donate')}
+                </Link>
               </li>
               <li>
                 <Link href="/form/join-the-team">

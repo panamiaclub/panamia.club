@@ -18,7 +18,7 @@ This document cross-references every platform module by its URL namespace, matur
 | `/r`        | **Resilience**    | Community Nostr relay: keypair enrollment, NIP-29 groups, NIP-05  |    2     | [RESILIENCE-ROADMAP.md](RESILIENCE-ROADMAP.md) · [RELAY-ABUSE-REPORTS-ROADMAP.MD](RELAY-ABUSE-REPORTS-ROADMAP.MD) |
 | `/account`  | **Account**       | Authenticated user hub: settings, profile editor, article history |    3     | [SIGNIN.md](SIGNIN.md)                                                                                            |
 | `/admin`    | **Admin**         | Staff tools: moderation, user management, analytics, metrics      |    2     | —                                                                                                                 |
-| `/donate`   | **Donations**     | Stripe-powered fundraising with membership tiers                  |    2     | —                                                                                                                 |
+| `/support-pana` | **Donations** | Stripe-powered fundraising, giving circle, and sponsorship        |    2     | —                                                                                                                 |
 | `/form`     | **Forms**         | Onboarding flows: get-listed, contact, affiliate, join-team       |    2     | —                                                                                                                 |
 | `/signin`   | **Auth**          | Passwordless sign-in: magic link, Google, Apple, Mastodon OAuth   |    2     | [SIGNIN.md](SIGNIN.md)                                                                                            |
 | `/links`    | **Link Hub**      | Centralised link page for social sharing                          |    2     | —                                                                                                                 |
@@ -48,6 +48,7 @@ This document cross-references every platform module by its URL namespace, matur
 - **`/e`** — reserved for Events; not yet implemented.
 - **`/r`** — Resilience Network; the relay itself is a standalone Worker consumed over a Service Binding, so only the enrollment and group-management surface lives here.
 - **`/admin`** — admin routes; served under `admin.pana.social`, which redirects `/` to `/admin`. Legacy `/account/admin/*` paths redirect here. Tool list in `lib/admin/views.ts`.
+- **`/support-pana`** — canonical giving page; `/donate` permanently redirects here and preserves checkout return parameters.
 
 ---
 

@@ -13,6 +13,7 @@ import {
   sql,
 } from 'drizzle-orm';
 import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
+import { listingPublicPath } from '@/lib/listing-url';
 import { scopesToSearch, type Scope } from '@/lib/directory-scopes';
 import {
   SUGGEST_LIMIT,
@@ -162,9 +163,6 @@ async function suggestDirectory(term: string): Promise<Suggestion[]> {
         // Also the gate on unapproved submissions: intake writes
         // active: false, so nothing reaches the typeahead until it is live.
         eq(profiles.active, true),
-        // A suggestion navigates to /p/[handle], so a profile with no handle
-        // on either side has nowhere to go.
-        sql`COALESCE(${profiles.screenname}, ${users.screenname}) IS NOT NULL`,
         // Personal accounts are panas, and are suggested as panas below — to
         // signed-in visitors only. A listing with no user carries no account
         // type to test and is a listing by definition, the same reasoning
@@ -189,7 +187,7 @@ async function suggestDirectory(term: string): Promise<Suggestion[]> {
     name: row.name,
     subtitle:
       [row.fiveWords, row.addressLocality].filter(Boolean).join(' · ') || null,
-    href: `/p/${row.screenname}`,
+    href: listingPublicPath(row),
     imageUrl: row.primaryImageCdn,
   }));
 }

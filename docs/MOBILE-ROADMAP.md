@@ -101,8 +101,8 @@ in the system browser, outside the app's cookie store, and three things break:
 | App Links / Universal Links native side | Done (manifest + entitlements)                                     |
 | App icons and splash images             | Generated from `mobile/assets/` (see below)                        |
 | Built or run on a device                | **Not yet** — but both platforms compile in CI                     |
-| CI builds both platforms                | Configured; this iOS change still requires a macOS workflow run     |
-| Signing, store listings                 | Android + iOS tooling ready; credentials/listings pending           |
+| CI builds both platforms                | Configured; this iOS change still requires a macOS workflow run    |
+| Signing, store listings                 | Android + iOS tooling ready; credentials/listings pending          |
 | Authentication                          | Android native Google + in-app email-link handoff; iOS email links |
 | Story photo/video camera                | Implemented; device testing pending                                |
 | Directory-first native navigation       | Implemented in web code; device testing pending                    |
@@ -134,6 +134,11 @@ links keep their destinations. Visited browsing panes remain mounted behind
 detail pages so returning restores their state. Private queries are scoped to
 the active identity, and changing accounts clears the shared query cache.
 
+The account menu keeps **About Pana** immediately above **Sign Out** in its
+pinned footer. It opens `https://panamia.club/` in a new browser tab on the web,
+or through the existing `@capacitor/browser` plugin on Android and iOS, outside
+the app's WebView. A failed native browser launch shows a localized error.
+
 Event saves require `drizzle/0073_event_bookmarks.sql` **before deploying the
 updated Worker**. They are private, profile-scoped, idempotent bookmarks, not
 RSVPs: saving never changes attendance. Account deletion explicitly removes
@@ -156,8 +161,8 @@ yarn test native-app.spec.ts --project=chromium
 
 The browser command uses the repository's normal configured development server.
 It covers the native/browser gate, real detail URLs, measured card visibility,
-independent maps, Community, private saves, Back priority, and stopping camera
-and microphone tracks when Social becomes inactive.
+independent maps, Community, private saves, account-menu browser links, Back
+priority, and stopping camera and microphone tracks when Social becomes inactive.
 
 ---
 
@@ -367,9 +372,9 @@ project would rot silently between releases. **GitHub's macOS runners are free
 for public repositories**, which is what makes this free to run — no Mac to buy,
 no Apple Developer account required.
 
-| Job     | Runner          | Produces                                    |
-| ------- | --------------- | ------------------------------------------- |
-| Android | `ubuntu-latest` | Unsigned debug APK, uploaded as an artifact |
+| Job     | Runner          | Produces                                                        |
+| ------- | --------------- | --------------------------------------------------------------- |
+| Android | `ubuntu-latest` | Unsigned debug APK, uploaded as an artifact                     |
 | iOS     | `macos-latest`  | Simulator + unsigned device Release archive (verification only) |
 
 Neither job takes a single secret, which is deliberate — it means both run on
@@ -545,7 +550,8 @@ Push is the highest-value next step for the product regardless of review.
 
 ### Apple guideline 3.2.1(vi) — donations
 
-`/donate` collects money inside the app. Apple only permits that for an
+`/support-pana` (also reached through the legacy `/donate` redirect) collects
+money inside the app. Apple only permits that for an
 approved nonprofit; nonprofit registration alone does not satisfy Apple's
 approval process. Until approval is confirmed, the iOS app must not expose the
 donation flow inside the WebView. Fundraising must remain outside the app, such
@@ -563,8 +569,8 @@ The canonical production domain is moving to `panamia.club`. Complete that
 migration before device and store-review testing so the app, donation return
 URLs, deep links, and public disclosures consistently use the same domain.
 
-**Current iOS behavior:** `/donate` shows an informational screen instead of a
-checkout form. In-app fundraising remains disabled until Apple nonprofit approval
+**Current iOS behavior:** `/support-pana` and its legacy `/donate` redirect show
+an informational screen instead of a checkout form. In-app fundraising remains disabled until Apple nonprofit approval
 is documented and accurate fund-use disclosure and tax-receipt behavior are
 implemented. Web and Android donation behavior is unchanged.
 
@@ -600,8 +606,9 @@ Apple references:
    and verify deep links end to end. The release workflow is ready after the
    Play service account has been granted access.
 4. **Complete Apple's nonprofit approval and donation compliance work.** Do not
-   enable `/donate` in the iOS app until approval is confirmed, fund use is
-   disclosed in-app, and tax-receipt behavior is implemented and verified.
+   enable `/support-pana` or its `/donate` alias in the iOS app until approval
+   is confirmed, fund use is disclosed in-app, and tax-receipt behavior is
+   implemented and verified.
 5. **Finish the `panamia.club` domain migration** before validating donation
    return URLs, deep links, and store-review disclosures on devices.
 6. **Push notifications** — the strongest answer to guideline 4.2 and the

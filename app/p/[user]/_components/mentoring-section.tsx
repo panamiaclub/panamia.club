@@ -14,9 +14,14 @@ interface MentoringSectionProps {
     hourlyRate?: number;
   };
   handle: string;
+  preview?: boolean;
 }
 
-export function MentoringSection({ mentoring, handle }: MentoringSectionProps) {
+export function MentoringSection({
+  mentoring,
+  handle,
+  preview = false,
+}: MentoringSectionProps) {
   return (
     <div className="space-y-4">
       {/* Mentoring Badge & CTA */}
@@ -31,7 +36,7 @@ export function MentoringSection({ mentoring, handle }: MentoringSectionProps) {
                   : `$${mentoring.hourlyRate}/hour`}
               </span>
             </div>
-            <BookSessionButton handle={handle} />
+            {!preview && <BookSessionButton handle={handle} />}
           </div>
         </CardContent>
       </Card>

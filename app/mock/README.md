@@ -11,7 +11,9 @@ layout only works with invented spacing or colours that are not in
 
 | Route                     | Description                                                                       |
 | ------------------------- | --------------------------------------------------------------------------------- |
-| `/mock/home`              | Homepage cut to four cards, built from the Connectors deck                        |
+| `/mock/home`              | Shared live homepage with three collapsed welcome cards and a density control    |
+| `/mock/welcome-footer`    | Web-only, first-visit welcome footer over the actual homepage                     |
+| `/mock/donate`            | Community-giving story with an interactive one-time/monthly donation preview      |
 | `/mock/profile`           | Personal profile page (pana page) redesign                                        |
 | `/mock/profile-next`      | Pana page, second pass: identity rail left, tabbed content right                  |
 | `/mock/feed`              | Pana Social feed redesign, including the empty feed                               |
@@ -21,12 +23,135 @@ layout only works with invented spacing or colours that are not in
 | `/mock/settings`          | Account settings — one page, either masthead                                      |
 | `/mock/directory`         | Directory search results, pre-map                                                 |
 | `/mock/directory-unified` | One directory theme across businesses, panas, groups and events                   |
+| `/mock/directory-online`  | Online base-ZIP map bubbles, grouped results, and public-location choices         |
 | `/mock/explore`           | Scope moved into the search bar; directory narrowed to businesses                 |
 | `/mock/groups`            | Groups landing and discover, as two steps of one flow                             |
 | `/mock/dms`               | Direct messages, as two competing models behind one switch                        |
 | `/mock/dm-chat`           | Interactive Messages workspace: desktop panes, mobile list/chat, drafts and retry |
 | `/mock/events`            | Events discovery: lanes that say why, not facets to narrow with                   |
 | `/mock/events/host`       | Host an event: the form, answering to the page it feeds                           |
+
+## Homepage preview
+
+`/mock/home` and `/` render the same homepage sections and styles. The three
+Welcome Pana cards are **What is Pana?**, **Why 'The Future is Local'?**, and
+**Why was Pana MIA started?**. Each starts with a photo or map, its question,
+and a short preview; its disclosure contains the complete copy. Close or
+Escape restores focus to the opening control. The phone rail has next/previous
+controls and retains the same three-card order.
+
+English and Spanish copy lives under `beats` in the home locale. About Us
+retains its separate local-movement section through `useLocalMovementBeat`;
+it does not depend on the homepage keeping a fourth card.
+
+## First-visit welcome footer
+
+`/mock/welcome-footer` previews the same compact, non-modal account prompt
+that the main web homepage ships, using `components/home/welcome-footer.tsx`.
+**Create a Pana account** is its only signup action and opens the existing
+passwordless sign-in page. Directory and newsletter promotions are omitted;
+the preview submits nothing. Its `pana:welcome-footer:mock:v1` browser
+preference is separate from the live homepage's `pana:welcome-footer:v1`, so
+reviewing the mock cannot consume a visitor's real first-time welcome.
+
+The prompt appears on the first anonymous visit in a browser. Later visits
+show only a small **Sign up** bookmark at the bottom-left, even if the visitor
+reloads before collapsing the prompt. Its
+`pana:welcome-footer:mock:v1` local-storage key is isolated from real onboarding.
+One persistent bookmark is the only toggle. It sits on the footer's upper-left
+edge and says **Hide** while the prompt is open; after hiding, it returns to
+the bottom-left and says **Sign up**. There is no separate Collapse button,
+full-width collapsed strip, or leftover bottom padding. Clicking **Sign up**
+reopens the same account prompt. Escape inside the prompt also hides it.
+Keyboard focus moves to the bookmark on hiding and to the account action
+on reopening.
+
+The homepage keeps its original hero and city dimensions. The compact bar
+overlays the town's lower edge rather than shortening or resizing the scene.
+Their combined height adds clearance only at the document's end so the real
+footer links remain reachable; hiding or navigation removes that clearance.
+The bookmark itself reserves no height and does not resize the town.
+
+On short screens, the prompt waits until it can fit below the search with a
+16px gap and below the sticky masthead. A manual reopen scrolls only as much
+as needed to clear the search when space is tight. The existing floating
+bug report control sits beside the prompt rather than covering signup.
+The native Capacitor app and signed-in members never mount the
+panel or bookmark, or record a mock visit. Mobile web browsers can preview the responsive
+layout; this is not native mobile onboarding.
+
+## Donation preview
+
+`/mock/donate` adapts the storytelling structure of
+[Miami Waterkeeper's A.N.C.H.O.R. page](https://miamiwaterkeeper.org/anchor-program/)
+and the frequency/amount controls of its
+[giving form](https://secure.qgiv.com/for/donatemain), using Pana MIA's existing
+palette, community photography, and original copy. The approved design is now
+live at `/support-pana`, with `/donate` permanently redirecting there. Both
+the live page and this mock render
+`components/donations/donation-experience.tsx` and its shared stylesheet, so the
+mock cannot drift from the live page. Only preview labels, the checkout action,
+and payment-related explanations differ. The live page also preserves Support
+Pana's section navigation and sponsorship content. `#giving-circle` opens the
+monthly levels, and `#sponsorship` retains the sponsorship contact options.
+
+One-time and monthly selections have separate, browser-local drafts. Presets
+come from `lib/donations.ts`, including **dePana ($10)**, **Pana Confiado
+($15)**, and **Pana Real ($25)** per month. The lower monthly cards select the
+matching gift and return to the form. Custom USD amounts are validated without
+rounding: $0.50 through $999,999.99, with at most two decimal places. Annual
+totals and the selected monthly level are derived from that same amount.
+
+In the mock, the optional purpose and note fields take sample text only.
+**Continue to preview** opens an accessible summary with explicit one-time or recurring
+language and a Stripe Checkout stand-in, not a success screen. No checkout
+request, payment fields, account lookup, or browser storage is used by the
+mock; all choices reset on reload. No fee-covering policy, new rewards, tax
+receipt language, or quantified impact claims are proposed here.
+Giving controls remain disabled until the client is ready; with JavaScript
+off, the page explains that the interactive preview cannot run rather than
+submitting a native form. The link to the live donation page does not prefetch
+that real route.
+
+The live **Continue to checkout** action calls `/api/create-checkout-session`,
+then opens Stripe's hosted payment page. Email and payment details are collected
+by Stripe, without adding those fields to the approved design. Checkout errors
+are shown in the form, and pending submissions disable the controls. A canceled
+checkout restores the validated amount and frequency from its `/support-pana`
+return URL; old `/donate` return URLs preserve those values through a redirect.
+Notes and email are never put in that URL. Native app donations remain one-time
+and mission-only, without the monthly controls or membership section.
+
+Stripe's one-time gifts use
+`mode: 'payment'`; monthly gifts use `mode: 'subscription'` and a monthly
+recurring price. Amounts and optional metadata are validated on the server,
+and membership tiers are derived there rather than trusted from the browser.
+Existing donor receipt and subscription-management processes are unchanged;
+this change does not add donation webhooks, account entitlements, or a new
+Customer Portal.
+
+## Online businesses on the map
+
+`/mock/directory-online` is an interactive, fixture-only location proposal.
+Hollow globe bubbles group online businesses by their required base ZIP,
+not storefront coordinates or delivery zones. Tap **33138 (2)** or **33301 (1)**
+to show that ZIP's matches in the existing results list; on phones,
+the view moves to those results. **Show all** restores the search, and storefront
+pins remain on the map while a ZIP group is focused. Choosing a business
+expands its existing result card without inventing a visiting address, delivery
+coverage, or distance. No business preview floats over the map, and there
+is no separate online panel or permanent preview card.
+
+**Sello Press** serves anywhere but still has a base in ZIP **33138**, sharing
+that bubble with Casa Digital. The search, area, and connection-type filters update bubble membership
+and counts from the same fixtures; an online-only search works with zero
+storefront pins. Each online business has one base ZIP, independent of the
+counties it serves. Mobile/appointment-based and
+location-not-provided fixtures stay distinct from online businesses.
+**View profile** opens a local fixture preview, not an invented live profile
+URL. The backdrop and businesses are illustrative; ZIP points come from
+GeoNames through Zippopotam.us and are attributed under CC BY 4.0. Nothing in
+this mock writes to the real directory.
 
 ## Viewing the Pana Social surface
 

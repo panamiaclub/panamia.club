@@ -29,6 +29,7 @@ export interface SendOptions {
   // Reply-To header. Used by staff notifications so that hitting reply reaches
   // the person who wrote in rather than the shared sending address.
   replyTo?: string;
+  requireDelivery?: boolean;
 }
 
 export interface CloudflareEmailEnv {
@@ -68,6 +69,11 @@ export async function sendEmail(
   options?: SendOptions
 ): Promise<void> {
   if (isDevMode()) {
+    if (options?.requireDelivery) {
+      throw new Error(
+        'Real email delivery is disabled; the reminder was not sent.'
+      );
+    }
     console.log(
       '[email:dev] to=%s subject=%s replyTo=%s',
       to,

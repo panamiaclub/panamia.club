@@ -154,17 +154,21 @@ test('iOS keeps email sign-in and never registers Android back or unsupported Go
   ).toBe(false);
 });
 
-test('iOS does not expose unapproved in-app fundraising', async ({ page }) => {
-  await ios(page);
-  await page.goto('/donate');
-  await expect(
-    page.getByText('Donations are not available inside the iOS app yet.')
-  ).toBeVisible();
-  await expect(page.locator('form')).toHaveCount(0);
-  await expect(
-    page.getByRole('link', { name: 'Back to Directory' })
-  ).toHaveAttribute('href', '/d');
-});
+for (const path of ['/donate', '/support-pana']) {
+  test(`iOS does not expose unapproved in-app fundraising at ${path}`, async ({
+    page,
+  }) => {
+    await ios(page);
+    await page.goto(path);
+    await expect(
+      page.getByText('Donations are not available inside the iOS app yet.')
+    ).toBeVisible();
+    await expect(page.locator('form')).toHaveCount(0);
+    await expect(
+      page.getByRole('link', { name: 'Back to Directory' })
+    ).toHaveAttribute('href', '/d');
+  });
+}
 
 test('iOS privacy settings expose the existing account-deletion flow', async ({
   page,

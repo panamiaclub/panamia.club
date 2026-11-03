@@ -60,7 +60,7 @@ const pathDefinitions: Array<Pick<InvolvementPath, 'id' | 'href' | 'icon'>> = [
   },
   {
     id: 'donate',
-    href: '/donate',
+    href: '/support-pana',
     icon: Heart,
   },
 ];

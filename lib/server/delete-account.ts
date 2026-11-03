@@ -45,6 +45,7 @@ import {
   relayGroupJoinPending,
   relayGroupLeavePending,
   relayGroupInvites,
+  billingCustomers,
 } from '@/lib/schema';
 import { applyDepartureRules } from '@/lib/relay/group-lifecycle';
 import { createId } from '@paralleldrive/cuid2';
@@ -52,6 +53,10 @@ import { deleteFile } from '@/lib/blob/api';
 import { revokeAllOAuthTokens } from '@/lib/oauth-revoke';
 import { signedHeaders } from '@/lib/federation/crypto/sign';
 import { GhlClient } from '@/lib/ghl';
+import {
+  deleteBillingCustomers,
+  getOwnedBillingCustomerIds,
+} from '@/lib/server/billing';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -817,19 +822,13 @@ export async function deleteAccount(
     // -------------------------------------------------------------------
 
     // Stripe
-    if (profile?.stripeCustomerId) {
+    if ((await getOwnedBillingCustomerIds(userId)).length > 0) {
       try {
         const Stripe = (await import('stripe')).default;
-        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '');
-        // Cancel active subscriptions
-        const subs = await stripe.subscriptions.list({
-          customer: profile.stripeCustomerId,
-          status: 'active',
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
+          httpClient: Stripe.createFetchHttpClient(),
         });
-        for (const sub of subs.data) {
-          await stripe.subscriptions.cancel(sub.id);
-        }
-        await stripe.customers.del(profile.stripeCustomerId);
+        await deleteBillingCustomers(stripe, userId);
         thirdPartyResults.stripe = true;
       } catch (error) {
         console.error('delete-account:stripe:error', error);
@@ -837,6 +836,16 @@ export async function deleteAccount(
         warnings.push('Stripe cleanup failed');
       }
     }
+    await safeDelete(
+      'billingCustomers',
+      () =>
+        db
+          .delete(billingCustomers)
+          .where(eq(billingCustomers.userId, userId))
+          .returning({ id: billingCustomers.stripeCustomerId }),
+      deletedTables,
+      warnings
+    );
 
     // GHL
     if (profile?.ghlContactId) {

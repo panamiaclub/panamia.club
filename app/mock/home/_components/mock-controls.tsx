@@ -19,10 +19,8 @@ const DENSITIES: { value: Density; label: string; hint: string }[] = [
 /**
  * Scaffolding, not design — same bar the other mocks carry.
  *
- * The page is signed-out and has no viewer states, so the bar carries two
- * things: a way to put this side by side with the page it is arguing
- * against, and the density switch, which is the one open question a reviewer
- * cannot answer by reading.
+ * The density switch compares the shared homepage's two spacing options
+ * without requiring database access.
  */
 export function MockControls({
   density,

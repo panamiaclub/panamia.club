@@ -2,10 +2,6 @@
 
 import { Crosshair, MapPin } from 'lucide-react';
 import type { LocationStatus } from '@/app/p/[user]/_lib/use-viewer-location';
-import {
-  directoryRadiusMiles,
-  type DirectoryRadius,
-} from '@/lib/directory-radius';
 import { DirectorySuggest } from '@/components/directory-suggest';
 import { ScopeMenuLive } from '@/components/scope-menu-live';
 
@@ -15,7 +11,6 @@ interface SearchBandProps {
   totalCount: number;
   loading: boolean;
   locationStatus: LocationStatus;
-  radius: DirectoryRadius;
   /** True only when the active sort is distance-based. */
   nearestFirst: boolean;
   onSearch: (term: string) => void;
@@ -52,13 +47,11 @@ export function SearchBand({
   totalCount,
   loading,
   locationStatus,
-  radius,
   nearestFirst,
   onSearch,
   onShareLocation,
 }: SearchBandProps) {
   const shared = locationStatus === 'granted';
-  const radiusMiles = directoryRadiusMiles(radius);
 
   return (
     <section className="dirsearch-band">
@@ -109,15 +102,7 @@ export function SearchBand({
                 <>
                   <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
                   <span>
-                    {radiusMiles === null ? (
-                      <>
-                        From <strong>your location</strong>
-                      </>
-                    ) : (
-                      <>
-                        Within <strong>{radiusMiles} miles</strong>
-                      </>
-                    )}
+                    From <strong>your location</strong>
                   </span>
                 </>
               ) : locationStatus === 'denied' ? (

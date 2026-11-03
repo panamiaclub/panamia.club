@@ -103,12 +103,49 @@ Community articles feature:
 
 ## Directory & Search
 
-| Endpoint                  | Method | Description           |
-| ------------------------- | ------ | --------------------- |
-| `/api/getDirectorySearch` | GET    | Search directory      |
-| `/api/getUsersByCategory` | GET    | Filter by category    |
-| `/api/getFeaturedPanas`   | GET    | Get featured profiles |
-| `/api/getProfile`         | GET    | Get public profile    |
+| Endpoint                  | Method | Description                                     |
+| ------------------------- | ------ | ----------------------------------------------- |
+| `/api/getDirectorySearch` | GET    | Search directory                                |
+| `/api/getUsersByCategory` | GET    | Filter by category                              |
+| `/api/getFeaturedPanas`   | GET    | Get featured profiles                           |
+| `/api/getProfile`         | GET    | Get the signed-in user's active managed profile |
+
+Approved directory listings have public pages at `/listings/{profileId}` even
+without a manager or screenname. Listings with a handle redirect to `/p/{handle}`;
+pending, declined, unknown, and personal profiles are not public by ID. The
+directory's `claimed` flag reflects actual ownership, not the presence of a
+handle. Ordinary browsing never leads to the claim flow; explicit claim actions
+remain separate. Public rendering passes only display fields to client components.
+
+### Online business base ZIPs
+
+`POST /api/listings/intake` accepts an explicit `onlineOnly` business choice.
+Online businesses must provide a valid US ZIP in `addressPostalCode`; ZIP+4 is
+normalized to five digits. A missing or unlocatable ZIP returns `400`, and a
+temporary lookup failure returns `503` before a listing is created.
+Storefront ZIPs remain optional and mobile/appointment-based listings are not
+silently classified as online.
+
+`POST /api/profile/saveAddress` enforces the same rule for `online_only: true`
+or an already-online profile, accepting both `zipcode` and `postalCode` address
+aliases. Online saves store only the base ZIP and its approximate locality,
+clearing street-address and exact-coordinate fields. The resolved location is
+kept in the existing `profiles.geo.zipArea` JSONB field; no migration is needed.
+
+Directory results expose this approximate location as `online_zip`, while
+`geo` is `null` for online businesses. Nearby searches use the ZIP area, not an
+old home coordinate. Web and native maps create nonempty ZIP groups from their
+current result page; a ZIP bubble is not a delivery-zone or pickup promise.
+Older online listings with a usable ZIP can resolve it without trusting their
+old street coordinates. Missing/unavailable locations stay discoverable in
+All-areas searches and are visibly reported as unplottable.
+
+ZIP lookup sends only the public five-digit code to
+[Zippopotam.us](https://api.zippopotam.us), not names, contact details, or street
+addresses. GeoNames data is attributed under
+[CC BY 4.0](https://www.geonames.org/about.html); lookups are cached for 30 days.
+The directory's existing five-minute public-response cache still applies to
+location edits.
 
 ## Map Tiles (`/api/map/*`)
 
@@ -221,26 +258,63 @@ Admin-only endpoints (require admin role):
 
 ## Forms & Submissions
 
-| Endpoint                        | Method | Description                   |
-| ------------------------------- | ------ | ----------------------------- |
-| `/api/createContactUs`          | POST   | Submit contact form           |
-| `/api/createSignup`             | POST   | Submit signup form            |
-| `/api/listings/intake`          | POST   | Submit a business listing     |
-| `/api/admin/contactSubmissions` | GET    | List contact submissions      |
-| `/api/admin/contactSubmissions` | PATCH  | Set contact submission status |
-| `/api/getSignupList`            | GET    | List signup requests          |
+| Endpoint                        | Method | Description                                 |
+| ------------------------------- | ------ | ------------------------------------------- |
+| `/api/createContactUs`          | POST   | Submit contact form                         |
+| `/api/createSignup`             | POST   | Submit signup form                          |
+| `/api/listings/intake`          | POST   | Submit a business listing                   |
+| `/api/listings/setup`           | GET    | Read the signed-in owner's setup invitation |
+| `/api/listings/setup`           | POST   | Confirm ownership and select the business   |
+| `/api/admin/contactSubmissions` | GET    | List contact submissions                    |
+| `/api/admin/contactSubmissions` | PATCH  | Set contact submission status               |
+| `/api/getSignupList`            | GET    | List signup requests                        |
 
-Directory intake accepts a listing contact `email` independently of account
-ownership. Signed-in applicants can explicitly set `manageWithPana: true` to
-manage the new listing with their existing account. Otherwise, optional
-`personalEmail` records an invitation and receives a sign-in link; omitting it
-leaves the listing unclaimed without creating an account. The two email
-addresses may match. A successful response includes `profileId`, `management`
-(`account`, `invitation`, or `unclaimed`), `invitationEmail`, and
-`invitationSent`, so the form does not promise an invitation email that failed.
-The form also sends `expectedManagerId` to reject a changed sign-in rather than
-silently assigning the listing to another account. Submission resends target
-`profileId` and require a listing manager or staff administrator.
+The current form sends `onboardingMode: "owner"`, required `accountEmail`,
+optional `contactEmail` (defaults to the account email), and `expectedOwnerId`
+(the signed-in account ID or `null` for a guest). Signed-in owners use their
+account email and automatically receive a `profile_owners` row; stale sessions,
+different account emails, and management opt-outs are rejected. Neither the
+personal profile nor `users.accountType` is replaced or changed.
+
+Guests save `pendingOwnerEmail` and receive one business-named `listing.setup`
+email instead of a separate submission receipt and generic sign-in invitation.
+If the business contact is different, it receives a submission receipt without
+the private sign-in link. A failed setup email falls back to ordinary receipts
+at both addresses, while preserving the saved invitation.
+The magic link signs in or creates the account and lands at
+`/listings/setup?profileId=...`. GET only previews the invitation for its intended
+recipient or existing manager. POST requires `profileId` and `expectedOwnerId`,
+explicitly confirms ownership, sets the HTTP-only active-profile cookie, and
+returns `/account/profile/edit`. The client reloads that destination so the
+header and dashboard use the same business. Email links also retain a permanent
+setup URL for recovery after the sign-in token expires.
+
+Responses include `profileId`, `management`, `invitationEmail`,
+`invitationSent`, `setupPath`, and `managementPath`. A delivery failure is
+reported without losing the saved application. Staff approval remains
+independent: intake saves `active: false`, and staff can publish before account
+setup is complete. Ownership is never automatically granted by ordinary sign-in.
+First claims through either setup invitations or legacy claim emails are
+serialized on the listing row; they cannot race into unintended co-ownership.
+
+Requests without the owner-flow marker retain the old `email`, optional
+`personalEmail`, `manageWithPana`, and `expectedManagerId` contract, preserving
+cached forms' explicit choices. Existing invitations and claim links remain
+valid. Submission resends still target `profileId` and require a listing manager
+or staff administrator.
+
+Application receipts and approval/decline decisions are sent to the owner's
+sign-in email **and** the business contact. Connected owners are resolved through
+`profile_owners` (owner role), or `profiles.userId` for legacy linked accounts;
+an unclaimed application uses its explicit `pendingOwnerEmail`. Superseded
+invitations are excluded once an account administers the listing. No ownership
+is inferred by matching the contact address to a user.
+
+Addresses are trimmed, case-normalized, and deduplicated. Delivery uses separate
+messages, so the business inbox cannot see an owner's private account address.
+All sends are awaited even if another recipient fails; the decision/submission
+remains saved and notification failures are reported. Account setup and sign-in
+links are never copied to the business contact.
 
 ## Payments
 
@@ -252,11 +326,31 @@ silently assigning the listing to another account. Submission resends target
 | `/api/shop/portal`             | POST      | Open the signed-in subscriber's Customer Portal  |
 | `/api/admin/shop`              | GET/PATCH | Read orders and update inventory or fulfillment  |
 | `/api/admin/shop`              | POST      | Synchronize active one-time Stripe prices        |
-| `/api/admin/shop/products`     | POST      | Create a Stripe product and price                 |
-| `/api/admin/shop/products`     | PATCH     | Edit product, visibility, inventory, or price     |
-| `/api/admin/shop/products`     | DELETE    | Archive a product and its active price            |
-| `/api/admin/shop/media`        | POST      | Upload a product image to R2                      |
-| `/api/admin/shop/refund`       | POST      | Issue a full or partial Stripe refund             |
+| `/api/admin/shop/products`     | POST      | Create a Stripe product and price                |
+| `/api/admin/shop/products`     | PATCH     | Edit product, visibility, inventory, or price    |
+| `/api/admin/shop/products`     | DELETE    | Archive a product and its active price           |
+| `/api/admin/shop/media`        | POST      | Upload a product image to R2                     |
+| `/api/admin/shop/refund`       | POST      | Issue a full or partial Stripe refund            |
+
+Donation checkout accepts `amount` as integer USD cents ($0.50 through
+$999,999.99) and a required boolean `isRecurring`. `customerEmail` is optional:
+the current donation UI lets Stripe collect it in hosted Checkout. Optional
+`comment` and `dedicate` strings are trimmed and limited to 500 characters.
+The UI's "Community directory" and "Other" choices retain the existing
+`Directory` and `Other` metadata values.
+The server derives `membership` from the amount and recurrence; a submitted
+`monthlyTier` is not trusted.
+
+Browser Origin must match the serving request origin, including when the page
+is served on another Pana surface. Invalid requests return 400, cross-origin
+requests return 403, and unavailable Stripe checkout returns 503 with a
+donor-safe message. Successful sessions preserve the existing confirmation
+parameters and add explicit `frequency`, including monthly gifts below the
+membership thresholds. Cancel URLs restore amount and frequency only, never
+email or notes. New cancel URLs point to `/support-pana`; existing `/donate`
+returns redirect there with their query values intact. The live Support Pana
+page and `/mock/donate` share their renderer and amount
+rules; only the live page calls this endpoint.
 
 ## CRM / Marketing Data (`/api/crm/*`)
 

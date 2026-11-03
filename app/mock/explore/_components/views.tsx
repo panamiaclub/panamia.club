@@ -107,8 +107,7 @@ export function HomeView(props: ViewProps) {
 
         <div className="mx-auto mt-4 max-w-[760px]">
           <p className="hero-subheadline">
-            Pana MIA Club promotes everything local in South Florida in order to
-            achieve a more regenerative future.
+            <strong>Your Portal for Everything South Florida</strong>
           </p>
 
           <div className="mt-[18px]">

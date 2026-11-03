@@ -1,4 +1,10 @@
 import type { SearchResultsInterface } from '@/lib/query/directory';
+import {
+  groupOnlineZipListings,
+  isOnlineZipArea,
+  onlineBusinessLocation,
+  type OnlineZipArea,
+} from '@/lib/online-zip';
 import type { UpcomingEvent } from '@/lib/query/events';
 import type {
   CalendarEntry,
@@ -7,7 +13,13 @@ import type {
 } from '@/lib/query/social';
 import type { DiscoveryEvent } from '@/lib/events/lanes';
 import { formatWhen } from '@/lib/events/lanes';
-import { CATEGORY_LABEL, resultHref } from '@/app/directory/search/_lib/format';
+import {
+  CATEGORY_LABEL,
+  resultHref,
+  resultMapCoords,
+  resultZipArea,
+} from '@/app/directory/search/_lib/format';
+import { readMapPoint } from '@/lib/map/viewport';
 
 export interface NativeEvent extends UpcomingEvent {
   mode: 'online' | 'offline' | 'hybrid';
@@ -23,6 +35,8 @@ export interface NativeResult {
   location: string;
   meta: string;
   coords: { lat: number; lng: number } | null;
+  zipArea?: OnlineZipArea | null;
+  approximateZip?: OnlineZipArea | null;
   slug?: string;
   when?: string;
   annotation?: string;
@@ -32,23 +46,11 @@ export function nativeCoords(
   latitude: unknown,
   longitude: unknown
 ): NativeResult['coords'] {
-  const numberOf = (value: unknown) =>
-    typeof value === 'number'
-      ? value
-      : typeof value === 'string' && value.trim()
-        ? Number(value)
-        : NaN;
-  const lat = numberOf(latitude);
-  const lng = numberOf(longitude);
-  return Number.isFinite(lat) &&
-    Number.isFinite(lng) &&
-    Math.abs(lat) <= 90 &&
-    Math.abs(lng) <= 180
-    ? { lat, lng }
-    : null;
+  return readMapPoint(latitude, longitude);
 }
 
 export function nativeBusiness(result: SearchResultsInterface): NativeResult {
+  const area = resultZipArea(result);
   return {
     id: result._id,
     kind: 'directory',
@@ -57,17 +59,16 @@ export function nativeBusiness(result: SearchResultsInterface): NativeResult {
     image: result.coverImage || result.images?.primaryCDN || null,
     description: result.five_words || result.details || '',
     location: result.online_only
-      ? 'Online'
-      : result.primary_address?.city || 'Location not listed',
+      ? onlineBusinessLocation(result.primary_address?.zipcode)
+      : area
+        ? `Approximate ZIP ${area.postalCode} area - ${result.primary_address?.city || area.city}`
+        : result.primary_address?.city || 'Location not listed',
     meta: (result.categories ?? [])
       .map((category) => CATEGORY_LABEL[category] ?? category)
       .join(' / '),
-    coords: result.online_only
-      ? null
-      : nativeCoords(
-          result.geo?.coordinates?.[1],
-          result.geo?.coordinates?.[0]
-        ),
+    coords: result.online_only ? null : resultMapCoords(result),
+    zipArea: result.online_only ? area : null,
+    approximateZip: !result.online_only ? area : null,
     annotation: result.certified ? 'Pana certified' : undefined,
   };
 }
@@ -182,7 +183,14 @@ export function nativeJoinedGroup(group: MyGroupSummary): NativeResult {
   };
 }
 
-export function nativeMapPins(items: NativeResult[]) {
+export interface NativeMapPin {
+  id: string;
+  coords: NonNullable<NativeResult['coords']>;
+  items: NativeResult[];
+  zipArea?: OnlineZipArea;
+}
+
+export function nativeMapPins(items: NativeResult[]): NativeMapPin[] {
   const pins = new Map<
     string,
     {
@@ -192,11 +200,23 @@ export function nativeMapPins(items: NativeResult[]) {
     }
   >();
   for (const item of items) {
-    if (!item.coords) continue;
+    if (
+      !item.coords ||
+      (item.kind === 'directory' && isOnlineZipArea(item.zipArea))
+    )
+      continue;
     const id = `${item.coords.lat},${item.coords.lng}`;
     const pin = pins.get(id);
     if (pin) pin.items.push(item);
     else pins.set(id, { id, coords: item.coords, items: [item] });
   }
-  return [...pins.values()];
+  const zipPins = groupOnlineZipListings(items, (item) =>
+    item.kind === 'directory' ? item.zipArea : null
+  ).map((group) => ({
+    id: group.id,
+    coords: { lat: group.area.lat, lng: group.area.lng },
+    items: group.items,
+    zipArea: group.area,
+  }));
+  return [...pins.values(), ...zipPins];
 }

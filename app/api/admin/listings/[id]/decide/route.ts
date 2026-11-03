@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { checkAdminAuth } from '@/lib/server/admin-auth';
 import { decideListing } from '@/lib/server/listing-decision';
+import { revalidatePublicListing } from '@/lib/server/profile';
 
 /**
  * Approve or decline a listing from the review queue.
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    revalidatePublicListing(id, result.screenname);
     return NextResponse.json({
       success: true,
       name: result.name,

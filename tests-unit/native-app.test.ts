@@ -221,23 +221,93 @@ describe('native data models', () => {
     }
   });
 
-  it('opens the real profile or existing unclaimed-listing flow', () => {
+  it('opens a public profile even before a business chooses a handle', () => {
     const item = nativeBusiness(business);
     assert.equal(item.href, '/p/local-cafe');
     assert.deepEqual(item.coords, { lat: 25.76, lng: -80.19 });
     assert.equal(item.location, 'Miami');
     assert.equal(
       nativeBusiness({ ...business, screenname: null }).href,
-      '/listings/claim/start?id=listing'
+      '/listings/listing'
     );
   });
 
   it('keeps online and unlocated businesses in the list without pins', () => {
     const online = nativeBusiness({ ...business, online_only: true });
-    assert.equal(online.location, 'Online');
+    assert.equal(online.location, 'Online - base ZIP not provided');
     assert.equal(online.coords, null);
     assert.equal(nativeBusiness({ ...business, geo: {} }).coords, null);
     assert.equal(nativeMapPins([online]).length, 0);
+  });
+
+  it('uses ZIP bubbles for online businesses without reusing private street points', () => {
+    const area = {
+      postalCode: '33138',
+      country: 'US' as const,
+      city: 'Miami',
+      region: 'FL',
+      lat: 25.8521,
+      lng: -80.1821,
+    };
+    const first = nativeBusiness({
+      ...business,
+      _id: 'online-one',
+      id: 'online-one',
+      online_only: true,
+      primary_address: { zipcode: '33138' },
+      online_zip: area,
+      geo: { coordinates: [-122.4, 37.8] },
+    });
+    const second = { ...first, id: 'online-two' };
+    assert.equal(first.coords, null);
+    assert.equal(first.location, 'Online - based near ZIP 33138');
+    const pins = nativeMapPins([first, second, nativeBusiness(business)]);
+    const zip = pins.find((pin) => pin.zipArea);
+    assert.ok(zip);
+    assert.equal(pins.length, 2);
+    assert.deepEqual(zip.coords, { lat: area.lat, lng: area.lng });
+    assert.deepEqual(
+      zip.items.map((item) => item.id),
+      ['online-one', 'online-two']
+    );
+    const defensive = nativeMapPins([
+      { ...first, coords: { lat: 37.8, lng: -122.4 } },
+    ]);
+    assert.equal(defensive.length, 1);
+    assert.deepEqual(defensive[0].coords, zip.coords);
+  });
+
+  it('keeps ZIP-only businesses approximate without classifying them as online', () => {
+    const area = {
+      postalCode: '33138',
+      country: 'US' as const,
+      city: 'Miami',
+      region: 'FL',
+      lat: 25.8521,
+      lng: -80.1821,
+    };
+    const zipOnly = nativeBusiness({
+      ...business,
+      geo: null,
+      online_only: false,
+      primary_address: { city: 'Miami', zipcode: '33138' },
+      zip_area: area,
+    });
+    assert.deepEqual(zipOnly.coords, { lat: area.lat, lng: area.lng });
+    assert.match(zipOnly.location, /Approximate ZIP 33138 area/);
+    assert.equal(zipOnly.zipArea, null);
+    assert.deepEqual(zipOnly.approximateZip, area);
+    const online = nativeBusiness({
+      ...business,
+      _id: 'online',
+      online_only: true,
+      primary_address: { zipcode: '33138' },
+      online_zip: area,
+    });
+    const pins = nativeMapPins([zipOnly, online]);
+    assert.equal(pins.length, 2);
+    assert.equal(pins.filter((pin) => pin.zipArea).length, 1);
+    assert.equal(pins.find((pin) => !pin.zipArea)?.items[0], zipOnly);
   });
 
   it('uses the real event venue, event timezone, attendance and detail page', () => {
@@ -323,6 +393,7 @@ describe('shared URL parsing and measured map sheet', () => {
     assert.equal(params.languages, 'es');
     assert.equal(params.freeOnly, true);
     assert.equal(params.sort, 'name');
+    assert.equal(params.radius, 'all');
     assert.equal(params.certifiedOnly, true);
     assert.equal(params.withEventsOnly, true);
     assert.equal(params.view, 'map');
@@ -333,18 +404,18 @@ describe('shared URL parsing and measured map sheet', () => {
   });
 
   it('keeps exact viewer location off directory request URLs', () => {
-    const params = getDirectorySearchParams(new URLSearchParams());
+    const params = getDirectorySearchParams(new URLSearchParams('radius=5'));
     const query = new URLSearchParams(
       searchParamsToString({
         ...params,
         sort: 'nearest',
-        radius: 'all',
         geolat: 25.761689,
         geolng: -80.191788,
       })
     );
     assert.equal(query.get('geolat'), '25.76');
     assert.equal(query.get('geolng'), '-80.19');
+    assert.equal(query.get('radius'), 'all');
   });
 
   it('fits a selected card with exactly twelve pixels above and below', () => {

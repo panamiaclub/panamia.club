@@ -22,7 +22,8 @@
     "distance_one": "a {{count}} milla",
     "distance_other": "a {{count}} millas",
     "distanceDenied": "Ubicación desactivada",
-    "onlineOnly": "Solo en línea"
+    "onlineOnly": "Negocio en línea",
+    "baseZip": "Base cerca del código postal {{zip}}"
   },
   "gate": {
     "eyebrow": {
@@ -89,6 +90,14 @@
     "claimHeading": "¿Es tuya esta ficha?",
     "claimBody": "Reclama esta ficha para publicar novedades, agregar fotos y responder a las panas que te guardan.",
     "claimCta": "Reclamar esta ficha"
+  },
+  "locationForm": {
+    "addressNote": "Una dirección pública permite indicar cómo llegar. Los negocios en línea necesitan un código postal de base, sin publicar una dirección.",
+    "onlineLabel": "Negocio en línea, sin un local público",
+    "onlineNote": "Tu ficha muestra una burbuja aproximada de código postal, no una dirección exacta ni distancia. Los detalles de entrega y recogida se deben confirmar con el negocio.",
+    "baseZip": "Código postal de la base del negocio",
+    "baseZipNote": "Obligatorio para negocios en línea. Solo se publica la zona de cinco dígitos; no escribas una dirección de casa ni coordenadas exactas.",
+    "invalidZip": "Escribe un código postal válido de cinco dígitos para la base de tu negocio en línea."
   },
   "location": {
     "eyebrow": "Visita",

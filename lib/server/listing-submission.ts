@@ -5,9 +5,11 @@ import type {
 } from '@/lib/interfaces';
 import type { profiles } from '@/lib/schema';
 import type { ListingStatus } from './listing-decision';
+import { sendListingNotification } from './listing-notifications';
 
 export async function sendListingSubmissionEmails(
-  profile: typeof profiles.$inferSelect
+  profile: typeof profiles.$inferSelect,
+  options: { setupReceiptEmail?: string } = {}
 ): Promise<void> {
   const status = profile.status as ListingStatus | null;
   const descriptions = profile.descriptions as ProfileDescriptions | null;
@@ -26,7 +28,20 @@ export async function sendListingSubmissionEmails(
   const declineUrl = new URL(approveUrl);
   declineUrl.searchParams.set('action', 'decline');
 
-  await Promise.all([
+  const setupReceiptEmail = options.setupReceiptEmail?.trim().toLowerCase();
+  const receipt = setupReceiptEmail
+    ? profile.email.trim().toLowerCase() === setupReceiptEmail
+      ? Promise.resolve()
+      : sendTemplateEmail(
+          'profile.submitted',
+          { name: profile.name },
+          profile.email
+        )
+    : sendListingNotification(profile, 'profile.submitted', {
+        name: profile.name,
+      });
+
+  const results = await Promise.allSettled([
     sendTemplateEmail('admin.profile_submission', {
       name: profile.name,
       email: profile.email,
@@ -45,10 +60,15 @@ export async function sendListingSubmissionEmails(
       approve_url: approveUrl.toString(),
       decline_url: declineUrl.toString(),
     }),
-    sendTemplateEmail(
-      'profile.submitted',
-      { name: profile.name },
-      profile.email
-    ),
+    receipt,
   ]);
+  const failures = results.flatMap((result) =>
+    result.status === 'rejected' ? [result.reason] : []
+  );
+  if (failures.length > 0) {
+    throw new AggregateError(
+      failures,
+      'Some listing submission emails could not be sent.'
+    );
+  }
 }

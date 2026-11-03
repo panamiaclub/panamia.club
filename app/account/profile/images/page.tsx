@@ -9,15 +9,21 @@ import axios from 'axios';
 import PageMeta from '@/components/PageMeta';
 import { ProfileInterface } from '@/lib/interfaces';
 import Status401_Unauthorized from '@/components/Page/Status401_Unauthorized';
-import { useProfile } from '@/lib/query/profile';
+import { profileEditorUrl, useProfile } from '@/lib/query/profile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import {
+  ListingReviewAccess,
+  ListingReviewStepHeader,
+  useListingReviewStep,
+} from '@/components/listings/review-step';
 
 export default function AccountProfileImages() {
   const { data: session, status } = useSession();
-  const { data, isLoading, refetch } = useProfile();
+  const review = useListingReviewStep('images');
+  const { data, isLoading, refetch } = useProfile(review.listingId);
   const profile = data as ProfileInterface;
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -29,11 +35,12 @@ export default function AccountProfileImages() {
     setUploadError('');
     setUploadSuccess(false);
 
-    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const form = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
 
     try {
       const { data: result } = await axios.post(
-        '/api/profile/upload',
+        profileEditorUrl('/api/profile/upload', review.listingId),
         formData,
         {
           headers: {
@@ -58,8 +65,8 @@ export default function AccountProfileImages() {
       await refetch();
 
       // Clear file inputs
-      const form = e.currentTarget as HTMLFormElement;
       form.reset();
+      review.onSaved();
     } catch (error) {
       console.error(error);
       const fromServer =
@@ -67,7 +74,9 @@ export default function AccountProfileImages() {
         typeof error.response?.data?.error === 'string'
           ? error.response.data.error
           : '';
-      setUploadError(fromServer || 'Failed to upload images. Please try again.');
+      setUploadError(
+        fromServer || 'Failed to upload images. Please try again.'
+      );
     } finally {
       setUploading(false);
     }
@@ -82,10 +91,14 @@ export default function AccountProfileImages() {
   }
 
   if (!session) {
+    if (review.active)
+      return <ListingReviewAccess listingId={review.listingId} />;
     return <Status401_Unauthorized />;
   }
 
   if (!profile) {
+    if (review.active)
+      return <ListingReviewAccess listingId={review.listingId} signedIn />;
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-gray-500">No profile found</div>
@@ -97,23 +110,51 @@ export default function AccountProfileImages() {
     <main className="container mx-auto max-w-3xl px-4 py-8">
       <PageMeta title="Images | Edit Profile" desc="" />
 
-      <h2 className="mb-8 text-3xl font-bold">Profile - Edit Images</h2>
+      {review.active ? (
+        <ListingReviewStepHeader
+          listingId={review.listingId}
+          name={profile.name}
+          step="images"
+        />
+      ) : (
+        <h2 className="mb-8 text-3xl font-bold">Profile - Edit Images</h2>
+      )}
 
       <Card>
         <CardContent className="pt-6">
-          <form onSubmit={submitForm} className="space-y-6">
+          <form
+            key={profile.id ?? profile._id}
+            onSubmit={submitForm}
+            className="space-y-6"
+          >
             <div className="mb-6 flex justify-between gap-4">
               <Button variant="outline" asChild>
-                <Link href="/account/profile/edit">
+                <Link href={review.backHref}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Link>
               </Button>
               <Button type="submit" disabled={uploading}>
                 <Save className="mr-2 h-4 w-4" />
-                {uploading ? 'Uploading...' : 'Save Changes'}
+                {uploading
+                  ? 'Uploading...'
+                  : review.active
+                    ? 'Save photos and finish'
+                    : 'Save Changes'}
               </Button>
             </div>
+
+            {review.active && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full rounded-full font-bold"
+                onClick={review.onSaved}
+                disabled={uploading}
+              >
+                Keep current photos and finish
+              </Button>
+            )}
 
             {/* Primary Picture */}
             <Card>
@@ -269,7 +310,10 @@ export default function AccountProfileImages() {
             </Card>
 
             {uploadError && (
-              <div className="rounded-md bg-red-50 p-4 text-red-600">
+              <div
+                role="alert"
+                className="rounded-md bg-red-50 p-4 text-red-600"
+              >
                 {uploadError}
               </div>
             )}

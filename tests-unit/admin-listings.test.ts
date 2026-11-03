@@ -16,6 +16,7 @@
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
   REVIEW_SLA_DAYS,
@@ -62,6 +63,7 @@ function listing(overrides: Partial<QueueListing> = {}): QueueListing {
     website: 'https://tallerlucia.example',
     phoneNumber: '',
     pendingOwnerEmail: 'lucia@example.com',
+    claimed: false,
     accountType: 'directory',
     locallyBased: 'yes',
     flags: [],
@@ -146,9 +148,10 @@ describe('computeFlags', () => {
   });
 
   test('"no" and "other" are different answers and get different notes', () => {
-    assert.deepEqual(computeFlags({ ...CLEAN, locallyBased: 'no' }, NO_OTHERS), [
-      'outside-area',
-    ]);
+    assert.deepEqual(
+      computeFlags({ ...CLEAN, locallyBased: 'no' }, NO_OTHERS),
+      ['outside-area']
+    );
     assert.deepEqual(
       computeFlags({ ...CLEAN, locallyBased: 'other' }, NO_OTHERS),
       ['locality-unclear']
@@ -167,7 +170,10 @@ describe('computeFlags', () => {
       'whitespace is not a description'
     );
     assert.deepEqual(
-      computeFlags({ ...CLEAN, details: 'x'.repeat(THIN_DETAILS_CHARS) }, NO_OTHERS),
+      computeFlags(
+        { ...CLEAN, details: 'x'.repeat(THIN_DETAILS_CHARS) },
+        NO_OTHERS
+      ),
       [],
       'exactly at the threshold is long enough'
     );
@@ -245,14 +251,18 @@ describe('listingStats', () => {
     const overdue = listingStats(rows).find((stat) =>
       stat.label.startsWith('Over')
     );
-    assert.equal(overdue?.value, '1', 'exactly at the window is not yet over it');
+    assert.equal(
+      overdue?.value,
+      '1',
+      'exactly at the window is not yet over it'
+    );
   });
 
-  test('unclaimed means no pending owner asked for it', () => {
+  test('unclaimed means no manager, regardless of whether a setup invitation exists', () => {
     const rows = [
-      listing({ pendingOwnerEmail: '' }),
-      listing({ pendingOwnerEmail: '' }),
-      listing({ pendingOwnerEmail: 'lucia@example.com' }),
+      listing({ pendingOwnerEmail: '', claimed: false }),
+      listing({ pendingOwnerEmail: 'lucia@example.com', claimed: false }),
+      listing({ pendingOwnerEmail: '', claimed: true }),
     ];
     const needALook = listingStats(rows).find(
       (stat) => stat.label === 'Need a look'
@@ -267,6 +277,63 @@ describe('listingStats', () => {
       stats.find((stat) => stat.label === 'Oldest')?.value,
       'today',
       'no backlog reads as nothing waiting, not as NaN'
+    );
+  });
+});
+
+describe('listing profile links', () => {
+  const source = readFileSync(
+    new URL('../app/admin/listings/page.tsx', import.meta.url),
+    'utf8'
+  );
+
+  test('waiting listing names open their private profile preview', () => {
+    assert.match(
+      source,
+      /<Link\s+href=\{listingPreviewPath\(listing\.id\)\}[^>]*>\s*\{listing\.name\}\s*<\/Link>/
+    );
+  });
+
+  test('decided names use public profiles only for approved listings', () => {
+    assert.match(
+      source,
+      /<Link\s+href=\{\s*row\.decision === 'approved'\s*\? listingPublicPath\(row\)\s*:\s*listingPreviewPath\(row\.id\)\s*\}[^>]*>\s*\{row\.name\}\s*<\/Link>/
+    );
+  });
+});
+
+describe('read-only listing previews', () => {
+  const source = (path: string) =>
+    readFileSync(new URL(path, import.meta.url), 'utf8');
+
+  test('the viewer skips public signal requests and refuses profile actions', () => {
+    const viewer = source('../app/p/[user]/_components/profile-viewer.tsx');
+    assert.match(viewer, /if \(preview \|\| status === 'loading'\) return/);
+    assert.match(viewer, /if \(preview\) return false/);
+    assert.match(viewer, /isOwner: !preview && isOwner/);
+    assert.match(viewer, /showsPanaActions:\s*!preview &&/);
+  });
+
+  test('profile rendering propagates preview mode to its interactive sections', () => {
+    const profile = source('../app/p/[user]/_components/business-profile.tsx');
+    for (const component of [
+      'ProfileViewer',
+      'ProfileHero',
+      'MentoringSection',
+    ]) {
+      assert.match(
+        profile,
+        new RegExp(`<${component}\\s[^>]*preview=\\{preview\\}`)
+      );
+    }
+    assert.match(profile, /!preview &&\s*\(claimed \?/);
+    assert.match(
+      source('../app/p/[user]/_components/profile-hero.tsx'),
+      /\{!preview && \(\s*<div>[\s\S]*onClick=\{handleShare\}/
+    );
+    assert.match(
+      source('../app/p/[user]/_components/mentoring-section.tsx'),
+      /!preview && <BookSessionButton/
     );
   });
 });

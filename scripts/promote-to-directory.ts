@@ -330,7 +330,7 @@ async function main() {
         );
       }
 
-      // A card at /api/directory/featured also needs an image and a handle.
+      // A card at /api/directory/featured also needs an image.
       // Search and browse do not, so this is a warning rather than a blocker.
       if (!row.primary_image_cdn) {
         console.log(
@@ -339,7 +339,7 @@ async function main() {
       }
       if (!row.screenname && !row.profile_screenname) {
         console.log(
-          '      note: no screenname — will not appear in the sitemap and has no /p/ page.'
+          `      note: no screenname — its public page uses /listings/${row.profile_id}.`
         );
       }
 

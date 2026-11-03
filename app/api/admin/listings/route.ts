@@ -10,7 +10,10 @@ import {
 import { db } from '@/lib/db';
 import { profiles } from '@/lib/schema';
 import { checkAdminAuth } from '@/lib/server/admin-auth';
-import { BUSINESS_INTAKE_SOURCE } from '@/lib/server/profile-owners';
+import {
+  BUSINESS_INTAKE_SOURCE,
+  claimedProfileIds,
+} from '@/lib/server/profile-owners';
 
 /**
  * The directory review queue.
@@ -90,6 +93,7 @@ export async function GET() {
     ]);
 
     const pendingIds = new Set(pendingRows.map((row) => row.id));
+    const claimed = await claimedProfileIds([...pendingIds]);
     // Names of everything that is *not* in the queue. Without this exclusion
     // every application would flag itself as its own duplicate.
     const otherNames = new Set(
@@ -126,6 +130,7 @@ export async function GET() {
         website,
         phoneNumber: row.phoneNumber ?? '',
         pendingOwnerEmail: row.pendingOwnerEmail ?? '',
+        claimed: claimed.has(row.id),
         accountType: status.accountType ?? 'directory',
         locallyBased,
         flags: computeFlags(

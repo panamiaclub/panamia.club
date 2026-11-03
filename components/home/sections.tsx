@@ -202,13 +202,9 @@ function HeroCard() {
         </h1>
 
         <div className="mx-auto mt-4 max-w-[760px]">
-          {/* The mission, cut to one line. The full sentence names the three
-              groups and the role the club plays between them, which is the
-              right level of detail for an about page and one clause too many
-              for the first thing anyone reads. What is left is the claim and
-              the reason for it; the three stops further down are where the
-              groups get named. */}
-          <p className="hero-subheadline">{t('hero.mission')}</p>
+          <p className="hero-subheadline">
+            <strong>{t('hero.mission')}</strong>
+          </p>
 
           {/* The scope control, and the whole point of this section.
               
@@ -281,12 +277,6 @@ export function HomeBasics() {
   return (
     <section id="what-is-this" className="home-section story-basics">
       <div className="container mx-auto px-4">
-        {/* Just the question. This section used to open with an eyebrow, a
-            two-line display heading and a lede explaining that three
-            questions follow — three lines of preamble in front of three
-            cards that ask and answer their own questions perfectly well.
-            The preamble was the least useful thing on the screen and it was
-            the thing costing the most height. */}
         <div className="home-sectionhead" data-rv>
           <h2 className="section-display">
             <Trans
@@ -295,6 +285,15 @@ export function HomeBasics() {
               components={{ em: <em className="display-accent" /> }}
             />
           </h2>
+          <p className="mx-auto max-w-5xl text-center text-base leading-7 text-pretty sm:text-lg sm:leading-8">
+            <strong>
+              <Trans
+                i18nKey="basics.introduction"
+                t={t}
+                components={{ em: <em /> }}
+              />
+            </strong>
+          </p>
         </div>
       </div>
 

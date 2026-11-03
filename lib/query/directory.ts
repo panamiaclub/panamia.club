@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import type { DirectoryRadius } from '@/lib/directory-radius';
+import type { OnlineZipArea } from '@/lib/online-zip';
 
 export type DirectorySort = 'relevance' | 'nearest' | 'recommended' | 'name';
 
@@ -11,7 +12,9 @@ export interface DirectorySearchParams {
   filterCategories: string;
   geolat: number;
   geolng: number;
+  /** Viewport-based directory browsing uses 'all'; other API callers may cap distance. */
   radius: DirectoryRadius;
+  resultsView?: 'map';
   sort?: DirectorySort;
   certifiedOnly?: boolean;
   withEventsOnly?: boolean;
@@ -38,25 +41,31 @@ export interface SearchResultsInterface {
   score: number;
   score_details: Record<string, unknown>;
   name: string;
+  /** One-based position in the complete, filtered result set. */
+  result_index?: number;
   screenname: string | null;
   details: string;
   five_words: string;
   geo: {
     coordinates?: number[];
-  };
+  } | null;
   images: {
     primaryCDN: string;
   };
   /** First gallery photo, standing in for a cover. Null when there are none. */
   coverImage?: string | null;
-  primary_address?: { city?: string };
+  primary_address?: { city?: string | null; zipcode?: string | null };
   /** True when the business has nowhere to visit, so distance does not apply. */
   online_only?: boolean;
+  /** Approximate base ZIP area, never the business's street coordinates. */
+  online_zip?: OnlineZipArea | null;
+  /** Public ZIP-area fallback when a non-online listing has no exact point. */
+  zip_area?: OnlineZipArea | null;
   categories?: string[];
   counties?: string[];
   /** Awarded by Pana Mia, not self-declared. */
   certified?: boolean;
-  /** Has a handle, so it has a profile page. Otherwise it gets a claim CTA. */
+  /** Someone administers the listing, independent of whether it has a handle. */
   claimed?: boolean;
   saves?: number;
   recommends?: number;
@@ -77,6 +86,12 @@ export interface SearchResponseInterface {
   success: boolean;
   data: SearchResultsInterface[];
   pagination: SearchPaginationInterface;
+  map?: {
+    totalResults: number;
+    unmappedCount: number;
+    /** Complete matching unlocated results, independent of list pagination. */
+    unmappedResults: SearchResultsInterface[];
+  };
 }
 
 const emptyResponse: SearchResponseInterface = {
@@ -98,6 +113,11 @@ export const searchParamsToString = (params: DirectorySearchParams) => {
     qs.append('fcat', params.filterCategories);
   }
   qs.append('radius', params.radius);
+  if (params.resultsView === 'map') {
+    qs.append('v', 'map');
+    // Do not reuse a pre-sections browser/edge response without unlocated cards.
+    qs.append('mapVersion', '2');
+  }
   // Sent at two decimal places so the edge cache key stays low-cardinality and
   // the CDN never sees a precise location. Omitted entirely when absent, so a
   // visitor who has not shared one produces the same URL as everybody else.

@@ -31,6 +31,60 @@ exists, is already populated, and is already correct on every existing row.
 
 ## Current State
 
+### Owner-focused listing setup
+
+The current business intake is separate from a person's identity profile.
+`profiles.userId` stays `NULL` for a business; `profile_owners` connects its
+manager, allowing one account to administer multiple listings without replacing
+the person's profile. The main application email is the login identity.
+`profiles.email` is only a copied business contact and may be changed separately.
+
+Application notifications go to both the owner account email and this business
+contact, with identical addresses deduplicated. Before setup is confirmed,
+the explicitly invited account email receives the same approval/decline decision.
+After confirmation, the current owner login email is resolved through ownership
+links, so changing the login address does not lose application notifications.
+Private setup and sign-in links are never copied to the business inbox.
+
+Signed-in applicants receive ownership automatically when they submit the
+owner-focused form. Guests confirm a business-specific setup email and then make
+an explicit authenticated ownership confirmation. Ordinary sign-in never
+automatically accepts an anonymously submitted invitation. Legacy intake payloads
+and invitations keep their existing behavior.
+
+Account setup does not gate publication. Staff still approve `active: false`
+applications, and approved listings without owners or handles are public at
+`/listings/{profileId}`. Their public page keeps the claim invitation until
+someone actually administers the listing; a handle alone is not a claim.
+Business managers do not need a personal social profile to use their dashboard.
+No migration or reassignment of existing approved businesses is required.
+
+Existing businesses also have a focused review journey, starting at
+`/listings/claim/start?id={profileId}` and continuing, after ownership
+verification, at `/listings/review?id={profileId}`. It reuses the account
+editors with an explicitly authorized listing scope rather than changing the
+active identity. Public previews exclude private contact and pending-owner
+information. Business contact edits never change `users.email` or the human's
+personal profile. See `docs/ONBOARDING-ROADMAP.md` for the journey and recovery
+behavior.
+
+An operator-issued seven-day inbox invitation can replace the extra business
+verification email for existing listings. It is not an account magic link:
+visitors choose their Pana login, then explicitly accept the listing-specific
+proof. Fragment/HttpOnly context keeps the invitation out of sign-in callbacks.
+Hashed proof, current-contact validation, admin-only issuance/revocation and
+atomic `profile_owners` acceptance preserve the same separation and do not
+select a different active identity.
+
+Final listing confirmation is server-recorded in `profiles.lastReviewedAt`,
+separate from ownership and personal account setup. Explicitly enrolled renewal
+cycles can issue weekly reminders and pause an unanswered listing after a
+30-day notice window. `listing_refresh_cycles` and hashed
+`listing_refresh_deliveries` track that lifecycle without importing recipients
+or changing login identities. Only an overdue-review pause can be restored by
+confirmation; staff decisions remain authoritative. See the renewal section in
+`docs/ONBOARDING-ROADMAP.md`.
+
 ### The two tables
 
 | Table      | Role                        | Created when                      |
@@ -43,7 +97,9 @@ and **nullable** (migration `0022`). Nullability supports two real flows:
 
 - **Unclaimed profiles** — an admin-imported listing that predates its account.
   `claimProfileForUser()` in `auth.ts` attaches it on first sign-in by matching
-  `profiles.email` against the user's email.
+  `profiles.email` against the user's email. This does **not** apply to listings
+  marked `status.source = 'business_intake'`; those use explicit ownership
+  verification and `profile_owners`, without consuming a personal identity slot.
 - **Tombstoned profiles** — account deletion nulls `user_id` to sever the
   cascade so the record survives for attribution.
 
@@ -240,18 +296,18 @@ missing profile during a handle change.
 
 ### Changes
 
-| #   | Area       | File                                       | Change                                                                                          |
-| --- | ---------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| #   | Area       | File                                       | Change                                                                                                |
+| --- | ---------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
 | 1   | Onboarding | `app/api/user/screenname/set/route.ts`     | Create a profile when none exists: `active: true`, required submitted name on first claim, no address |
-| 2   | Directory  | `app/api/directory/suggest/route.ts`       | Add `inArray(users.accountType, ['directory', 'hybrid'])`                                       |
-| 3   | Directory  | `lib/server/directory.ts`                  | Same predicate on the `getSearch()` query                                                       |
-| 4   | Indexing   | `app/sitemap.ts`                           | Same predicate — see _Privacy_ below                                                            |
-| 5   | Readiness  | `lib/relay/profile-readiness.ts`           | Require profile + screenname only; drop `locallyBased`/`fiveWords` from the gate                |
-| 6   | Onboarding | `app/form/become-a-pana/page.tsx`          | Set `accountType` on submit; branch the form per the existing rebuild notes                     |
-| 7   | Onboarding | `app/api/createExpressProfile/route.ts`    | Update the caller's existing profile rather than inserting a second one                         |
-| 8   | Admin      | `app/api/admin/allProfiles/route.ts`       | Same predicate — consumers must not flood the admin profile list                                |
-| 9   | Admin      | `app/api/admin/profile/action/route.ts`    | Same predicate on the active-profile count                                                      |
-| 10  | Downgrade  | wherever `accountType` moves to `personal` | Null every address field — see _Decisions_ §3                                                   |
+| 2   | Directory  | `app/api/directory/suggest/route.ts`       | Add `inArray(users.accountType, ['directory', 'hybrid'])`                                             |
+| 3   | Directory  | `lib/server/directory.ts`                  | Same predicate on the `getSearch()` query                                                             |
+| 4   | Indexing   | `app/sitemap.ts`                           | Same predicate — see _Privacy_ below                                                                  |
+| 5   | Readiness  | `lib/relay/profile-readiness.ts`           | Require profile + screenname only; drop `locallyBased`/`fiveWords` from the gate                      |
+| 6   | Onboarding | `app/form/become-a-pana/page.tsx`          | Set `accountType` on submit; branch the form per the existing rebuild notes                           |
+| 7   | Onboarding | `app/api/createExpressProfile/route.ts`    | Update the caller's existing profile rather than inserting a second one                               |
+| 8   | Admin      | `app/api/admin/allProfiles/route.ts`       | Same predicate — consumers must not flood the admin profile list                                      |
+| 9   | Admin      | `app/api/admin/profile/action/route.ts`    | Same predicate on the active-profile count                                                            |
+| 10  | Downgrade  | wherever `accountType` moves to `personal` | Null every address field — see _Decisions_ §3                                                         |
 
 Item 7 matters: once a consumer profile exists, `become-a-pana` is an **upgrade**
 of that record, not an insert. The `UNIQUE` constraint on `profiles.userId`

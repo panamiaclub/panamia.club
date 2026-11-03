@@ -1,8 +1,11 @@
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db';
-import { sendTemplateEmail } from '@/lib/email';
-import { profiles } from '@/lib/schema';
+import { sendListingNotification } from './listing-notifications';
+import { profiles, users } from '@/lib/schema';
+import { cancelListingRefreshes } from './listing-refresh-status';
+import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
+import { listingPublicPath } from '@/lib/listing-url';
 
 /**
  * The one place a directory listing is approved or declined.
@@ -75,6 +78,8 @@ export type DecisionOutcome =
       email: string;
       mailed: boolean;
       mailFailed: boolean;
+      publicPath: string | null;
+      screenname: string | null;
     }
   | { ok: false; reason: 'not-found' | 'already-decided' };
 
@@ -93,48 +98,83 @@ export async function decideListing({
   reason?: string;
   expect?: 'any' | 'pending';
 }): Promise<DecisionOutcome> {
-  const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.id, profileId),
+  const write = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(profiles)
+      .where(eq(profiles.id, profileId))
+      .for('update');
+    if (!row) return { ok: false as const, reason: 'not-found' as const };
+    const user = row.userId
+      ? await tx.query.users.findFirst({
+          where: eq(users.id, row.userId),
+          columns: { screenname: true, accountType: true },
+        })
+      : undefined;
+    const profile = { ...row, user };
+
+    const status = (profile.status ?? {}) as ListingStatus;
+    const alreadyDecided = Boolean(status.approved || status.declined);
+
+    if (expect === 'pending' && alreadyDecided) {
+      return { ok: false as const, reason: 'already-decided' as const };
+    }
+
+    const stampedAt = new Date().toISOString();
+    const firstTime =
+      decision === 'approve' ? !status.approved : !status.declined;
+
+    const nextStatus: ListingStatus = {
+      ...status,
+      [decision === 'approve' ? 'approved' : 'declined']: stampedAt,
+    };
+    delete nextStatus.refreshPause;
+
+    // Recorded only when we know it. The capability link cannot say who clicked
+    // it, and inventing a value — "email link", a shared address — would make an
+    // unattributed decision look attributed, which is worse than a blank.
+    if (decidedBy) nextStatus.decidedBy = decidedBy;
+    if (decision === 'decline' && reason) nextStatus.decidedReason = reason;
+
+    await tx
+      .update(profiles)
+      .set({ active: decision === 'approve', status: nextStatus })
+      .where(eq(profiles.id, profileId));
+    await cancelListingRefreshes(tx, profileId);
+    return { ok: true as const, profile, firstTime };
   });
-
-  if (!profile) return { ok: false, reason: 'not-found' };
-
-  const status = (profile.status ?? {}) as ListingStatus;
-  const alreadyDecided = Boolean(status.approved || status.declined);
-
-  if (expect === 'pending' && alreadyDecided) {
-    return { ok: false, reason: 'already-decided' };
-  }
-
-  const stampedAt = new Date().toISOString();
-  const firstTime =
-    decision === 'approve' ? !status.approved : !status.declined;
-
-  const nextStatus: ListingStatus = {
-    ...status,
-    [decision === 'approve' ? 'approved' : 'declined']: stampedAt,
-  };
-
-  // Recorded only when we know it. The capability link cannot say who clicked
-  // it, and inventing a value — "email link", a shared address — would make an
-  // unattributed decision look attributed, which is worse than a blank.
-  if (decidedBy) nextStatus.decidedBy = decidedBy;
-  if (decision === 'decline' && reason) nextStatus.decidedReason = reason;
-
-  await db
-    .update(profiles)
-    .set({ active: decision === 'approve', status: nextStatus })
-    .where(eq(profiles.id, profileId));
+  if (!write.ok) return write;
+  const { profile, firstTime } = write;
+  const screenname = profile.screenname ?? profile.user?.screenname;
 
   let mailed = false;
   let mailFailed = false;
+  const publicPath =
+    decision === 'approve' &&
+    (screenname ||
+      profile.userId === null ||
+      DIRECTORY_ACCOUNT_TYPES.some(
+        (type) => type === profile.user?.accountType
+      ))
+      ? listingPublicPath({ id: profile.id, screenname })
+      : null;
 
   if (firstTime) {
     try {
-      await sendTemplateEmail(
+      await sendListingNotification(
+        profile,
         decision === 'approve' ? 'profile.published' : 'profile.not_published',
-        { name: profile.name },
-        profile.email
+        {
+          name: profile.name,
+          ...(publicPath
+            ? {
+                profileUrl: new URL(
+                  publicPath,
+                  process.env.NEXT_PUBLIC_HOST_URL || 'https://panamia.club'
+                ).toString(),
+              }
+            : {}),
+        }
       );
       mailed = true;
     } catch (error) {
@@ -153,5 +193,7 @@ export async function decideListing({
     email: profile.email,
     mailed,
     mailFailed,
+    publicPath,
+    screenname: screenname ?? null,
   };
 }

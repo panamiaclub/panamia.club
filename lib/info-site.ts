@@ -12,7 +12,7 @@ export const INFO_LINKS = [
   { id: 'events', href: '/e' },
   { id: 'connectors', href: '/connectors' },
   { id: 'listing', href: '/form/get-listed' },
-  { id: 'support', href: '/donate' },
+  { id: 'support', href: '/support-pana' },
 ] as const;
 
 export function getInfoCanonicalUrl(): string {

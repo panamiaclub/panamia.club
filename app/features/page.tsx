@@ -68,7 +68,7 @@ const features: {
     title: 'Support Us',
     description:
       'Help sustain the platform through donations that fund development, events, and community programs.',
-    href: '/donate',
+    href: '/support-pana',
     icon: Gift,
   },
 ];

@@ -99,11 +99,12 @@ export interface QueueListing {
   website: string;
   phoneNumber: string;
   /**
-   * `profiles.pending_owner_email` — a personal address asking to administer
-   * this listing. Frequently not the business address on the form, and the
-   * single most common reason a reviewer pauses.
+   * Account email awaiting explicit setup confirmation. An invitation is not
+   * proof of ownership, even when it matches the business contact.
    */
   pendingOwnerEmail: string;
+  /** Actual administration link, not an unanswered email invitation. */
+  claimed: boolean;
   /** `status.accountType`: 'directory' or 'hybrid'. */
   accountType: string;
   /** `status.locallyBased`: 'yes', 'no', 'other' or blank. */
@@ -176,7 +177,8 @@ export function computeFlags(
   if (!listing.instagram && !listing.website) flags.push('no-socials');
 
   const normalized = normalizeListingName(listing.name);
-  if (normalized && otherNames.has(normalized)) flags.push('possible-duplicate');
+  if (normalized && otherNames.has(normalized))
+    flags.push('possible-duplicate');
 
   if (listing.locallyBased === 'no') flags.push('outside-area');
   else if (listing.locallyBased === 'other') flags.push('locality-unclear');
@@ -219,7 +221,7 @@ export function listingStats(rows: readonly QueueListing[]): ListingStat[] {
       ? waits[(waits.length - 1) / 2]
       : Math.round((waits[waits.length / 2 - 1] + waits[waits.length / 2]) / 2)
     : 0;
-  const unclaimed = rows.filter((r) => !r.pendingOwnerEmail).length;
+  const unclaimed = rows.filter((r) => !r.claimed).length;
   const flagged = rows.filter((r) => r.flags.length > 0).length;
 
   return [

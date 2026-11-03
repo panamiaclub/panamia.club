@@ -13,6 +13,7 @@ import {
 import dynamic from 'next/dynamic';
 import { Globe, MapPin } from 'lucide-react';
 import { nativeMapPins, type NativeResult } from '@/lib/mobile/browse';
+import { mapContainsPoint, type MapBounds } from '@/lib/map/viewport';
 import {
   nativePreviewHeight,
   nativeSheetHeights,
@@ -23,7 +24,10 @@ import {
   NATIVE_BACK_BUTTON_EVENT,
 } from '@/lib/mobile/native';
 import {
+  FALLBACK_MAP_PX,
   frameForPoints,
+  onResultsArrived,
+  viewerFrame,
   type MapFrame,
 } from '@/app/directory/search/_lib/map-frame';
 import type { MapCanvasPin } from '@/app/directory/search/_components/map-canvas';
@@ -38,6 +42,9 @@ const STOPS: NativeSheetStop[] = ['peek', 'half', 'expanded'];
 
 export default function NativeMapResults({
   items,
+  mapItems = items,
+  directorySections = false,
+  unmappedCount,
   label,
   count,
   filterKey,
@@ -51,6 +58,9 @@ export default function NativeMapResults({
   onControlsCovered,
 }: {
   items: NativeResult[];
+  mapItems?: NativeResult[];
+  directorySections?: boolean;
+  unmappedCount?: number;
   label: string;
   count: string;
   filterKey: string;
@@ -64,6 +74,8 @@ export default function NativeMapResults({
   onControlsCovered: (covered: boolean) => void;
 }) {
   const area = useRef<HTMLDivElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
+  const viewerFramePending = useRef(false);
   const heading = useRef<HTMLElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const cardNodes = useRef(new Map<string, HTMLDivElement>());
@@ -74,16 +86,37 @@ export default function NativeMapResults({
   const [previewKey, setPreviewKey] = useState<string | null>(null);
   const [previewHeight, setPreviewHeight] = useState<number | null>(null);
   const [dragHeight, setDragHeight] = useState<number | null>(null);
+  const [bounds, setBounds] = useState<MapBounds | null>(null);
   const [view, setView] = useState<MapFrame>(() =>
-    frameForPoints(items.flatMap((item) => (item.coords ? [item.coords] : [])))
+    frameForPoints(nativeMapPins(mapItems).map((pin) => pin.coords))
   );
-  const pins = useMemo(() => nativeMapPins(items), [items]);
-  const pinKey = pins.map((pin) => pin.id).join('|');
+  const pins = useMemo(() => nativeMapPins(mapItems), [mapItems]);
+  const pinKey = pins
+    .map((pin) => `${pin.id}:${pin.coords.lat},${pin.coords.lng}`)
+    .join('|');
   const latestPins = useRef(pins);
   latestPins.current = pins;
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
+  const inMapItems = useMemo(() => {
+    const ids = new Set(
+      pins
+        .filter((pin) => mapContainsPoint(bounds, pin.coords))
+        .flatMap((pin) => pin.items.map((item) => item.id))
+    );
+    return mapItems.filter((item) => ids.has(item.id));
+  }, [pins, mapItems, bounds]);
+  const onlineItems = useMemo(() => {
+    const ids = new Set(
+      pins.flatMap((pin) => pin.items.map((item) => item.id))
+    );
+    return items.filter((item) => !ids.has(item.id));
+  }, [pins, items]);
   const cluster = pins.find((pin) => pin.id === clusterId);
-  const results = cluster?.items ?? items;
-  const selected = results.find((item) => item.id === selectedId);
+  const results = directorySections
+    ? inMapItems.filter((item) => !cluster || cluster.items.includes(item))
+    : (cluster?.items ?? items);
+  const selected = mapItems.find((item) => item.id === selectedId);
   const preview = previewKey === filterKey && Boolean(selected);
   const visible = preview && selected ? [selected] : results;
   const heights = nativeSheetHeights(height, controlsInset);
@@ -128,8 +161,29 @@ export default function NativeMapResults({
   }, [filterKey]);
 
   useEffect(() => {
+    const decision = onResultsArrived(
+      viewerFramePending.current,
+      latestPins.current.length
+    );
+    viewerFramePending.current = decision.viewerFramePending;
+    if (!decision.reframe) return;
     setView(frameForPoints(latestPins.current.map((pin) => pin.coords)));
   }, [pinKey, filterKey]);
+
+  // Successful location requests publish a new viewer object, including repeat taps.
+  useEffect(() => {
+    if (!directorySections || !viewer) {
+      viewerFramePending.current = false;
+      return;
+    }
+    const box = viewport.current?.getBoundingClientRect();
+    const side = box ? Math.min(box.width, box.height) : 0;
+    viewerFramePending.current = loadingRef.current;
+    setView(viewerFrame(viewer, side > 0 ? side : FALLBACK_MAP_PX));
+    setSelectedId(null);
+    setClusterId(null);
+    setPreviewKey(null);
+  }, [directorySections, viewer]);
 
   const scrollToSelection = useCallback(() => {
     const card = selectedId ? cardNodes.current.get(selectedId) : null;
@@ -203,20 +257,45 @@ export default function NativeMapResults({
         type="button"
         className={styles.pin}
         data-kind={pin.items[0].kind}
+        data-online-zip={pin.zipArea?.postalCode}
+        data-approximate={
+          pin.items.some((item) => item.approximateZip) || undefined
+        }
         aria-label={
-          pin.items.length > 1
-            ? `${pin.items.length} ${label.toLowerCase()} results at ${pin.items[0].location}`
-            : pin.items[0].title
+          pin.zipArea
+            ? `${pin.items.length} online ${pin.items.length === 1 ? 'business' : 'businesses'} based near ZIP ${pin.zipArea.postalCode}`
+            : pin.items.length > 1
+              ? `${pin.items.length} ${label.toLowerCase()} results at ${pin.items[0].location}`
+              : pin.items[0].approximateZip
+                ? `${pin.items[0].title}, approximate ZIP ${pin.items[0].approximateZip.postalCode} area`
+                : pin.items[0].title
+        }
+        title={
+          pin.zipArea
+            ? 'Approximate base ZIP, not a visiting address or delivery zone'
+            : pin.items.some((item) => item.approximateZip)
+              ? 'Approximate ZIP area, not an exact business location'
+              : undefined
         }
         aria-pressed={
           clusterId === pin.id ||
           pin.items.some((item) => item.id === selectedId)
         }
         onClick={() => {
-          setView((current) => ({
-            center: [pin.coords.lat, pin.coords.lng],
-            zoom: Math.max(12, current.zoom),
-          }));
+          if (pin.zipArea) {
+            setClusterId(pin.id);
+            setSelectedId(null);
+            setPreviewKey(null);
+            setStop('half');
+            scroller.current?.scrollTo({ top: 0 });
+            return;
+          }
+          if (!directorySections) {
+            setView((current) => ({
+              center: [pin.coords.lat, pin.coords.lng],
+              zoom: Math.max(12, current.zoom),
+            }));
+          }
           if (pin.items.length === 1) {
             setClusterId(null);
             setSelectedId(pin.items[0].id);
@@ -231,12 +310,20 @@ export default function NativeMapResults({
           }
         }}
       >
-        {pin.items[0].image ? (
-          <img src={pin.items[0].image} alt="" />
+        {pin.zipArea ? (
+          <>
+            <Globe size={18} aria-hidden="true" />
+            <b>{pin.zipArea.postalCode}</b>
+            <strong>{pin.items.length}</strong>
+          </>
+        ) : pin.items[0].image || pin.items[0].kind === 'directory' ? (
+          <img src={pin.items[0].image || '/img/bg_coconut_blue.jpg'} alt="" />
         ) : (
           <MapPin size={20} aria-hidden="true" />
         )}
-        {pin.items.length > 1 && <span>{pin.items.length}</span>}
+        {!pin.zipArea &&
+          pin.items.length > 1 &&
+          pin.items[0].kind !== 'directory' && <span>{pin.items.length}</span>}
       </button>
     ),
   }));
@@ -266,7 +353,20 @@ export default function NativeMapResults({
     setDragHeight(null);
   };
 
-  const unpinned = items.filter((item) => !item.coords).length;
+  const unpinned =
+    unmappedCount ??
+    items.length - pins.reduce((total, pin) => total + pin.items.length, 0);
+  const resultCard = (item: NativeResult) => (
+    <div
+      key={item.id}
+      ref={(node) => {
+        if (node) cardNodes.current.set(item.id, node);
+        else cardNodes.current.delete(item.id);
+      }}
+    >
+      <NativeResultCard item={item} selected={item.id === selectedId} />
+    </div>
+  );
   return (
     <div
       className={styles.mapResults}
@@ -276,6 +376,7 @@ export default function NativeMapResults({
     >
       <div
         className={styles.mapViewport}
+        ref={viewport}
         style={{ bottom: sheetHeight }}
         hidden={height > 0 && sheetHeight >= height}
       >
@@ -284,11 +385,20 @@ export default function NativeMapResults({
           onViewChange={setView}
           pins={canvasPins}
           viewer={viewer}
+          hasZipAreas={pins.some(
+            (pin) =>
+              Boolean(pin.zipArea) ||
+              pin.items.some((item) => item.approximateZip)
+          )}
+          onBoundsChange={directorySections ? setBounds : undefined}
         />
         {unpinned > 0 && (
           <p className={styles.offMap}>
             <Globe size={13} aria-hidden="true" />
-            {unpinned} without map coordinates, included below
+            {unpinned}{' '}
+            {directorySections
+              ? 'without usable map locations, in Online below'
+              : 'without map coordinates, included below'}
           </p>
         )}
       </div>
@@ -365,7 +475,13 @@ export default function NativeMapResults({
             <span aria-hidden="true" />
           </button>
           <div className={styles.sheetHeading}>
-            <h2>{cluster ? `${results.length} at this location` : count}</h2>
+            <h2>
+              {cluster?.zipArea
+                ? `${results.length} online near ZIP ${cluster.zipArea.postalCode}`
+                : cluster
+                  ? `${results.length} at this location`
+                  : count}
+            </h2>
             <button
               type="button"
               onClick={() => {
@@ -401,18 +517,44 @@ export default function NativeMapResults({
               Try a different search or category.
             </NativeNotice>
           )}
-          {visible.map((item) => (
-            <div
-              key={item.id}
-              ref={(node) => {
-                if (node) cardNodes.current.set(item.id, node);
-                else cardNodes.current.delete(item.id);
-              }}
-            >
-              <NativeResultCard item={item} selected={item.id === selectedId} />
-            </div>
-          ))}
-          {!preview && footer}
+          {!preview && directorySections ? (
+            <>
+              <section className={styles.resultSection} aria-label="In map">
+                <h3>
+                  In map <span>{visible.length}</span>
+                </h3>
+                <p className={styles.resultSectionCopy}>
+                  Businesses in the visible map area. ZIP-area locations are
+                  approximate.
+                </p>
+                {visible.map(resultCard)}
+                {!loading && !failed && visible.length === 0 && (
+                  <p className={styles.resultSectionCopy}>
+                    No matches in this map area. Move or zoom out on the map to
+                    see more.
+                  </p>
+                )}
+              </section>
+              <section className={styles.resultSection} aria-label="Online">
+                <h3>
+                  Online <span>{onlineItems.length}</span>
+                </h3>
+                <p className={styles.resultSectionCopy}>
+                  Listings without a usable map location. This does not imply
+                  online service.
+                </p>
+                {onlineItems.map(resultCard)}
+                {!loading && !failed && onlineItems.length === 0 && (
+                  <p className={styles.resultSectionCopy}>
+                    No matching listings without a map location.
+                  </p>
+                )}
+              </section>
+            </>
+          ) : (
+            visible.map(resultCard)
+          )}
+          {!preview && !cluster && !directorySections && footer}
         </div>
       </section>
       <p className="sr-only" aria-live="polite">

@@ -3,6 +3,9 @@
 The iPhone and iPad app uses the same Directory, Social, Community, Profile,
 story camera, and detail screens as Android. There is no separate iOS website.
 The permanent bundle identifier is **`social.pana.app`**.
+Panamia's organization Team ID is **`RT9836SANW`**. The App Store Connect app
+record is **`6830254519`**; the separate Personal Team used for sideloading
+must not sign App Store builds.
 
 ## What is prepared
 
@@ -17,7 +20,8 @@ The permanent bundle identifier is **`social.pana.app`**.
   from the iOS native package. Do not enable Google on iOS without implementing
   the corresponding Apple-compliant login options and configuring their credentials.
 - In-app donations are disabled on iOS until nonprofit fundraising approval,
-  disclosures, and receipt behavior are complete. Web and Android behavior is unchanged.
+  disclosures, and receipt behavior are complete. This applies to `/support-pana`
+  and the legacy `/donate` redirect. Web and Android behavior is unchanged.
 - Settings -> Data and Privacy Settings link to the existing account-deletion
   wizard, so members can start deletion inside the app rather than contacting support.
 - Mobile Build verifies both the simulator and an unsigned device Release archive.

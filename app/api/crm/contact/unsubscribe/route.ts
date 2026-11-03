@@ -48,6 +48,10 @@ export async function POST(request: Request) {
 
   const now = new Date();
   await db
+    .update(profiles)
+    .set({ emailOptedOut: true })
+    .where(eq(profiles.id, profile.id));
+  await db
     .update(smsSubscriptions)
     .set({
       status: 'opted_out',

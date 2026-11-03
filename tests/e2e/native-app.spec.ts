@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { installNativeApiFixtures } from './fixtures/native-app-api';
 import { NATIVE_BACK_BUTTON_EVENT } from '@/lib/mobile/native';
+import type { SearchResultsInterface } from '@/lib/query/directory';
 
 test.use({
   viewport: { width: 390, height: 844 },
@@ -16,7 +17,10 @@ test.use({
   },
 });
 
-async function native(page: Page) {
+async function native(
+  page: Page,
+  options: { businesses?: SearchResultsInterface[] } = {}
+) {
   await page.addInitScript(() => {
     window.Capacitor = {
       isNativePlatform: () => true,
@@ -24,8 +28,54 @@ async function native(page: Page) {
     };
     Object.assign(window, { androidBridge: { postMessage: () => {} } });
   });
+  return installNativeApiFixtures(page, options);
+}
+
+async function nativeBrowser(
+  page: Page,
+  platform: 'android' | 'ios',
+  failBrowser = false
+) {
+  await page.addInitScript(
+    (config) => {
+      Object.assign(window, {
+        CapacitorCustomPlatform: { name: config.platform },
+        Capacitor: {
+          isNativePlatform: () => true,
+          getPlatform: () => config.platform,
+          isPluginAvailable: (name: string) => name === 'Browser',
+          PluginHeaders: [
+            {
+              name: 'Browser',
+              methods: [{ name: 'open', rtype: 'promise' }],
+            },
+          ],
+          nativePromise: async (
+            plugin: string,
+            method: string,
+            args: unknown
+          ) => {
+            const calls = JSON.parse(
+              sessionStorage.getItem('native-browser-test.calls') ?? '[]'
+            );
+            calls.push({ plugin, method, args });
+            sessionStorage.setItem(
+              'native-browser-test.calls',
+              JSON.stringify(calls)
+            );
+            if (config.failBrowser && plugin === 'Browser') {
+              throw new Error('Browser unavailable');
+            }
+            return {};
+          },
+        },
+      });
+    },
+    { platform, failBrowser }
+  );
   return installNativeApiFixtures(page);
 }
+
 const map = (page: Page, name = 'Directory') =>
   page.locator(`[data-map-results="${name}"]`);
 async function scope(page: Page, label: string) {
@@ -101,6 +151,501 @@ test('Directory is the native front door, with actual identity and branded categ
   expect(fixtures.state.unhandled).toEqual([]);
 });
 
+test('native directory shows complete In map and Online collections with camera-stable photo selection', async ({
+  page,
+}) => {
+  const businesses: SearchResultsInterface[] = Array.from(
+    { length: 47 },
+    (_, index) => ({
+      _id: `business-${index}`,
+      id: `business-${index}`,
+      name: `Business ${index}`,
+      screenname: `business-${index}`,
+      score: 1,
+      score_details: {},
+      details: 'A directory map fixture.',
+      five_words: 'A directory map fixture.',
+      geo: index < 20 ? null : { coordinates: [-80.19 + index * 0.001, 25.76] },
+      images: { primaryCDN: '/logos/pana_logo_long_orange.png' },
+      primary_address: { city: 'Miami' },
+      socials: {},
+    })
+  );
+  const fixtures = await native(page, { businesses });
+  await page.goto('/d');
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(27);
+  await expect(
+    map(page).getByText('20 without usable map locations, in Online below')
+  ).toBeVisible();
+  const canvas = map(page).locator('.dirsearch-mapcanvas[data-map-center]');
+  await expect
+    .poll(async () => {
+      const center = (await canvas.getAttribute('data-map-center'))!
+        .split(',')
+        .map(Number);
+      return Math.max(
+        Math.abs(center[0] - 25.76),
+        Math.abs(center[1] + 80.157)
+      );
+    })
+    .toBeLessThan(0.000001);
+  const before = {
+    center: await canvas.getAttribute('data-map-center'),
+    zoom: await canvas.getAttribute('data-map-zoom'),
+  };
+  await expect(
+    map(page)
+      .getByRole('region', { name: 'In map', exact: true })
+      .locator('article[data-result-id]')
+  ).toHaveCount(27);
+  await expect(
+    map(page)
+      .getByRole('region', { name: 'Online', exact: true })
+      .locator('article[data-result-id]')
+  ).toHaveCount(20);
+  const pin = map(page).getByRole('button', {
+    name: 'Business 46',
+    exact: true,
+  });
+  await expect(pin).toHaveText('');
+  await expect(pin.locator('img')).toHaveCount(1);
+  await map(page)
+    .getByRole('button', { name: 'Business 46', exact: true })
+    .click();
+  await fitted(page);
+  await expect(map(page).locator('article a').first()).toHaveAttribute(
+    'href',
+    '/p/business-46'
+  );
+  // The old selection ease lasted 420ms; include it in the regression check.
+  await page.waitForTimeout(550);
+  expect(await canvas.getAttribute('data-map-center')).toBe(before.center);
+  expect(await canvas.getAttribute('data-map-zoom')).toBe(before.zoom);
+  await map(page)
+    .getByRole('button', { name: 'Show all', exact: true })
+    .click();
+  await expect(
+    map(page).getByRole('button', { name: 'Next', exact: true })
+  ).toHaveCount(0);
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(27);
+  expect(
+    fixtures.state.requests.filter(
+      (request) =>
+        request.pathname === '/api/getDirectorySearch' &&
+        new URLSearchParams(request.query).get('v') === 'map'
+    )
+  ).toHaveLength(1);
+});
+
+test('native location sharing ignores old radius links and can recenter after browsing farther away', async ({
+  page,
+  context,
+}) => {
+  const viewer = { latitude: 25.761689, longitude: -80.191788 };
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation(viewer);
+  const businesses: SearchResultsInterface[] = [
+    ...[
+      { id: 'near', lng: viewer.longitude + 0.005 },
+      { id: 'far', lng: viewer.longitude + 0.18 },
+    ].map(({ id, lng }) => ({
+      _id: id,
+      id,
+      name: id,
+      screenname: id,
+      score: 1,
+      score_details: {},
+      details: '',
+      five_words: '',
+      geo: { coordinates: [lng, viewer.latitude] },
+      images: { primaryCDN: '/logos/pana_logo_long_orange.png' },
+      primary_address: { city: 'Miami' },
+      socials: {},
+    })),
+    {
+      _id: 'unlocated',
+      id: 'unlocated',
+      name: 'Unlocated business',
+      screenname: null,
+      score: 1,
+      score_details: {},
+      details: '',
+      five_words: '',
+      geo: null,
+      images: { primaryCDN: '' },
+      socials: {},
+    },
+  ];
+  const fixtures = await native(page, { businesses });
+  const queries = () =>
+    fixtures.state.requests
+      .filter((request) => request.pathname === '/api/getDirectorySearch')
+      .map((request) => new URLSearchParams(request.query));
+  await page.goto('/d?radius=5');
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Use my location' }).tap();
+  const canvas = map(page).locator('.dirsearch-mapcanvas[data-map-bounds]');
+  const center = async () =>
+    (await canvas.getAttribute('data-map-center'))!.split(',').map(Number);
+  const atViewer = async () =>
+    Math.max(
+      Math.abs((await center())[0] - viewer.latitude),
+      Math.abs((await center())[1] - viewer.longitude)
+    );
+  await expect.poll(atViewer).toBeLessThan(0.000001);
+  await expect.poll(() => queries().at(-1)?.get('sort')).toBe('nearest');
+  expect(queries().every((query) => query.get('radius') === 'all')).toBe(true);
+  expect(queries().at(-1)?.get('geolat')).toBe('25.76');
+  expect(queries().at(-1)?.get('geolng')).toBe('-80.19');
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
+  const online = map(page).getByRole('region', { name: 'Online', exact: true });
+  await expect(online.locator('article')).toHaveCount(1);
+  const requests = queries().length;
+  const box = (await map(page).locator('canvas').boundingBox())!;
+  for (let step = 0; step < 4; step++) {
+    const bounds = JSON.parse(
+      (await canvas.getAttribute('data-map-bounds'))!
+    ) as { west: number; east: number };
+    const farLng = viewer.longitude + 0.18;
+    if (farLng >= bounds.west && farLng <= bounds.east) break;
+    const previous = (await center())[1];
+    await page.mouse.move(box.x + box.width * 0.85, box.y + box.height * 0.55);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.55, {
+      steps: 20,
+    });
+    await page.mouse.up();
+    await expect
+      .poll(async () => (await center())[1])
+      .toBeGreaterThan(previous + 0.01);
+  }
+  await expect
+    .poll(async () => (await center())[1])
+    .toBeGreaterThan(viewer.longitude + 0.08);
+  await expect(
+    map(page)
+      .getByRole('region', { name: 'In map', exact: true })
+      .locator('article[data-result-id="far"]')
+  ).toHaveCount(1);
+  await expect(online.locator('article')).toHaveCount(1);
+  const before = {
+    center: await canvas.getAttribute('data-map-center'),
+    zoom: await canvas.getAttribute('data-map-zoom'),
+  };
+  await map(page).getByRole('button', { name: 'far', exact: true }).tap();
+  await fitted(page);
+  await page.waitForTimeout(550);
+  expect(await canvas.getAttribute('data-map-center')).toBe(before.center);
+  expect(await canvas.getAttribute('data-map-zoom')).toBe(before.zoom);
+  await map(page).getByRole('button', { name: 'Show all', exact: true }).tap();
+  await page.getByRole('button', { name: 'Use my location' }).tap();
+  await expect.poll(atViewer).toBeLessThan(0.000001);
+  expect(queries()).toHaveLength(requests);
+  await expect(online.locator('article')).toHaveCount(1);
+});
+
+for (const viewport of [
+  { width: 390, height: 844 },
+  { width: 740, height: 320 },
+]) {
+  test(`native directory dropdowns keep branded, accessible filters at ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }, testInfo) => {
+    const fixtures = await native(page);
+    await page.setViewportSize(viewport);
+    await page.goto('/d?radius=5');
+    await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
+    await page.getByRole('button', { name: 'Directory filters' }).tap();
+    const dialog = page.getByRole('dialog', { name: 'Directory filters' });
+    await expect(dialog.getByRole('button', { name: /^Radius/ })).toHaveCount(
+      0
+    );
+    const category = dialog.getByRole('button', { name: /^Categories/ });
+    const cream = await category.evaluate(
+      (node) => getComputedStyle(node).backgroundColor
+    );
+    await expect(dialog).toHaveCSS('background-color', cream);
+    await expect(category).toHaveCSS('border-radius', '999px');
+    await category.tap();
+    const menu = dialog.getByRole('menu', {
+      name: 'Categories',
+      exact: true,
+    });
+    await expect(menu).toHaveCSS('background-color', cream);
+    const choices = menu.getByRole('menuitemcheckbox');
+    await choices.first().press('End');
+    await expect(choices.last()).toBeFocused();
+    await expect(choices.last()).toBeInViewport({ ratio: 1 });
+    await choices.last().press('Home');
+    await expect(choices.first()).toBeFocused();
+    await menu
+      .getByRole('menuitemcheckbox', { name: 'Art', exact: true })
+      .tap();
+    await menu
+      .getByRole('menuitemcheckbox', { name: 'Food', exact: true })
+      .tap();
+    await expect(
+      menu.getByRole('menuitemcheckbox', { name: 'Art', exact: true })
+    ).toHaveAttribute('aria-checked', 'true');
+    await menu.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: testInfo.outputPath('native-category-open.png'),
+      animations: 'disabled',
+    });
+    await menu.getByRole('button', { name: 'Clear categories' }).focus();
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    await expect(category).toBeFocused();
+    await category.tap();
+    expect(
+      await page.evaluate((name) => {
+        const event = new Event(name, { cancelable: true });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      }, NATIVE_BACK_BUTTON_EVENT)
+    ).toBe(true);
+    await expect(menu).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    await expect(category).toBeFocused();
+    const sort = dialog.getByRole('button', { name: /^Sort/ });
+    await sort.press('ArrowDown');
+    const sortMenu = dialog.getByRole('menu', { name: 'Sort', exact: true });
+    await expect(
+      sortMenu.getByRole('menuitemradio', { name: /Nearest/ })
+    ).toBeDisabled();
+    await expect(sortMenu).toHaveCSS('background-color', cream);
+    await sortMenu.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: testInfo.outputPath('native-sort-open.png'),
+      animations: 'disabled',
+    });
+    await sortMenu
+      .getByRole('menuitemradio', { name: 'Most recommended', exact: true })
+      .press('Enter');
+    await expect(sortMenu).toHaveCount(0);
+    await dialog.getByRole('checkbox', { name: 'Pana certified only' }).check();
+    await dialog
+      .getByRole('checkbox', { name: 'Hosting upcoming events' })
+      .check();
+    await expect
+      .poll(() => {
+        const request = fixtures.state.requests
+          .filter((item) => item.pathname === '/api/getDirectorySearch')
+          .at(-1)!;
+        const params = new URLSearchParams(request.query);
+        return [
+          params.get('fcat'),
+          params.get('sort'),
+          params.get('certified'),
+          params.get('events'),
+          params.get('radius'),
+        ];
+      })
+      .toEqual(['art+food', 'recommended', 'true', 'true', 'all']);
+    await dialog
+      .getByRole('button', { name: 'Clear filters', exact: true })
+      .tap();
+    await expect(
+      dialog.getByRole('checkbox', { name: 'Pana certified only' })
+    ).not.toBeChecked();
+    await expect(
+      dialog.getByRole('checkbox', { name: 'Hosting upcoming events' })
+    ).not.toBeChecked();
+    await dialog
+      .getByRole('button', { name: 'Show results', exact: true })
+      .tap();
+    await expect(dialog).toHaveCount(0);
+    await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
+    await expect(
+      map(page)
+        .getByRole('region', { name: 'Online', exact: true })
+        .locator('article')
+    ).toHaveCount(1);
+    expect(
+      fixtures.state.requests
+        .filter((item) => item.pathname === '/api/getDirectorySearch')
+        .every(
+          (item) => new URLSearchParams(item.query).get('radius') === 'all'
+        )
+    ).toBe(true);
+  });
+}
+
+test('native In map follows zoom, pan, and resizing while unlocated matches remain in Online', async ({
+  page,
+}) => {
+  const points = [
+    { id: 'near-west', lng: -80.21 },
+    { id: 'near-east', lng: -80.19 },
+    { id: 'edge', lng: -80.3 },
+    { id: 'far-west', lng: -80.6 },
+    { id: 'far-east', lng: -79.8 },
+  ];
+  const businesses: SearchResultsInterface[] = [
+    ...points.map(({ id, lng }) => ({
+      _id: id,
+      id,
+      name: id,
+      screenname: id,
+      score: 1,
+      score_details: {},
+      details: '',
+      five_words: '',
+      geo: { coordinates: [lng, 25.8] },
+      images: { primaryCDN: '/logos/pana_logo_long_orange.png' },
+      primary_address: { city: 'Miami' },
+      socials: {},
+    })),
+    ...['missing-location', 'private-online'].map((id) => ({
+      _id: id,
+      id,
+      name: id,
+      screenname: null,
+      score: 1,
+      score_details: {},
+      details: '',
+      five_words: '',
+      geo: id === 'private-online' ? { coordinates: [-122.4, 37.8] } : null,
+      online_only: id === 'private-online',
+      images: { primaryCDN: '' },
+      socials: {},
+    })),
+  ];
+  const fixtures = await native(page, { businesses });
+  await page.goto('/d');
+  const canvas = map(page).locator('.dirsearch-mapcanvas[data-map-bounds]');
+  await expect(canvas).toHaveCount(1);
+  await expect
+    .poll(async () => {
+      const center = (await canvas.getAttribute('data-map-center'))!
+        .split(',')
+        .map(Number);
+      return Math.abs(center[1] + 80.2);
+    })
+    .toBeLessThan(0.000001);
+  for (let step = 0; step < 3; step++) {
+    const zoom = Number(await canvas.getAttribute('data-map-zoom'));
+    await map(page)
+      .getByRole('button', { name: 'Zoom in', exact: true })
+      .click();
+    await expect
+      .poll(async () => Number(await canvas.getAttribute('data-map-zoom')))
+      .toBeGreaterThan(zoom + 0.99);
+  }
+  const inMap = map(page).getByRole('region', { name: 'In map', exact: true });
+  const online = map(page).getByRole('region', { name: 'Online', exact: true });
+  await expect(inMap.locator('article')).toHaveCount(2);
+  await expect(online.locator('article')).toHaveCount(2);
+  await expect(online).not.toContainText('far-west');
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(5);
+
+  const assertViewportMatches = async () => {
+    const bounds = JSON.parse(
+      (await canvas.getAttribute('data-map-bounds'))!
+    ) as {
+      west: number;
+      east: number;
+      south: number;
+      north: number;
+    };
+    const expected = points
+      .filter(
+        ({ lng }) =>
+          lng >= bounds.west &&
+          lng <= bounds.east &&
+          25.8 >= bounds.south &&
+          25.8 <= bounds.north
+      )
+      .map(({ id }) => id);
+    await expect
+      .poll(() =>
+        inMap
+          .locator('article')
+          .evaluateAll((nodes) =>
+            nodes.map((node) => node.getAttribute('data-result-id'))
+          )
+      )
+      .toEqual(expected);
+  };
+  await page.setViewportSize({ width: 740, height: 844 });
+  await expect(inMap.locator('[data-result-id="edge"]')).toBeAttached();
+  await assertViewportMatches();
+  const before = (await canvas.getAttribute('data-map-center'))!
+    .split(',')
+    .map(Number);
+  const box = (await map(page).locator('canvas').boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.85, box.y + box.height * 0.6);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.6, {
+    steps: 20,
+  });
+  await page.mouse.up();
+  await expect
+    .poll(async () => {
+      const center = (await canvas.getAttribute('data-map-center'))!
+        .split(',')
+        .map(Number);
+      return center[1] - before[1];
+    })
+    .toBeGreaterThan(0.02);
+  await assertViewportMatches();
+  await expect(online.locator('article')).toHaveCount(2);
+  expect(
+    fixtures.state.requests.filter(
+      (request) => request.pathname === '/api/getDirectorySearch'
+    )
+  ).toHaveLength(1);
+});
+
+test('native ZIP-only businesses use labelled approximate photo pins without online classification', async ({
+  page,
+}) => {
+  await native(page, {
+    businesses: [
+      {
+        _id: 'zip-only',
+        id: 'zip-only',
+        name: 'ZIP-only business',
+        screenname: null,
+        score: 1,
+        score_details: {},
+        details: 'A business with an existing public ZIP.',
+        five_words: '',
+        geo: null,
+        online_only: false,
+        zip_area: {
+          postalCode: '33138',
+          country: 'US',
+          city: 'Miami',
+          region: 'FL',
+          lat: 25.8521,
+          lng: -80.1821,
+        },
+        primary_address: { city: 'Miami', zipcode: '33138' },
+        images: { primaryCDN: '' },
+        socials: {},
+      },
+    ],
+  });
+  await page.goto('/d');
+  const pin = map(page).getByRole('button', {
+    name: 'ZIP-only business, approximate ZIP 33138 area',
+    exact: true,
+  });
+  await expect(pin).toBeVisible();
+  await expect(pin).toHaveText('');
+  await expect(pin.locator('img')).toHaveCount(1);
+  await expect(pin).toHaveAttribute('data-approximate', 'true');
+  await expect(pin).toHaveCSS('border-style', 'dashed');
+  await expect(pin).not.toHaveAttribute('data-online-zip');
+  await pin.click();
+  await fitted(page);
+  await expect(map(page).locator('article')).toContainText(
+    'Approximate ZIP 33138 area'
+  );
+});
+
 test('mobile browsers keep the website layout rather than the native tabs', async ({
   page,
 }) => {
@@ -109,6 +654,96 @@ test('mobile browsers keep the website layout rather than the native tabs', asyn
   await expect(page.locator('#layout-main')).toBeVisible();
   await expect(page.getByRole('banner').first()).toBeVisible();
   await expect(page.locator('[data-native-app]')).toHaveCount(0);
+});
+
+for (const viewport of [
+  { width: 390, height: 844 },
+  { width: 1280, height: 720 },
+]) {
+  test(`About Pana opens a new browser tab from the account menu at ${viewport.width}x${viewport.height}`, async ({
+    page,
+    context,
+  }) => {
+    await installNativeApiFixtures(page);
+    await context.route('https://panamia.club/**', (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: '<title>Pana Mia</title>',
+      })
+    );
+    await page.setViewportSize(viewport);
+    await page.goto('/d');
+    const trigger = page.getByRole('button', { name: /Native Viewer/ });
+    await trigger.click();
+    const menu = page.getByRole('menu');
+    const about = menu.getByRole('menuitem', {
+      name: 'About Pana',
+      exact: true,
+    });
+    await expect(menu.getByRole('menuitem').nth(-2)).toHaveText('About Pana');
+    await expect(menu.getByRole('menuitem').last()).toHaveText('Sign Out');
+    await expect(about).toHaveAttribute('href', 'https://panamia.club/');
+    await expect(about).toHaveAttribute('target', '_blank');
+    await expect(about).toHaveAttribute('rel', 'noopener noreferrer');
+    const [popup] = await Promise.all([
+      page.waitForEvent('popup'),
+      about.click(),
+    ]);
+    await expect(popup).toHaveURL('https://panamia.club/');
+    await expect(page).toHaveURL(/\/d$/);
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  });
+}
+
+for (const platform of ['android', 'ios'] as const) {
+  test(`About Pana opens the native browser on ${platform} without leaving the app`, async ({
+    page,
+    context,
+  }) => {
+    await nativeBrowser(page, platform);
+    await page.goto('/d');
+    const trigger = page.getByRole('button', { name: /Native Viewer/ });
+    await trigger.click();
+    const menu = page.getByRole('menu');
+    await expect(menu.getByRole('menuitem').nth(-2)).toHaveText('About Pana');
+    await expect(menu.getByRole('menuitem').last()).toHaveText('Sign Out');
+    await menu
+      .getByRole('menuitem', { name: 'About Pana', exact: true })
+      .click();
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          JSON.parse(
+            sessionStorage.getItem('native-browser-test.calls') ?? '[]'
+          )
+        )
+      )
+      .toEqual([
+        {
+          plugin: 'Browser',
+          method: 'open',
+          args: { url: 'https://panamia.club/' },
+        },
+      ]);
+    await expect(page).toHaveURL(/\/d$/);
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(context.pages()).toHaveLength(1);
+  });
+}
+
+test('About Pana reports a native browser failure without navigating the app', async ({
+  page,
+  context,
+}) => {
+  await nativeBrowser(page, 'android', true);
+  await page.goto('/d');
+  await page.getByRole('button', { name: /Native Viewer/ }).click();
+  await page.getByRole('menuitem', { name: 'About Pana', exact: true }).click();
+  await expect(
+    page.getByText("Couldn't open Pana Mia. Please try again.", { exact: true })
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/d$/);
+  expect(context.pages()).toHaveLength(1);
 });
 
 for (const viewport of [

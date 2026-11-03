@@ -6,8 +6,8 @@ import {
 } from '@/lib/server/profile-owners';
 import { listPendingInvitations } from '@/lib/server/pending-listing-owner';
 import {
-  ACTIVE_PROFILE_COOKIE,
   getActiveProfileId,
+  selectActiveProfile,
 } from '@/lib/server/active-profile';
 
 /**
@@ -109,13 +109,7 @@ export async function POST(request: NextRequest) {
   }
 
   const response = NextResponse.json({ success: true, data: { profileId } });
-  response.cookies.set(ACTIVE_PROFILE_COOKIE, profileId, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  selectActiveProfile(response, profileId);
 
   return response;
 }

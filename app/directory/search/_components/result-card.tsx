@@ -12,6 +12,7 @@ import {
   Store,
 } from 'lucide-react';
 import type { SearchResultsInterface } from '@/lib/query/directory';
+import { normalizeUsZip, onlineBusinessLocation } from '@/lib/online-zip';
 import { isUnoptimizableImageSrc } from '@/lib/image-src';
 import { distanceInMiles, type Coords } from '@/app/p/[user]/_lib/profile-view';
 import { useDirectoryViewer } from './directory-viewer';
@@ -21,6 +22,8 @@ import {
   formatDistance,
   formatWhen,
   resultCoords,
+  resultHref,
+  resultZipArea,
 } from '../_lib/format';
 
 const FALLBACK_COVER = '/img/bg_coconut_blue.jpg';
@@ -47,13 +50,11 @@ interface ResultCardProps {
  * depends on. The count is shown; the button lives one click deeper.
  */
 export function ResultCard({ result, index, viewerCoords }: ResultCardProps) {
-  const { showsPanaActions, isSaved, toggleSave, saveCount } =
+  const { showsPanaActions, isSaved, isOwner, toggleSave, saveCount } =
     useDirectoryViewer();
 
-  const claimed = Boolean(result.screenname);
-  const href = claimed
-    ? `/p/${result.screenname}`
-    : `/listings/claim/start?id=${result._id}`;
+  const claimed = result.claimed ?? Boolean(result.screenname);
+  const href = resultHref(result);
 
   const logo = result.images?.primaryCDN || null;
   const cover = result.coverImage || logo || FALLBACK_COVER;
@@ -66,6 +67,7 @@ export function ResultCard({ result, index, viewerCoords }: ResultCardProps) {
   // coordinates never leave the browser, and so this rounds identically to the
   // same business's profile page.
   const coords = resultCoords(result);
+  const zipArea = resultZipArea(result);
   const distance =
     viewerCoords && coords && !result.online_only
       ? distanceInMiles(viewerCoords, coords)
@@ -128,26 +130,43 @@ export function ResultCard({ result, index, viewerCoords }: ResultCardProps) {
         {/* Place and proximity, together and high up. "Little Haiti" alone
             does not tell a pana in Hollywood whether this is worth the drive,
             and that judgement is the whole reason they came to the directory. */}
-        {(result.online_only || result.primary_address?.city) && (
-          <p className="dirsearch-card-where">
-            {result.online_only ? (
-              <>
-                <Globe className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>Online only — serves all of South Florida</span>
-              </>
-            ) : (
-              <>
-                <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{result.primary_address?.city}</span>
-                {distance !== null && (
-                  <span className="dirsearch-card-distance">
-                    {formatDistance(distance)}
+        <p className="dirsearch-card-where">
+          {result.online_only ? (
+            <>
+              <Globe className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>
+                {onlineBusinessLocation(result.primary_address?.zipcode)}
+              </span>
+              {normalizeUsZip(result.primary_address?.zipcode) &&
+                !result.online_zip && (
+                  <span className="dirsearch-card-distance-off">
+                    Map position unavailable
                   </span>
                 )}
-              </>
-            )}
-          </p>
-        )}
+            </>
+          ) : (
+            <>
+              <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>
+                {zipArea
+                  ? `Approximate ZIP ${zipArea.postalCode} area - ${result.primary_address?.city || zipArea.city}`
+                  : result.primary_address?.city || 'Map location not provided'}
+              </span>
+              {!coords &&
+                !zipArea &&
+                normalizeUsZip(result.primary_address?.zipcode) && (
+                  <span className="dirsearch-card-distance-off">
+                    Map position unavailable
+                  </span>
+                )}
+              {distance !== null && (
+                <span className="dirsearch-card-distance">
+                  {formatDistance(distance)}
+                </span>
+              )}
+            </>
+          )}
+        </p>
 
         {result.details && (
           <p className="dirsearch-card-blurb">{result.details}</p>
@@ -203,7 +222,7 @@ export function ResultCard({ result, index, viewerCoords }: ResultCardProps) {
                 business can act on that. */}
             {claimed ? (
               <>
-                {showsPanaActions && (
+                {showsPanaActions && !isOwner(result._id) && (
                   <button
                     type="button"
                     className="dirsearch-save"
@@ -222,17 +241,30 @@ export function ResultCard({ result, index, viewerCoords }: ResultCardProps) {
                     {saved ? 'Saved' : 'Save'}
                   </button>
                 )}
-                <DirectoryFollowButton screenname={result.screenname!} />
+                {result.screenname && (
+                  <DirectoryFollowButton screenname={result.screenname} />
+                )}
                 <Link href={href} className="dirsearch-view">
                   View profile
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
               </>
             ) : (
-              <Link href={href} className="dirsearch-claim">
-                <Store className="h-4 w-4" aria-hidden="true" />
-                Is this your business?
-              </Link>
+              <>
+                {!isOwner(result._id) && (
+                  <Link
+                    href={`/listings/claim/start?id=${encodeURIComponent(result._id)}`}
+                    className="dirsearch-claim"
+                  >
+                    <Store className="h-4 w-4" aria-hidden="true" />
+                    Is this your business?
+                  </Link>
+                )}
+                <Link href={href} className="dirsearch-view">
+                  View profile{' '}
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </>
             )}
           </div>
         </div>

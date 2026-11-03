@@ -22,6 +22,11 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: '/linkedin-bio',
+        destination: '/info',
+        permanent: true,
+      },
+      {
         source: '/newsletter-sign-up-702983',
         destination: '/info#newsletter-signup',
         permanent: true,

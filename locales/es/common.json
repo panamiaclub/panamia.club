@@ -16,6 +16,7 @@
     "messages": "Mensajes"
   },
   "identity": {
+    "aboutPanaOpenFailed": "No pudimos abrir Pana Mia. Inténtalo de nuevo.",
     "account": "Cuenta",
     "actingAs": "Actuando como",
     "backToYou": "Volver a ti",

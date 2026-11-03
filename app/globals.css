@@ -5587,6 +5587,11 @@ body {
   border-color: var(--color-pana-indigo);
 }
 
+.dirsearch-checkfilter:has(.dirsearch-checkinput:focus-visible) {
+  outline: 2px solid var(--color-pana-indigo);
+  outline-offset: 2px;
+}
+
 .dirsearch-checkfilter[data-on='true'] {
   background-color: rgb(48 62 140 / 0.08);
   border-color: var(--color-pana-indigo);
@@ -5733,6 +5738,84 @@ body {
 .dirsearch-menuclear:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* Directory menus opt in to the same paper, ink and selected rows as the
+   masthead scope selector. Other FilterMenu callers retain their own skin. */
+.dirsearch-filtertrigger {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.dirsearch-filtertrigger[aria-expanded='true'] {
+  border-color: var(--color-pana-indigo);
+}
+
+.dirsearch-filtertrigger[data-on='true'] {
+  border-color: var(--color-pana-indigo);
+  background-color: var(--color-pana-indigo);
+  color: var(--color-pana-cream);
+}
+
+.dirsearch-filtertrigger .dirsearch-menuvalue {
+  font-weight: 800;
+}
+
+.dirsearch-filterpanel {
+  top: calc(100% + 0.5rem);
+  right: auto;
+  left: 0;
+  z-index: 45;
+  width: 18rem;
+  max-width: calc(100vw - 2rem);
+  max-height: 24rem;
+  padding: 0.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Upward-opening panels must clear the sticky masthead and floating bug button. */
+.dirsearch-filters:has(.dirsearch-filterpanel) {
+  z-index: 45;
+}
+
+.dirsearch-filterpanel .dirsearch-menulist {
+  gap: 0.25rem;
+  max-height: none;
+  overflow: visible;
+}
+
+.dirsearch-filteroption {
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.dirsearch-filtertrigger:focus-visible,
+.dirsearch-filteroption:focus-visible,
+.dirsearch-filterpanel .dirsearch-menuclear:focus-visible {
+  outline: 2px solid var(--color-pana-indigo);
+  outline-offset: 2px;
+}
+
+.dirsearch-filteroption:focus-visible {
+  background-color: var(--surface-tone-soft, rgb(48 62 140 / 0.08));
+}
+
+.dirsearch-filteroption:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dirsearch-filteroption:disabled:hover {
+  background-color: transparent;
+}
+
+.dirsearch-filteroption[data-on='true'] .dirsearch-menutick {
+  border-color: var(--color-pana-indigo);
+  background-color: var(--color-pana-indigo);
 }
 
 /* --- Active filters ----------------------------------------------------- */
@@ -6875,6 +6958,86 @@ body {
 /* Pins on real tiles. Distinct from .dirsearch-map-pin because pigeon-maps
    positions its own overlay wrapper — a pin that also positions itself would
    fight it and land in the wrong place. */
+.dirsearch-zip-bubble {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.4rem 0.75rem;
+  border: 2px solid var(--color-pana-indigo);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--color-pana-indigo);
+  box-shadow: 0 4px 14px rgb(17 13 13 / 0.12);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.dirsearch-zip-bubble strong {
+  display: grid;
+  place-items: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.6875rem;
+}
+
+.dirsearch-zip-bubble[data-on='true'],
+.dirsearch-zip-bubble:focus-visible {
+  outline: 3px solid var(--color-pana-indigo);
+  outline-offset: 3px;
+}
+
+.dirsearch-zip-focus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 0.75rem;
+  padding: 0.4rem 1rem;
+  border-block: 1px solid rgb(48 62 140 / 0.15);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.dirsearch-zip-focus button {
+  min-height: 44px;
+  color: var(--color-pana-indigo);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.dirsearch-zip-attribution {
+  position: absolute;
+  left: 0.3rem;
+  bottom: 0.3rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.2rem;
+  background: rgb(255 255 255 / 0.9);
+  color: var(--color-pana-ink);
+  font-size: 0.625rem;
+  text-decoration: underline;
+}
+
+.dirsearch-map-card {
+  padding-right: 2.8rem;
+}
+
+.dirsearch-map-close {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--color-pana-cream);
+  cursor: pointer;
+}
+
 .dirsearch-pin {
   position: relative;
   display: block;
@@ -7439,6 +7602,8 @@ body:has(.home-hero-field) .bizprofile-mockbar .mock-toolbar-link {
  * dissolve the sky into the paper, and with no sky it was cream fading into
  * cream, so it has gone with the sky. */
 .home-hero-field {
+  --home-hero-headline-size: clamp(42px, min(8.4vw, 13svh), 126px);
+
   background-color: transparent;
   color: var(--story-ink);
   /* Named so the masthead can react to this card leaving, from a different
@@ -7516,7 +7681,14 @@ body:has(.home-hero-field) .bizprofile-mockbar .mock-toolbar-link {
    and only bites on short windows, which is where the room is needed. */
 .home-hero-field .hero-headline {
   text-shadow: none;
-  font-size: clamp(42px, min(8.4vw, 13svh), 126px);
+  font-size: var(--home-hero-headline-size);
+}
+
+/* One-third of the headline, without shrinking the existing phone copy. */
+.home-hero-field .hero-subheadline {
+  font-size: max(17px, calc(var(--home-hero-headline-size) / 3));
+  line-height: 1.25;
+  text-wrap: balance;
 }
 
 /* Coral rather than orange, and for a specific reason: the wordmark directly
@@ -8026,8 +8198,8 @@ body:has([data-density]) {
      ceiling comes down to roughly a tenth of the screen here; the floor and
      the width term are untouched, so nothing changes on any screen tall
      enough not to need it. */
-  [data-density] .home-hero-field .hero-headline {
-    font-size: clamp(38px, min(8.4vw, 9.8svh), 126px);
+  [data-density] .home-hero-field {
+    --home-hero-headline-size: clamp(38px, min(8.4vw, 9.8svh), 126px);
   }
 }
 
@@ -8449,6 +8621,7 @@ body:has([data-density]) {
    directly under the search — the obvious next thing to do, rather than three
    screens of scrolling that have to be earned. */
 .beats-rail {
+  --home-beat-art: clamp(8.5rem, 12vw, 10rem);
   position: relative;
 }
 
@@ -8497,21 +8670,12 @@ body:has([data-density]) {
 
 .beats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--home-beat-gap, 1.25rem);
-  /* Wider than the other sections because four shopfronts have to stand in
-     the row that used to hold three. At the narrow end of this layout each
-     card is about 265px, which is the floor: any narrower and the questions
-     start wrapping to three lines and the row stops reading as a street. The
-     rail below takes over before that happens. */
-  width: min(100% - 2rem, 84rem);
+  width: min(100% - 2rem, 80rem);
   margin-inline: auto;
-  /* Stretched, so the four shopfronts are the same size whatever their copy
-     does. The signs hang level either way — the shop windows above them are a
-     fixed height — but four cards of four different depths standing in a
-     row read as four unfinished cards rather than as a block of shops.
-     Nothing is lost by it: the open note is drawn over its card rather than
-     pushed under it, so no stop can grow the row it stands in. */
+  scroll-margin-top: calc(var(--main-masthead-offset, 65px) + 1rem);
+  /* Matching heights keep the signs and disclosure controls aligned. */
   align-items: stretch;
   /* The per-side arrival offset pushes a stop sideways mid-animation. `clip`
      rather than `hidden` so no scroll container is created — a scroll
@@ -8532,7 +8696,7 @@ body:has([data-density]) {
   border-top: 10px solid var(--beat-accent, var(--story-orange));
   border-radius: 14px;
   background-color: #fff;
-  padding: clamp(0.9rem, 1.5vw, 1.35rem);
+  padding: clamp(1rem, 2vw, 1.5rem);
   box-shadow: 0 12px 26px rgb(2 8 17 / 0.07);
   /* Keeps the open note inside the card's rounded corners. */
   overflow: hidden;
@@ -8572,6 +8736,7 @@ body:has([data-density]) {
   display: grid;
   place-items: center;
   height: var(--home-beat-art, 12rem);
+  flex-shrink: 0;
   border-radius: 9px;
   background-color: var(--story-cream);
   padding: 0.75rem;
@@ -8599,20 +8764,13 @@ body:has([data-density]) {
   --beat-in: 34px;
 }
 
-/* Below four-across, the row becomes a swipeable rail rather than a stack:
-   the four questions stay one gesture apart instead of four screens, and
-   the half-visible neighbour is the affordance that says so.
-
-   The cutover is 72rem rather than the 60rem it was at three cards. Four
-   columns in 1024px leaves each card about 230px, which is narrower than the
-   artwork wants and tall enough to cost the section its one-screen fit; a
-   rail at that width keeps all four one gesture apart and the section one
-   screen. Laptops that used to get three-across now swipe. */
-@media (max-width: 71.99rem) {
+/* Below three-across, the next visible card and arrow controls advertise the
+   swipe rail without turning the questions into three screens of scrolling. */
+@media (max-width: 59.99rem) {
   .beats {
     grid-template-columns: none;
     grid-auto-flow: column;
-    grid-auto-columns: min(80vw, 22rem);
+    grid-auto-columns: min(86vw, 24rem);
     gap: 1rem;
     width: 100%;
     /* This is exactly the scroll container the desktop layout goes out of its
@@ -8646,6 +8804,13 @@ body:has([data-density]) {
      anyone driving with a mouse. */
   .beats-nav {
     display: flex;
+    width: max-content;
+    margin-inline: auto;
+    border: 1px solid rgb(2 8 17 / 0.15);
+    border-radius: 999px;
+    background-color: var(--story-cream);
+    padding: 0.45rem 0.65rem;
+    box-shadow: 0 6px 14px rgb(2 8 17 / 0.1);
   }
 }
 
@@ -8660,9 +8825,9 @@ body:has([data-density]) {
   box-shadow: 0 8px 20px rgb(2 8 17 / 0.14);
   padding: 0.5rem 1rem;
   color: var(--beat-on-accent, var(--story-ink));
-  font-size: clamp(1.05rem, 1.45vw, 1.3rem);
+  font-size: clamp(1.1rem, 1.65vw, 1.35rem);
   font-weight: 900;
-  line-height: 1.15;
+  line-height: 1.25;
   letter-spacing: -0.01em;
 }
 
@@ -8683,6 +8848,59 @@ body:has([data-density]) {
   margin-bottom: 1.25rem;
 }
 
+.beat-answer-blocks {
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--story-ink);
+}
+
+.beat-answer-blocks > * + * {
+  margin-top: 1.1rem;
+}
+
+.beat-answer-blocks strong {
+  font-weight: 700;
+}
+
+.beat-definition .beat-aside {
+  margin-top: 0;
+  font-size: 1rem;
+  color: var(--story-ink);
+}
+
+.beat-definition dd {
+  margin-top: 1rem;
+}
+
+.beat-definition .beat-numbered {
+  padding-left: 1.5rem;
+}
+
+.beat-definition li + li {
+  margin-top: 0.8rem;
+}
+
+.beat-definition li::marker {
+  font-weight: 800;
+}
+
+.beat-example {
+  border-left: 3px solid var(--beat-accent);
+  border-radius: 0 9px 9px 0;
+  background-color: var(--story-cream);
+  padding: 0.85rem 1rem;
+}
+
+.beat-body-question {
+  border-left: 3px solid var(--beat-accent);
+  padding-left: 0.8rem;
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
 /* Pushed to the floor of the card so the three toggles line up even when the
    answers wrap to different depths. The gap above it is the answer's bottom
    margin, since an auto margin can go to zero. */
@@ -8697,14 +8915,20 @@ body:has([data-density]) {
   padding: 0.45rem 1rem;
   font-size: 0.8125rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
+  line-height: 1.5;
+  text-align: left;
   color: var(--story-ink);
   cursor: pointer;
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
     color 0.2s ease;
+}
+
+.beat-toggle svg {
+  flex-shrink: 0;
 }
 
 .beat-toggle:hover {
@@ -8731,10 +8955,11 @@ body:has([data-density]) {
   background-color: #fff;
   padding: clamp(0.9rem, 1.5vw, 1.35rem);
   padding-top: 2.4rem;
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 500;
   line-height: 1.6;
   color: rgb(2 8 17 / 0.78);
+  scroll-margin-top: calc(var(--main-masthead-offset, 65px) + 1rem);
 }
 
 /* `display: flex` above would otherwise beat the `hidden` attribute's own
@@ -8749,6 +8974,11 @@ body:has([data-density]) {
    the horizontal rail the card is sitting in. */
 .beat-detail-body {
   flex: 1 1 auto;
+  max-height: calc(
+    100svh -
+      max(var(--mock-chrome-h, 0px), var(--welcome-footer-clearance, 0px)) -
+      var(--main-masthead-offset, 65px) - 4rem
+  );
   overflow-y: auto;
   overscroll-behavior: contain;
   border-left: 3px solid var(--beat-accent, var(--story-orange));
@@ -8822,7 +9052,7 @@ body:has([data-density]) {
   color: rgb(2 8 17 / 0.7);
 }
 
-/* --- Stops one, two and three: the photograph --------------------------- */
+/* --- Community and founder photographs --------------------------------- */
 
 /* One picture per card, filling the whole art window.
 
@@ -10201,7 +10431,7 @@ a.pillar-program:hover {
        travel along, so each of these would sit at 0% forever. Turned off
        rather than re-ranged: each one's resting state is its own base style,
        so switching the animation off is what shows the finished artwork. */
-    @media (max-width: 71.99rem) {
+    @media (max-width: 59.99rem) {
       .beat-art,
       .beat-copy,
       .statemap-img {
@@ -11698,6 +11928,31 @@ body:has(.dirsearch) {
   margin-top: auto;
 }
 
+.dirsearch-resultsection + .dirsearch-resultsection {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgb(2 8 17 / 0.18);
+}
+
+.dirsearch-sectionhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-weight: 900;
+}
+
+.dirsearch-sectionhead h2 {
+  font-size: 1.25rem;
+}
+
+.dirsearch-sectioncopy,
+.dirsearch-sectionempty {
+  margin-block: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
 @container (min-width: 44rem) {
   .dirsearch-listbody .dirsearch-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -11710,8 +11965,6 @@ body:has(.dirsearch) {
   }
 }
 
-/* Number and logo travel together. The number links the map to the list at a
-   glance; the logo keeps the identity that made the original pins useful. */
 .dirsearch-pin {
   display: flex;
   align-items: center;
@@ -11723,16 +11976,8 @@ body:has(.dirsearch) {
   overflow: visible;
 }
 
-.dirsearch-pin > span {
-  display: grid;
-  width: 1.35rem;
-  height: 1.35rem;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--story-blue);
-  color: #fff;
-  font-size: 0.62rem;
-  font-weight: 900;
+.dirsearch-pin[data-approximate] {
+  border-style: dashed;
 }
 
 .dirsearch-pin img {
@@ -11746,10 +11991,6 @@ body:has(.dirsearch) {
   box-shadow:
     0 0 0 4px rgb(242 136 47 / 0.38),
     0 8px 20px rgb(17 13 13 / 0.26);
-}
-
-.dirsearch-pin[data-on='true'] > span {
-  background: var(--story-coral);
 }
 
 @media (min-width: 72rem) {
@@ -11775,23 +12016,7 @@ body:has(.dirsearch) {
   }
 
   .dirsearch-split .dirsearch-filterinner--menus .dirsearch-menurow {
-    flex-wrap: nowrap;
     gap: 0.4rem;
-  }
-
-  .dirsearch-split .dirsearch-menubtn {
-    min-height: 2.35rem;
-    border-width: 1px;
-    border-color: rgb(2 8 17 / 0.16);
-    border-radius: 0.75rem;
-    background: #fff;
-    color: var(--story-ink);
-  }
-
-  .dirsearch-split .dirsearch-menubtn[data-on='true'] {
-    border-color: var(--story-blue);
-    background: var(--story-blue);
-    color: #fff;
   }
 
   .dirsearch-split .dirsearch-checkfilter {

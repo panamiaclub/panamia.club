@@ -26,6 +26,46 @@ test.describe('Public Navigation', () => {
     await expect(page.locator('h1').first()).toContainText('The Future');
   });
 
+  for (const viewport of [
+    { width: 1920, height: 1080 },
+    { width: 1366, height: 768 },
+    { width: 390, height: 844 },
+  ]) {
+    test(`homepage tagline scales at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      const res = await page.goto('/');
+      expect(res?.status()).toBe(200);
+
+      const tagline = page.locator('.home-hero-field .hero-subheadline');
+      await expect(tagline).toHaveText(
+        'Your Portal for Everything South Florida'
+      );
+      await expect(tagline.locator('strong')).toHaveCSS('font-weight', '700');
+
+      await expect(async () => {
+        const [headlineSize, taglineSize] = await page.evaluate(() => {
+          const headline = document.querySelector(
+            '.home-hero-field .hero-headline'
+          );
+          const tagline = document.querySelector(
+            '.home-hero-field .hero-subheadline'
+          );
+          if (!headline || !tagline) {
+            throw new Error('The homepage hero is not mounted');
+          }
+          return [headline, tagline].map((element) =>
+            parseFloat(getComputedStyle(element).fontSize)
+          );
+        });
+        expect(Number.isFinite(headlineSize)).toBe(true);
+        expect(Number.isFinite(taglineSize)).toBe(true);
+        expect(taglineSize).toBeCloseTo(Math.max(17, headlineSize / 3), 2);
+      }).toPass({ timeout: 30_000 });
+    });
+  }
+
   test('about page loads', async ({ page }) => {
     const res = await page.goto('/about-us');
     expect(res?.status()).toBe(200);
@@ -37,7 +77,7 @@ test.describe('Public Navigation', () => {
   for (const [path, heading] of [
     ['/our-impact', 'Our Impact'],
     ['/ecosystem', 'Our Ecosystem'],
-    ['/support-pana', 'Support Pana'],
+    ['/support-pana', 'The future is local.'],
     ['/programs', 'Programs'],
   ]) {
     test(`${path} parent page loads`, async ({ page }) => {
@@ -139,7 +179,10 @@ test.describe('Public Navigation', () => {
   test('donate page loads', async ({ page }) => {
     const res = await page.goto('/donate');
     expect(res?.status()).toBe(200);
-    await expect(page.locator('h1').first()).toContainText('MAKE A DONATION');
+    await expect(page).toHaveURL(/^https?:\/\/[^/]+\/support-pana$/);
+    await expect(page.locator('h1').first()).toContainText(
+      'The future is local.'
+    );
   });
 
   // /affiliate is a redirect shim: it banks an affiliate code in localStorage

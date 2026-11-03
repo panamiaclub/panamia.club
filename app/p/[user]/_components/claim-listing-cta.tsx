@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, BadgeCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { listingClaimPath } from '@/lib/listing-url';
 
 /**
  * Shown where a claimed listing shows its Pana Social updates.
@@ -34,9 +35,7 @@ export function ClaimListingCta({ profileId }: { profileId: string }) {
           asChild
           className="bg-pana-flame text-pana-ink hover:bg-pana-burnt mt-8 rounded-full font-extrabold"
         >
-          <Link
-            href={`/listings/claim/start?id=${encodeURIComponent(profileId)}`}
-          >
+          <Link href={listingClaimPath(profileId)}>
             <BadgeCheck className="h-4 w-4" aria-hidden="true" />
             {t('updates.claimCta')}
             <ArrowRight className="h-4 w-4" aria-hidden="true" />

@@ -79,9 +79,6 @@ export async function GET(request: NextRequest) {
           // submission cannot reach the homepage, and delete-account clears it
           // on a tombstoned profile. Not merely "is this listing live".
           eq(profiles.active, true),
-          // A card links to /p/[handle], so a profile with no handle on either
-          // side has nowhere to point.
-          sql`COALESCE(${profiles.screenname}, ${users.screenname}) IS NOT NULL`,
           // A card is mostly photograph, so a profile without one would render
           // as an empty box beside two real ones.
           isNotNull(profiles.primaryImageCdn),

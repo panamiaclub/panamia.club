@@ -14,27 +14,43 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { profileCategoryList } from '@/lib/lists';
+import {
+  ListingReviewAccess,
+  ListingReviewStepHeader,
+  useListingReviewStep,
+} from '@/components/listings/review-step';
 
 export default function AccountProfileCategories() {
   const { data: session, status } = useSession();
-  const mutation = useMutateProfileCategories();
-  const { data, isLoading } = useProfile();
+  const review = useListingReviewStep('categories');
+  const mutation = useMutateProfileCategories(review.listingId);
+  const { data, isLoading } = useProfile(review.listingId);
   const profile = data as ProfileInterface;
 
   const submitForm = (e: FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
 
-    let categories: { [k: string]: boolean } = {};
+    const categories: { [k: string]: boolean } = {};
     profileCategoryList.forEach((item) => {
       categories[item.value] = formData.get(item.value) ? true : false;
     });
 
-    const updates = {
-      categories: categories,
-    };
+    const changes = review.active
+      ? Object.fromEntries(
+          Object.entries(categories).filter(
+            ([field, value]) =>
+              value !==
+              Boolean(profile.categories?.[field as keyof CategoryInterface])
+          )
+        )
+      : categories;
+    if (review.active && !Object.keys(changes).length) {
+      review.onSaved();
+      return;
+    }
 
-    mutation.mutate(updates);
+    mutation.mutate({ categories: changes }, { onSuccess: review.onSaved });
   };
 
   if (status === 'loading' || isLoading) {
@@ -46,10 +62,14 @@ export default function AccountProfileCategories() {
   }
 
   if (!session) {
+    if (review.active)
+      return <ListingReviewAccess listingId={review.listingId} />;
     return <Status401_Unauthorized />;
   }
 
   if (!profile) {
+    if (review.active)
+      return <ListingReviewAccess listingId={review.listingId} signedIn />;
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-gray-500">No profile found</div>
@@ -61,21 +81,37 @@ export default function AccountProfileCategories() {
     <main className="container mx-auto max-w-3xl px-4 py-8">
       <PageMeta title="Categories | Edit Profile" desc="" />
 
-      <h2 className="mb-8 text-3xl font-bold">Profile - Edit Categories</h2>
+      {review.active ? (
+        <ListingReviewStepHeader
+          listingId={review.listingId}
+          name={profile.name}
+          step="categories"
+        />
+      ) : (
+        <h2 className="mb-8 text-3xl font-bold">Profile - Edit Categories</h2>
+      )}
 
       <Card>
         <CardContent className="pt-6">
-          <form onSubmit={submitForm} className="space-y-6">
+          <form
+            key={profile.id ?? profile._id}
+            onSubmit={submitForm}
+            className="space-y-6"
+          >
             <div className="mb-6 flex justify-between gap-4">
               <Button variant="outline" asChild>
-                <Link href="/account/profile/edit">
+                <Link href={review.backHref}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Link>
               </Button>
               <Button type="submit" disabled={isLoading || mutation.isPending}>
                 <Save className="mr-2 h-4 w-4" />
-                {mutation.isPending ? 'Saving...' : 'Save Changes'}
+                {mutation.isPending
+                  ? 'Saving...'
+                  : review.active
+                    ? 'Save and continue'
+                    : 'Save Changes'}
               </Button>
             </div>
 
@@ -95,7 +131,7 @@ export default function AccountProfileCategories() {
                           id={item.value}
                           name={item.value}
                           defaultChecked={
-                            profile.categories[
+                            profile.categories?.[
                               item.value as keyof CategoryInterface
                             ]
                               ? true
@@ -116,7 +152,10 @@ export default function AccountProfileCategories() {
             </div>
 
             {mutation.isError && (
-              <div className="rounded-md bg-red-50 p-4 text-red-600">
+              <div
+                role="alert"
+                className="rounded-md bg-red-50 p-4 text-red-600"
+              >
                 Failed to update profile. Please try again.
               </div>
             )}

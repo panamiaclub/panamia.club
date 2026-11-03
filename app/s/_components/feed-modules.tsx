@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useFeaturedProfiles } from '@/lib/query/directory';
 import { useUpcomingEvents, type UpcomingEvent } from '@/lib/query/events';
 import { useFollowActor, useSuggestedPanas } from '@/lib/query/social';
+import { listingPublicPath } from '@/lib/listing-url';
 
 /* Modules injected between posts.
  *
@@ -171,7 +172,7 @@ export function DirectoryModule() {
   /* The mock shows category tags here. /api/directory/featured does not select
      them, and inventing them is exactly the kind of decoration that makes a
      feed untrustworthy, so the row is absent rather than filled. */
-  if (!spotlight || !spotlight.screenname) return null;
+  if (!spotlight) return null;
 
   return (
     <section className="feed-module" aria-labelledby="feed-module-directory">
@@ -213,7 +214,7 @@ export function DirectoryModule() {
               -- the chrome deliberately does not say it by ejecting them.
               If /p ever stops being a social path, revisit this link. */}
           <Link
-            href={`/p/${spotlight.screenname}`}
+            href={listingPublicPath(spotlight)}
             className="link-arrow text-pana-indigo mt-3.5 inline-flex text-[13px]"
           >
             View listing

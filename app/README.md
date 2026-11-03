@@ -10,6 +10,7 @@ Next.js 16 App Router directory containing all pages, layouts, and API routes.
 | ------------------- | -------------------------------------------- |
 | `/`                 | Homepage with featured profiles and articles |
 | `/about-us`         | About Pana MIA page                          |
+| `/about-us/[section]` | Open the About page at a specific section  |
 | `/directory`        | Browse business directory                    |
 | `/directory/search` | Search directory with filters                |
 | `/directorio`       | Spanish alias for directory                  |
@@ -24,7 +25,23 @@ Next.js 16 App Router directory containing all pages, layouts, and API routes.
 | `/signin`           | Authentication page                          |
 | `/links`            | Link tree style page                         |
 | `/podcasts`         | Podcast listings                             |
-| `/donate`           | Donation page                                |
+| `/support-pana`     | One-time/monthly giving and sponsorship      |
+| `/donate`           | Permanent redirect to `/support-pana`        |
+
+Support Pana renders the approved giving design and retains the
+`#giving-circle` and `#sponsorship` sections. `/donate` preserves query
+parameters when redirecting, including canceled Stripe checkout selections.
+New checkout cancellations return directly to `/support-pana`; the existing
+`/donation/confirmation` return URL is unchanged. Its thank-you page shares
+Support Pana's palette, community photography, and button styles. One-time,
+monthly, and legacy tier-only links retain their distinct messages; monthly
+copy offers contact help rather than promising automatic account activation.
+
+About section URLs keep the complete page and scroll to the requested section:
+`/about-us/our-story`, `/about-us/why-local`, `/about-us/pillars`,
+`/about-us/meet-the-team`, and `/about-us/collaborative-projects`. Existing
+fragment links such as `/about-us#our-story` still work. Unknown section names
+return 404.
 
 ### Account Pages (`/account/*`)
 
@@ -135,7 +152,7 @@ RSS and JSON feeds for articles:
 | Route                                 | Description              |
 | ------------------------------------- | ------------------------ |
 | `/affiliate`                          | Affiliate portal         |
-| `/donation/confirmation`              | Post-donation page       |
+| `/donation/confirmation`              | Branded donation thank-you page |
 | `/doc/terms-and-conditions`           | Terms of service         |
 | `/doc/affiliate-terms-and-conditions` | Affiliate terms          |
 | `/become-a-pana`                      | Redirect to listing form |

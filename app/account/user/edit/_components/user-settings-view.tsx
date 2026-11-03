@@ -48,6 +48,7 @@ import { SETTINGS_SECTIONS, SettingsNav, type SectionId } from './settings-nav';
 import { AvatarEditor } from './avatar-editor';
 import { SmsSubscriptionCard } from './sms-subscription-card';
 import { ReferralCard } from './referral-card';
+import { BillingCard } from './billing-card';
 
 // Channels the app manages, spelled as GHL requires. Mirrors GHL_DND_CHANNELS
 // in lib/ghl.ts; kept local so this client component does not pull in the
@@ -139,7 +140,7 @@ function Section({ id, children }: { id: SectionId; children: ReactNode }) {
  * 2. "ADVANCED" IS NOT A CATEGORY. It describes how nervous we were about a
  *    control rather than what the control is for, which is how marketing
  *    consent ended up behind the same summary row as a key rotation. The
- *    accordion is gone; the page is six named sections a member can scan
+ *    accordion is gone; the page is named sections a member can scan
  *    without opening anything.
  *
  * 3. CONSEQUENCES ARRIVED TOO LATE. Changing a screenname deletes every post
@@ -738,9 +739,8 @@ export function UserSettingsView({
             </div>
           </div>
           <p className="settings-note mt-4 max-w-2xl">
-            There is one of these for your whole account. Everything below
-            applies on Pana Mia and Pana Social alike — each section says so
-            individually, and means it.
+            There is one of these for your whole account. Everything below says
+            where it applies, whether that is Pana Mia, Pana Social, or both.
           </p>
         </header>
 
@@ -1003,6 +1003,10 @@ export function UserSettingsView({
                   </div>
                 </SettingsRow>
               </SettingsCard>
+            </Section>
+
+            <Section id="billing">
+              <BillingCard userId={session.user.id} />
             </Section>
 
             {/* ---- Publishing -------------------------------------------- */}
