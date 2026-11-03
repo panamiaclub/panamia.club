@@ -86,11 +86,13 @@ jobs:
               requested_domains = set(plistlib.load(source).get("com.apple.developer.associated-domains", []))
           if not requested_domains or ("*" not in domains and not requested_domains.issubset(domains)):
               raise SystemExit("The distribution profile must allow the Associated Domains declared by this app.")
-          identifier = str(uuid.UUID(profile["UUID"])).upper()
+          identifier = profile["UUID"]
+          if str(uuid.UUID(identifier)).lower() != identifier.lower():
+              raise SystemExit("The provisioning profile UUID is not in canonical form.")
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
               output.write(f"IOS_PROFILE_UUID={identifier}\n")
           PY
-          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/pana-ios-profile.plist" | tr '[:lower:]' '[:upper:]')
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/pana-ios-profile.plist")
           mkdir -p "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$RUNNER_TEMP/pana-ios-signing.mobileprovision" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
           cp "$RUNNER_TEMP/pana-ios-signing.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
