@@ -6,6 +6,7 @@ interface PageMetaProps {
   desc: string | null;
   url?: string | null;
   image?: string | null;
+  hideHeading?: boolean;
 }
 
 export default function PageMeta(props: PageMetaProps) {
@@ -47,7 +48,7 @@ export default function PageMeta(props: PageMetaProps) {
           }
         />
       </Head>
-      <h1 className="sr-only">{props.title}</h1>
+      {!props.hideHeading && <h1 className="sr-only">{props.title}</h1>}
     </>
   );
 }

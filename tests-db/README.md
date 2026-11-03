@@ -52,7 +52,19 @@ anonymous/wrong-account recovery, explicit correct-business authorization across
 all editors, multiple managed listings, login/contact separation, preservation
 of untouched information, and online/mobile location privacy. Browser coverage
 in `tests/e2e/listing-review.spec.ts` follows the complete guided journey with
-isolated API fixtures.
+isolated API fixtures; CI uses the actual built Worker. The canonical review
+entry opens Location directly; all six steps and the final authenticated
+confirmation share one frame. Coverage includes adjacent Back navigation,
+step pills, deep-link sign-in returns, reloads, unchanged location/photos,
+completion-query tampering, stale/wrong-business review state, failed saves,
+multiple managed listings and personal-editor isolation. Desktop/mobile
+screenshots are produced from the real editor components with synthetic
+profiles, not a separate design mock.
+
+For local visual inspection with the site's actual rounded typeface, the suite
+accepts `LISTING_REVIEW_VISUAL_FONT` as the path to a locally saved Nunito WOFF2
+file. It serves that font through a browser fixture, without external font
+requests. The ordinary suite does not require this optional screenshot asset.
 
 The same review suite covers operator-only seven-day invitation issuance,
 hashed storage, HttpOnly context, read-only scanners, explicit chosen-account

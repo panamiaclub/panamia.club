@@ -1,3 +1,5 @@
+import { listingClaimPath, listingReviewPath } from '@/lib/listing-url';
+
 export const LISTING_REVIEW_STEPS = [
   { key: 'address', label: 'Location' },
   { key: 'desc', label: 'Description' },
@@ -14,6 +16,27 @@ export function listingReviewStepPath(
   step: ListingReviewStep
 ): string {
   return `/account/profile/${step}?listingId=${encodeURIComponent(profileId)}`;
+}
+
+export function listingReviewFinishPath(profileId: string): string {
+  return `${listingReviewPath(profileId)}&complete=1`;
+}
+
+export function listingReviewNavigation(
+  profileId: string,
+  step: ListingReviewStep
+) {
+  const index = LISTING_REVIEW_STEPS.findIndex((item) => item.key === step);
+  const previous = LISTING_REVIEW_STEPS[index - 1];
+  const next = LISTING_REVIEW_STEPS[index + 1];
+  return {
+    backHref: previous
+      ? listingReviewStepPath(profileId, previous.key)
+      : listingClaimPath(profileId),
+    nextHref: next
+      ? listingReviewStepPath(profileId, next.key)
+      : listingReviewFinishPath(profileId),
+  };
 }
 
 export interface ClaimListingContext {

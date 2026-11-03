@@ -1,20 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Loader2 } from 'lucide-react';
 import { useSession } from '@/lib/auth-client';
 import {
   isListingReviewState,
   type ListingReviewState,
 } from '@/lib/listing-refresh';
 import { listingReviewPath } from '@/lib/listing-url';
+import {
+  listingReviewFinishPath,
+  listingReviewStepPath,
+} from '@/lib/listing-review';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import styles from './review.module.css';
 
 export function ListingReviewConfirmation({
   profileId,
@@ -22,12 +27,14 @@ export function ListingReviewConfirmation({
   publicPath,
   active,
   finish,
+  children,
 }: {
   profileId: string;
   name: string;
   publicPath: string;
   active: boolean;
   finish: boolean;
+  children?: ReactNode;
 }) {
   const { data: session } = useSession();
   const router = useRouter();
@@ -55,6 +62,7 @@ export function ListingReviewConfirmation({
   });
   const confirmed =
     params?.get('confirmed') === '1' &&
+    state.isSuccess &&
     Boolean(state.data?.lastReviewedAt) &&
     !state.data?.cycle;
 
@@ -77,20 +85,36 @@ export function ListingReviewConfirmation({
           expectedOwnerEmail: session.user.email,
         }),
       });
-      const data = await response.json();
+      const data: unknown = await response.json();
       if (
         !response.ok ||
+        !data ||
+        typeof data !== 'object' ||
+        !('success' in data) ||
         data.success !== true ||
-        (action === 'confirm' && data.profileId !== profileId)
+        (action === 'confirm' &&
+          (!('profileId' in data) || data.profileId !== profileId))
       ) {
-        throw new Error(data.error || 'Could not save this review.');
+        throw new Error(
+          data &&
+            typeof data === 'object' &&
+            'error' in data &&
+            typeof data.error === 'string'
+            ? data.error
+            : 'Could not save this review.'
+        );
       }
       if (action === 'confirm') {
-        setRestored(data.restored === true);
+        setRestored('restored' in data && data.restored === true);
         await client.invalidateQueries({ queryKey: ['profile'] });
-        router.replace(
-          `${listingReviewPath(profileId)}&complete=1&confirmed=1`
-        );
+        const current = new URL(window.location.href);
+        if (
+          current.pathname === '/listings/review' &&
+          current.searchParams.get('id') === profileId &&
+          current.searchParams.get('complete') === '1'
+        ) {
+          router.replace(`${listingReviewFinishPath(profileId)}&confirmed=1`);
+        }
       }
       await state.refetch();
     } catch (cause) {
@@ -106,8 +130,8 @@ export function ListingReviewConfirmation({
   return (
     <>
       {state.data?.cycle && (
-        <div className="border-pana-ink/10 rounded-2xl border p-4">
-          <p className="font-bold">
+        <aside className={styles.deadline} aria-label="Review status">
+          <p className="font-extrabold">
             {state.data.cycle.state === 'paused'
               ? 'This listing is temporarily hidden because its review is overdue.'
               : state.data.cycle.state === 'held'
@@ -116,15 +140,36 @@ export function ListingReviewConfirmation({
                   ? `Confirm this listing by ${new Date(state.data.cycle.dueAt).toLocaleDateString()}.`
                   : 'The response window starts after the initial notice is successfully sent.'}
           </p>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Signing in, claiming or opening a link does not confirm the business
-            information. No private home address or invented ZIP is required.
+          <p className="mt-1">
+            Only the final confirmation completes this review. You can leave
+            location details unchanged.
           </p>
+        </aside>
+      )}
+      {state.isLoading && (
+        <p role="status" className={`${styles.helper} mb-4`}>
+          Loading review status...
+        </p>
+      )}
+      {state.isError && (
+        <div className="mb-5 space-y-3">
+          <p role="alert" className={styles.error}>
+            {state.error.message}
+          </p>
+          <Button
+            variant="outline"
+            className={styles.secondary}
+            disabled={state.isFetching}
+            onClick={() => state.refetch()}
+          >
+            Reload review status
+          </Button>
         </div>
       )}
+      {!(finish && confirmed) && children}
       {finish && (
-        <Card className="border-pana-indigo/20 rounded-2xl">
-          <CardContent className="space-y-4 pt-6">
+        <Card className={styles.editor}>
+          <CardContent className={`${styles.editorContent} space-y-5`}>
             {confirmed ? (
               <>
                 <CheckCircle2
@@ -139,21 +184,21 @@ export function ListingReviewConfirmation({
                   this cycle.
                 </p>
                 {state.data?.lastReviewedAt && (
-                  <p className="text-muted-foreground text-sm">
+                  <p className={styles.helper}>
                     Last confirmed:{' '}
                     {new Date(state.data.lastReviewedAt).toLocaleString()}.
                   </p>
                 )}
                 <div className="flex flex-col gap-3 sm:flex-row">
                   {(active || restored) && (
-                    <Button asChild className="rounded-full font-extrabold">
+                    <Button asChild className={styles.primary}>
                       <Link href={publicPath}>View updated listing</Link>
                     </Button>
                   )}
                   <Button
                     asChild
                     variant="outline"
-                    className="rounded-full font-bold"
+                    className={styles.secondary}
                   >
                     <Link href={listingReviewPath(profileId)}>
                       Manage this business
@@ -173,37 +218,62 @@ export function ListingReviewConfirmation({
                   Confirm your listing information
                 </h2>
                 <p>
-                  Check the summary below for <strong>{name}</strong>. Anything
-                  you skipped stays unchanged. This final confirmation is what
-                  completes the review and stops reminders.
+                  Confirm that the information for <strong>{name}</strong> is
+                  current. Sections you left alone stay unchanged. This final
+                  action completes the review and stops reminders for this
+                  cycle.
                 </p>
                 <div className="flex items-start gap-3">
                   <Checkbox
                     id="confirm-listing-information"
                     checked={checked}
                     onCheckedChange={(value) => setChecked(value === true)}
-                    disabled={saving}
+                    disabled={saving || !state.data || state.isError}
                   />
-                  <Label htmlFor="confirm-listing-information">
+                  <Label
+                    htmlFor="confirm-listing-information"
+                    className="cursor-pointer leading-relaxed"
+                  >
                     I reviewed this business and confirm that the listed
                     information is current.
                   </Label>
                 </div>
-                <Button
-                  onClick={() => submit('confirm')}
-                  disabled={!checked || saving || !state.data || state.isError}
-                  className="w-full rounded-full font-extrabold"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Confirm business information'
-                  )}
-                </Button>
-                <p className="text-muted-foreground text-sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className={styles.secondary}
+                  >
+                    <Link href={listingReviewStepPath(profileId, 'images')}>
+                      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                      Back to photos
+                    </Link>
+                  </Button>
+                  <Button
+                    onClick={() => submit('confirm')}
+                    disabled={
+                      !checked ||
+                      saving ||
+                      !state.data ||
+                      state.isError ||
+                      state.isFetching
+                    }
+                    className={styles.primary}
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          aria-hidden="true"
+                        />
+                        Saving...
+                      </>
+                    ) : (
+                      'Confirm business information'
+                    )}
+                  </Button>
+                </div>
+                <p className={styles.helper}>
                   An overdue-review pause can be lifted after this confirmation.
                   It never overrides a staff decline or manual suspension.
                 </p>
@@ -212,52 +282,46 @@ export function ListingReviewConfirmation({
           </CardContent>
         </Card>
       )}
-      {state.isLoading && <p role="status">Loading review status...</p>}
-      {(error || state.error) && (
-        <p role="alert" className="text-destructive">
-          {error || state.error?.message}
-        </p>
-      )}
       {error && (
-        <Button
-          variant="outline"
-          onClick={() => window.location.reload()}
-          disabled={saving}
-        >
-          Reload and confirm again
-        </Button>
-      )}
-      {state.isError && (
-        <Button variant="outline" onClick={() => state.refetch()}>
-          Reload review status
-        </Button>
+        <div className="mt-4 space-y-3">
+          <p role="alert" className={styles.error}>
+            {error}
+          </p>
+          <Button
+            variant="outline"
+            className={styles.secondary}
+            onClick={() => window.location.reload()}
+            disabled={saving}
+          >
+            Reload and confirm again
+          </Button>
+        </div>
       )}
       {state.data && (
-        <div className="text-muted-foreground space-y-2 text-sm">
-          {state.data.remindersOptedOut ? (
-            <>
-              <p>
-                Listing-review reminders are opted out. You can still confirm
-                the business without enabling email.
-              </p>
-              <Button
-                variant="outline"
-                disabled={saving}
-                onClick={() => submit('allow_reminders')}
-              >
-                Allow future listing-review reminders
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="outline"
-              disabled={saving}
-              onClick={() => submit('stop_reminders')}
-            >
-              Stop listing-review reminders
-            </Button>
-          )}
-        </div>
+        <details className={styles.preferences}>
+          <summary>Review reminders</summary>
+          <p className={`${styles.helper} mb-3`}>
+            {state.data.remindersOptedOut
+              ? 'Listing-review reminders are opted out. You can still confirm the business without enabling email.'
+              : 'Reminder preferences do not confirm this review or change your listing visibility.'}
+          </p>
+          <Button
+            variant="outline"
+            className={styles.secondary}
+            disabled={saving || state.isError || state.isFetching}
+            onClick={() =>
+              submit(
+                state.data.remindersOptedOut
+                  ? 'allow_reminders'
+                  : 'stop_reminders'
+              )
+            }
+          >
+            {state.data.remindersOptedOut
+              ? 'Allow future listing-review reminders'
+              : 'Stop listing-review reminders'}
+          </Button>
+        </details>
       )}
     </>
   );
