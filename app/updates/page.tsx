@@ -511,7 +511,11 @@ function RequestCard({
             <Trash2 className="mr-1 h-4 w-4" />
             Delete without replying
           </Button>
-          <BlockMenu username={sender.username} displayName={displayName} />
+          <BlockMenu
+            username={sender.username}
+            actorUri={sender.uri}
+            displayName={displayName}
+          />
         </div>
       </div>
     </div>

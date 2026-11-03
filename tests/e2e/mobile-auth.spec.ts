@@ -1,12 +1,143 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import {
   mobileMagicLinkAppUrl,
   mobileMagicLinkUrl,
 } from '../../lib/mobile/auth-links';
 import { calls, nativeBridge } from './fixtures/native-bridge';
 
+async function testTurnstile(page: Page) {
+  await page.route('**/api/config/turnstile', (route) =>
+    route.fulfill({ json: { siteKey: 'mobile-auth-test-site-key' } })
+  );
+  await page.route(
+    'https://challenges.cloudflare.com/turnstile/v0/api.js?*',
+    (route) =>
+      route.fulfill({
+        contentType: 'application/javascript',
+        body: `window.turnstile = {
+          render: function (element, options) {
+            queueMicrotask(function () { options.callback('mobile-auth-test-token'); });
+            return 'mobile-auth-test-widget';
+          },
+          reset: function () {},
+          remove: function () {}
+        };`,
+      })
+  );
+}
+
+test('native safety reports retain their draft after an error and submit without attachments or navigation', async ({
+  page,
+}) => {
+  await nativeBridge(page);
+  await testTurnstile(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const requests: Record<string, FormDataEntryValue>[] = [];
+  await page.route('**/api/bug-reports', async (route) => {
+    const form = await new Request(route.request().url(), {
+      method: 'POST',
+      headers: route.request().headers(),
+      body: route.request().postData() ?? '',
+    }).formData();
+    requests.push(Object.fromEntries(form));
+    await route.fulfill(
+      requests.length === 1
+        ? {
+            status: 503,
+            json: { error: 'Safety reports are temporarily unavailable.' },
+          }
+        : {
+            json: {
+              success: true,
+              message: 'Your safety report has been received for review.',
+            },
+          }
+    );
+  });
+  await page.goto('/d');
+  await page
+    .getByRole('button', { name: 'Report a safety concern', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: 'Report a safety concern',
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('form')).toHaveAttribute('method', 'post');
+  await expect(dialog.locator('input[type=file]')).toHaveCount(0);
+  await expect(
+    dialog.getByText(/do not copy, download, or attach/)
+  ).toBeVisible();
+  await dialog.getByLabel('Name', { exact: true }).fill('Safety Test Reporter');
+  await dialog
+    .getByLabel('Email', { exact: true })
+    .fill('reporter@example.test');
+  await dialog.getByLabel('Safety reason').selectOption('child_safety');
+  await dialog
+    .getByLabel('What happened?')
+    .fill('Readiness test only; no real incident or illegal material.');
+  const send = dialog.getByRole('button', { name: 'Send report', exact: true });
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(
+    page.getByText('Safety reports are temporarily unavailable.')
+  ).toBeVisible();
+  await expect(dialog.getByLabel('What happened?')).toHaveValue(
+    'Readiness test only; no real incident or illegal material.'
+  );
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(
+    page.getByText('Safety report received', { exact: true })
+  ).toBeVisible();
+  await expect(dialog).toHaveCount(0);
+  expect(new URL(page.url()).pathname).toBe('/d');
+  expect(requests).toHaveLength(2);
+  expect(requests[0]).toMatchObject({
+    reportType: 'safety',
+    targetType: 'other',
+    reason: 'child_safety',
+    name: 'Safety Test Reporter',
+    email: 'reporter@example.test',
+    turnstileToken: 'mobile-auth-test-token',
+  });
+  expect(requests[0]).not.toHaveProperty('screenshot');
+  expect(requests[0]).not.toHaveProperty('viewport');
+  expect(requests[0]).not.toHaveProperty('locale');
+  await page.getByRole('button', { name: 'Report a bug', exact: true }).click();
+  const bug = page.getByRole('dialog', { name: 'Report a bug', exact: true });
+  await bug
+    .getByLabel('What happened?')
+    .fill('Keep this ordinary bug report draft when closing the dialog.');
+  await page.keyboard.press('Escape');
+  await expect(bug).toHaveCount(0);
+  await page.getByRole('button', { name: 'Report a bug', exact: true }).click();
+  await expect(bug.getByLabel('What happened?')).toHaveValue(
+    'Keep this ordinary bug report draft when closing the dialog.'
+  );
+  await page.keyboard.press('Escape');
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth)
+  ).toBeLessThanOrEqual(390);
+});
+
 test.describe('sign-in hydration', () => {
   test.use({ javaScriptEnabled: false });
+
+  test('report controls cannot accept taps before their dialog handlers are ready', async ({
+    page,
+  }) => {
+    await page.goto('/d');
+    await expect(
+      page.getByRole('button', {
+        name: 'Report a safety concern',
+        exact: true,
+      })
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Report a bug', exact: true })
+    ).toBeDisabled();
+  });
 
   test('sign-in controls cannot accept taps before event handlers are ready', async ({
     page,
@@ -23,6 +154,84 @@ test.describe('sign-in hydration', () => {
     await expect(
       page.getByRole('button', { name: 'Send sign-in link', exact: true })
     ).toBeDisabled();
+  });
+
+  test('review credentials cannot be submitted before hydration or through a GET form', async ({
+    page,
+  }) => {
+    await page.goto('/signin/reviewer');
+    await expect(page.locator('form')).toHaveAttribute('method', 'post');
+    await expect(page.getByLabel('Review account email')).toBeDisabled();
+    await expect(page.getByLabel('Review account password')).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Sign in for review' })
+    ).toBeDisabled();
+  });
+});
+
+test.describe('dedicated app reviewer sign-in', () => {
+  test('the native Social tab redirects signed-out reviewers to sign-in instead of a screen failure', async ({
+    page,
+  }) => {
+    await nativeBridge(page);
+    await page.goto('/s');
+    await expect(page).toHaveURL(/\/signin\?callbackUrl=%2Fs$/);
+    await expect(
+      page.getByRole('link', { name: 'App reviewer sign-in' })
+    ).toBeVisible();
+    await expect(page.getByText('This screen could not open')).toHaveCount(0);
+  });
+
+  test('is discoverable in the app and submits credentials only in the POST body', async ({
+    page,
+  }) => {
+    await nativeBridge(page);
+    await page.goto('/signin');
+    await page.getByRole('link', { name: 'App reviewer sign-in' }).click();
+    await expect(page).toHaveURL(/\/signin\/reviewer$/);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      'content',
+      /noindex/
+    );
+    const requests: { method: string; url: string; body: unknown }[] = [];
+    await page.route('**/api/auth/sign-in/email', async (route) => {
+      requests.push({
+        method: route.request().method(),
+        url: route.request().url(),
+        body: route.request().postDataJSON(),
+      });
+      await route.fulfill({
+        status: 401,
+        json: {
+          code: 'INVALID_EMAIL_OR_PASSWORD',
+          message: 'Invalid email or password.',
+        },
+      });
+    });
+    const password = 'browser-review-test-not-for-production-2026';
+    await page
+      .getByLabel('Review account email')
+      .fill('play-review@panamia.club');
+    await page.getByLabel('Review account password').fill(password);
+    await page.getByRole('button', { name: 'Sign in for review' }).click();
+    await expect(page.getByRole('alert')).toHaveText(
+      'Invalid email or password.'
+    );
+    expect(requests).toEqual([
+      {
+        method: 'POST',
+        url: 'http://127.0.0.1:3000/api/auth/sign-in/email',
+        body: {
+          email: 'play-review@panamia.club',
+          password,
+          callbackURL: '/d',
+        },
+      },
+    ]);
+    expect(page.url()).not.toContain(password);
+    await expect(
+      page.getByRole('button', { name: 'Sign in for review' })
+    ).toBeEnabled();
   });
 });
 
@@ -188,24 +397,7 @@ test.describe('app email-link handoff', () => {
     baseURL,
   }) => {
     await nativeBridge(page, { googlePlugin: false });
-    await page.route('**/api/config/turnstile', (route) =>
-      route.fulfill({ json: { siteKey: 'mobile-auth-test-site-key' } })
-    );
-    await page.route(
-      'https://challenges.cloudflare.com/turnstile/v0/api.js?*',
-      (route) =>
-        route.fulfill({
-          contentType: 'application/javascript',
-          body: `window.turnstile = {
-            render: function (element, options) {
-              queueMicrotask(function () { options.callback('mobile-auth-test-token'); });
-              return 'mobile-auth-test-widget';
-            },
-            reset: function () {},
-            remove: function () {}
-          };`,
-        })
-    );
+    await testTurnstile(page);
     await page.route('**/api/auth/verify-turnstile', (route) =>
       route.fulfill({ json: { success: true } })
     );

@@ -11,7 +11,7 @@ import type { ContactCategory } from '@/lib/contact-categories';
 //   - category decides which role is notified (below),
 //   - authentication decides only whether the all-admin fan-out also fires.
 
-export type ContactRole = 'operators' | 'team';
+export type ContactRole = 'operators' | 'team' | 'safety';
 
 // `technical` and `general` are answerable by whoever runs the site; `press`
 // and `membership` are not. `other` is the catch-all and goes to operators,
@@ -24,6 +24,7 @@ export const CONTACT_CATEGORY_ROLE: Record<ContactCategory, ContactRole> = {
   other: 'operators',
   press: 'team',
   membership: 'team',
+  safety: 'safety',
 };
 
 // Role addresses. Hardcoded rather than configured: these are role aliases on
@@ -31,15 +32,13 @@ export const CONTACT_CATEGORY_ROLE: Record<ContactCategory, ContactRole> = {
 // here and nothing that changes when staffing does — re-pointing a role is a
 // mail-alias edit with no deploy at all.
 //
-// Both roles currently resolve to the same shared address because no `press@`
-// or `membership@` alias exists yet. Splitting them later means editing this
-// map and nothing else; every call site already asks for a role, not an
-// address. Do NOT put an alias here before it is confirmed deliverable — an
-// address that bounces silently drops the inquiries this routing exists to
-// protect (Goal 2).
+// The legacy operator and team aliases remain unchanged. Safety reports use
+// the approved public safety contact. Do not add an unconfirmed alias: a
+// bouncing address would silently drop the inquiries this routing protects.
 const ROLE_ADDRESSES: Record<ContactRole, string> = {
   operators: 'hola@pana.social',
   team: 'hola@pana.social',
+  safety: 'hola@panamia.club',
 };
 
 export function roleForCategory(category: ContactCategory): ContactRole {

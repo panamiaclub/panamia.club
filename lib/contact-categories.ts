@@ -23,4 +23,5 @@ export const CONTACT_CATEGORY_LABELS: Record<ContactCategory, string> = {
   press: 'Press & partnerships',
   technical: 'Technical / website issue',
   other: 'Other',
+  safety: 'Safety / abusive content or users',
 };

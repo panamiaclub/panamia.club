@@ -11,8 +11,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { X, ChevronLeft, ChevronRight, Eye, Trash2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Eye, Trash2, Flag } from 'lucide-react';
 import { isUnoptimizableImageSrc } from '@/lib/image-src';
+import { openSafetyReport } from '@/lib/safety-report';
 import type { Story, StoryTray } from '@/lib/federation/wrappers/stories';
 
 /** How long a photo stays up before advancing. Videos use their own length. */
@@ -190,7 +191,11 @@ export function StoryViewer({
               className="h-full bg-white transition-[width] duration-75 ease-linear"
               style={{
                 width:
-                  i < index ? '100%' : i === index ? `${progress * 100}%` : '0%',
+                  i < index
+                    ? '100%'
+                    : i === index
+                      ? `${progress * 100}%`
+                      : '0%',
               }}
             />
           </div>
@@ -214,7 +219,9 @@ export function StoryViewer({
           <p className="truncate text-sm font-semibold text-white">
             {displayName}
           </p>
-          <p className="text-xs text-white/70">{timeAgo(current.publishedAt)}</p>
+          <p className="text-xs text-white/70">
+            {timeAgo(current.publishedAt)}
+          </p>
         </div>
 
         {isOwner && current.viewCount !== null && (
@@ -236,6 +243,20 @@ export function StoryViewer({
           </button>
         )}
 
+        <button
+          type="button"
+          onClick={() => {
+            close();
+            openSafetyReport({
+              type: 'content',
+              url: `/p/${encodeURIComponent(tray.actor.username)}/${encodeURIComponent(current.id)}`,
+            });
+          }}
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/80 hover:bg-white/10 hover:text-white"
+          aria-label="Report this story"
+        >
+          <Flag className="h-4 w-4" aria-hidden="true" />
+        </button>
         <button
           type="button"
           onClick={close}

@@ -47,6 +47,45 @@ describe('Permissions-Policy — features the site itself calls', () => {
     assert.equal(allowlist(policyFor(), 'geolocation'), '(self)');
   });
 
+  describe('listing proof response policies', () => {
+    for (const path of [
+      '/listings/invite',
+      '/listings/invite/',
+      '/listings/reminders/stop',
+      '/api/listings/invitations',
+      '/api/listings/invitations/context',
+      '/api/listings/review',
+      '/api/listings/review/stop',
+      '/api/admin/listings/public-profile/invitation',
+      '/api/admin/listings/public-profile/refresh',
+    ]) {
+      test(`${path} preserves the intended no-referrer policy`, () => {
+        const response = proxy(new NextRequest(`https://panamia.club${path}`));
+        assert.equal(response.headers.get('Referrer-Policy'), 'no-referrer');
+        assert.equal(response.headers.has('Cache-Control'), false);
+      });
+    }
+
+    test('directory maps and unrelated routes keep their normal referrer policy', () => {
+      for (const path of [
+        '/directory/search',
+        '/api/getDirectorySearch',
+        '/listings/public-profile',
+        '/listings/claim',
+        '/listings/claim/start',
+        '/listings/invite-other',
+        '/api/listings/review-other',
+      ]) {
+        const response = proxy(new NextRequest(`https://panamia.club${path}`));
+        assert.equal(
+          response.headers.get('Referrer-Policy'),
+          'strict-origin-when-cross-origin'
+        );
+        assert.equal(response.headers.has('Cache-Control'), false);
+      }
+    });
+  });
+
   test('geolocation is not an empty allowlist', () => {
     // Stated separately because this is the assertion with the useful failure
     // message. If someone "hardens" the header back to `()`, this names the

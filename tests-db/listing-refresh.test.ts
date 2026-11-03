@@ -479,6 +479,7 @@ test('the exact weekly schedule hides only the unconfirmed business at day 30, n
   assert.equal(initial.noticesSent, 1);
   assert.equal(notices()[0].to, businessEmail);
   assert.deepEqual(notices()[0].options, { requireDelivery: true });
+  assert.equal(notices()[0].variables.reminderNotice, false);
   assert.equal((await cycle())?.startedAt?.getTime(), start);
   assert.equal(
     (await cycle())?.dueAt?.getTime(),
@@ -502,6 +503,10 @@ test('the exact weekly schedule hides only the unconfirmed business at day 30, n
   }
   assert.equal(notices().length, 5);
   assert.equal((await cycle())?.reminderCount, 4);
+  assert.deepEqual(
+    notices().map((notice) => notice.variables.reminderNotice),
+    [false, true, true, true, true]
+  );
   assert.equal(notices()[4].variables.finalNotice, true);
   assert.equal(
     (await db.select().from(schema.listingRefreshDeliveries)).length,

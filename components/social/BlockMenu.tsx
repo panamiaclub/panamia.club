@@ -39,10 +39,19 @@ import {
   type SocialBlockKind,
 } from '@/lib/query/social';
 import { toast } from '@/hooks/use-toast';
-import { MoreHorizontal, Ban, VolumeX, Volume2, Loader2 } from 'lucide-react';
+import {
+  MoreHorizontal,
+  Ban,
+  VolumeX,
+  Volume2,
+  Loader2,
+  Flag,
+} from 'lucide-react';
+import { openSafetyReport } from '@/lib/safety-report';
 
 interface BlockMenuProps {
   username: string;
+  actorUri?: string;
   displayName?: string | null;
   isBlocked?: boolean;
   isMuted?: boolean;
@@ -50,6 +59,7 @@ interface BlockMenuProps {
 
 export function BlockMenu({
   username,
+  actorUri,
   displayName,
   isBlocked = false,
   isMuted = false,
@@ -121,6 +131,20 @@ export function BlockMenu({
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem
+            onSelect={() => {
+              // Let the menu release its focus trap before opening the report.
+              requestAnimationFrame(() =>
+                openSafetyReport({
+                  type: 'user',
+                  url: actorUri || `/p/${encodeURIComponent(username)}`,
+                })
+              );
+            }}
+          >
+            <Flag className="mr-2 h-4 w-4" />
+            Report {who}
+          </DropdownMenuItem>
           {isMuted ? (
             <DropdownMenuItem onClick={() => run('unmute', 'mute')}>
               <Volume2 className="mr-2 h-4 w-4" />

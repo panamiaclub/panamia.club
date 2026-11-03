@@ -1,4 +1,5 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { magicLink, genericOAuth, customSession } from 'better-auth/plugins';
 import { headers } from 'next/headers';
@@ -19,6 +20,7 @@ import {
 } from '@/lib/server/profile-owners';
 import { describeDbError } from '@/lib/server/db-error';
 import { isAdminEmail } from '@/lib/server/admin-emails';
+import { isPlayReviewerEmail } from '@/lib/play-reviewer';
 import {
   SURFACES,
   getRootDomain,
@@ -31,6 +33,14 @@ import { mobileMagicLinkUrl } from '@/lib/mobile/auth-links';
 import { listingSetupPath } from '@/lib/listing-url';
 
 const MAGIC_LINK_EXPIRY_MINUTES = 30;
+const PASSWORD_MANAGEMENT_PATHS = new Set([
+  '/sign-up/email',
+  '/set-password',
+  '/change-password',
+  '/request-password-reset',
+  '/forget-password',
+  '/reset-password',
+]);
 
 // Custom email templates for magic link authentication
 function html(params: { url: string; host: string; email: string }) {
@@ -644,7 +654,8 @@ async function enrichUserFields(
   // resolves when the `profiles` read below throws, and it cannot be revoked
   // through any screen in the product. The last admin can therefore never be
   // locked out by a bad write.
-  const isSuperAdmin = isAdminEmail(email);
+  const isReviewer = isPlayReviewerEmail(email);
+  const isSuperAdmin = !isReviewer && isAdminEmail(email);
 
   let profileVerification: ProfileVerification | null = null;
   let profileRoles: ProfileRoles | null = null;
@@ -678,13 +689,15 @@ async function enrichUserFields(
     // degrades to env-only admin. A database problem can cost a granted admin
     // their access until it recovers, but it can never hand access to someone
     // who had none — the safe direction for a failure in a privilege check.
-    isAdmin: isSuperAdmin || profileRoles?.admin === true,
+    isAdmin: !isReviewer && (isSuperAdmin || profileRoles?.admin === true),
     isSuperAdmin,
     panaVerified: profileVerification?.panaVerified || false,
     legalAgeVerified: profileVerification?.legalAgeVerified || false,
-    isMentoringModerator: profileRoles?.mentoringModerator || false,
-    isEventOrganizer: profileRoles?.eventOrganizer || false,
-    isContentModerator: profileRoles?.contentModerator || false,
+    isMentoringModerator:
+      !isReviewer && (profileRoles?.mentoringModerator || false),
+    isEventOrganizer: !isReviewer && (profileRoles?.eventOrganizer || false),
+    isContentModerator:
+      !isReviewer && (profileRoles?.contentModerator || false),
   };
 }
 
@@ -1078,12 +1091,40 @@ function getBetterAuth(): BetterAuthInstance {
         // Three attempts per quarter-hour is ample for a real person who
         // mistyped their address once.
         '/sign-in/magic-link': { window: 60 * 15, max: 3 },
+        '/sign-in/email': { window: 60 * 15, max: 5 },
       },
       // Note this covers better-auth's own endpoints only. The app's own
       // mail-sending routes (e.g. /api/user/request-email-migration) sit
       // outside this and are still unthrottled.
     },
     secret: process.env.BETTER_AUTH_SECRET,
+    emailAndPassword: {
+      enabled: true,
+      disableSignUp: true,
+      requireEmailVerification: true,
+      minPasswordLength: 32,
+      maxPasswordLength: 128,
+    },
+    hooks: {
+      before: createAuthMiddleware(async (context) => {
+        const path = context.path.replace(/\/+$/, '');
+        if (
+          path === '/sign-in/email' &&
+          !isPlayReviewerEmail(context.body?.email)
+        ) {
+          throw new APIError('UNAUTHORIZED', {
+            message: 'Invalid email or password.',
+          });
+        }
+        // Only the operator's maintenance command can issue or rotate the
+        // review credential. Public accounts remain passwordless.
+        if (PASSWORD_MANAGEMENT_PATHS.has(path)) {
+          throw new APIError('FORBIDDEN', {
+            message: 'Password management is not available.',
+          });
+        }
+      }),
+    },
     // BETTER_AUTH_URL is CF-RUNTIME only and gets baked in as undefined by Vite.
     // NEXT_PUBLIC_HOST_URL is in CF-BUILD and is correctly baked in at build time.
     baseURL: authBaseURL,

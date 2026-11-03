@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { moduleDefinitions, ModuleContent } from './module-content';
 import { LegalJsonLd } from '@/components/legal/JsonLd';
+import policy from './policy.json';
 
 // Live web origin for this app — not a stale federation value to "correct".
 // Never find-and-replace `pana.social`; most occurrences are federated
@@ -22,14 +23,6 @@ export const metadata: Metadata = {
   },
 };
 
-function Placeholder({ label }: { label: string }) {
-  return (
-    <p className="rounded border border-dashed border-blue-400/50 bg-blue-50/50 p-4 text-sm text-blue-800 dark:bg-blue-950/20 dark:text-blue-200">
-      {label} — full legal text to be drafted.
-    </p>
-  );
-}
-
 export default function TermsPage() {
   return (
     <>
@@ -37,13 +30,13 @@ export default function TermsPage() {
         name="Pana MIA Club Terms of Service"
         description="Terms of Service for Pana MIA Club. CC-licensed content, community-drafted terms, Florida jurisdiction, no mandatory arbitration."
         url={`${SITE}/legal/terms`}
-        version="0.1"
+        version={policy.version}
         policyJsonUrl={`${SITE}/legal/terms/policy.json`}
       />
       <header className="mb-10 border-b pb-6">
         <h1 className="text-4xl font-bold">Terms of Service</h1>
         <p className="text-muted-foreground mt-2">
-          Version 0.1 — Effective October 26, 2026
+          Version {policy.version} — Effective {policy.effectiveDate}
         </p>
         <p className="text-muted-foreground mt-1 text-sm">
           The English-language version of these terms shall take precedence over
@@ -158,10 +151,6 @@ export default function TermsPage() {
         </ul>
       </nav>
 
-      {/* Commitments preamble — this is what the footer's "Our Commitments"
-          link points to. The commitments enumerate what Panamia promises its
-          members; the terms that follow are the legal mechanism to uphold them.
-          TODO: Replace placeholder text with final copy. */}
       <section id="commitments" className="mb-16">
         <h2 className="mb-4 text-2xl font-bold">Our Commitments</h2>
         <div className="space-y-4 rounded-lg border-2 border-pink-200 bg-pink-50/30 p-6 dark:border-pink-900/50 dark:bg-pink-950/10">
@@ -170,9 +159,18 @@ export default function TermsPage() {
             and as a community:
           </p>
           <ul className="list-none space-y-3 pl-0">
-            <Placeholder label="Commitment: We place the interests of local artists and businesses first" />
-            <Placeholder label="Commitment: We will be transparent — our platform is community-drafted, versioned, and open to revision by any member" />
-            <Placeholder label="Commitment: We are more than a website — we value in-person communication and collaboration. The Future is Local." />
+            <li>
+              We put local artists, independent businesses, and the communities
+              around them at the center of the service.
+            </li>
+            <li>
+              We publish our policies, identify their versions, and welcome
+              community proposals for changes.
+            </li>
+            <li>
+              Online tools help local relationships and in-person collaboration,
+              rather than replacing them. The Future is Local.
+            </li>
           </ul>
           <p className="text-muted-foreground text-sm">
             The terms below are how we hold ourselves to these commitments.
@@ -222,7 +220,7 @@ export default function TermsPage() {
           <p>
             <strong>Community-drafted:</strong> These terms were mutually
             prepared with the community. You may propose changes by emailing{' '}
-            <a href="mailto:hola@pana.social">hola@pana.social</a>.
+            <a href="mailto:hola@panamia.club">hola@panamia.club</a>.
           </p>
         </div>
       </section>
@@ -236,7 +234,7 @@ export default function TermsPage() {
             community. They shall not be construed against either party as the
             drafter. Community members may request revisions or propose
             alterations to these terms by contacting{' '}
-            <a href="mailto:hola@pana.social">hola@pana.social</a>. Proposals
+            <a href="mailto:hola@panamia.club">hola@panamia.club</a>. Proposals
             are reviewed and, where adopted, incorporated into the next
             versioned release with changelog attribution.
           </p>
@@ -273,7 +271,28 @@ export default function TermsPage() {
         {/* 4. Account */}
         <section id="account" className="mb-12">
           <h2>4. Account</h2>
-          <Placeholder label="Account rules: one account per person, screenname rules, termination" />
+          <p>
+            Use one personal account, provide accurate information, and choose a
+            screenname that does not impersonate someone, infringe their rights,
+            or evade moderation. Protect your sign-in methods and device. You
+            are responsible for activity you authorize. Do not share, sell, or
+            transfer an account without our permission, and notify us of
+            suspected unauthorized use.
+          </p>
+          <p>
+            An authorized person may manage a business or organizational listing
+            through the permissions the service provides. This does not confer
+            ownership of other members&apos; accounts. The operator may issue
+            dedicated demonstration or app-review accounts for testing. They are
+            not administrator accounts and may not impersonate an actual
+            resident or customer.
+          </p>
+          <p>
+            We may limit or suspend an account when reasonably necessary to
+            investigate abuse, protect people, address an eligibility problem,
+            or comply with law. Section 16 and the Privacy Policy explain
+            account deletion and retained information.
+          </p>
         </section>
 
         {/* 5. Content Licensing */}
@@ -293,12 +312,19 @@ export default function TermsPage() {
               <strong>CC BY-SA 4.0</strong> — Same as CC BY, plus adaptations
               must use the same license.
             </li>
+            <li>
+              <strong>CC0 1.0</strong> — A public-domain dedication with the
+              fallback permissions provided by the CC0 instrument.
+            </li>
           </ul>
           <p>
             No traditionally copyrighted (&quot;all rights reserved&quot;) media
             may be uploaded. License selection is required at the point of
-            publication. The default is CC BY-SA 4.0. The license is irrevocable
-            per CC legal code.
+            publication. The default is CC BY 4.0. You must hold the rights
+            needed for the license you select. A license does not authorize
+            disclosure of private information, misuse of a person&apos;s
+            likeness, or infringement of third-party rights. Existing grants
+            remain governed by their terms after source removal.
           </p>
         </section>
 
@@ -329,7 +355,70 @@ export default function TermsPage() {
         {/* 7. Acceptable Use */}
         <section id="acceptable-use" className="mb-12">
           <h2>7. Acceptable Use</h2>
-          <Placeholder label="Acceptable use: prohibited conduct, spam, harassment, illegal content" />
+          <p>
+            Treat people with respect and use the service lawfully. Do not
+            threaten, harass, stalk, discriminate against, exploit, or defraud
+            someone; publish private information without authority; impersonate
+            another person; or use the service for spam, scams, malware,
+            unauthorized access, or evading restrictions. Do not publish
+            pornography, sexually explicit content, content intended to be
+            sexually gratifying, non-consensual intimate imagery, gratuitous
+            graphic real-world violence, or content that promotes or facilitates
+            exploitation or violence.
+          </p>
+          <p>
+            Lawful nonsexual nudity may be permitted only in a clearly justified
+            educational, documentary, scientific, or artistic context and must
+            not be gratuitous. This exception never permits child sexual abuse
+            or exploitation, non-consensual intimate imagery, or other illegal
+            content. Graphic real-world violence is permitted only in
+            non-gratuitous newsworthy coverage.
+          </p>
+          <p>
+            Only publish material you have the right to share and license.
+            Content warnings and licenses do not excuse unlawful content or
+            violations. Do not republish another member&apos;s restricted
+            messages or bypass access controls.
+          </p>
+          <p>
+            Use the in-app Report a safety concern, Report post, Report message,
+            or user-report controls. You can also use{' '}
+            <Link href="/form/contact-us">Contact Us inside the app</Link> or{' '}
+            <a href="mailto:hola@panamia.club">hola@panamia.club</a>. Include
+            the relevant profile, post, or event link and a description, but do
+            not attach or redistribute illegal material. Profile blocking and
+            muting can limit unwanted interaction but do not replace reporting.
+            We may remove content, restrict interaction, suspend accounts, or
+            terminate access; serious risks can require immediate action without
+            a warning.
+          </p>
+          <h3 id="child-safety">Pana Mia Child Safety Standards</h3>
+          <p>
+            Pana Mia and Pana MIA Club, Corp. prohibit child sexual abuse and
+            exploitation (CSAE), including grooming, sexual solicitation of a
+            minor, sextortion, trafficking, and the production, possession,
+            promotion, or distribution of child sexual abuse material (CSAM).
+            This includes synthetic or computer-generated material that
+            unlawfully depicts or facilitates sexual exploitation of a child.
+            These rules apply even though membership is limited to adults.
+          </p>
+          <p>
+            Use Report a safety concern in the app, the Contact Us form, or
+            hola@panamia.club to report a concern. Include identifying context
+            or a link, but do not download, forward, or attach suspected CSAM.
+            If a child is in immediate danger, contact local emergency services.
+          </p>
+          <p>
+            We review safety reports, remove or disable access to identified
+            prohibited material, and restrict or terminate offending accounts as
+            appropriate. Relevant evidence is handled with restricted access
+            consistent with applicable law. We report apparent violations to the
+            National Center for Missing &amp; Exploited Children&apos;s
+            CyberTipline or the appropriate authority when legally required and
+            cooperate with lawful child-safety requests. The operator designates
+            a responsible child-safety contact for Google Play; public reports
+            should use the channels above.
+          </p>
         </section>
 
         {/* 8. Law Enforcement */}
@@ -349,7 +438,23 @@ export default function TermsPage() {
         {/* 9. Intellectual Property */}
         <section id="intellectual-property" className="mb-12">
           <h2>9. Intellectual Property</h2>
-          <Placeholder label="Intellectual property: user retains ownership; platform license limited to operating the service; CC license governs downstream use" />
+          <p>
+            You retain your rights in your original work. Submitting content
+            gives Pana MIA Club the permissions reasonably needed to store,
+            display, format, transmit, moderate, and, where supported, federate
+            it according to your selected license and audience. The chosen
+            Creative Commons instrument governs permissions granted to other
+            recipients. It does not transfer account ownership, automatically
+            publish a private draft, or grant rights you do not own.
+          </p>
+          <p>
+            Our name, logos, and other protected platform materials are not
+            licensed for misleading endorsement or impersonation merely because
+            member contributions use Creative Commons. Use the published
+            copyright-reporting process for alleged infringement. These terms do
+            not remove another person&apos;s rights or a defense available under
+            law.
+          </p>
         </section>
 
         {/* 10. Data Tiers */}
@@ -380,7 +485,23 @@ export default function TermsPage() {
         {/* 11. Limitation of Liability */}
         <section id="liability" className="mb-12">
           <h2>11. Limitation of Liability</h2>
-          <Placeholder label="Limitation of liability: standard disclaimers" />
+          <p>
+            The service is provided on an as-available basis. We work to operate
+            it responsibly but cannot guarantee uninterrupted access, another
+            member&apos;s accuracy, an independent business&apos;s performance,
+            the safety of a third-party event, or preservation of information on
+            systems we do not control. Check relevant details before relying on
+            a listing, attending an event, entering a transaction, or acting on
+            advice.
+          </p>
+          <p>
+            To the extent permitted by applicable law, we are not liable for
+            indirect or consequential loss arising from use of the service or
+            another user&apos;s conduct. This does not exclude liability that
+            cannot lawfully be excluded, including non-waivable consumer rights,
+            fraud, or other protected claims, or excuse obligations imposed on
+            us by law.
+          </p>
         </section>
 
         {/* 12. Dispute Resolution */}
@@ -422,13 +543,40 @@ export default function TermsPage() {
         {/* 15. Modifications */}
         <section id="modifications" className="mb-12">
           <h2>15. Modifications</h2>
-          <Placeholder label="Modifications: versioned, with changelog and advance notice" />
+          <p>
+            We publish a version and effective date for these terms and their
+            modules. Material changes are announced through the service or
+            account contact details as appropriate, with advance notice when
+            required by law or the nature of the change. We request renewed
+            agreement where required. If you do not accept a material revision,
+            stop using the affected service and contact us about account closure
+            or applicable rights. Changes do not revoke an existing Creative
+            Commons grant or remove a non-waivable right.
+          </p>
         </section>
 
         {/* 16. Termination */}
         <section id="termination" className="mb-12">
           <h2>16. Termination</h2>
-          <Placeholder label="Termination: user-initiated deletion, platform-initiated suspension, data retention post-termination" />
+          <p>
+            You may stop participating and request account deletion through the{' '}
+            <Link href="/form/delete-account">account-deletion form</Link> or
+            the assistance channel in our Privacy Policy. Cancel or transfer
+            upcoming commitments when required by the deletion workflow. Account
+            deletion does not erase another person&apos;s independent record or
+            a remote copy that we cannot control.
+          </p>
+          <p>
+            We may suspend or terminate access for serious or repeated
+            violations, ineligibility, security risks, or legal requirements.
+            Where appropriate and lawful, we explain the reason and allow an
+            appeal by email. Immediate restrictions may be necessary to protect
+            people or an investigation. Eligible private data is removed
+            according to the Privacy Policy; archived contributions, safety and
+            compliance records, provider records, and remote copies have the
+            stated limits. Existing licenses, payment obligations, and
+            provisions needed to resolve a dispute survive as applicable.
+          </p>
         </section>
 
         {/* Service Modules — expanded inline */}
@@ -455,7 +603,7 @@ export default function TermsPage() {
           <p>
             Pana MIA Club, Corp. (d/b/a Pana MIA)
             <br />
-            Email: <a href="mailto:hola@pana.social">hola@pana.social</a>
+            Email: <a href="mailto:hola@panamia.club">hola@panamia.club</a>
           </p>
         </section>
       </article>

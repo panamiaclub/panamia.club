@@ -15,6 +15,24 @@ const image = Buffer.from(
   'base64'
 );
 
+test('listing proof HTTP responses preserve no-referrer through the production proxy', async ({
+  request,
+}) => {
+  for (const path of [
+    '/listings/invite',
+    '/listings/reminders/stop',
+    '/api/listings/invitations',
+  ]) {
+    const response = await request.get(path);
+    expect(response.status()).toBe(
+      path === '/api/listings/invitations' ? 400 : 200
+    );
+    expect(response.headers()['referrer-policy']).toBe('no-referrer');
+    expect(response.headers()['cache-control']).toContain('no-store');
+    expect(response.headers()['set-cookie']).toBeUndefined();
+  }
+});
+
 async function fixtures(
   page: Page,
   options: {
@@ -509,7 +527,8 @@ async function fixtures(
             missingLocation: true,
             canManage: signedIn && owned && accountId === 'review-account',
             claimable: !owned && !options.otherOwner,
-            published: !options.unpublished && options.refreshState !== 'paused',
+            published:
+              !options.unpublished && options.refreshState !== 'paused',
             reviewPaused: options.refreshState === 'paused',
           },
         });

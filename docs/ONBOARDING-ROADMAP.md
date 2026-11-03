@@ -76,6 +76,10 @@ a different business contact gets a receipt without the sign-in link. Connected
 owners receive future decisions at their current account email. Sign-in and setup
 links stay private to that account.
 
+Invitation/reminder proof pages and their private APIs select `no-referrer`
+in the global proxy: the runtime applies proxy headers after route headers.
+Route-owned cache directives and public directory/map policies are unchanged.
+
 ### Review and claim an existing listing
 
 The permanent entry for an existing directory business is
@@ -233,6 +237,26 @@ confirmation records the listing preference without claiming or republishing
 it. Owners can also stop reminders from the review page. Opt-outs are not
 treated as ignored notices, and staff cannot bypass the preference with retry.
 An owner can allow future listing reminders without starting a new campaign.
+
+Initial, weekly and final `listing.refresh` notices use the listing-only variant
+of `emailLayout` in `lib/email-templates/layout.ts`, along with the closely
+related `listing.claim` and `listing.setup` messages. The cream/orange/indigo
+palette, current PNG wordmark, inline table layout and text fallbacks match the
+site without changing unrelated authentication or admin templates. The job's
+`reminderNotice` flag selects presentation only; deadlines, recipient selection,
+proof URLs, opt-outs and successful-delivery lifecycle rules are unchanged.
+
+For a private, no-send preview, run
+`yarn tsx scripts\preview-listing-emails.ts <private-output-directory>`.
+It writes HTML, plain text and a subject manifest directly from the registered
+`renderTemplate` path used by `sendTemplateEmail`, including all refresh stages,
+owned-listing links, claim verification and setup recovery. It uses only sample
+data, reserved `.invalid` action URLs and deliberately invalid proof strings;
+it imports neither the transport nor the database and requires no credentials.
+Keep previews outside public assets. Outlook can fall back to square corners
+and system fonts; images can be blocked without losing the name, content or CTA.
+Presentation does not guarantee Inbox placement. Mail provider/authentication
+settings, controlled sends and production campaign approvals remain separate.
 
 The server APIs are:
 
