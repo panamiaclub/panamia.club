@@ -8,7 +8,10 @@ import {
   iosExportOptions,
   parseIosBuildOptions,
 } from '../scripts/ios-bundle';
-import { MOBILE_APP_ID } from '@/lib/mobile/app-identity';
+import {
+  IOS_UNIVERSAL_LINK_HOSTS,
+  MOBILE_APP_ID,
+} from '@/lib/mobile/app-identity';
 
 const args = ['--version-name', '1.0.0', '--build-number', '1'];
 const env = { APPLE_TEAM_ID: 'ABCDE12345' };
@@ -152,4 +155,16 @@ test('the iOS shell includes only supported plugins and the matching native iden
   );
   assert.match(scene, /rootViewController = PanaBridgeViewController\(\)/);
   assert.match(scene, /allowsBackForwardNavigationGestures = true/);
+});
+
+test('Universal Links and release checks claim only the active launch host', () => {
+  assert.deepEqual(IOS_UNIVERSAL_LINK_HOSTS, ['panamia.club']);
+  const entitlements = readFileSync(
+    new URL('../mobile/ios/App/App/App.entitlements', import.meta.url),
+    'utf8'
+  );
+  const nativeHosts = [
+    ...entitlements.matchAll(/<string>applinks:([^<]+)<\/string>/g),
+  ].map((match) => match[1]);
+  assert.deepEqual(nativeHosts, [...IOS_UNIVERSAL_LINK_HOSTS]);
 });

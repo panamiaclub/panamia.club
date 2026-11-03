@@ -40,11 +40,14 @@ do not replace an Xcode build, simulator run, or real-device permission/link tes
 3. Find the Apple Team ID in Membership details. Set **`APPLE_APP_TEAM_ID`** to
    that value in the website's deployment environment, then deploy the website.
    The build environment uses **`APPLE_TEAM_ID`** for the same value.
-4. Confirm both hosts return HTTP 200 JSON, without redirects, from
-   `https://panamia.club/.well-known/apple-app-site-association` and
-   `https://social.panamia.club/.well-known/apple-app-site-association`.
-   Their `applinks.details` must authorize `TEAMID.social.pana.app`.
-   The release command checks this before archiving; broken associations must not ship.
+4. Confirm `https://panamia.club/.well-known/apple-app-site-association` returns
+   HTTP 200 JSON without redirects and authorizes `RT9836SANW.social.pana.app`.
+   The first release claims only this active host; Directory and Social use
+   `/d` and `/s` on it while the separate social subdomain is disabled.
+   The release command checks every host in `IOS_UNIVERSAL_LINK_HOSTS` before
+   archiving, and regression coverage keeps that list aligned with native
+   entitlements. Add the social hostname only after it is healthy and subdomain
+   navigation is intentionally enabled.
 
 ## Local Mac
 
@@ -144,15 +147,15 @@ symbols. Use `--provisioning-profile UUID` for manual distribution signing.
 Create a GitHub Actions environment named **`ios-release`**. Restrict its allowed
 branches and require approval for releases as appropriate. Add these secrets:
 
-| Secret                                    | Value                                                                                                        |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `APPLE_TEAM_ID`                           | Organization's 10-character Team ID                                                                          |
-| `APPLE_DISTRIBUTION_CERTIFICATE_BASE64`   | Base64-encoded Apple Distribution `.p12`, including its private key                                          |
-| `APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD` | Password protecting that `.p12`                                                                              |
-| `APPLE_PROVISIONING_PROFILE_BASE64`       | Base64-encoded App Store Connect distribution profile for `social.pana.app`, with Associated Domains enabled |
-| `APP_STORE_CONNECT_API_KEY_ID`            | App Store Connect API key ID; required only for upload                                                       |
-| `APP_STORE_CONNECT_ISSUER_ID`             | API key issuer ID; required only for upload                                                                  |
-| `APP_STORE_CONNECT_API_KEY_BASE64`        | Base64-encoded private `.p8` key; required only for upload                                                   |
+| Secret                                    | Value                                                                                                                          |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `APPLE_TEAM_ID`                           | Organization's 10-character Team ID                                                                                            |
+| `APPLE_DISTRIBUTION_CERTIFICATE_BASE64`   | Base64-encoded Apple Distribution `.p12`, including its private key                                                            |
+| `APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD` | Password protecting that `.p12`                                                                                                |
+| `APPLE_PROVISIONING_PROFILE_BASE64`       | Base64-encoded App Store Connect distribution profile for `social.pana.app`, authorizing the app's declared Associated Domains |
+| `APP_STORE_CONNECT_API_KEY_ID`            | App Store Connect API key ID; required only for upload                                                                         |
+| `APP_STORE_CONNECT_ISSUER_ID`             | API key issuer ID; required only for upload                                                                                    |
+| `APP_STORE_CONNECT_API_KEY_BASE64`        | Base64-encoded private `.p8` key; required only for upload                                                                     |
 
 The distribution certificate must include its private key: a downloaded `.cer`
 alone cannot sign an app. Use a valid, unexpired App Store Connect profile,

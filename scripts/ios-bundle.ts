@@ -5,7 +5,10 @@ import { platform } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import config from '../capacitor.config';
-import { MOBILE_APP_ID } from '../lib/mobile/app-identity';
+import {
+  IOS_UNIVERSAL_LINK_HOSTS,
+  MOBILE_APP_ID,
+} from '../lib/mobile/app-identity';
 import { DEFAULT_ROOT_DOMAIN } from '../lib/panaverse/root-domain';
 
 const ROOT = resolve(import.meta.dirname, '..');
@@ -137,7 +140,7 @@ ${
 }
 
 async function checkUniversalLinks(teamId: string): Promise<void> {
-  for (const host of [DEFAULT_ROOT_DOMAIN, `social.${DEFAULT_ROOT_DOMAIN}`]) {
+  for (const host of IOS_UNIVERSAL_LINK_HOSTS) {
     const url = `https://${host}/.well-known/apple-app-site-association`;
     const response = await fetch(url, {
       redirect: 'error',

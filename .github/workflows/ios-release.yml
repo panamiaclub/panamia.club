@@ -82,8 +82,10 @@ jobs:
           if profile["ExpirationDate"].replace(tzinfo=datetime.timezone.utc) <= datetime.datetime.now(datetime.timezone.utc):
               raise SystemExit("The provisioning profile has expired.")
           domains = entitlements.get("com.apple.developer.associated-domains", [])
-          if "*" not in domains and not {"applinks:panamia.club", "applinks:social.panamia.club"}.issubset(domains):
-              raise SystemExit("The distribution profile must allow Associated Domains for both app surfaces.")
+          with open("mobile/ios/App/App/App.entitlements", "rb") as source:
+              requested_domains = set(plistlib.load(source).get("com.apple.developer.associated-domains", []))
+          if not requested_domains or ("*" not in domains and not requested_domains.issubset(domains)):
+              raise SystemExit("The distribution profile must allow the Associated Domains declared by this app.")
           identifier = str(uuid.UUID(profile["UUID"])).upper()
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
               output.write(f"IOS_PROFILE_UUID={identifier}\n")
