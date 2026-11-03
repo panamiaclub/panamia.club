@@ -33,6 +33,10 @@ async function fixtures(
     accountChangesOnAccept?: boolean;
     invitationResponseId?: string;
     invitationPreviewFailure?: boolean;
+    refreshState?: 'active' | 'paused' | 'held';
+    reviewFailure?: boolean;
+    staffSuspended?: boolean;
+    admin?: boolean;
   } = {}
 ) {
   let signedIn = options.signedIn === true;
@@ -55,12 +59,29 @@ async function fixtures(
   const invitationContexts: Record<string, unknown>[] = [];
   const invitationLookups: string[] = [];
   const invitationAcceptances: Record<string, unknown>[] = [];
+  const reviewConfirmations: Record<string, unknown>[] = [];
+  const reminderControls: Record<string, unknown>[] = [];
+  const reminderStops: Record<string, unknown>[] = [];
+  let remindersOptedOut = false;
+  let reviewCycle: Record<string, unknown> | null = options.refreshState
+    ? {
+        id: 'review-cycle',
+        state: options.refreshState,
+        reminderCount: options.refreshState === 'paused' ? 4 : 1,
+        startedAt: '2026-11-03T12:00:00Z',
+        dueAt: '2026-12-03T12:00:00Z',
+        pausedAt:
+          options.refreshState === 'paused' ? '2026-12-03T12:00:00Z' : null,
+        holdReason: options.refreshState === 'held' ? 'mail_failed' : null,
+      }
+    : null;
   const profile: Record<string, unknown> = {
     id: listingId,
     userId: null,
     name: 'Ana Bakery',
     email: businessEmail,
-    active: !options.unpublished,
+    active: !options.unpublished && options.refreshState !== 'paused',
+    lastReviewedAt: null,
     screenname: null,
     status: { source: 'business_intake' },
     phoneNumber: 'private-business-phone',
@@ -131,6 +152,7 @@ async function fixtures(
                 email: currentAccountEmail,
                 name: 'Ana Person',
                 emailVerified: true,
+                isAdmin: options.admin === true,
               },
             }
           : null,
@@ -158,6 +180,136 @@ async function fixtures(
           },
         },
       });
+    } else if (path === '/api/listings/review') {
+      if (route.request().method() === 'GET') {
+        if (
+          !owned ||
+          !signedIn ||
+          url.searchParams.get('profileId') !== listingId
+        ) {
+          await route.fulfill({
+            status: 403,
+            json: { success: false, error: 'You do not manage that business.' },
+          });
+        } else {
+          await route.fulfill({
+            json: {
+              profileId: listingId,
+              lastReviewedAt: profile.lastReviewedAt,
+              remindersOptedOut,
+              cycle: reviewCycle,
+            },
+          });
+        }
+      } else {
+        const body = route.request().postDataJSON() as Record<string, unknown>;
+        reviewConfirmations.push(body);
+        if (
+          options.reviewFailure ||
+          body.expectedOwnerId !== accountId ||
+          body.expectedOwnerEmail !== currentAccountEmail ||
+          body.profileId !== listingId ||
+          body.cycleId !== (reviewCycle?.id ?? null)
+        ) {
+          await route.fulfill({
+            status: 409,
+            json: {
+              success: false,
+              error:
+                'The review cycle or sign-in changed. Reload before confirming.',
+            },
+          });
+        } else if (body.action === 'confirm' && body.confirmed === true) {
+          const restored =
+            options.refreshState === 'paused' && !options.staffSuspended;
+          profile.lastReviewedAt = new Date().toISOString();
+          if (restored) profile.active = true;
+          reviewCycle = null;
+          await route.fulfill({
+            json: {
+              success: true,
+              profileId: listingId,
+              restored,
+              reviewedAt: profile.lastReviewedAt,
+            },
+          });
+        } else if (body.action === 'stop_reminders') {
+          remindersOptedOut = true;
+          if (reviewCycle && reviewCycle.state !== 'paused')
+            reviewCycle = {
+              ...reviewCycle,
+              state: 'held',
+              holdReason: 'opted_out',
+            };
+          await route.fulfill({ json: { success: true } });
+        } else if (body.action === 'allow_reminders') {
+          remindersOptedOut = false;
+          await route.fulfill({ json: { success: true } });
+        } else {
+          await route.fulfill({
+            status: 400,
+            json: {
+              success: false,
+              error: 'Explicit confirmation is required.',
+            },
+          });
+        }
+      }
+    } else if (path === '/api/listings/review/stop') {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      reminderStops.push(body);
+      if (
+        body.cycleId !== 'review-cycle' ||
+        body.token !== invitationToken ||
+        body.action !== 'stop'
+      ) {
+        await route.fulfill({
+          status: 403,
+          json: { error: 'This stop-reminders link is not valid.' },
+        });
+      } else {
+        remindersOptedOut = true;
+        if (reviewCycle)
+          reviewCycle = {
+            ...reviewCycle,
+            state: 'held',
+            holdReason: 'opted_out',
+          };
+        await route.fulfill({ json: { success: true } });
+      }
+    } else if (path === `/api/admin/listings/${listingId}/refresh`) {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          json: {
+            profile: {
+              id: listingId,
+              name: profile.name,
+              active: profile.active,
+              lastReviewedAt: profile.lastReviewedAt,
+            },
+            cycle: reviewCycle,
+            deliveries: [],
+          },
+        });
+      } else {
+        const body = route.request().postDataJSON() as Record<string, unknown>;
+        reminderControls.push(body);
+        reviewCycle = {
+          id: 'review-cycle',
+          state:
+            body.action === 'start'
+              ? 'queued'
+              : body.action === 'cancel'
+                ? 'cancelled'
+                : 'held',
+          reminderCount: 0,
+          startedAt: null,
+          dueAt: null,
+          pausedAt: null,
+          holdReason: null,
+        };
+        await route.fulfill({ json: { success: true } });
+      }
     } else if (path === '/api/listings/invitations/context') {
       const body = route.request().postDataJSON() as Record<string, unknown>;
       invitationContexts.push(body);
@@ -357,7 +509,8 @@ async function fixtures(
             missingLocation: true,
             canManage: signedIn && owned && accountId === 'review-account',
             claimable: !owned && !options.otherOwner,
-            published: !options.unpublished,
+            published: !options.unpublished && options.refreshState !== 'paused',
+            reviewPaused: options.refreshState === 'paused',
           },
         });
       }
@@ -391,6 +544,7 @@ async function fixtures(
       } else {
         used = true;
         owned = true;
+        ownedBy = accountId;
         await route.fulfill({
           json: {
             success: true,
@@ -514,6 +668,9 @@ async function fixtures(
     invitationContexts,
     invitationLookups,
     invitationAcceptances,
+    reviewConfirmations,
+    reminderControls,
+    reminderStops,
     signIn() {
       signedIn = true;
       accountId = 'review-account';
@@ -529,6 +686,24 @@ function expectListingReads(reads: string[]) {
     .filter((id) => id !== null);
   expect(scoped.length).toBeGreaterThan(0);
   expect(scoped.every((id) => id === listingId)).toBe(true);
+}
+
+async function confirmReview(page: Page) {
+  await expect(
+    page.getByRole('heading', {
+      name: 'Confirm your listing information',
+      exact: true,
+    })
+  ).toBeVisible();
+  await page
+    .getByRole('checkbox', { name: /I reviewed this business/ })
+    .check();
+  await page
+    .getByRole('button', { name: 'Confirm business information', exact: true })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Your review is complete', exact: true })
+  ).toBeVisible();
 }
 
 test('anonymous entry, Pana sign-in, explicit verification and all prefilled review steps stay on the exact business', async ({
@@ -686,6 +861,7 @@ test('anonymous entry, Pana sign-in, explicit verification and all prefilled rev
   await page
     .getByRole('button', { name: 'Save photos and finish', exact: true })
     .click();
+  await confirmReview(page);
   await expect(
     page.getByRole('heading', { name: 'Your review is complete', exact: true })
   ).toBeVisible();
@@ -867,6 +1043,7 @@ test('an unpublished business stays manageable without offering a broken public 
       exact: true,
     })
     .click();
+  await confirmReview(page);
   await expect(
     page.getByRole('heading', { name: 'Your review is complete', exact: true })
   ).toBeVisible();
@@ -1132,6 +1309,7 @@ test('the mobile review keeps photos unchanged and offers exact-business complet
       exact: true,
     })
     .click();
+  await confirmReview(page);
   await expect(
     page.getByRole('heading', { name: 'Your review is complete', exact: true })
   ).toBeVisible();
@@ -1530,4 +1708,196 @@ test('the mobile invitation is keyboard accessible, identifies the account and k
     )
   ).toBe(true);
   expect(fixture.invitationAcceptances).toHaveLength(0);
+});
+
+test('finishing steps or adding completion query parameters does not confirm an active review cycle', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    refreshState: 'active',
+  });
+  await page.goto(`${reviewPath}&complete=1&confirmed=1`);
+  await expect(
+    page.getByRole('heading', {
+      name: 'Confirm your listing information',
+      exact: true,
+    })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', {
+      name: 'Confirm business information',
+      exact: true,
+    })
+  ).toBeDisabled();
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+  expect(fixture.profile.lastReviewedAt).toBeNull();
+  await confirmReview(page);
+  expect(fixture.reviewConfirmations).toEqual([
+    {
+      profileId: listingId,
+      action: 'confirm',
+      confirmed: true,
+      cycleId: 'review-cycle',
+      expectedOwnerId: 'review-account',
+      expectedOwnerEmail: accountEmail,
+    },
+  ]);
+});
+
+test('an overdue owner reviews the exact business and explicitly restores it without adding a ZIP or changing their login', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    refreshState: 'paused',
+  });
+  await page.goto(`${reviewPath}&complete=1`);
+  await expect(
+    page.getByText(
+      'This listing is temporarily hidden because its review is overdue.',
+      { exact: true }
+    )
+  ).toBeVisible();
+  expect(fixture.profile.active).toBe(false);
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+  await confirmReview(page);
+  await expect(
+    page.getByRole('link', { name: 'View updated listing', exact: true })
+  ).toHaveAttribute('href', `/listings/${listingId}`);
+  expect(fixture.profile.active).toBe(true);
+  expect(fixture.profile.addressPostalCode).toBeNull();
+  expect(fixture.profile.email).toBe(businessEmail);
+  expect(fixture.switches).toHaveLength(0);
+});
+
+test('staff-hidden businesses can confirm information without automatically becoming public', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    refreshState: 'paused',
+    staffSuspended: true,
+  });
+  await page.goto(`${reviewPath}&complete=1`);
+  await confirmReview(page);
+  await expect(
+    page.getByRole('link', { name: 'View updated listing', exact: true })
+  ).toHaveCount(0);
+  expect(fixture.profile.active).toBe(false);
+});
+
+test('a changed review or sign-in stays unconfirmed and offers a reload instead of a success screen', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    refreshState: 'active',
+    reviewFailure: true,
+  });
+  await page.goto(`${reviewPath}&complete=1`);
+  await page
+    .getByRole('checkbox', { name: /I reviewed this business/ })
+    .check();
+  await page
+    .getByRole('button', { name: 'Confirm business information', exact: true })
+    .click();
+  await expect(page.getByRole('alert')).toContainText(
+    'review cycle or sign-in changed'
+  );
+  await expect(
+    page.getByRole('button', { name: 'Reload and confirm again', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Your review is complete', exact: true })
+  ).toHaveCount(0);
+  expect(fixture.profile.lastReviewedAt).toBeNull();
+});
+
+test('owners can opt out of review reminders without confirming, hiding, or editing another business', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    refreshState: 'active',
+  });
+  await page.goto(reviewPath);
+  await page
+    .getByRole('button', { name: 'Stop listing-review reminders', exact: true })
+    .click();
+  await expect(
+    page.getByText(/Listing-review reminders are opted out/)
+  ).toBeVisible();
+  expect(fixture.reviewConfirmations[0].action).toBe('stop_reminders');
+  expect(fixture.reviewConfirmations[0].profileId).toBe(listingId);
+  expect(fixture.profile.active).toBe(true);
+  expect(fixture.profile.lastReviewedAt).toBeNull();
+  expect(fixture.writes).toHaveLength(0);
+});
+
+test('email opt-out scanners leave the cycle unchanged until the recipient explicitly confirms', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { refreshState: 'active' });
+  await page.goto(
+    `/listings/reminders/stop?cycleId=review-cycle#token=${invitationToken}`
+  );
+  const button = page.getByRole('button', {
+    name: 'Confirm stop reminders',
+    exact: true,
+  });
+  await expect(button).toBeVisible();
+  expect(fixture.reminderStops).toHaveLength(0);
+  expect(fixture.profile.active).toBe(true);
+  await button.click();
+  await expect(
+    page.getByRole('heading', {
+      name: 'Listing reminders stopped',
+      exact: true,
+    })
+  ).toBeVisible();
+  expect(fixture.reminderStops).toEqual([
+    { cycleId: 'review-cycle', token: invitationToken, action: 'stop' },
+  ]);
+  expect(fixture.profile.active).toBe(true);
+});
+
+test('admin preview does not enroll a campaign; starting the selected listing requires explicit authorization', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    admin: true,
+  });
+  await page.goto(`/admin/listings/${listingId}/refresh`);
+  await expect(
+    page.getByRole('heading', { name: 'Ana Bakery', exact: true })
+  ).toBeVisible();
+  const start = page.getByRole('button', {
+    name: 'Start review reminder cycle',
+    exact: true,
+  });
+  await expect(start).toBeDisabled();
+  expect(fixture.reminderControls).toHaveLength(0);
+  await page
+    .getByRole('checkbox', { name: /I authorize the initial email/ })
+    .check();
+  await start.click();
+  await expect(
+    page.getByText('Cycle status: queued', { exact: true })
+  ).toBeVisible();
+  expect(fixture.reminderControls[0]).toMatchObject({
+    profileId: listingId,
+    action: 'start',
+    confirmed: true,
+    expectedActorId: 'review-account',
+  });
+  expect(fixture.profile.active).toBe(true);
+  expect(fixture.claims).toHaveLength(0);
 });

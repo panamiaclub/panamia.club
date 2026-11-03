@@ -180,6 +180,8 @@ const tables = [
   schema.profiles,
   schema.profileOwners,
   schema.verification,
+  schema.listingRefreshCycles,
+  schema.listingRefreshDeliveries,
   schema.articles,
   schema.recommendationLists,
   schema.recommendationListItems,

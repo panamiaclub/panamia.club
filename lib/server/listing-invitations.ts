@@ -12,7 +12,9 @@ import { getEditableProfile } from './active-profile';
 import {
   BUSINESS_INTAKE_SOURCE,
   claimUnownedProfileInTransaction,
+  type ProfileOwnershipTransaction,
 } from './profile-owners';
+import { isReviewPausedListing } from './listing-refresh-status';
 
 type Profile = typeof profiles.$inferSelect;
 type Reader = Pick<typeof db, 'select'>;
@@ -87,13 +89,16 @@ function readStoredInvitation(value: string): StoredInvitation {
   };
 }
 
-function eligible(profile: Profile | undefined): profile is Profile {
+async function eligible(
+  profile: Profile | undefined,
+  reader: Reader = db
+): Promise<boolean> {
   return Boolean(
     profile &&
-    profile.active === true &&
     profile.userId === null &&
     (profile.status as { source?: string } | null)?.source ===
-      BUSINESS_INTAKE_SOURCE
+      BUSINESS_INTAKE_SOURCE &&
+    (profile.active === true || (await isReviewPausedListing(profile, reader)))
   );
 }
 
@@ -129,60 +134,63 @@ export async function issueListingInvitation(
   profileId: string,
   operatorId: string
 ) {
-  return db.transaction(async (tx) => {
-    const [profile] = await tx
-      .select()
-      .from(profiles)
-      .where(eq(profiles.id, profileId))
-      .for('update');
-    if (!eligible(profile)) return unavailable();
-    if (await hasOwner(profileId, tx)) return claimed();
-    if (
-      !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(profile.email.trim())
-    ) {
-      return {
-        success: false as const,
-        code: 'contact_unavailable' as const,
-        error:
-          'This listing needs a valid business contact before an invitation can be issued.',
-        status: 400 as const,
-      };
-    }
-    const token = Array.from(
-      crypto.getRandomValues(new Uint8Array(32)),
-      (byte) => byte.toString(16).padStart(2, '0')
-    ).join('');
-    const now = new Date();
-    const expiresAt = new Date(
-      now.getTime() + LISTING_INVITATION_DAYS * 24 * 60 * 60 * 1000
-    );
-    const record: StoredInvitation = {
-      tokenHash: await digest(token),
-      contactHash: await digest(profile.email.trim().toLowerCase()),
-      pendingOwnerHash: await digest(
-        profile.pendingOwnerEmail?.trim().toLowerCase() ?? ''
-      ),
-      issuedBy: operatorId,
-    };
-    const identifier = listingInvitationIdentifier(profileId);
-    await tx
-      .delete(verification)
-      .where(eq(verification.identifier, identifier));
-    await tx.insert(verification).values({
-      identifier,
-      value: JSON.stringify(record),
-      expiresAt,
-      createdAt: now,
-      updatedAt: now,
-    });
+  return db.transaction((tx) =>
+    issueListingInvitationInTransaction(tx, profileId, operatorId)
+  );
+}
+
+export async function issueListingInvitationInTransaction(
+  tx: ProfileOwnershipTransaction,
+  profileId: string,
+  operatorId: string
+) {
+  const [profile] = await tx
+    .select()
+    .from(profiles)
+    .where(eq(profiles.id, profileId))
+    .for('update');
+  if (!(await eligible(profile, tx))) return unavailable();
+  if (await hasOwner(profileId, tx)) return claimed();
+  if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(profile.email.trim())) {
     return {
-      success: true as const,
-      profileId,
-      recipient: profile.email.trim(),
-      invitationPath: `${listingInvitationPath(profileId)}#token=${token}`,
-      expiresAt: expiresAt.toISOString(),
+      success: false as const,
+      code: 'contact_unavailable' as const,
+      error:
+        'This listing needs a valid business contact before an invitation can be issued.',
+      status: 400 as const,
     };
+  }
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) =>
+    byte.toString(16).padStart(2, '0')
+  ).join('');
+  const now = new Date();
+  const expiresAt = new Date(
+    now.getTime() + LISTING_INVITATION_DAYS * 24 * 60 * 60 * 1000
+  );
+  const record: StoredInvitation = {
+    tokenHash: await digest(token),
+    contactHash: await digest(profile.email.trim().toLowerCase()),
+    pendingOwnerHash: await digest(
+      profile.pendingOwnerEmail?.trim().toLowerCase() ?? ''
+    ),
+    issuedBy: operatorId,
+  };
+  const identifier = listingInvitationIdentifier(profileId);
+  await tx.delete(verification).where(eq(verification.identifier, identifier));
+  await tx.insert(verification).values({
+    identifier,
+    value: JSON.stringify(record),
+    expiresAt,
+    createdAt: now,
+    updatedAt: now,
   });
+  return {
+    success: true as const,
+    profileId,
+    recipient: profile.email.trim(),
+    invitationPath: `${listingInvitationPath(profileId)}#token=${token}`,
+    expiresAt: expiresAt.toISOString(),
+  };
 }
 
 export async function revokeListingInvitation(
@@ -217,7 +225,7 @@ export async function inspectListingInvitation(
     .select()
     .from(profiles)
     .where(eq(profiles.id, profileId));
-  if (!eligible(profile)) return unavailable();
+  if (!(await eligible(profile))) return unavailable();
   if (await hasOwner(profileId, db)) return claimed();
   if (!isListingInvitationToken(token)) return invalid();
   const [row] = await db
@@ -245,7 +253,7 @@ export async function acceptListingInvitation(
       .from(profiles)
       .where(eq(profiles.id, profileId))
       .for('update');
-    if (!eligible(profile)) return unavailable();
+    if (!(await eligible(profile, tx))) return unavailable();
     if (await hasOwner(profileId, tx)) return claimed();
     if (!isListingInvitationToken(token)) return invalid();
     const [row] = await tx

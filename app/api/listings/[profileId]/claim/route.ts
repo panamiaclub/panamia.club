@@ -16,6 +16,7 @@ import {
 import { getEditableProfile } from '@/lib/server/active-profile';
 import { listingPublicPath, listingReviewPath } from '@/lib/listing-url';
 import type { ClaimListingContext } from '@/lib/listing-review';
+import { isReviewPausedListing } from '@/lib/server/listing-refresh-status';
 
 /**
  * Request a claim link for an unclaimed listing.
@@ -41,9 +42,27 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   const session = await auth();
   let profile = await getPublicListing(profileId);
+  let reviewPaused = false;
   if (!profile && session?.user?.id) {
     const managed = await getEditableProfile(session.user.id, profileId);
-    if (managed) profile = transformToLegacyFormat(managed);
+    if (managed) {
+      profile = transformToLegacyFormat(managed);
+      reviewPaused = await isReviewPausedListing(managed);
+    }
+  }
+  if (!profile) {
+    const paused = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      with: { user: { columns: { screenname: true, accountType: true } } },
+    });
+    if (paused && (await isReviewPausedListing(paused))) {
+      reviewPaused = true;
+      profile = transformToLegacyFormat({
+        ...paused,
+        screenname: paused.screenname ?? paused.user?.screenname,
+        accountType: paused.user?.accountType ?? null,
+      });
+    }
   }
 
   if (!profile) {
@@ -79,6 +98,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       (await canAdministerProfile(session.user.id, profile.id))
     ),
     published: profile.active === true,
+    reviewPaused,
   };
   return NextResponse.json(context, {
     headers: { 'Cache-Control': 'private, no-store' },
@@ -107,21 +127,22 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    if (!(await getPublicListing(profileId))) {
-      return NextResponse.json(
-        { error: 'That public business listing could not be found.' },
-        { status: 404 }
-      );
-    }
-
     const profile = await db.query.profiles.findFirst({
       where: eq(profiles.id, profileId),
-      columns: { id: true, name: true, email: true },
     });
 
     if (!profile) {
       return NextResponse.json(
         { error: 'That listing no longer exists.' },
+        { status: 404 }
+      );
+    }
+    if (
+      !(await getPublicListing(profileId)) &&
+      !(await isReviewPausedListing(profile))
+    ) {
+      return NextResponse.json(
+        { error: 'That public business listing could not be found.' },
         { status: 404 }
       );
     }

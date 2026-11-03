@@ -3,10 +3,10 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { CheckCircle2, Loader2, MapPin, Store } from 'lucide-react';
+import { Loader2, MapPin, Store } from 'lucide-react';
 import { useSession } from '@/lib/auth-client';
 import { useProfile } from '@/lib/query/profile';
-import { listingPublicPath, listingReviewPath } from '@/lib/listing-url';
+import { listingPublicPath } from '@/lib/listing-url';
 import {
   LISTING_REVIEW_STEPS,
   listingReviewStepPath,
@@ -14,6 +14,7 @@ import {
 } from '@/lib/listing-review';
 import { listSelectedCategories } from '@/lib/profile';
 import { ListingReviewAccess } from '@/components/listings/review-step';
+import { ListingReviewConfirmation } from '@/components/listings/review-confirmation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -98,7 +99,9 @@ function OwnedListingReview({
       <div className="mx-auto max-w-3xl space-y-6">
         <header className="space-y-4">
           <p className="section-eyebrow text-pana-burnt dark:text-pana-flame">
-            {complete ? 'Listing review complete' : 'Your business on Pana MIA'}
+            {complete
+              ? 'Confirm your listing review'
+              : 'Your business on Pana MIA'}
           </p>
           <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
             {complete
@@ -112,44 +115,15 @@ function OwnedListingReview({
           </p>
         </header>
 
-        {complete ? (
-          <Card className="border-pana-indigo/20 rounded-2xl">
-            <CardContent className="space-y-4 pt-6">
-              <CheckCircle2
-                className="text-pana-indigo h-8 w-8"
-                aria-hidden="true"
-              />
-              <h2 className="text-xl font-extrabold">
-                Your review is complete
-              </h2>
-              <p role="status">
-                {profile.active
-                  ? 'Changes you saved are live on this listing. Anything you skipped stays as it was.'
-                  : 'Your saved changes are ready. This listing is not public yet; staff review is separate.'}
-              </p>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                {profile.active && (
-                  <Button asChild className="rounded-full font-extrabold">
-                    <Link href={publicPath}>View updated listing</Link>
-                  </Button>
-                )}
-                <Button
-                  asChild
-                  variant="outline"
-                  className="rounded-full font-bold"
-                >
-                  <Link href={listingReviewPath(profileId)}>
-                    Manage this business
-                  </Link>
-                </Button>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                Keep this business-specific review link for future updates. You
-                can also find this business in your account&apos;s profile menu.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
+        <ListingReviewConfirmation
+          key={`${profileId}:${session?.user?.id}`}
+          profileId={profileId}
+          name={profile.name}
+          publicPath={publicPath}
+          active={Boolean(profile.active)}
+          finish={complete}
+        />
+        {!complete && (
           <Card className="border-pana-ink/10 rounded-2xl">
             <CardContent className="space-y-4 pt-6">
               {zip ? (

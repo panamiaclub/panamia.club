@@ -76,6 +76,15 @@ Hashed proof, current-contact validation, admin-only issuance/revocation and
 atomic `profile_owners` acceptance preserve the same separation and do not
 select a different active identity.
 
+Final listing confirmation is server-recorded in `profiles.lastReviewedAt`,
+separate from ownership and personal account setup. Explicitly enrolled renewal
+cycles can issue weekly reminders and pause an unanswered listing after a
+30-day notice window. `listing_refresh_cycles` and hashed
+`listing_refresh_deliveries` track that lifecycle without importing recipients
+or changing login identities. Only an overdue-review pause can be restored by
+confirmation; staff decisions remain authoritative. See the renewal section in
+`docs/ONBOARDING-ROADMAP.md`.
+
 ### The two tables
 
 | Table      | Role                        | Created when                      |

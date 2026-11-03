@@ -215,7 +215,14 @@ function ClaimStartContent() {
                     View the public listing
                   </Link>
                 )}
-                {listing.published === false && (
+                {listing.reviewPaused && (
+                  <p className="text-muted-foreground text-sm">
+                    This listing is temporarily hidden because its review is
+                    overdue. Verify ownership and confirm its information to
+                    restore it.
+                  </p>
+                )}
+                {listing.published === false && !listing.reviewPaused && (
                   <p className="text-muted-foreground text-sm">
                     This listing is not public yet. You can still update it;
                     staff review is separate.

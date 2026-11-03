@@ -69,7 +69,7 @@ export async function POST(request: Request) {
   // to push future updates to this contact.
   await db
     .update(profiles)
-    .set({ ghlOptedOut: false })
+    .set({ ghlOptedOut: false, emailOptedOut: false })
     .where(eq(profiles.id, profile.id));
 
   try {

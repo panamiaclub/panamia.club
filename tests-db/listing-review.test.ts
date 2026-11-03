@@ -119,6 +119,8 @@ const tables = [
   schema.profiles,
   schema.profileOwners,
   schema.verification,
+  schema.listingRefreshCycles,
+  schema.listingRefreshDeliveries,
 ];
 let claim: typeof import('../app/api/listings/[profileId]/claim/route');
 let verify: typeof import('../app/api/listings/claim/verify/route');

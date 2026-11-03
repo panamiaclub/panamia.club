@@ -251,6 +251,13 @@ function InvitationContent() {
                   <p className="text-muted-foreground text-sm">
                     {listing.locationLabel}
                   </p>
+                  {listing.reviewPaused && (
+                    <p className="text-muted-foreground text-sm">
+                      Temporarily hidden for an overdue review. Claiming alone
+                      will not restore it; confirm the business information at
+                      the end.
+                    </p>
+                  )}
                   {listing.published !== false && (
                     <Link
                       href={listing.publicPath}

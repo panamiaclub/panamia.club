@@ -27,6 +27,7 @@ export interface ClaimListingContext {
   claimable: boolean;
   canManage: boolean;
   published?: boolean;
+  reviewPaused?: boolean;
 }
 
 export function isClaimListingContext(
@@ -45,6 +46,9 @@ export function isClaimListingContext(
     typeof listing.missingLocation === 'boolean' &&
     typeof listing.claimable === 'boolean' &&
     typeof listing.canManage === 'boolean' &&
-    (listing.published === undefined || typeof listing.published === 'boolean')
+    (listing.published === undefined ||
+      typeof listing.published === 'boolean') &&
+    (listing.reviewPaused === undefined ||
+      typeof listing.reviewPaused === 'boolean')
   );
 }

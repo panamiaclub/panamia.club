@@ -177,6 +177,81 @@ or support; changed sessions must reload and confirm again. No production
 invitations are minted by development/testing, and campaign delivery remains
 subject to separate approval.
 
+### Thirty-day review reminders and overdue recovery
+
+Staff may explicitly enroll one published business at
+`/admin/listings/{profileId}/refresh`. The page is read-only until the operator
+checks the authorization box and starts the cycle. The migration, ordinary
+sign-in, claim links and listing edits do not enroll anyone.
+
+The existing hourly Worker checks due cycles. A successful initial email starts
+the 30-day clock. Reminders follow at days 7, 14, 21 and 28; the fourth is the
+final notice. At day 30 an unanswered cycle is paused by setting `active=false`
+and recording `status.refreshPause.reason = 'review_overdue'`. No profile,
+photos, location or ownership data is deleted. Late notices remain seven days
+apart, and the last successful reminder always receives at least 48 hours before
+hiding; delivery lateness extends the deadline rather than shortening notice.
+
+The last step of the listing journey now requires an explicit, authenticated
+**Confirm business information** action. It records `profiles.lastReviewedAt`
+and completes the current cycle atomically with cancellation of pending
+reminders. Merely opening `?complete=1`, signing in, claiming, or saving one
+section does not confirm the review. Existing values can be left unchanged;
+confirmation does not require a guessed ZIP or a private home address.
+
+Unclaimed businesses receive fresh seven-day inbox invitations in reminders.
+Claimed businesses receive a non-secret review link at their current managing
+account emails, not whichever identity is active in the browser. Recipients are
+resolved from actual ownership links, with duplicate inboxes removed. Business
+and personal login emails remain separate.
+
+Overdue unclaimed listings retain the secure claim path even while their public
+directory/profile page is hidden. A valid overdue-pause marker and cycle allow
+ownership verification; claiming alone does not republish them. The subsequent
+authorized confirmation restores only that overdue pause. The marker contains a
+guard against changes to staff decisions, administrative state, or identity.
+Staff approve/decline operations cancel the cycle and clear the marker. A manual
+suspension or cancelled cycle is never overridden by an owner confirmation.
+
+Delivery is recorded per cycle, round and recipient hash before the provider is
+called. Confirmed recipients are not automatically mailed twice for that round.
+The native mail binding does not promise delivery idempotency: rejected sends
+and abandoned/unacknowledged attempts put the cycle on hold, not into a blind
+retry loop. Development console logging cannot count as a delivered reminder.
+The initial clock stays unset when the first email fails. Staff can inspect
+delivery references, mark a delayed bounce, hold/cancel a cycle, or explicitly
+acknowledge resend risk before retrying. Changed recipients, known bounces, and
+a held final notice require a fresh cycle rather than an immediate overdue hide.
+Before hiding, the job also checks that the initial notice and every reminder
+reached a currently relevant manager or business inbox; a new, unnotified
+contact/ownership handoff is held instead of inheriting an old deadline.
+
+Local email opt-outs and existing CRM Email DND are checked before sending and
+before hiding; an unavailable preference lookup holds the cycle. Every reminder
+includes a scoped stop-reminders link whose GET is read-only and whose explicit
+confirmation records the listing preference without claiming or republishing
+it. Owners can also stop reminders from the review page. Opt-outs are not
+treated as ignored notices, and staff cannot bypass the preference with retry.
+An owner can allow future listing reminders without starting a new campaign.
+
+The server APIs are:
+
+- `GET/POST /api/admin/listings/{profileId}/refresh`: authorized staff status,
+  explicit start, hold, bounce flag, cancellation and controlled retry.
+- `GET/POST /api/listings/review`: private exact-business status and authenticated
+  final confirmation or reminder preference. Account and cycle snapshots are
+  checked again on writes.
+- `POST /api/listings/review/stop`: a scoped, non-login suppression capability
+  from `/listings/reminders/stop?cycleId={id}#token={proof}`.
+
+Recipient emails and delivery/invitation URLs are not copied into the delivery
+ledger. Only hashes, dates, states and references are retained; the tables have
+RLS with no direct-client policies and cascade when their business is deleted.
+Cron telemetry remains aggregate counts, not private contacts or messages.
+Migration `0076_listing_refresh.sql` is required before deployment. It changes
+no listing visibility and creates no cycles. Campaign enrollment, real sends,
+merge and deployment are still separate operational approvals.
+
 ### What happens on a first sign-in
 
 | Step                   | Where       | Effect                                                                                                      |
