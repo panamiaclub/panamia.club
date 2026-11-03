@@ -1387,6 +1387,7 @@ export const useSentMessages = (cursor?: string, limit: number = 20) => {
 export interface DmRequestEntry {
   sender: {
     id: string;
+    uri?: string;
     username: string;
     domain: string;
     name: string | null;

@@ -12,10 +12,16 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import {
+  unstable_rethrow,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from 'next/navigation';
 import {
   ArrowLeft,
   Bug,
+  Flag,
   MessageCircle,
   Store,
   UserRound,
@@ -31,6 +37,7 @@ import { IdentityMenu } from '@/components/account/identity-menu';
 import { NotificationsMenu } from '@/components/account/notifications-menu';
 import { ActingAsBar } from '@/components/account/acting-as-bar';
 import { OPEN_BUG_REPORT_EVENT } from '@/lib/mobile/native';
+import { openSafetyReport } from '@/lib/safety-report';
 import { cn } from '@/lib/utils';
 import {
   NATIVE_TABS,
@@ -61,7 +68,9 @@ class PaneBoundary extends Component<
   { failed: boolean }
 > {
   state = { failed: false };
-  static getDerivedStateFromError() {
+  static getDerivedStateFromError(error: unknown) {
+    // Redirects and access fallbacks belong to the framework's route boundary.
+    unstable_rethrow(error);
     return { failed: true };
   }
   componentDidCatch(error: Error) {
@@ -219,6 +228,19 @@ function AppFrame({
             {eventSlug && eventSlug !== 'new' && (
               <NativeEventSave slug={decodeURIComponent(eventSlug)} />
             )}
+            <button
+              type="button"
+              className={styles.iconButton}
+              aria-label="Report a safety concern"
+              onClick={() =>
+                openSafetyReport({
+                  type: 'other',
+                  url: window.location.origin + window.location.pathname,
+                })
+              }
+            >
+              <Flag size={19} aria-hidden="true" />
+            </button>
             <button
               type="button"
               className={styles.iconButton}

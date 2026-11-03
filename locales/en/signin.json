@@ -35,6 +35,7 @@
   "turnstileError": "Verification is not configured. Please contact support.",
   "loading": "Loading...",
   "privacyLink": "Privacy Policy",
+  "reviewerSignIn": "App reviewer sign-in",
   "footerNavLabel": "Site links",
   "goToMain": "Go to {{main}}",
   "partOfPanaverse": "{{surface}} is part of {{main}}. One Pana account covers both."

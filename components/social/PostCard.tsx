@@ -231,6 +231,7 @@ export function PostCard({
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <PostActions
                   statusId={status.id}
+                  statusUri={status.uri}
                   actorUsername={status.actor.username}
                   liked={status.liked}
                   likesCount={status.likesCount}

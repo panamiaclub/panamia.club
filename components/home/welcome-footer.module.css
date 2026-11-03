@@ -66,9 +66,13 @@
   scroll-padding-bottom: calc(var(--welcome-footer-clearance, 0px) + 1rem);
 }
 
-/* The site's floating report control belongs beside the handle, not over a signup. */
-:global(body:has([data-welcome-footer]) button[aria-label='Report a bug']) {
+/* Keep the report dock compact beside the handle, not over a signup. */
+:global(body:has([data-welcome-footer]) [data-report-controls]) {
   bottom: max(1rem, calc(var(--welcome-footer-height, 0px) - 3.5rem));
+}
+
+:global(body:has([data-welcome-footer]) [data-report-label]) {
+  display: none;
 }
 
 .bar {
@@ -200,7 +204,7 @@
 
 @media (max-width: 39.99rem) {
   .bar {
-    padding-inline-end: 4.25rem;
+    padding-inline-end: 7.5rem;
   }
 }
 

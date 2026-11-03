@@ -349,6 +349,7 @@ function renderActions({
       */}
       <BlockMenu
         username={actor.username}
+        actorUri={actor.uri}
         displayName={actor.name || actor.username}
         isBlocked={isBlocked}
         isMuted={isMuted}

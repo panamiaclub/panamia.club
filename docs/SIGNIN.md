@@ -126,6 +126,45 @@ use the same account. iOS does not expose Google or other third-party providers;
 adding native Google there must include the corresponding Sign in with Apple
 and App Store guideline 4.8 work.
 
+## Google Play reviewer access
+
+Ordinary members still use Google or single-use email links. A separate
+English-language `/signin/reviewer` page, linked from sign-in, accepts the
+operator-issued `play-review@panamia.club` credential. This is a regular,
+unverified demonstration identity, not an administrator or a directory listing.
+The session enrichment layer excludes it from all staff roles, including
+`ADMIN_EMAILS`. No residence, age, payment, or membership evidence is fabricated.
+
+Better Auth handles its password hash, origin checks, HttpOnly cookie and normal
+account-lock checks. Credential sign-in is restricted server-side to that email.
+Public password signup, password changes and password-reset endpoints are
+disabled. The password endpoint has an additional five-attempt/15-minute limit
+within the existing per-isolate in-memory limiter; this is not a global lockout.
+The reviewer form uses a fixed `/d` destination and never puts a password in a URL.
+
+Provisioning is an explicit operator action, not an HTTP API:
+
+1. Generate a unique 32-128-character password and store it in the organization's
+   password manager and the protected Actions secret `PLAY_REVIEW_PASSWORD`.
+   Do not put the password in source, shell arguments, issue comments, or logs.
+2. After this code reaches trusted `main`, run **Play Review Account** manually
+   from `main`. It uses the existing production database secret and refuses
+   identity/handle collisions or a founder-email conflict.
+3. Verify repeated sign-in, ordinary-account rejection and a non-admin session.
+   Enter the credential and English access instructions only in Play Console's
+   app-access section. Reviewers do not need an inbox, MFA, or an expiring link.
+4. For rotation, update the protected secret, explicitly enable
+   `rotate_password`, and rerun. Rotation refuses unrelated or staff accounts,
+   revokes review-account sessions, and does not clear an account lock. Update
+   Play Console and the password-manager record immediately after a confirmed
+   rotation.
+
+For controlled local maintenance, provide `POSTGRES_URL`, `ADMIN_EMAILS` and
+`PLAY_REVIEW_PASSWORD` securely in the environment, then run
+`yarn node --import tsx scripts/provision-play-reviewer.ts --apply`. Add
+`--rotate` only for intentional rotation. The command does not print hashes,
+passwords, connection strings or driver parameters.
+
 ## Data Structure
 
 ### PostgreSQL `users` table
