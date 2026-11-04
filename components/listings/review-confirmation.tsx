@@ -155,7 +155,8 @@ export function ListingReviewConfirmation({
           </p>
           <p className="mt-1">
             Only the final confirmation completes this review. A valid US ZIP is
-            required; a street or home address is not.
+            required for every business. Public visiting locations need an
+            address; online and mobile services need only a base ZIP.
           </p>
         </aside>
       )}
@@ -235,8 +236,9 @@ export function ListingReviewConfirmation({
                   current. Sections you left alone stay unchanged. This final
                   action completes the review and stops reminders for this
                   cycle. Every business needs a valid five-digit US ZIP in
-                  Location, including online and mobile services. A street or
-                  home address is not required.
+                  Location. Public visiting locations need a street address,
+                  city, state and ZIP; online and mobile services need only a
+                  base ZIP. Never enter a private home address.
                 </p>
                 <div className="flex items-start gap-3">
                   <Checkbox

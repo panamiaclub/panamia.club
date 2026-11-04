@@ -7,6 +7,10 @@ import {
   US_ZIP_REQUIRED_MESSAGE,
   type OnlineZipArea,
 } from '@/lib/online-zip';
+import {
+  isListingLocationMode,
+  publicVisitingAddressIssue,
+} from '@/lib/listing-review';
 
 const listingId = 'public-business-id';
 const accountEmail = 'ana@personal.test';
@@ -176,8 +180,13 @@ async function fixtures(
         ? { zipArea: zipAreas[savedZip] }
         : null,
     addressLine1: options.hasAddress ? 'An old visiting address' : null,
-    addressLocality: null,
-    addressRegion: null,
+    addressName: null,
+    addressLine2: null,
+    addressLine3: null,
+    addressHours: null,
+    addressGooglePlaceId: null,
+    addressLocality: options.hasAddress ? 'Miami' : null,
+    addressRegion: options.hasAddress ? 'FL' : null,
     addressLat: options.hasAddress ? '25.8' : null,
     addressLng: options.hasAddress ? '-80.2' : null,
     counties: { miami_dade: true },
@@ -762,13 +771,44 @@ async function fixtures(
       } else if (path === '/api/profile/saveAddress') {
         const address = body.primary_address as
           Record<string, unknown> | undefined;
+        const mode = isListingLocationMode(body.location_mode)
+          ? body.location_mode
+          : null;
+        if (mode === 'storefront') {
+          const issue = publicVisitingAddressIssue({
+            street1:
+              address?.street1 ??
+              (profile.onlineOnly ? null : profile.addressLine1),
+            city:
+              address?.city ??
+              (profile.onlineOnly ? null : profile.addressLocality),
+            state:
+              address?.state ??
+              (profile.onlineOnly ? null : profile.addressRegion),
+          });
+          if (issue) {
+            await route.fulfill({
+              status: 400,
+              json: {
+                success: false,
+                error: issue.message,
+                field: issue.field,
+                step: 'address',
+              },
+            });
+            return;
+          }
+        }
         const zip = normalizeUsZip(
           address && 'zipcode' in address
             ? address.zipcode
             : profile.addressPostalCode
         );
-        const online =
-          'online_only' in body ? body.online_only : profile.onlineOnly;
+        const online = mode
+          ? mode === 'online'
+          : 'online_only' in body
+            ? body.online_only
+            : profile.onlineOnly;
         const scoped = url.searchParams.has('listingId');
         const stored = readOnlineZipArea(
           profile.geo,
@@ -794,14 +834,27 @@ async function fixtures(
           });
           return;
         }
+        if (mode === 'storefront' && profile.onlineOnly) {
+          for (const column of [
+            'addressName',
+            'addressLine2',
+            'addressLine3',
+            'addressHours',
+            'addressGooglePlaceId',
+            'addressLat',
+            'addressLng',
+            'geo',
+          ]) {
+            profile[column] = null;
+          }
+        }
         if (address && 'zipcode' in address) profile.addressPostalCode = zip;
-        if (address && 'street1' in address)
-          profile.addressLine1 = address.street1;
-        if (address && 'city' in address)
-          profile.addressLocality = address.city;
-        if (address && 'state' in address)
-          profile.addressRegion = address.state;
         for (const [field, column] of [
+          ['street1', 'addressLine1'],
+          ['street2', 'addressLine2'],
+          ['city', 'addressLocality'],
+          ['state', 'addressRegion'],
+          ['hours', 'addressHours'],
           ['lat', 'addressLat'],
           ['lng', 'addressLng'],
           ['googlePlaceId', 'addressGooglePlaceId'],
@@ -811,11 +864,24 @@ async function fixtures(
         }
         if (address && 'lat' in address && 'lng' in address) profile.geo = null;
         if ('counties' in body) profile.counties = body.counties;
-        if ('online_only' in body) profile.onlineOnly = body.online_only;
-        if (profile.onlineOnly === true) {
-          profile.addressLine1 = null;
-          profile.addressLat = null;
-          profile.addressLng = null;
+        if (mode || 'online_only' in body) profile.onlineOnly = online;
+        if (profile.onlineOnly === true || mode === 'mobile') {
+          for (const column of [
+            'addressName',
+            'addressLine1',
+            'addressLine2',
+            'addressLine3',
+            'addressHours',
+            'addressGooglePlaceId',
+            'addressLat',
+            'addressLng',
+          ]) {
+            profile[column] = null;
+          }
+          profile.addressLocality =
+            online === true && zip ? zipAreas[zip]?.city : null;
+          profile.addressRegion =
+            online === true && zip ? zipAreas[zip]?.region : null;
           profile.geo = null;
         }
         if (zip && zipAreas[zip])
@@ -1015,18 +1081,24 @@ test('anonymous entry, Pana sign-in, explicit verification and all prefilled rev
       name: 'Keep current location details for now',
       exact: true,
     })
-  ).toBeChecked();
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Continue', exact: true })
+  ).toBeVisible();
   await page
     .getByRole('radio', {
-      name: 'Public visiting address or ZIP area',
+      name: 'Public visiting address',
       exact: true,
     })
     .click();
   await page
     .getByRole('textbox', { name: 'ZIP code', exact: true })
     .fill('33138');
-  await page.getByLabel('City', { exact: true }).fill('Miami');
-  await page.getByLabel('State', { exact: true }).fill('FL');
+  await page
+    .getByRole('textbox', { name: 'Street address', exact: true })
+    .fill('123 Synthetic Visiting Street');
+  await page.getByRole('textbox', { name: 'City', exact: true }).fill('Miami');
+  await page.getByRole('textbox', { name: 'State', exact: true }).fill('FL');
   await page
     .getByRole('button', { name: 'Save and continue', exact: true })
     .click();
@@ -1121,7 +1193,7 @@ test('anonymous entry, Pana sign-in, explicit verification and all prefilled rev
   expect(fixture.writes[0].body).toMatchObject({
     primary_address: { zipcode: '33138' },
   });
-  expect(fixture.writes[0].body.online_only).not.toBe(true);
+  expect(fixture.writes[0].body.location_mode).toBe('storefront');
   expect(fixture.writes[3].body).not.toHaveProperty('pronouns');
   expect(fixture.switches).toHaveLength(0);
 });
@@ -1227,12 +1299,11 @@ test('untouched descriptions, categories and private contact stay unchanged and 
 });
 
 for (const [mode, label] of [
-  ['keep', 'Keep current location details for now'],
-  ['storefront', 'Public visiting address or ZIP area'],
+  ['storefront', 'Public visiting address'],
   ['online', 'Online business, without a public storefront'],
   ['mobile', 'Mobile or by appointment, without a public address'],
 ] as const) {
-  test(`Location requires a recognized ZIP for ${mode}, preserves privacy and accepts leading-zero ZIP+4 without a street address`, async ({
+  test(`Location requires a recognized ZIP for ${mode}, preserves privacy and accepts leading-zero ZIP+4`, async ({
     page,
   }) => {
     const fixture = await fixtures(page, {
@@ -1243,6 +1314,13 @@ for (const [mode, label] of [
     });
     const before = structuredClone(fixture.profile);
     await page.goto(locationPath);
+    await expect(
+      page.getByRole('radio', {
+        name: 'Keep current location details for now',
+        exact: true,
+      })
+    ).toHaveCount(0);
+    await expect(page.locator('#zipcode')).toHaveCount(0);
     await page.getByRole('radio', { name: label, exact: true }).click();
     const zip = page.getByRole('textbox', {
       name:
@@ -1253,19 +1331,21 @@ for (const [mode, label] of [
     });
     const next = page.getByRole('button', {
       name:
-        mode === 'keep' ? 'Keep location and continue' : 'Save and continue',
+        mode === 'storefront' ? 'Save and continue' : 'Save ZIP and continue',
       exact: true,
     });
     await expect(zip).toBeVisible();
     await expect(zip).toHaveAttribute('required', '');
     await expect(zip).toHaveAttribute('aria-describedby', 'base-zip-note');
     if (mode !== 'storefront') {
-      await expect(page.getByLabel('Street 1', { exact: true })).toBeHidden();
+      await expect(
+        page.getByLabel('Street address', { exact: true })
+      ).toBeHidden();
       await expect(page.getByLabel('Latitude', { exact: true })).toBeHidden();
     } else {
       await expect(
-        page.getByLabel('Street 1', { exact: true })
-      ).not.toHaveAttribute('required');
+        page.getByRole('textbox', { name: 'Street address', exact: true })
+      ).toHaveAttribute('required', '');
     }
     for (const invalid of ['', 'bad', '1234', '331380']) {
       await zip.fill(invalid);
@@ -1291,15 +1371,16 @@ for (const [mode, label] of [
     expect(fixture.profile.onlineOnly).toBe(mode === 'online');
     expect(fixture.profile.counties).toEqual(before.counties);
     expect(fixture.profile.addressLine1).toBe(
-      mode === 'online' ? null : mode === 'mobile' ? '' : before.addressLine1
+      mode === 'storefront' ? before.addressLine1 : null
     );
     expect(fixture.profile.addressLat).toBe(
       mode === 'online' || mode === 'mobile' ? null : before.addressLat
     );
     expect(fixture.reviewConfirmations).toHaveLength(0);
     expect(fixture.switches).toHaveLength(0);
-    if (mode === 'keep') {
+    if (mode !== 'storefront') {
       expect(fixture.writes.at(-1)?.body).toEqual({
+        location_mode: mode,
         primary_address: { zipcode: '00501' },
       });
     }
@@ -1320,7 +1401,13 @@ for (const online of [false, true]) {
         exact: true,
       })
       .click();
-    await expect(page.locator('#zipcode')).toHaveValue('33138');
+    await expect(
+      page.getByText('Keep saved ZIP 33138', { exact: false })
+    ).toBeVisible();
+    await expect(page.locator('#zipcode')).toHaveCount(0);
+    await expect(
+      page.getByLabel('Street address', { exact: true })
+    ).toBeHidden();
     await page
       .getByRole('button', {
         name: 'Keep location and continue',
@@ -1332,6 +1419,576 @@ for (const online of [false, true]) {
     expect(fixture.profile).toEqual(before);
   });
 }
+
+test('public visiting entry requires street, city, state and ZIP but never requires an exact point', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    zip: null,
+  });
+  const before = structuredClone(fixture.profile);
+  await page.goto(locationPath);
+  await page
+    .getByRole('radio', { name: 'Public visiting address', exact: true })
+    .click();
+  for (const [field, label, value] of [
+    ['street1', 'Street address', '123 Synthetic Visiting Street'],
+    ['city', 'City', 'Miami'],
+    ['state', 'State', 'FL'],
+  ] as const) {
+    const input = page.getByRole('textbox', { name: label, exact: true });
+    await expect(input).toHaveAttribute('required', '');
+    await input.fill(' \t ');
+    await page
+      .getByRole('button', { name: 'Save and continue', exact: true })
+      .click();
+    await expect(page.locator(`#${field}-error`)).toBeVisible();
+    await expect(input).toBeFocused();
+    await expect(input).toHaveAttribute('aria-invalid', 'true');
+    await expect(input).toHaveAttribute('aria-describedby', `${field}-error`);
+    expect(fixture.writes).toHaveLength(0);
+    await input.fill(value);
+    await expect(page.locator(`#${field}-error`)).toHaveCount(0);
+  }
+  await expect(
+    page.getByLabel('Latitude', { exact: true })
+  ).not.toHaveAttribute('required');
+  await expect(
+    page.getByLabel('Longitude', { exact: true })
+  ).not.toHaveAttribute('required');
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expect(page.locator('#zipcode-error')).toHaveText(
+    US_ZIP_REQUIRED_MESSAGE
+  );
+  expect(fixture.profile).toEqual(before);
+  await page.locator('#zipcode').fill('33138');
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expectWizard(page, 2);
+  expect(fixture.writes[0].body).toEqual({
+    location_mode: 'storefront',
+    primary_address: {
+      street1: '123 Synthetic Visiting Street',
+      city: 'Miami',
+      state: 'FL',
+      zipcode: '33138',
+    },
+  });
+  expect(fixture.profile.addressLat).toBeNull();
+  expect(fixture.profile.addressLng).toBeNull();
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+});
+
+for (const mode of ['online', 'mobile'] as const) {
+  test(`switching to ${mode} before saving never submits hidden visiting fields or changes the business early`, async ({
+    page,
+  }) => {
+    const fixture = await fixtures(page, {
+      signedIn: true,
+      owned: true,
+      hasAddress: true,
+      zip: null,
+    });
+    const before = structuredClone(fixture.profile);
+    await page.goto(locationPath);
+    await page
+      .getByRole('radio', { name: 'Public visiting address', exact: true })
+      .click();
+    await page
+      .getByRole('textbox', { name: 'Street address', exact: true })
+      .fill('An unsaved private street');
+    await page.getByLabel('Latitude', { exact: true }).fill('44.5');
+    await page.getByLabel('Longitude', { exact: true }).fill('-90.5');
+    await page.locator('#zipcode').fill('00501-1234');
+    await page
+      .getByRole('radio', {
+        name:
+          mode === 'online'
+            ? 'Online business, without a public storefront'
+            : 'Mobile or by appointment, without a public address',
+        exact: true,
+      })
+      .click();
+    await expect(
+      page.getByLabel('Street address', { exact: true })
+    ).toBeHidden();
+    await expect(
+      page.getByLabel('Street address', { exact: true })
+    ).toBeDisabled();
+    await expect(page.getByLabel('Latitude', { exact: true })).toBeHidden();
+    await expect(page.getByLabel('City', { exact: true })).toBeHidden();
+    await expect(page.locator('#zipcode')).toHaveValue('00501-1234');
+    await expect(
+      page.locator('#address_form').getByRole('textbox')
+    ).toHaveCount(1);
+    const submitted = await page
+      .locator('#address_form')
+      .evaluate((element) =>
+        Object.fromEntries(new FormData(element as HTMLFormElement))
+      );
+    for (const field of [
+      'street1',
+      'street2',
+      'city',
+      'state',
+      'hours',
+      'lat',
+      'lng',
+      'county_miamidade',
+    ]) {
+      expect(submitted).not.toHaveProperty(field);
+    }
+    expect(fixture.profile).toEqual(before);
+    expect(fixture.writes).toHaveLength(0);
+    await page
+      .getByRole('button', { name: 'Save ZIP and continue', exact: true })
+      .click();
+    await expectWizard(page, 2);
+    expect(fixture.writes[0].body).toEqual({
+      location_mode: mode,
+      primary_address: { zipcode: '00501' },
+    });
+    expect(fixture.profile.addressLine1).toBeNull();
+    expect(fixture.profile.addressLat).toBeNull();
+    expect(fixture.profile.addressLng).toBeNull();
+    expect(fixture.profile.onlineOnly).toBe(mode === 'online');
+    expect(fixture.profile.counties).toEqual(before.counties);
+    expect(fixture.reviewConfirmations).toHaveLength(0);
+  });
+}
+
+test('choosing a public visiting address cannot restore legacy hidden online street data or an exact point', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    hasAddress: true,
+  });
+  Object.assign(fixture.profile, {
+    onlineOnly: true,
+    addressLine1: 'Old hidden home',
+    addressLine2: 'Private apartment',
+    addressHours: 'Private hours',
+    addressGooglePlaceId: 'private-place',
+  });
+  const before = structuredClone(fixture.profile);
+  await page.goto(locationPath);
+  await page
+    .getByRole('radio', { name: 'Public visiting address', exact: true })
+    .click();
+  for (const label of [
+    'Street address',
+    'Street 2',
+    'Latitude',
+    'Longitude',
+    'Hours',
+  ]) {
+    await expect(
+      page.getByRole('textbox', { name: label, exact: true })
+    ).toHaveValue('');
+  }
+  expect(fixture.profile).toEqual(before);
+  expect(fixture.writes).toHaveLength(0);
+  await page
+    .getByRole('textbox', { name: 'Street address', exact: true })
+    .fill('123 Public Visiting Street');
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expectWizard(page, 2);
+  expect(fixture.writes[0].body).toEqual({
+    location_mode: 'storefront',
+    primary_address: {
+      street1: '123 Public Visiting Street',
+      city: 'Miami',
+      state: 'FL',
+      zipcode: '33138',
+    },
+  });
+  expect(fixture.profile.addressLine2).toBeNull();
+  expect(fixture.profile.addressHours).toBeNull();
+  expect(fixture.profile.addressGooglePlaceId).toBeNull();
+  expect(fixture.profile.addressLat).toBeNull();
+  expect(fixture.profile.addressLng).toBeNull();
+  expect(fixture.profile.onlineOnly).toBe(false);
+  expect(fixture.profile.counties).toEqual(before.counties);
+});
+
+test('public-address server field errors stay beside the field and focus it without losing edits', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    hasAddress: true,
+  });
+  let first = true;
+  await page.route('**/api/profile/saveAddress?listingId=*', async (route) => {
+    if (!first) return route.fallback();
+    first = false;
+    await route.fulfill({
+      status: 400,
+      json: {
+        success: false,
+        error: 'Check the city for the public visiting address.',
+        field: 'city',
+        step: 'address',
+      },
+    });
+  });
+  const before = structuredClone(fixture.profile);
+  await page.goto(locationPath);
+  await page
+    .getByRole('radio', { name: 'Public visiting address', exact: true })
+    .click();
+  await page
+    .getByRole('textbox', { name: 'Street address', exact: true })
+    .fill('123 Updated Public Street');
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expect(page.locator('#address-save-error')).toHaveText(
+    'Check the city for the public visiting address.'
+  );
+  const city = page.getByRole('textbox', { name: 'City', exact: true });
+  await expect(city).toBeFocused();
+  await expect(city).toHaveAttribute('aria-invalid', 'true');
+  await expect(city).toHaveAttribute('aria-describedby', 'address-save-error');
+  await expect(
+    page.getByRole('textbox', { name: 'Street address', exact: true })
+  ).toHaveValue('123 Updated Public Street');
+  expect(fixture.profile).toEqual(before);
+  await city.fill('');
+  await city.fill('Miami');
+  await expect(page.locator('#address-save-error')).toHaveCount(0);
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expectWizard(page, 2);
+  expect(fixture.profile.addressLine1).toBe('123 Updated Public Street');
+});
+
+for (const [label, savedZip] of [
+  ['missing', null],
+  ['empty', ''],
+  ['malformed', '12x45'],
+  ['unrecognized', '00000'],
+  ['not-yet-verified', '33138'],
+] as const) {
+  test(`a ${label} saved ZIP starts with an explicit location choice, no fields and no keep bypass`, async ({
+    page,
+  }) => {
+    const fixture = await fixtures(page, {
+      signedIn: true,
+      owned: true,
+      hasAddress: true,
+      zip: savedZip,
+      verifiedZip: false,
+    });
+    Object.assign(fixture.profile, {
+      addressLine2: 'Suite 7',
+      addressHours: 'By appointment',
+      addressGooglePlaceId: 'synthetic-public-entrance',
+      geo: { type: 'Point', coordinates: [-80.2, 25.8] },
+      counties: { miami_dade: true, another_service_area: true },
+    });
+    const before = structuredClone(fixture.profile);
+    await page.goto(locationPath);
+    await expectWizard(page, 1);
+    await expect(
+      page.getByRole('radio', {
+        name: 'Keep current location details for now',
+        exact: true,
+      })
+    ).toHaveCount(0);
+    await expect(
+      page.locator('#address_form [role="radio"][aria-checked="true"]')
+    ).toHaveCount(0);
+    await expect(
+      page.getByLabel('Street address', { exact: true })
+    ).toBeHidden();
+    await expect(page.getByLabel('Latitude', { exact: true })).toBeHidden();
+    await expect(page.getByLabel('Miami-Dade', { exact: true })).toHaveCount(0);
+    await expect(page.locator('#zipcode')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(page.locator('#mode-error')).toHaveText(
+      'Choose how people can find this business.'
+    );
+    await expect(
+      page.getByRole('radio', { name: 'Public visiting address', exact: true })
+    ).toBeFocused();
+    await expect(page.getByRole('radio', { checked: true })).toHaveCount(0);
+    await page
+      .getByRole('radio', {
+        name: 'Mobile or by appointment, without a public address',
+        exact: true,
+      })
+      .click();
+    await expect(page.locator('#mode-error')).toHaveCount(0);
+    await expect(page.locator('#zipcode')).toHaveValue(savedZip ?? '');
+    await expect(page.locator('#zipcode')).toHaveAttribute('required', '');
+    expect(fixture.profile).toEqual(before);
+    expect(fixture.writes).toHaveLength(0);
+    expect(fixture.reviewConfirmations).toHaveLength(0);
+    expect(fixture.switches).toHaveLength(0);
+  });
+}
+
+test('changing a public visiting ZIP requires a save and never treats unrecognized edits as current details', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    hasAddress: true,
+  });
+  const before = structuredClone(fixture.profile);
+  await page.goto(locationPath);
+  await page
+    .getByRole('radio', {
+      name: 'Public visiting address',
+      exact: true,
+    })
+    .click();
+  const zip = page.locator('#zipcode');
+  await zip.fill('00000');
+  await expect(
+    page.getByRole('button', {
+      name: 'Keep location and continue',
+      exact: true,
+    })
+  ).toHaveCount(0);
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expect(page.locator('#address-save-error')).toContainText(
+    'could not recognize that US ZIP'
+  );
+  await expect(zip).toBeFocused();
+  expect(fixture.profile).toEqual(before);
+  await expect(
+    page.getByRole('button', {
+      name: 'Keep location and continue',
+      exact: true,
+    })
+  ).toHaveCount(0);
+  await zip.fill('00501-1234');
+  await expect(page.locator('#address-save-error')).toHaveCount(0);
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expectWizard(page, 2);
+  expect(fixture.writes.map((write) => write.body)).toEqual([
+    {
+      location_mode: 'storefront',
+      primary_address: {
+        street1: before.addressLine1,
+        city: 'Miami',
+        state: 'FL',
+        zipcode: '00000',
+      },
+    },
+    {
+      location_mode: 'storefront',
+      primary_address: {
+        street1: before.addressLine1,
+        city: 'Miami',
+        state: 'FL',
+        zipcode: '00501',
+      },
+    },
+  ]);
+  expect(fixture.profile).toEqual({
+    ...before,
+    addressPostalCode: '00501',
+    geo: withOnlineZipArea(before.geo, zipAreas['00501']),
+  });
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+});
+
+test('keyboard focus does not choose a location type and an explicit online choice submits only its base ZIP', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    zip: null,
+  });
+  fixture.profile.onlineOnly = true;
+  const before = structuredClone(fixture.profile);
+  await page.goto(locationPath);
+  await expect(page.getByRole('radio', { checked: true })).toHaveCount(0);
+  await expect(page.locator('#zipcode')).toHaveCount(0);
+  await page.getByRole('link', { name: '6. Photos', exact: true }).focus();
+  await page.keyboard.press('Tab');
+  await expect(
+    page.getByRole('radio', {
+      name: 'Public visiting address',
+      exact: true,
+    })
+  ).toBeFocused();
+  await expect(page.getByRole('radio', { checked: true })).toHaveCount(0);
+  await page.keyboard.down('ArrowDown');
+  try {
+    await expect(
+      page.getByRole('radio', {
+        name: 'Online business, without a public storefront',
+        exact: true,
+      })
+    ).toBeChecked();
+  } finally {
+    await page.keyboard.up('ArrowDown');
+  }
+  expect(fixture.writes).toHaveLength(0);
+  expect(fixture.profile).toEqual(before);
+  await page.getByLabel('Business base ZIP code').fill('33138');
+  await page
+    .getByRole('button', { name: 'Save ZIP and continue', exact: true })
+    .click();
+  await expectWizard(page, 2);
+  expect(fixture.writes[0].body).toEqual({
+    location_mode: 'online',
+    primary_address: { zipcode: '33138' },
+  });
+  expect(fixture.profile).toEqual({
+    ...before,
+    addressPostalCode: '33138',
+    addressLocality: zipAreas['33138'].city,
+    addressRegion: zipAreas['33138'].region,
+    geo: withOnlineZipArea(before.geo, zipAreas['33138']),
+  });
+  expect(fixture.switches).toHaveLength(0);
+});
+
+test('the chosen ZIP-only mode stays stable during verification and retries lookup failures without premature changes', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    hasAddress: true,
+    zip: null,
+    zipLookupUnavailable: true,
+  });
+  const before = structuredClone(fixture.profile);
+  const { promise: pendingSave, resolve: releaseSave } =
+    Promise.withResolvers<void>();
+  let checking = false;
+  await page.route('**/api/profile/saveAddress?listingId=*', async (route) => {
+    checking = true;
+    await pendingSave;
+    await route.fallback();
+  });
+  await page.goto(locationPath);
+  await page
+    .getByRole('radio', {
+      name: 'Online business, without a public storefront',
+      exact: true,
+    })
+    .click();
+  const zip = page.locator('#zipcode');
+  await zip.fill('33138');
+  await page
+    .getByRole('button', { name: 'Save ZIP and continue', exact: true })
+    .click();
+  try {
+    await expect.poll(() => checking).toBe(true);
+    await expect(
+      page.getByRole('button', { name: 'Saving ZIP...', exact: true })
+    ).toBeDisabled();
+    await expect(zip).toHaveAttribute('readonly', '');
+    await expect(
+      page.getByRole('radio', { name: 'Public visiting address', exact: true })
+    ).toBeDisabled();
+    await expect(page.getByRole('radio', { name: /Keep current/ })).toHaveCount(
+      0
+    );
+    await expect(
+      page.getByRole('button', { name: /Keep location/ })
+    ).toHaveCount(0);
+    await expect(zip).toHaveValue('33138');
+    expect(fixture.profile).toEqual(before);
+  } finally {
+    releaseSave();
+  }
+  await expect(page.locator('#address-save-error')).toContainText(
+    'temporarily unavailable'
+  );
+  await expect(zip).toBeFocused();
+  await expect(zip).toHaveAttribute('aria-invalid', 'true');
+  await expect(zip).toHaveAttribute(
+    'aria-describedby',
+    'base-zip-note address-save-error'
+  );
+  await expect(
+    page.getByRole('button', { name: 'Save ZIP and continue', exact: true })
+  ).toBeEnabled();
+  expect(fixture.profile).toEqual(before);
+  fixture.restoreZipLookup();
+  await page
+    .getByRole('button', { name: 'Save ZIP and continue', exact: true })
+    .click();
+  await expectWizard(page, 2);
+  expect(fixture.writes).toHaveLength(2);
+  expect(fixture.writes.map((write) => write.body)).toEqual([
+    { location_mode: 'online', primary_address: { zipcode: '33138' } },
+    { location_mode: 'online', primary_address: { zipcode: '33138' } },
+  ]);
+  expect(fixture.profile.addressLine1).toBeNull();
+  expect(fixture.profile.addressLat).toBeNull();
+  expect(fixture.profile.counties).toEqual(before.counties);
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+});
+
+test('unsaved ZIP entry, Back, reload and deep-link flags never create a keep shortcut or change the selected business', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    zip: null,
+  });
+  const before = structuredClone(fixture.profile);
+  await page.goto(`${locationPath}&complete=1&confirmed=1&zipcode=33138`);
+  await expectWizard(page, 1);
+  await expect(page.locator('#zipcode')).toHaveCount(0);
+  await page
+    .getByRole('radio', {
+      name: 'Mobile or by appointment, without a public address',
+      exact: true,
+    })
+    .click();
+  await expect(page.locator('#zipcode')).toHaveValue('');
+  await page.locator('#zipcode').fill('00501');
+  await page.getByRole('link', { name: '2. Description', exact: true }).click();
+  await expectWizard(page, 2);
+  await page.getByRole('link', { name: 'Back', exact: true }).click();
+  await expectWizard(page, 1);
+  await expect(page.locator('#zipcode')).toHaveCount(0);
+  await expect(page.getByRole('radio', { name: /Keep current/ })).toHaveCount(
+    0
+  );
+  await expect(
+    page.getByRole('button', { name: 'Continue', exact: true })
+  ).toBeVisible();
+  await page.reload();
+  await expectWizard(page, 1);
+  await expect(page.locator('#zipcode')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Keep location/ })).toHaveCount(
+    0
+  );
+  expect(fixture.profile).toEqual(before);
+  expect(fixture.writes).toHaveLength(0);
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+  expectListingReads(fixture.reads);
+  expect(fixture.switches).toHaveLength(0);
+});
 
 test('an unpublished business stays manageable without offering a broken public listing destination', async ({
   page,
@@ -1387,22 +2044,22 @@ test('online location uses the existing ZIP validation and does not submit a pre
       exact: true,
     })
     .click();
-  await expect(page.getByLabel('Street 1', { exact: true })).toBeHidden();
+  await expect(page.getByLabel('Street address', { exact: true })).toBeHidden();
   await expect(page.getByLabel('Latitude', { exact: true })).toBeHidden();
   await page.getByLabel('Business base ZIP code').fill('bad-zip');
   await page
-    .getByRole('button', { name: 'Save and continue', exact: true })
+    .getByRole('button', { name: 'Save ZIP and continue', exact: true })
     .click();
   expect(fixture.writes).toHaveLength(0);
   await page.getByLabel('Business base ZIP code').fill('33138');
   await page
-    .getByRole('button', { name: 'Save and continue', exact: true })
+    .getByRole('button', { name: 'Save ZIP and continue', exact: true })
     .click();
   await expect(
     page.getByLabel('About this business', { exact: true })
   ).toBeVisible();
   expect(fixture.writes[0].body).toMatchObject({
-    online_only: true,
+    location_mode: 'online',
     primary_address: { zipcode: '33138' },
   });
   expect(fixture.writes[0].body.primary_address).not.toHaveProperty('street1');
@@ -1427,22 +2084,18 @@ test('mobile location keeps the required ZIP while explicitly clearing a previou
       exact: true,
     })
     .click();
-  await expect(page.getByLabel('Street 1', { exact: true })).toBeHidden();
+  await expect(page.getByLabel('Street address', { exact: true })).toBeHidden();
   await page.getByLabel('Business base ZIP code').fill('33138');
   await page
-    .getByRole('button', { name: 'Save and continue', exact: true })
+    .getByRole('button', { name: 'Save ZIP and continue', exact: true })
     .click();
   await expect(
     page.getByLabel('About this business', { exact: true })
   ).toBeVisible();
   expect(fixture.writes[0].body).toMatchObject({
-    online_only: false,
+    location_mode: 'mobile',
     primary_address: {
-      street1: '',
       zipcode: '33138',
-      lat: '',
-      lng: '',
-      googlePlaceId: '',
     },
   });
 });
@@ -1465,7 +2118,7 @@ test('a failed location save stays on the form and explains the failure', async 
     .click();
   await page.getByLabel('Business base ZIP code').fill('33138');
   await page
-    .getByRole('button', { name: 'Save and continue', exact: true })
+    .getByRole('button', { name: 'Save ZIP and continue', exact: true })
     .click();
   await expect(
     page
@@ -2100,11 +2753,18 @@ test('a skipped Location step and old confirmation flags cannot restore an overd
   await expect(location).toHaveAttribute('href', locationPath);
   await location.click();
   await expectWizard(page, 1);
-  await expect(page.getByLabel('Street 1', { exact: true })).toBeHidden();
+  await expect(page.getByLabel('Street address', { exact: true })).toBeHidden();
+  await expect(page.locator('#zipcode')).toHaveCount(0);
+  await page
+    .getByRole('radio', {
+      name: 'Mobile or by appointment, without a public address',
+      exact: true,
+    })
+    .click();
   await page.locator('#zipcode').fill('33138');
   await page
     .getByRole('button', {
-      name: 'Keep location and continue',
+      name: 'Save ZIP and continue',
       exact: true,
     })
     .click();
@@ -2246,7 +2906,7 @@ test('keeping a public visiting point without a street does not relabel or remov
   expect(fixture.profile.onlineOnly).toBe(false);
 });
 
-test('a prefilled unverified ZIP+4 is normalized when keeping other location details', async ({
+test('a prefilled unverified ZIP+4 is normalized after explicitly choosing mobile', async ({
   page,
 }) => {
   const fixture = await fixtures(page, {
@@ -2257,15 +2917,23 @@ test('a prefilled unverified ZIP+4 is normalized when keeping other location det
   });
   const before = structuredClone(fixture.profile);
   await page.goto(locationPath);
+  await expect(page.locator('#zipcode')).toHaveCount(0);
+  await page
+    .getByRole('radio', {
+      name: 'Mobile or by appointment, without a public address',
+      exact: true,
+    })
+    .click();
   await expect(page.locator('#zipcode')).toHaveValue('00501-1234');
   await page
     .getByRole('button', {
-      name: 'Keep location and continue',
+      name: 'Save ZIP and continue',
       exact: true,
     })
     .click();
   await expectWizard(page, 2);
   expect(fixture.writes[0].body).toEqual({
+    location_mode: 'mobile',
     primary_address: { zipcode: '00501' },
   });
   expect(fixture.profile.counties).toEqual(before.counties);
@@ -2940,6 +3608,155 @@ test('ordinary personal editors keep their existing frame, controls and unscoped
   ).toBe('Our existing description');
   expect(fixture.reviewConfirmations).toHaveLength(0);
 });
+
+for (const viewport of [
+  { width: 1280, height: 900, label: 'desktop' },
+  { width: 390, height: 844, label: 'mobile' },
+  { width: 320, height: 720, label: 'narrow-mobile' },
+]) {
+  test(`actual ${viewport.label} location entry shows choices first and only the selected mode fields`, async ({
+    page,
+  }) => {
+    const fixture = await fixtures(page, {
+      signedIn: true,
+      owned: true,
+      zip: null,
+    });
+    const before = structuredClone(fixture.profile);
+    await page.setViewportSize(viewport);
+    await page.goto(locationPath);
+    await expectWizard(page, 1);
+    await page.evaluate(() => document.fonts.ready);
+    const choices = page.getByRole('group', {
+      name: 'How can people find this business?',
+      exact: true,
+    });
+    await expect(choices.getByRole('radio')).toHaveCount(3);
+    await expect(choices.getByRole('radio', { checked: true })).toHaveCount(0);
+    await expect(page.locator('#zipcode')).toHaveCount(0);
+    await expect(
+      page.locator('#address_form').getByRole('textbox')
+    ).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(
+      page.getByRole('button', { name: /^Switch account/ })
+    ).toHaveAttribute('aria-expanded', 'false');
+    await choices.evaluate((element) =>
+      element.scrollIntoView({ block: 'center' })
+    );
+    await page.screenshot({
+      path: test.info().outputPath(`location-choices-${viewport.label}.png`),
+      fullPage: viewport.label === 'desktop',
+      animations: 'disabled',
+    });
+    for (const [mode, label] of [
+      ['storefront', 'Public visiting address'],
+      ['online', 'Online business, without a public storefront'],
+      ['mobile', 'Mobile or by appointment, without a public address'],
+    ] as const) {
+      await choices.getByRole('radio', { name: label, exact: true }).click();
+      const zip = page.locator('#zipcode');
+      await expect(zip).toHaveValue('');
+      await expect(zip).toHaveAttribute('required', '');
+      await expect(zip).toHaveAttribute(
+        'placeholder',
+        'Enter a five-digit US ZIP'
+      );
+      expect((await choices.boundingBox())!.y).toBeLessThan(
+        (await zip.boundingBox())!.y
+      );
+      if (mode === 'storefront') {
+        await expect(
+          page.getByRole('textbox', { name: 'Street address', exact: true })
+        ).toBeVisible();
+        await expect(
+          page.getByRole('textbox', { name: 'Street address', exact: true })
+        ).toHaveAttribute('required', '');
+      } else {
+        await expect(
+          page.locator('#address_form').getByRole('textbox')
+        ).toHaveCount(1);
+        await expect(
+          page.getByLabel('Street address', { exact: true })
+        ).toBeHidden();
+      }
+      const next = page.locator('#address_form button[type="submit"]');
+      expect((await next.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      expect(
+        await next.evaluate(
+          (element) => getComputedStyle(element).backgroundColor
+        )
+      ).toBe('rgb(242, 132, 68)');
+      expect(
+        await page
+          .getByRole('main')
+          .evaluate((element) => getComputedStyle(element).backgroundColor)
+      ).toBe('rgb(255, 247, 236)');
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth
+        )
+      ).toBe(true);
+      await page.keyboard.press('Escape');
+      await choices.evaluate((element) =>
+        element.scrollIntoView({ block: 'center' })
+      );
+      await page.screenshot({
+        path: test
+          .info()
+          .outputPath(
+            `location-${mode}-${viewport.label}-${viewport.label === 'desktop' ? 'full' : 'top'}.png`
+          ),
+        fullPage: viewport.label === 'desktop',
+        animations: 'disabled',
+      });
+      if (mode === 'storefront' && viewport.label !== 'desktop') {
+        await page
+          .locator('#street1')
+          .evaluate((element) => element.scrollIntoView({ block: 'center' }));
+        await page.screenshot({
+          path: test
+            .info()
+            .outputPath(`location-storefront-${viewport.label}-street.png`),
+          animations: 'disabled',
+        });
+      }
+      await zip.evaluate((element) =>
+        element.scrollIntoView({ block: 'center' })
+      );
+      await zip.focus();
+      await page.screenshot({
+        path: test.info().outputPath(`location-${mode}-${viewport.label}.png`),
+      });
+    }
+    await choices
+      .getByRole('radio', {
+        name: 'Online business, without a public storefront',
+        exact: true,
+      })
+      .click();
+    const zip = page.locator('#zipcode');
+    await zip.fill('00000');
+    await page
+      .getByRole('button', { name: 'Save ZIP and continue', exact: true })
+      .click();
+    await expect(page.locator('#address-save-error')).toContainText(
+      'could not recognize that US ZIP'
+    );
+    await expect(zip).toBeFocused();
+    await expect(zip).toHaveAttribute('aria-invalid', 'true');
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true);
+    await page.screenshot({
+      path: test.info().outputPath(`location-${viewport.label}-error.png`),
+    });
+    expect(fixture.profile).toEqual(before);
+    expect(fixture.reviewConfirmations).toHaveLength(0);
+  });
+}
 
 for (const viewport of [
   { width: 1280, height: 900, label: 'desktop' },

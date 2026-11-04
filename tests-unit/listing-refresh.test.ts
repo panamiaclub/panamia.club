@@ -92,7 +92,14 @@ test('final reminder copy requires confirmation, explains recoverable hiding and
   assert.doesNotMatch(mail.html, /<script>business<\/script>/);
   assert.match(mail.text, /Signing in or claiming alone does not finish/);
   assert.match(mail.text, /Every business needs a valid five-digit US ZIP/);
-  assert.match(mail.text, /A street or home address is not required/);
+  assert.match(
+    mail.text,
+    /A public visiting location needs a street address, city, state and ZIP/
+  );
+  assert.match(
+    mail.text,
+    /Online and mobile services need only a business base ZIP, not a street or home address/
+  );
   assert.match(mail.text, /delivery-reference/);
   assert.match(mail.html, /temporary pause, not a deletion/);
 });
@@ -142,7 +149,8 @@ test('every refresh stage preserves personalized proof links, deadline and compl
       '"Confirm business information"',
       'Every business needs a valid five-digit US ZIP',
       'including online and mobile services.',
-      'A street or home address is not required.',
+      'A public visiting location needs a street address, city, state and ZIP.',
+      'Online and mobile services need only a business base ZIP, not a street or home address.',
       'only an approximate base area, not a service or delivery boundary.',
       'Use a real ZIP; do not make one up.',
       'Use the Pana account that manages it.',
