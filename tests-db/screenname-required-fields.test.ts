@@ -30,6 +30,8 @@ const tables = [
   schema.profileOwners,
 ];
 let route: typeof import('../app/api/user/screenname/set/route');
+let checkRoute: typeof import('../app/api/user/screenname/check/route');
+let handles: typeof import('../lib/screenname');
 let NextRequest: typeof import('next/server').NextRequest;
 
 before(async () => {
@@ -43,6 +45,8 @@ before(async () => {
     await pg.exec(`CREATE TABLE "${name}" (${definitions.join(', ')})`);
   }
   route = await import('../app/api/user/screenname/set/route');
+  checkRoute = await import('../app/api/user/screenname/check/route');
+  handles = await import('../lib/screenname');
   ({ NextRequest } = await import('next/server'));
 });
 
@@ -66,6 +70,12 @@ function claim(body: Record<string, unknown>) {
       body: JSON.stringify(body),
     })
   );
+}
+
+function check(screenname: string) {
+  const url = new URL('https://signup.test.invalid/api/user/screenname/check');
+  url.searchParams.set('name', screenname);
+  return checkRoute.GET(new NextRequest(url));
 }
 
 async function assertSetupUnchanged() {
@@ -244,4 +254,128 @@ test('claiming a handle still requires authentication', async () => {
 
   assert.equal(response.status, 401);
   await assertSetupUnchanged();
+});
+
+test('a member can check and claim a handle already held by their imported personal profile', async () => {
+  await db.insert(schema.profiles).values({
+    userId,
+    email,
+    name: 'Ana Martinez',
+    screenname: 'anamartinez',
+  });
+
+  const availability = await check('anamartinez');
+  assert.equal(availability.status, 200);
+  assert.deepEqual(await availability.json(), { available: true });
+
+  const response = await claim({
+    screenname: 'anamartinez',
+    name: 'Ana Martinez',
+  });
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).data.screenname, 'anamartinez');
+});
+
+test('a member can check their own current and retired handles', async () => {
+  await db
+    .update(schema.users)
+    .set({ screenname: 'ana-current' })
+    .where(eq(schema.users.id, userId));
+  await db.insert(schema.profiles).values({
+    userId,
+    email,
+    name: 'Ana Martinez',
+    screenname: 'ana-current',
+  });
+  await db.insert(schema.screennameHistory).values({
+    screenname: 'ana-former',
+    userId,
+  });
+
+  for (const screenname of ['ana-current', 'ana-former']) {
+    const response = await check(screenname.toUpperCase());
+    assert.deepEqual(await response.json(), { available: true });
+    assert.equal(response.headers.get('cache-control'), 'private, no-store');
+  }
+});
+
+test('signed-out availability checks cannot exclude an account by query parameter', async () => {
+  await db
+    .update(schema.users)
+    .set({ screenname: 'anamartinez' })
+    .where(eq(schema.users.id, userId));
+  session = null;
+  const url = new URL('https://signup.test.invalid/api/user/screenname/check');
+  url.searchParams.set('name', 'anamartinez');
+  url.searchParams.set('excludeEmail', email);
+
+  const response = await checkRoute.GET(new NextRequest(url));
+  assert.deepEqual(await response.json(), {
+    available: false,
+    error: 'This screenname is already taken',
+  });
+});
+
+test('availability and full validation trim the handle before checking uniqueness', async () => {
+  await db.insert(schema.users).values({
+    id: 'another-member',
+    email: 'another-member@test.invalid',
+    screenname: 'anamartinez',
+  });
+
+  const response = await check('  ANAMARTINEZ  ');
+  assert.deepEqual(await response.json(), {
+    available: false,
+    error: 'This screenname is already taken',
+  });
+  assert.deepEqual(
+    await handles.validateScreennameFull('  ANAMARTINEZ  ', email),
+    { valid: false, error: 'This screenname is already taken' }
+  );
+  await assertSetupUnchanged();
+});
+
+test('account exclusion compares email addresses case-insensitively', async () => {
+  await db
+    .update(schema.users)
+    .set({ email: email.toUpperCase(), screenname: 'anamartinez' })
+    .where(eq(schema.users.id, userId));
+
+  assert.equal(await handles.isScreennameAvailable('anamartinez', email), true);
+});
+
+test('signed-in checks still reserve other identities, shared-inbox businesses, groups and retired handles', async () => {
+  await db.insert(schema.users).values({
+    id: 'another-member',
+    email: 'another-member@test.invalid',
+    screenname: 'another-member',
+  });
+  await db.insert(schema.profiles).values({
+    id: 'business-listing',
+    email,
+    name: 'Shared Inbox Shop',
+    screenname: 'shared-inbox-shop',
+    status: { source: 'business_intake' },
+  });
+  await db.insert(schema.screennameHistory).values({
+    screenname: 'retired-member',
+    userId: 'deleted-member',
+  });
+  await pg.exec(`
+    INSERT INTO social_actors (id, username) VALUES ('group-actor', 'garden-club');
+    INSERT INTO social_groups (id, actor_id) VALUES ('group', 'group-actor');
+  `);
+
+  for (const screenname of [
+    'another-member',
+    'shared-inbox-shop',
+    'garden-club',
+    'retired-member',
+  ]) {
+    const response = await check(`  ${screenname.toUpperCase()}  `);
+    assert.deepEqual(await response.json(), {
+      available: false,
+      error: 'This screenname is already taken',
+    });
+  }
 });

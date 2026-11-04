@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useScreennameAvailability } from '@/hooks/use-screenname-availability';
 import { useTranslation } from 'react-i18next';
 import { getUserSession, saveUserSession } from '@/lib/user';
 import { UserInterface } from '@/lib/interfaces';
@@ -192,10 +193,11 @@ export function UserSettingsView({
     });
   };
 
-  const [screennameStatus, setScreennameStatus] = useState<
-    'idle' | 'checking' | 'available' | 'taken' | 'invalid'
-  >('idle');
-  const [screennameError, setScreennameError] = useState('');
+  const { status: screennameStatus, error: screennameError } =
+    useScreennameAvailability(sessionScreenname, {
+      currentScreenname: userData?.screenname,
+      enabled: !!userData?._id,
+    });
 
   const setUserSession = async () => {
     try {
@@ -218,53 +220,6 @@ export function UserSettingsView({
       console.error('Could not load account settings:', error);
     }
   };
-
-  const checkScreennameAvailability = useCallback(async (name: string) => {
-    if (!name || name.length < 3) {
-      setScreennameStatus('idle');
-      setScreennameError('');
-      return;
-    }
-
-    setScreennameStatus('checking');
-    setScreennameError('');
-
-    try {
-      const response = await fetch(
-        `/api/user/screenname/check?name=${encodeURIComponent(name)}`
-      );
-      const data = await response.json();
-
-      if (data.available) {
-        setScreennameStatus('available');
-        setScreennameError('');
-      } else {
-        setScreennameStatus(
-          data.error?.includes('taken') ? 'taken' : 'invalid'
-        );
-        setScreennameError(data.error || 'Invalid screenname');
-      }
-    } catch {
-      setScreennameStatus('idle');
-      setScreennameError('Could not check availability');
-    }
-  }, []);
-
-  // Debounce screenname check
-  useEffect(() => {
-    // Skip check if screenname matches the current saved value
-    if (sessionScreenname === userData?.screenname) {
-      setScreennameStatus('idle');
-      setScreennameError('');
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      checkScreennameAvailability(sessionScreenname);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [sessionScreenname, userData?.screenname, checkScreennameAvailability]);
 
   const [showScreennameConfirmDialog, setShowScreennameConfirmDialog] =
     useState(false);

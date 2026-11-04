@@ -1,8 +1,9 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
+import { useScreennameAvailability } from '@/hooks/use-screenname-availability';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,8 +12,6 @@ import { Check, Loader2, X } from 'lucide-react';
 import { safeInternalPath } from '@/lib/safe-path';
 import { ONBOARDING_DISMISS_KEY } from '@/lib/onboarding';
 
-type CheckStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
-
 function WelcomeForm({ rootPath }: { rootPath: string }) {
   const { t } = useTranslation('common');
   const router = useRouter();
@@ -20,8 +19,13 @@ function WelcomeForm({ rootPath }: { rootPath: string }) {
 
   const [screenname, setScreenname] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [status, setStatus] = useState<CheckStatus>('idle');
   const [error, setError] = useState('');
+  const {
+    status,
+    error: availabilityError,
+    reject,
+  } = useScreennameAvailability(screenname);
+  const screennameError = error || availabilityError;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ready, setReady] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -79,45 +83,6 @@ function WelcomeForm({ rootPath }: { rootPath: string }) {
     };
   }, [destination, router]);
 
-  const checkAvailability = useCallback(
-    async (name: string) => {
-      if (!name || name.length < 3) {
-        setStatus('idle');
-        setError('');
-        return;
-      }
-
-      setStatus('checking');
-      setError('');
-
-      try {
-        const response = await fetch(
-          `/api/user/screenname/check?name=${encodeURIComponent(name)}`
-        );
-        const data = await response.json();
-
-        if (data.available) {
-          setStatus('available');
-          setError('');
-        } else {
-          setStatus(data.error?.includes('taken') ? 'taken' : 'invalid');
-          setError(data.error || t('onboarding.checkFailed'));
-        }
-      } catch {
-        setStatus('idle');
-        setError(t('onboarding.checkFailed'));
-      }
-    },
-    [t]
-  );
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      checkAvailability(screenname);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [screenname, checkAvailability]);
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (status !== 'available' || isSubmitting) return;
@@ -149,8 +114,7 @@ function WelcomeForm({ rootPath }: { rootPath: string }) {
         return;
       }
 
-      setError(data.error || t('onboarding.setFailed'));
-      setStatus('invalid');
+      reject(data.error || t('onboarding.setFailed'));
       setIsSubmitting(false);
     } catch {
       setError(t('onboarding.setFailed'));
@@ -197,7 +161,10 @@ function WelcomeForm({ rootPath }: { rootPath: string }) {
                   required
                   placeholder={t('onboarding.namePlaceholder')}
                   disabled={isSubmitting}
-                  onChange={(e) => setDisplayName(e.target.value)}
+                  onChange={(e) => {
+                    setDisplayName(e.target.value);
+                    setError('');
+                  }}
                 />
                 <p className="text-muted-foreground text-sm">
                   {t('onboarding.nameHint')}
@@ -219,7 +186,10 @@ function WelcomeForm({ rootPath }: { rootPath: string }) {
                     autoFocus
                     placeholder={t('onboarding.screennamePlaceholder')}
                     disabled={isSubmitting}
-                    onChange={(e) => setScreenname(e.target.value)}
+                    onChange={(e) => {
+                      setScreenname(e.target.value);
+                      setError('');
+                    }}
                     className={
                       status === 'available'
                         ? 'border-green-500 pr-10'
@@ -240,9 +210,9 @@ function WelcomeForm({ rootPath }: { rootPath: string }) {
                     )}
                   </div>
                 </div>
-                {error && (
+                {screennameError && (
                   <p role="alert" className="text-destructive text-sm">
-                    {error}
+                    {screennameError}
                   </p>
                 )}
                 <p className="text-muted-foreground text-sm">
