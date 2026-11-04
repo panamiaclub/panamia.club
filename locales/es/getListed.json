@@ -128,12 +128,12 @@
   "instagramPlaceholder": "@tuusuario",
 
   "storefrontLabel": "Tengo una dirección física que la gente puede visitar",
-  "storefrontNote": "Comparte solo una dirección pública para visitas — nunca tu casa.",
+  "storefrontNote": "Comparte solo una dirección pública para visitas — nunca tu casa. Todo negocio necesita un código postal válido de EE. UU. para completar la revisión de su ficha; no se exige una dirección de calle ni de tu casa.",
   "locationModeLabel": "¿Cómo encuentran los clientes tu negocio?",
   "onlineBusinessLabel": "Negocio en línea, sin un local público",
   "mobileBusinessLabel": "Móvil, por cita u otra modalidad",
   "onlineZipLabel": "Código postal de la base del negocio",
-  "onlineZipNote": "Obligatorio para negocios en línea, incluso si ofrecen entrega o recogida acordada. El mapa público muestra solo la zona de tu código postal de cinco dígitos, no una dirección. Los detalles de entrega y recogida se deben confirmar con el negocio.",
+  "onlineZipNote": "Obligatorio para negocios en línea, incluso si ofrecen entrega o recogida acordada. Todo negocio, incluidos los servicios móviles, necesita un código postal válido de EE. UU. para completar la revisión de su ficha. El mapa público muestra solo la zona de tu código postal de cinco dígitos, no una dirección. Los detalles de entrega y recogida se deben confirmar con el negocio.",
 
   "addressLine1Label": "Dirección",
   "addressLine1Placeholder": "123 SW 8th St",
@@ -142,7 +142,7 @@
   "addressCityLabel": "Ciudad",
   "addressCityPlaceholder": "Miami",
   "addressStateLabel": "Estado",
-  "addressZipLabel": "Código postal (opcional)",
+  "addressZipLabel": "Código postal (necesario para completar la revisión)",
   "addressZipPlaceholder": "33130",
 
   "hoursLabel": "Horario de atención (opcional)",

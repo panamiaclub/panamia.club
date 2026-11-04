@@ -271,9 +271,10 @@ function ClaimStartContent() {
                   </p>
                   {listing.missingLocation && (
                     <p className="bg-pana-flame/10 rounded-xl p-3 text-sm font-semibold">
-                      A ZIP has not been added yet. You can confirm a public
-                      visiting address or choose the right online/mobile option.
-                      No home address is required.
+                      A ZIP has not been added yet. Every business needs a valid
+                      five-digit US ZIP to complete its listing review,
+                      including online and mobile services. A street or home
+                      address is not required.
                     </p>
                   )}
                   {message && (

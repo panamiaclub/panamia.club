@@ -127,12 +127,12 @@
   "instagramLabel": "Instagram",
   "instagramPlaceholder": "@yourhandle",
   "storefrontLabel": "I have a physical address people can visit",
-  "storefrontNote": "Only provide a public visiting address — never your home.",
+  "storefrontNote": "Only provide a public visiting address — never your home. Every business needs a valid US ZIP to complete a listing review; a street or home address is not required.",
   "locationModeLabel": "How do customers find your business?",
   "onlineBusinessLabel": "Online business, without a public storefront",
   "mobileBusinessLabel": "Mobile, by appointment, or another setup",
   "onlineZipLabel": "Business base ZIP code",
-  "onlineZipNote": "Required for online businesses, including those offering delivery or arranged pickup. Only your five-digit ZIP area is shown on the public map, not a street address. Delivery and pickup details must be confirmed with the business.",
+  "onlineZipNote": "Required for online businesses, including those offering delivery or arranged pickup. Every business, including mobile services, needs a valid US ZIP to complete a listing review. Only your five-digit ZIP area is shown on the public map, not a street address. Delivery and pickup details must be confirmed with the business.",
 
   "addressLine1Label": "Street address",
   "addressLine1Placeholder": "123 SW 8th St",
@@ -141,7 +141,7 @@
   "addressCityLabel": "City",
   "addressCityPlaceholder": "Miami",
   "addressStateLabel": "State",
-  "addressZipLabel": "ZIP code (optional)",
+  "addressZipLabel": "ZIP code (needed to complete listing review)",
   "addressZipPlaceholder": "33130",
 
   "hoursLabel": "Operating hours (optional)",

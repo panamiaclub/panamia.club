@@ -43,6 +43,7 @@ export function ListingReviewConfirmation({
   const [checked, setChecked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [locationError, setLocationError] = useState(false);
   const [restored, setRestored] = useState(false);
   const state = useQuery<ListingReviewState, Error>({
     queryKey: ['listing-review-state', profileId, session?.user?.id],
@@ -64,6 +65,7 @@ export function ListingReviewConfirmation({
     params?.get('confirmed') === '1' &&
     state.isSuccess &&
     Boolean(state.data?.lastReviewedAt) &&
+    state.data?.zipVerified === true &&
     !state.data?.cycle;
 
   async function submit(
@@ -72,6 +74,7 @@ export function ListingReviewConfirmation({
     if (!state.data || !session?.user?.id || saving) return;
     setSaving(true);
     setError('');
+    setLocationError(false);
     try {
       const response = await fetch('/api/listings/review', {
         method: 'POST',
@@ -95,6 +98,16 @@ export function ListingReviewConfirmation({
         (action === 'confirm' &&
           (!('profileId' in data) || data.profileId !== profileId))
       ) {
+        setLocationError(
+          Boolean(
+            data &&
+            typeof data === 'object' &&
+            'field' in data &&
+            data.field === 'zipcode' &&
+            'step' in data &&
+            data.step === 'address'
+          )
+        );
         throw new Error(
           data &&
             typeof data === 'object' &&
@@ -141,8 +154,8 @@ export function ListingReviewConfirmation({
                   : 'The response window starts after the initial notice is successfully sent.'}
           </p>
           <p className="mt-1">
-            Only the final confirmation completes this review. You can leave
-            location details unchanged.
+            Only the final confirmation completes this review. A valid US ZIP is
+            required; a street or home address is not.
           </p>
         </aside>
       )}
@@ -221,7 +234,9 @@ export function ListingReviewConfirmation({
                   Confirm that the information for <strong>{name}</strong> is
                   current. Sections you left alone stay unchanged. This final
                   action completes the review and stops reminders for this
-                  cycle.
+                  cycle. Every business needs a valid five-digit US ZIP in
+                  Location, including online and mobile services. A street or
+                  home address is not required.
                 </p>
                 <div className="flex items-start gap-3">
                   <Checkbox
@@ -287,14 +302,22 @@ export function ListingReviewConfirmation({
           <p role="alert" className={styles.error}>
             {error}
           </p>
-          <Button
-            variant="outline"
-            className={styles.secondary}
-            onClick={() => window.location.reload()}
-            disabled={saving}
-          >
-            Reload and confirm again
-          </Button>
+          {locationError ? (
+            <Button asChild variant="outline" className={styles.secondary}>
+              <Link href={listingReviewStepPath(profileId, 'address')}>
+                Add or check ZIP in Location
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              className={styles.secondary}
+              onClick={() => window.location.reload()}
+              disabled={saving}
+            >
+              Reload and confirm again
+            </Button>
+          )}
         </div>
       )}
       {state.data && (

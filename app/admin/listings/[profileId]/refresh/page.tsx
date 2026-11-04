@@ -51,6 +51,7 @@ function valid(value: unknown, id: string): value is AdminState {
       {
         profileId: id,
         lastReviewedAt: profile.lastReviewedAt,
+        zipVerified: false,
         remindersOptedOut: false,
         cycle: state.cycle,
       },

@@ -6,11 +6,8 @@ import { profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { getEditableProfile } from '@/lib/server/active-profile';
 import { revalidatePublicListing } from '@/lib/server/profile';
-import { normalizeUsZip } from '@/lib/online-zip';
-import {
-  getOnlineZipArea,
-  ZipLookupUnavailableError,
-} from '@/lib/server/online-zip';
+import { withOnlineZipArea, type OnlineZipArea } from '@/lib/online-zip';
+import { validateBusinessZip } from '@/lib/server/online-zip';
 
 export async function POST(request: NextRequest) {
   let parsed: unknown;
@@ -104,46 +101,29 @@ export async function POST(request: NextRequest) {
         typeof value === 'string' ? value.trim() || null : null;
     }
 
-    if (online) {
-      const zip = normalizeUsZip(
-        updateData.addressPostalCode !== undefined
-          ? updateData.addressPostalCode
-          : existingProfile.addressPostalCode
-      );
-      if (!zip) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              'Online businesses require a valid five-digit base ZIP code.',
-          },
-          { status: 400 }
-        );
-      }
-      if (
-        updateData.addressCountry &&
-        updateData.addressCountry.toUpperCase() !== 'US'
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              'Please provide the US ZIP where this online business is based.',
-          },
-          { status: 400 }
-        );
-      }
-      const zipArea = await getOnlineZipArea(zip);
-      if (!zipArea) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              'We could not find a map location for that ZIP. Check the code or contact us.',
-          },
-          { status: 400 }
-        );
-      }
+    let zipArea: OnlineZipArea | undefined;
+    if (listingId !== null || online) {
+      const verified = await validateBusinessZip({
+        addressPostalCode:
+          updateData.addressPostalCode !== undefined
+            ? updateData.addressPostalCode
+            : existingProfile.addressPostalCode,
+        addressCountry:
+          updateData.addressCountry !== undefined
+            ? updateData.addressCountry
+            : listingId !== null && updateData.addressPostalCode !== undefined
+              ? 'US'
+              : existingProfile.addressCountry,
+        geo: existingProfile.geo,
+      });
+      if (!verified.success)
+        return NextResponse.json(verified, { status: verified.status });
+      zipArea = verified.area;
+      updateData.addressPostalCode = zipArea.postalCode;
+      updateData.addressCountry = 'US';
+    }
+
+    if (online && zipArea) {
       Object.assign(updateData, {
         addressName: null,
         addressLine1: null,
@@ -154,7 +134,7 @@ export async function POST(request: NextRequest) {
         addressLocality: zipArea.city,
         addressRegion: zipArea.region,
         addressCountry: 'US',
-        addressPostalCode: zip,
+        addressPostalCode: zipArea.postalCode,
         addressLat: null,
         addressLng: null,
         geo: { zipArea },
@@ -202,6 +182,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (zipArea && !online) {
+      updateData.geo = withOnlineZipArea(
+        updateData.geo !== undefined ? updateData.geo : existingProfile.geo,
+        zipArea
+      );
+    }
+
     const [updatedProfile] = await db
       .update(profiles)
       .set(updateData)
@@ -214,17 +201,6 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (e) {
-    if (e instanceof ZipLookupUnavailableError) {
-      console.error('Profile ZIP location lookup failed:', e);
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            'ZIP location lookup is temporarily unavailable. Please try again.',
-        },
-        { status: 503 }
-      );
-    }
     if (e instanceof Error) {
       console.log(e.message);
       return NextResponse.json(

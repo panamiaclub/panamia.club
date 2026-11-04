@@ -6,7 +6,11 @@ import axios from 'axios';
 import { toast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
 
-import { normalizeUsZip } from '@/lib/online-zip';
+import {
+  normalizeUsZip,
+  readOnlineZipArea,
+  US_ZIP_REQUIRED_MESSAGE,
+} from '@/lib/online-zip';
 import Status401_Unauthorized from '@/components/Page/Status401_Unauthorized';
 import { useProfile, useMutateProfileAddress } from '@/lib/query/profile';
 import { Button } from '@/components/ui/button';
@@ -49,6 +53,15 @@ export default function AccountProfileAddress() {
     id: string | undefined;
     value: ReviewLocationMode;
   } | null>(null);
+  const [zipIssue, setZipIssue] = useState<{
+    id: string | undefined;
+    message: string;
+  } | null>(null);
+  const zipError = zipIssue?.id === profileId ? zipIssue?.message : undefined;
+  const serverZipError =
+    mutation.isError &&
+    axios.isAxiosError<{ field?: string }>(mutation.error) &&
+    mutation.error.response?.data?.field === 'zipcode';
   const savedOnline =
     profile?.onlineOnly === true || profile?.online_only === true;
   const legacyCoordinates =
@@ -63,15 +76,15 @@ export default function AccountProfileAddress() {
       : savedOnline
         ? 'online'
         : profile?.addressLine1 ||
-            profile?.addressPostalCode ||
             profile?.primary_address?.street1 ||
-            profile?.primary_address?.zipcode ||
             readMapPoint(profile?.addressLat, profile?.addressLng) ||
             legacyCoordinates
           ? 'storefront'
           : 'keep';
   const onlineOnly = review.active
-    ? reviewMode === 'online'
+    ? reviewMode === 'keep'
+      ? savedOnline
+      : reviewMode === 'online'
     : onlineChoice && onlineChoice.id === profileId
       ? onlineChoice.value
       : savedOnline;
@@ -162,11 +175,13 @@ export default function AccountProfileAddress() {
   const submitForm = (e: FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
-    if (review.active && reviewMode === 'keep') {
-      review.onSaved();
+    const zip = normalizeUsZip(formData.get('zipcode'));
+    if (review.active && !zip) {
+      setZipIssue({ id: profileId, message: US_ZIP_REQUIRED_MESSAGE });
+      document.getElementById('zipcode')?.focus();
       return;
     }
-    if (onlineOnly && !normalizeUsZip(formData.get('zipcode'))) {
+    if (onlineOnly && !zip) {
       toast({
         title: t('missingFields'),
         description: tProfile('locationForm.invalidZip'),
@@ -181,7 +196,7 @@ export default function AccountProfileAddress() {
         street2: formData.get('street2'),
         city: formData.get('city'),
         state: formData.get('state'),
-        zipcode: formData.get('zipcode'),
+        zipcode: review.active ? zip : formData.get('zipcode'),
         hours: formData.get('hours'),
         lat: formData.get('lat'),
         lng: formData.get('lng'),
@@ -205,8 +220,8 @@ export default function AccountProfileAddress() {
           street3: '',
           city: '',
           state: '',
-          zipcode: '',
-          country: '',
+          zipcode: zip,
+          country: 'US',
           hours: '',
           googlePlaceId: '',
           lat: '',
@@ -228,6 +243,9 @@ export default function AccountProfileAddress() {
           primaryAddress.lng = updates.primary_address.lng;
         }
       }
+      if (!readOnlineZipArea(profile?.geo, zip, profile?.addressCountry)) {
+        primaryAddress.zipcode = zip;
+      }
       const patch = {
         ...(Object.keys(primaryAddress).length
           ? { primary_address: primaryAddress }
@@ -235,7 +253,8 @@ export default function AccountProfileAddress() {
         ...(onlineOnly !== savedOnline || reviewMode === 'mobile'
           ? { online_only: onlineOnly }
           : {}),
-        ...(Object.entries(updates.counties).some(
+        ...(reviewMode !== 'keep' &&
+        Object.entries(updates.counties).some(
           ([field, value]) =>
             Boolean(value) !==
             Boolean(profile?.counties?.[field as keyof typeof profile.counties])
@@ -247,7 +266,18 @@ export default function AccountProfileAddress() {
         review.onSaved();
         return;
       }
-      mutation.mutate(patch, { onSuccess: review.onSaved });
+      mutation.mutate(patch, {
+        onSuccess: review.onSaved,
+        onError: () => {
+          const current = new URL(window.location.href);
+          if (
+            current.pathname === '/account/profile/address' &&
+            current.searchParams.get('listingId') === review.listingId
+          ) {
+            document.getElementById('zipcode')?.focus();
+          }
+        },
+      });
     } else {
       mutation.mutate(updates);
     }
@@ -301,6 +331,7 @@ export default function AccountProfileAddress() {
         key={profileId}
         id="address_form"
         onSubmit={submitForm}
+        noValidate={review.active}
         className="space-y-6"
       >
         <ProfileEditorActions
@@ -359,11 +390,11 @@ export default function AccountProfileAddress() {
               </RadioGroup>
             </fieldset>
             <p className={reviewStyles.note}>
-              No private home address or invented ZIP is required. Only enter a
-              street address if visitors are welcome there. Online listings show
-              an approximate ZIP area, never a home address or exact
-              coordinates. Choosing mobile removes the existing public address
-              and map point; no ZIP is required.
+              Every business needs a real US ZIP to complete this review,
+              including online and mobile services. A street or home address is
+              not required. Only enter a street address if visitors are welcome
+              there. Choosing mobile removes the existing public address and map
+              point, but keeps your ZIP as an approximate base area.
             </p>
           </>
         )}
@@ -401,44 +432,66 @@ export default function AccountProfileAddress() {
           </div>
         )}
 
-        {!(
-          review.active &&
-          (reviewMode === 'keep' || reviewMode === 'mobile')
-        ) && (
-          <div className="space-y-2">
-            <Label htmlFor="zipcode">
-              {onlineOnly ? tProfile('locationForm.baseZip') : 'ZIP code'}
-              {onlineOnly && <span className="text-destructive"> *</span>}
-            </Label>
-            <Input
-              id="zipcode"
-              name="zipcode"
-              type="text"
-              defaultValue={address.zipcode}
-              placeholder="33138"
-              autoComplete="postal-code"
-              inputMode={onlineOnly || review.active ? 'numeric' : undefined}
-              required={onlineOnly}
-              maxLength={onlineOnly || review.active ? 10 : undefined}
-              pattern={
-                onlineOnly || review.active ? '[0-9]{5}(-[0-9]{4})?' : undefined
-              }
-              aria-describedby={onlineOnly ? 'base-zip-note' : undefined}
-            />
-            {onlineOnly && (
-              <p
-                id="base-zip-note"
-                className={
-                  review.active
-                    ? reviewStyles.helper
-                    : 'text-sm text-gray-600 dark:text-gray-400'
-                }
-              >
-                {tProfile('locationForm.baseZipNote')}
-              </p>
+        <div className="space-y-2">
+          <Label htmlFor="zipcode">
+            {onlineOnly || (review.active && reviewMode === 'mobile')
+              ? tProfile('locationForm.baseZip')
+              : 'ZIP code'}
+            {(review.active || onlineOnly) && (
+              <span className="text-destructive" aria-hidden="true">
+                {' '}
+                *
+              </span>
             )}
-          </div>
-        )}
+          </Label>
+          <Input
+            id="zipcode"
+            name="zipcode"
+            type="text"
+            defaultValue={address.zipcode}
+            placeholder="33138"
+            autoComplete="postal-code"
+            inputMode={onlineOnly || review.active ? 'numeric' : undefined}
+            required={review.active || onlineOnly}
+            maxLength={onlineOnly || review.active ? 10 : undefined}
+            pattern={
+              onlineOnly || review.active ? '[0-9]{5}(-[0-9]{4})?' : undefined
+            }
+            aria-invalid={Boolean(zipError || serverZipError) || undefined}
+            aria-describedby={
+              [
+                review.active || onlineOnly ? 'base-zip-note' : '',
+                zipError ? 'zipcode-error' : '',
+                serverZipError ? 'address-save-error' : '',
+              ]
+                .filter(Boolean)
+                .join(' ') || undefined
+            }
+            onChange={() => {
+              setZipIssue(null);
+              if (mutation.isError) mutation.reset();
+            }}
+          />
+          {(review.active || onlineOnly) && (
+            <p
+              id="base-zip-note"
+              className={
+                review.active
+                  ? reviewStyles.helper
+                  : 'text-sm text-gray-600 dark:text-gray-400'
+              }
+            >
+              {review.active
+                ? 'Required: a valid five-digit US ZIP. ZIP+4 is accepted and saved as five digits. Without a visiting address, this is only an approximate base area, not directions or a service/delivery boundary. Do not make up a ZIP.'
+                : tProfile('locationForm.baseZipNote')}
+            </p>
+          )}
+          {zipError && (
+            <p id="zipcode-error" role="alert" className={reviewStyles.error}>
+              {zipError}
+            </p>
+          )}
+        </div>
 
         <fieldset
           disabled={hideAddress}
@@ -618,6 +671,7 @@ export default function AccountProfileAddress() {
 
         {mutation.isError && (
           <div
+            id="address-save-error"
             role="alert"
             className={
               review.active

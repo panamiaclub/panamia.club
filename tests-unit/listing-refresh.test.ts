@@ -22,6 +22,7 @@ test('review-state guards reject another business, invalid dates and unsupported
   const state = {
     profileId: 'business',
     lastReviewedAt: null,
+    zipVerified: false,
     remindersOptedOut: false,
     cycle: {
       id: 'cycle',
@@ -35,6 +36,14 @@ test('review-state guards reject another business, invalid dates and unsupported
   };
   assert.equal(isListingReviewState(state, 'business'), true);
   assert.equal(isListingReviewState(state, 'different'), false);
+  assert.equal(
+    isListingReviewState({ ...state, zipVerified: undefined }, 'business'),
+    false
+  );
+  assert.equal(
+    isListingReviewState({ ...state, zipVerified: 'true' }, 'business'),
+    false
+  );
   assert.equal(
     isListingReviewState(
       { ...state, cycle: { ...state.cycle, state: 'unknown' } },
@@ -82,7 +91,8 @@ test('final reminder copy requires confirmation, explains recoverable hiding and
   assert.match(mail.subject, /Final listing reminder/);
   assert.doesNotMatch(mail.html, /<script>business<\/script>/);
   assert.match(mail.text, /Signing in or claiming alone does not finish/);
-  assert.match(mail.text, /No private home address or invented ZIP/);
+  assert.match(mail.text, /Every business needs a valid five-digit US ZIP/);
+  assert.match(mail.text, /A street or home address is not required/);
   assert.match(mail.text, /delivery-reference/);
   assert.match(mail.html, /temporary pause, not a deletion/);
 });
@@ -130,8 +140,11 @@ test('every refresh stage preserves personalized proof links, deadline and compl
       'temporary pause, not a deletion',
       'Signing in or claiming alone does not finish the review.',
       '"Confirm business information"',
-      'location or ZIP only if appropriate',
-      'No private home address or invented ZIP is required.',
+      'Every business needs a valid five-digit US ZIP',
+      'including online and mobile services.',
+      'A street or home address is not required.',
+      'only an approximate base area, not a service or delivery boundary.',
+      'Use a real ZIP; do not make one up.',
       'Use the Pana account that manages it.',
       'verify access to the business inbox and choose your own Pana account.',
       'Your personal login email can be different from the business contact.',
@@ -155,6 +168,10 @@ test('every refresh stage preserves personalized proof links, deadline and compl
       assert.ok(mail.text.includes(url));
     }
     assert.doesNotMatch(mail.html, /<business>|&amp;amp; Makers/);
+    assert.doesNotMatch(
+      mail.text,
+      /ZIP only if appropriate|no ZIP is required/i
+    );
   }
 });
 
