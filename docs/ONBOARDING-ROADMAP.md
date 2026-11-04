@@ -113,8 +113,13 @@ Existing information is prefilled and omitted values are preserved. Every
 business must provide a real, recognized five-digit US ZIP to complete its
 listing review, including online-only and mobile/appointment-based businesses.
 ZIP+4 is normalized to its first five digits, preserving leading zeros. A
-street or home address is never required. Keeping current location details
-preserves the other fields, but cannot skip a missing or invalid ZIP. Missing
+street or home address is never required. A missing, invalid or not-yet-verified
+saved ZIP opens the required ZIP form directly, with **Save ZIP and continue**
+and no **Keep current location details** choice. Other location choices are
+optional: saving only the ZIP preserves the existing online flag, public
+address/point and service counties. A verified saved ZIP still allows keeping
+current location details unchanged; editing that ZIP changes the action to
+**Save ZIP and continue** until it matches the verified saved ZIP again. Missing
 location is not classified as online-only. Owners may keep a confirmed public
 visiting address/point, use just a ZIP, choose an online base ZIP, or remove a
 previous address/point for a mobile business without marking it online-only.

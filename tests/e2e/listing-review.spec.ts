@@ -1015,7 +1015,10 @@ test('anonymous entry, Pana sign-in, explicit verification and all prefilled rev
       name: 'Keep current location details for now',
       exact: true,
     })
-  ).toBeChecked();
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Save ZIP and continue', exact: true })
+  ).toBeVisible();
   await page
     .getByRole('radio', {
       name: 'Public visiting address or ZIP area',
@@ -1227,7 +1230,7 @@ test('untouched descriptions, categories and private contact stay unchanged and 
 });
 
 for (const [mode, label] of [
-  ['keep', 'Keep current location details for now'],
+  ['zip-only', ''],
   ['storefront', 'Public visiting address or ZIP area'],
   ['online', 'Online business, without a public storefront'],
   ['mobile', 'Mobile or by appointment, without a public address'],
@@ -1243,7 +1246,15 @@ for (const [mode, label] of [
     });
     const before = structuredClone(fixture.profile);
     await page.goto(locationPath);
-    await page.getByRole('radio', { name: label, exact: true }).click();
+    await expect(
+      page.getByRole('radio', {
+        name: 'Keep current location details for now',
+        exact: true,
+      })
+    ).toHaveCount(0);
+    if (mode !== 'zip-only') {
+      await page.getByRole('radio', { name: label, exact: true }).click();
+    }
     const zip = page.getByRole('textbox', {
       name:
         mode === 'online' || mode === 'mobile'
@@ -1252,8 +1263,7 @@ for (const [mode, label] of [
       exact: true,
     });
     const next = page.getByRole('button', {
-      name:
-        mode === 'keep' ? 'Keep location and continue' : 'Save and continue',
+      name: mode === 'zip-only' ? 'Save ZIP and continue' : 'Save and continue',
       exact: true,
     });
     await expect(zip).toBeVisible();
@@ -1298,7 +1308,7 @@ for (const [mode, label] of [
     );
     expect(fixture.reviewConfirmations).toHaveLength(0);
     expect(fixture.switches).toHaveLength(0);
-    if (mode === 'keep') {
+    if (mode === 'zip-only') {
       expect(fixture.writes.at(-1)?.body).toEqual({
         primary_address: { zipcode: '00501' },
       });
@@ -1321,6 +1331,17 @@ for (const online of [false, true]) {
       })
       .click();
     await expect(page.locator('#zipcode')).toHaveValue('33138');
+    await page.locator('#zipcode').fill('00501');
+    await expect(
+      page.getByRole('button', {
+        name: 'Keep location and continue',
+        exact: true,
+      })
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Save ZIP and continue', exact: true })
+    ).toBeVisible();
+    await page.locator('#zipcode').fill('33138');
     await page
       .getByRole('button', {
         name: 'Keep location and continue',
@@ -1332,6 +1353,282 @@ for (const online of [false, true]) {
     expect(fixture.profile).toEqual(before);
   });
 }
+
+for (const [label, savedZip] of [
+  ['missing', null],
+  ['empty', ''],
+  ['malformed', '12x45'],
+  ['unrecognized', '00000'],
+  ['not-yet-verified', '33138'],
+] as const) {
+  test(`a ${label} saved ZIP opens direct ZIP-only entry without inferring or changing other location details`, async ({
+    page,
+  }) => {
+    const fixture = await fixtures(page, {
+      signedIn: true,
+      owned: true,
+      hasAddress: true,
+      zip: savedZip,
+      verifiedZip: false,
+    });
+    Object.assign(fixture.profile, {
+      addressLine2: 'Suite 7',
+      addressHours: 'By appointment',
+      addressGooglePlaceId: 'synthetic-public-entrance',
+      geo: { type: 'Point', coordinates: [-80.2, 25.8] },
+      counties: { miami_dade: true, another_service_area: true },
+    });
+    const before = structuredClone(fixture.profile);
+    await page.goto(locationPath);
+    await expectWizard(page, 1);
+    await expect(
+      page.getByRole('heading', {
+        name: 'Add or check your business ZIP',
+        exact: true,
+      })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('radio', {
+        name: 'Keep current location details for now',
+        exact: true,
+      })
+    ).toHaveCount(0);
+    await expect(
+      page.locator('#address_form [role="radio"][aria-checked="true"]')
+    ).toHaveCount(0);
+    await expect(page.getByLabel('Street 1', { exact: true })).toBeHidden();
+    await expect(page.getByLabel('Latitude', { exact: true })).toBeHidden();
+    await expect(page.getByLabel('Miami-Dade', { exact: true })).toHaveCount(0);
+    const zip = page.getByRole('textbox', { name: 'ZIP code', exact: true });
+    await expect(zip).toHaveValue(savedZip ?? '');
+    await expect(zip).toHaveAttribute('required', '');
+    await expect(zip).toHaveAttribute(
+      'placeholder',
+      'Enter a five-digit US ZIP'
+    );
+    await zip.fill('00501-1234');
+    await expect(
+      page.getByRole('button', { name: 'Save ZIP and continue', exact: true })
+    ).toBeVisible();
+    await zip.press('Enter');
+    await expectWizard(page, 2);
+    expect(
+      fixture.writes.map((write) => ({
+        listingId: write.listingId,
+        body: write.body,
+      }))
+    ).toEqual([{ listingId, body: { primary_address: { zipcode: '00501' } } }]);
+    expect(fixture.profile).toEqual({
+      ...before,
+      addressPostalCode: '00501',
+      geo: withOnlineZipArea(before.geo, zipAreas['00501']),
+    });
+    expect(fixture.reviewConfirmations).toHaveLength(0);
+    expect(fixture.switches).toHaveLength(0);
+  });
+}
+
+test('changing a verified saved ZIP requires a ZIP save and never offers to keep an unrecognized new code', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    hasAddress: true,
+  });
+  const before = structuredClone(fixture.profile);
+  await page.goto(locationPath);
+  await page
+    .getByRole('radio', {
+      name: 'Keep current location details for now',
+      exact: true,
+    })
+    .click();
+  const zip = page.locator('#zipcode');
+  await zip.fill('00000');
+  await expect(
+    page.getByRole('button', {
+      name: 'Keep location and continue',
+      exact: true,
+    })
+  ).toHaveCount(0);
+  await page
+    .getByRole('button', { name: 'Save ZIP and continue', exact: true })
+    .click();
+  await expect(page.locator('#address-save-error')).toContainText(
+    'could not recognize that US ZIP'
+  );
+  await expect(zip).toBeFocused();
+  expect(fixture.profile).toEqual(before);
+  await expect(
+    page.getByRole('button', {
+      name: 'Keep location and continue',
+      exact: true,
+    })
+  ).toHaveCount(0);
+  await zip.fill('00501-1234');
+  await expect(page.locator('#address-save-error')).toHaveCount(0);
+  await page
+    .getByRole('button', { name: 'Save ZIP and continue', exact: true })
+    .click();
+  await expectWizard(page, 2);
+  expect(fixture.writes.map((write) => write.body)).toEqual([
+    { primary_address: { zipcode: '00000' } },
+    { primary_address: { zipcode: '00501' } },
+  ]);
+  expect(fixture.profile).toEqual({
+    ...before,
+    addressPostalCode: '00501',
+    geo: withOnlineZipArea(before.geo, zipAreas['00501']),
+  });
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+});
+
+test('ZIP-only entry preserves an existing online business without requiring a new location choice', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    zip: null,
+  });
+  fixture.profile.onlineOnly = true;
+  const before = structuredClone(fixture.profile);
+  await page.goto(locationPath);
+  await expect(page.getByRole('radio', { checked: true })).toHaveCount(0);
+  await page
+    .getByRole('button', { name: 'Save ZIP and continue', exact: true })
+    .focus();
+  await page.keyboard.press('Tab');
+  await expect(
+    page.getByRole('radio', {
+      name: 'Public visiting address or ZIP area',
+      exact: true,
+    })
+  ).toBeFocused();
+  await expect(page.getByRole('radio', { checked: true })).toHaveCount(0);
+  await page.getByLabel('Business base ZIP code').fill('33138');
+  await page
+    .getByRole('button', { name: 'Save ZIP and continue', exact: true })
+    .click();
+  await expectWizard(page, 2);
+  expect(fixture.writes[0].body).toEqual({
+    primary_address: { zipcode: '33138' },
+  });
+  expect(fixture.profile).toEqual({
+    ...before,
+    addressPostalCode: '33138',
+    geo: withOnlineZipArea(before.geo, zipAreas['33138']),
+  });
+  expect(fixture.switches).toHaveLength(0);
+});
+
+test('ZIP-only entry stays stable during verification, exposes lookup errors and can retry without losing other fields', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    hasAddress: true,
+    zip: null,
+    zipLookupUnavailable: true,
+  });
+  const before = structuredClone(fixture.profile);
+  const { promise: pendingSave, resolve: releaseSave } =
+    Promise.withResolvers<void>();
+  let checking = false;
+  await page.route('**/api/profile/saveAddress?listingId=*', async (route) => {
+    checking = true;
+    await pendingSave;
+    await route.fallback();
+  });
+  await page.goto(locationPath);
+  const zip = page.locator('#zipcode');
+  await zip.fill('33138');
+  await page
+    .getByRole('button', { name: 'Save ZIP and continue', exact: true })
+    .click();
+  try {
+    await expect.poll(() => checking).toBe(true);
+    await expect(
+      page.getByRole('button', { name: 'Saving ZIP...', exact: true })
+    ).toBeDisabled();
+    await expect(page.getByRole('radio', { name: /Keep current/ })).toHaveCount(
+      0
+    );
+    await expect(
+      page.getByRole('button', { name: /Keep location/ })
+    ).toHaveCount(0);
+    await expect(zip).toHaveValue('33138');
+    expect(fixture.profile).toEqual(before);
+  } finally {
+    releaseSave();
+  }
+  await expect(page.locator('#address-save-error')).toContainText(
+    'temporarily unavailable'
+  );
+  await expect(zip).toBeFocused();
+  await expect(zip).toHaveAttribute('aria-invalid', 'true');
+  await expect(zip).toHaveAttribute(
+    'aria-describedby',
+    'base-zip-note address-save-error'
+  );
+  await expect(
+    page.getByRole('button', { name: 'Save ZIP and continue', exact: true })
+  ).toBeEnabled();
+  expect(fixture.profile).toEqual(before);
+  fixture.restoreZipLookup();
+  await page
+    .getByRole('button', { name: 'Save ZIP and continue', exact: true })
+    .click();
+  await expectWizard(page, 2);
+  expect(fixture.writes).toHaveLength(2);
+  expect(fixture.writes.map((write) => write.body)).toEqual([
+    { primary_address: { zipcode: '33138' } },
+    { primary_address: { zipcode: '33138' } },
+  ]);
+  expect(fixture.profile.addressLine1).toBe(before.addressLine1);
+  expect(fixture.profile.addressLat).toBe(before.addressLat);
+  expect(fixture.profile.counties).toEqual(before.counties);
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+});
+
+test('unsaved ZIP entry, Back, reload and deep-link flags never create a keep shortcut or change the selected business', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    zip: null,
+  });
+  const before = structuredClone(fixture.profile);
+  await page.goto(`${locationPath}&complete=1&confirmed=1&zipcode=33138`);
+  await expectWizard(page, 1);
+  await expect(page.locator('#zipcode')).toHaveValue('');
+  await page.locator('#zipcode').fill('00501');
+  await page.getByRole('link', { name: '2. Description', exact: true }).click();
+  await expectWizard(page, 2);
+  await page.getByRole('link', { name: 'Back', exact: true }).click();
+  await expectWizard(page, 1);
+  await expect(page.locator('#zipcode')).toHaveValue('');
+  await expect(page.getByRole('radio', { name: /Keep current/ })).toHaveCount(
+    0
+  );
+  await expect(
+    page.getByRole('button', { name: 'Save ZIP and continue', exact: true })
+  ).toBeVisible();
+  await page.reload();
+  await expectWizard(page, 1);
+  await expect(page.locator('#zipcode')).toHaveValue('');
+  await expect(page.getByRole('button', { name: /Keep location/ })).toHaveCount(
+    0
+  );
+  expect(fixture.profile).toEqual(before);
+  expect(fixture.writes).toHaveLength(0);
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+  expectListingReads(fixture.reads);
+  expect(fixture.switches).toHaveLength(0);
+});
 
 test('an unpublished business stays manageable without offering a broken public listing destination', async ({
   page,
@@ -2104,7 +2401,7 @@ test('a skipped Location step and old confirmation flags cannot restore an overd
   await page.locator('#zipcode').fill('33138');
   await page
     .getByRole('button', {
-      name: 'Keep location and continue',
+      name: 'Save ZIP and continue',
       exact: true,
     })
     .click();
@@ -2260,7 +2557,7 @@ test('a prefilled unverified ZIP+4 is normalized when keeping other location det
   await expect(page.locator('#zipcode')).toHaveValue('00501-1234');
   await page
     .getByRole('button', {
-      name: 'Keep location and continue',
+      name: 'Save ZIP and continue',
       exact: true,
     })
     .click();
@@ -2940,6 +3237,93 @@ test('ordinary personal editors keep their existing frame, controls and unscoped
   ).toBe('Our existing description');
   expect(fixture.reviewConfirmations).toHaveLength(0);
 });
+
+for (const viewport of [
+  { width: 1280, height: 900, label: 'desktop' },
+  { width: 390, height: 844, label: 'mobile' },
+  { width: 320, height: 720, label: 'narrow-mobile' },
+]) {
+  test(`actual ${viewport.label} missing-ZIP entry keeps required input and errors ahead of optional location choices`, async ({
+    page,
+  }) => {
+    const fixture = await fixtures(page, {
+      signedIn: true,
+      owned: true,
+      zip: null,
+    });
+    const before = structuredClone(fixture.profile);
+    await page.setViewportSize(viewport);
+    await page.goto(locationPath);
+    await expectWizard(page, 1);
+    await page.evaluate(() => document.fonts.ready);
+    const zip = page.getByRole('textbox', { name: 'ZIP code', exact: true });
+    const next = page.getByRole('button', {
+      name: 'Save ZIP and continue',
+      exact: true,
+    });
+    const choices = page.getByRole('group', {
+      name: 'Optional: update other location details',
+      exact: true,
+    });
+    await expect(choices.getByRole('radio')).toHaveCount(3);
+    await expect(choices.getByRole('radio', { checked: true })).toHaveCount(0);
+    await expect(zip).toHaveValue('');
+    await expect(zip).toHaveAttribute(
+      'placeholder',
+      'Enter a five-digit US ZIP'
+    );
+    expect((await zip.boundingBox())!.y).toBeLessThan(
+      (await next.boundingBox())!.y
+    );
+    expect((await next.boundingBox())!.y).toBeLessThan(
+      (await choices.boundingBox())!.y
+    );
+    expect((await next.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(
+      await next.evaluate(
+        (element) => getComputedStyle(element).backgroundColor
+      )
+    ).toBe('rgb(242, 132, 68)');
+    expect(
+      await page
+        .getByRole('main')
+        .evaluate((element) => getComputedStyle(element).backgroundColor)
+    ).toBe('rgb(255, 247, 236)');
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true);
+    await page.screenshot({
+      path: test.info().outputPath(`zip-entry-${viewport.label}-full.png`),
+      fullPage: true,
+    });
+    await zip.evaluate((element) =>
+      element.scrollIntoView({ block: 'center' })
+    );
+    await zip.focus();
+    await page.screenshot({
+      path: test.info().outputPath(`zip-entry-${viewport.label}.png`),
+    });
+    await zip.fill('00000');
+    await next.click();
+    await expect(page.locator('#address-save-error')).toContainText(
+      'could not recognize that US ZIP'
+    );
+    await expect(zip).toBeFocused();
+    await expect(zip).toHaveAttribute('aria-invalid', 'true');
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true);
+    await page.screenshot({
+      path: test.info().outputPath(`zip-entry-${viewport.label}-error.png`),
+    });
+    expect(fixture.profile).toEqual(before);
+    expect(fixture.reviewConfirmations).toHaveLength(0);
+  });
+}
 
 for (const viewport of [
   { width: 1280, height: 900, label: 'desktop' },

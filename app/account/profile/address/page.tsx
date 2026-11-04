@@ -53,6 +53,10 @@ export default function AccountProfileAddress() {
     id: string | undefined;
     value: ReviewLocationMode;
   } | null>(null);
+  const [zipChoice, setZipChoice] = useState<{
+    id: string | undefined;
+    value: string;
+  } | null>(null);
   const [zipIssue, setZipIssue] = useState<{
     id: string | undefined;
     message: string;
@@ -64,23 +68,32 @@ export default function AccountProfileAddress() {
     mutation.error.response?.data?.field === 'zipcode';
   const savedOnline =
     profile?.onlineOnly === true || profile?.online_only === true;
+  const savedZipArea = readOnlineZipArea(
+    profile?.geo,
+    profile?.addressPostalCode ?? profile?.primary_address?.zipcode,
+    profile?.addressCountry
+  );
+  const needsZipEntry = review.active && !savedZipArea;
   const legacyCoordinates =
     profile?.geo &&
     'coordinates' in profile.geo &&
     Array.isArray(profile.geo.coordinates)
       ? readMapPoint(profile.geo.coordinates[1], profile.geo.coordinates[0])
       : null;
+  // ZIP-only entry preserves saved fields until a location change is chosen.
   const reviewMode: ReviewLocationMode =
     locationChoice?.id === profileId && locationChoice
       ? locationChoice.value
-      : savedOnline
-        ? 'online'
-        : profile?.addressLine1 ||
-            profile?.primary_address?.street1 ||
-            readMapPoint(profile?.addressLat, profile?.addressLng) ||
-            legacyCoordinates
-          ? 'storefront'
-          : 'keep';
+      : needsZipEntry
+        ? 'keep'
+        : savedOnline
+          ? 'online'
+          : profile?.addressLine1 ||
+              profile?.primary_address?.street1 ||
+              readMapPoint(profile?.addressLat, profile?.addressLng) ||
+              legacyCoordinates
+            ? 'storefront'
+            : 'keep';
   const onlineOnly = review.active
     ? reviewMode === 'keep'
       ? savedOnline
@@ -109,6 +122,12 @@ export default function AccountProfileAddress() {
     lat: profile?.addressLat ?? saved?.lat ?? legacyCoordinates?.lat ?? '',
     lng: profile?.addressLng ?? saved?.lng ?? legacyCoordinates?.lng ?? '',
   };
+  const enteredZip =
+    zipChoice?.id === profileId && zipChoice
+      ? zipChoice.value
+      : address.zipcode;
+  const keepingSavedZip =
+    savedZipArea && normalizeUsZip(enteredZip) === savedZipArea.postalCode;
 
   const clickSetCoordsFromAddress = async () => {
     setGettingCoords(true);
@@ -319,6 +338,36 @@ export default function AccountProfileAddress() {
     );
   }
 
+  const actions = (
+    <ProfileEditorActions
+      review={review}
+      pending={isLoading || mutation.isPending}
+      continueLabel={
+        reviewMode === 'keep'
+          ? keepingSavedZip
+            ? 'Keep location and continue'
+            : 'Save ZIP and continue'
+          : 'Save and continue'
+      }
+      pendingLabel={reviewMode === 'keep' ? 'Saving ZIP...' : 'Saving...'}
+    />
+  );
+  const saveError = mutation.isError && (
+    <div
+      id="address-save-error"
+      role="alert"
+      className={
+        review.active
+          ? reviewStyles.error
+          : 'rounded-md bg-red-50 p-4 text-red-600'
+      }
+    >
+      {axios.isAxiosError<{ error?: string }>(mutation.error)
+        ? mutation.error.response?.data?.error || t('profileUpdateFailed')
+        : mutation.error.message}
+    </div>
+  );
+
   return (
     <ProfileEditorFrame
       listingId={review.listingId}
@@ -334,69 +383,19 @@ export default function AccountProfileAddress() {
         noValidate={review.active}
         className="space-y-6"
       >
-        <ProfileEditorActions
-          review={review}
-          pending={isLoading || mutation.isPending}
-          continueLabel={
-            reviewMode === 'keep'
-              ? 'Keep location and continue'
-              : 'Save and continue'
-          }
-        />
+        {!needsZipEntry && actions}
 
-        {review.active && (
-          <>
-            <fieldset className="space-y-3">
-              <legend className="mb-3 font-extrabold">
-                How can people find this business?
-              </legend>
-              <RadioGroup
-                value={reviewMode}
-                onValueChange={(value) => {
-                  if (
-                    value === 'keep' ||
-                    value === 'storefront' ||
-                    value === 'online' ||
-                    value === 'mobile'
-                  ) {
-                    setLocationChoice({ id: profileId, value });
-                  }
-                }}
-              >
-                {(
-                  [
-                    ['keep', 'Keep current location details for now'],
-                    ['storefront', 'Public visiting address or ZIP area'],
-                    ['online', 'Online business, without a public storefront'],
-                    [
-                      'mobile',
-                      'Mobile or by appointment, without a public address',
-                    ],
-                  ] as const
-                ).map(([value, label]) => (
-                  <div key={value} className="flex min-h-11 items-center gap-3">
-                    <RadioGroupItem
-                      id={`review-location-${value}`}
-                      value={value}
-                    />
-                    <Label
-                      htmlFor={`review-location-${value}`}
-                      className="cursor-pointer py-2.5"
-                    >
-                      {label}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </fieldset>
-            <p className={reviewStyles.note}>
-              Every business needs a real US ZIP to complete this review,
-              including online and mobile services. A street or home address is
-              not required. Only enter a street address if visitors are welcome
-              there. Choosing mobile removes the existing public address and map
-              point, but keeps your ZIP as an approximate base area.
+        {needsZipEntry && (
+          <div className="space-y-2">
+            <h2 className="text-xl font-extrabold">
+              Add or check your business ZIP
+            </h2>
+            <p className={reviewStyles.helper}>
+              Enter a real US ZIP to continue. A street or home address is not
+              required. Your other location details stay unchanged unless you
+              choose to update them below.
             </p>
-          </>
+          </div>
         )}
 
         {!review.active && (
@@ -449,7 +448,7 @@ export default function AccountProfileAddress() {
             name="zipcode"
             type="text"
             defaultValue={address.zipcode}
-            placeholder="33138"
+            placeholder={review.active ? 'Enter a five-digit US ZIP' : '33138'}
             autoComplete="postal-code"
             inputMode={onlineOnly || review.active ? 'numeric' : undefined}
             required={review.active || onlineOnly}
@@ -467,7 +466,8 @@ export default function AccountProfileAddress() {
                 .filter(Boolean)
                 .join(' ') || undefined
             }
-            onChange={() => {
+            onChange={(event) => {
+              setZipChoice({ id: profileId, value: event.target.value });
               setZipIssue(null);
               if (mutation.isError) mutation.reset();
             }}
@@ -491,7 +491,70 @@ export default function AccountProfileAddress() {
               {zipError}
             </p>
           )}
+          {serverZipError && saveError}
         </div>
+
+        {needsZipEntry && actions}
+
+        {review.active && (
+          <>
+            <fieldset className="space-y-3">
+              <legend className="mb-3 font-extrabold">
+                {needsZipEntry
+                  ? 'Optional: update other location details'
+                  : 'How can people find this business?'}
+              </legend>
+              <RadioGroup
+                value={needsZipEntry && reviewMode === 'keep' ? '' : reviewMode}
+                onValueChange={(value) => {
+                  if (
+                    value === 'keep' ||
+                    value === 'storefront' ||
+                    value === 'online' ||
+                    value === 'mobile'
+                  ) {
+                    setLocationChoice({ id: profileId, value });
+                  }
+                }}
+              >
+                {(
+                  [
+                    ['keep', 'Keep current location details for now'],
+                    ['storefront', 'Public visiting address or ZIP area'],
+                    ['online', 'Online business, without a public storefront'],
+                    [
+                      'mobile',
+                      'Mobile or by appointment, without a public address',
+                    ],
+                  ] as const
+                )
+                  .filter(([value]) => value !== 'keep' || !needsZipEntry)
+                  .map(([value, label]) => (
+                    <div
+                      key={value}
+                      className="flex min-h-11 items-center gap-3"
+                    >
+                      <RadioGroupItem
+                        id={`review-location-${value}`}
+                        value={value}
+                      />
+                      <Label
+                        htmlFor={`review-location-${value}`}
+                        className="cursor-pointer py-2.5"
+                      >
+                        {label}
+                      </Label>
+                    </div>
+                  ))}
+              </RadioGroup>
+            </fieldset>
+            <p className={reviewStyles.note}>
+              Only enter a street address if visitors are welcome there.
+              Choosing online or mobile removes the existing public address and
+              map point, but keeps your ZIP as an approximate base area.
+            </p>
+          </>
+        )}
 
         <fieldset
           disabled={hideAddress}
@@ -669,21 +732,7 @@ export default function AccountProfileAddress() {
           </div>
         )}
 
-        {mutation.isError && (
-          <div
-            id="address-save-error"
-            role="alert"
-            className={
-              review.active
-                ? reviewStyles.error
-                : 'rounded-md bg-red-50 p-4 text-red-600'
-            }
-          >
-            {axios.isAxiosError<{ error?: string }>(mutation.error)
-              ? mutation.error.response?.data?.error || t('profileUpdateFailed')
-              : mutation.error.message}
-          </div>
-        )}
+        {!serverZipError && saveError}
 
         {mutation.isSuccess && !review.active && (
           <div className="rounded-md bg-green-50 p-4 text-green-600">
