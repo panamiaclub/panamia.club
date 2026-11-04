@@ -1,11 +1,18 @@
 # iOS Device Testing and Publishing
 
-The iPhone and iPad app uses the same Directory, Social, Community, Profile,
+The first App Store release targets iPhone and uses the same Directory, Social, Community, Profile,
 story camera, and detail screens as Android. There is no separate iOS website.
 The permanent bundle identifier is **`social.pana.app`**.
 Panamia's organization Team ID is **`RT9836SANW`**. The App Store Connect app
 record is **`6830254519`**; the separate Personal Team used for sideloading
 must not sign App Store builds.
+
+Both Debug and Release target iPhone device family `1`. Apple may still offer
+the iPhone app in compatibility mode on iPad; this is not a native iPad release.
+iPad-specific App Store screenshots are not required for this device scope.
+The responsive website, tablet layout, and WebKit coverage remain unchanged.
+Native iPad support can be added later with an intentional target change and
+the corresponding iPad screenshots.
 
 ## What is prepared
 
@@ -138,7 +145,8 @@ before retrying the same version/build.
 
 The command always syncs iOS, archives **Release** for a physical-device
 destination, and exports an `app-store-connect` IPA. It rejects preview/server
-overrides. Output is under
+overrides and verifies `UIDeviceFamily` is exactly `[1]` in both the archive
+and exported IPA. Output is under
 `mobile/ios/App/build/release/VERSION-BUILD/`, including the archive and debug
 symbols. Use `--provisioning-profile UUID` for manual distribution signing.
 
@@ -195,7 +203,7 @@ credentials after a confirmed rotation.
 
 ## Device and review checklist
 
-- On a notched iPhone and an iPad, test portrait/landscape, all four tabs,
+- On a notched iPhone, test portrait/landscape, all four tabs,
   detail-page Back, history gestures, long result lists, and map-sheet dragging.
 - Open Directory search, Community search, messages, and a story caption with the
   keyboard visible. Confirm the focused control and submit/close controls remain reachable.
@@ -209,7 +217,7 @@ credentials after a confirmed rotation.
 - Keep iOS fundraising disabled until Apple's nonprofit approval and the required
   fund-use disclosures and tax-receipt behavior are documented. Do not bypass the
   donation gate with a Stripe link or an embedded browser.
-- Complete privacy disclosures, age rating, support/privacy URLs, iPhone/iPad
+- Complete privacy disclosures, age rating, support/privacy URLs, iPhone
   screenshots, and reviewer-access instructions in App Store Connect. Provide a
   usable review account/login path despite passwordless authentication.
 - Review the archive's SDK privacy report and the app's actual cryptography before
