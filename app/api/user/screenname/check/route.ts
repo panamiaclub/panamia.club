@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import { validateScreenname, isScreennameAvailable } from '@/lib/screenname';
 
 export async function GET(request: NextRequest) {
@@ -21,11 +22,17 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Check database availability
-  const available = await isScreennameAvailable(name);
+  const session = await auth();
+  const available = await isScreennameAvailable(
+    name,
+    session?.user?.email?.toLowerCase()
+  );
 
-  return NextResponse.json({
-    available,
-    error: available ? undefined : 'This screenname is already taken',
-  });
+  return NextResponse.json(
+    {
+      available,
+      error: available ? undefined : 'This screenname is already taken',
+    },
+    { headers: { 'Cache-Control': 'private, no-store' } }
+  );
 }
