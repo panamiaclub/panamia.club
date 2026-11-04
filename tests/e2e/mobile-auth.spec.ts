@@ -4,6 +4,7 @@ import {
   mobileMagicLinkUrl,
 } from '../../lib/mobile/auth-links';
 import { calls, nativeBridge } from './fixtures/native-bridge';
+import { installNativeApiFixtures } from './fixtures/native-app-api';
 
 async function testTurnstile(page: Page) {
   await page.route('**/api/config/turnstile', (route) =>
@@ -26,10 +27,23 @@ async function testTurnstile(page: Page) {
   );
 }
 
+async function openNativeReport(
+  page: Page,
+  name: 'Report a bug' | 'Report a safety concern'
+) {
+  await page
+    .locator('[data-native-app] > header')
+    .getByRole('button', { name: 'Sign in or sign up', exact: true })
+    .click();
+  await page.getByRole('menuitem', { name, exact: true }).click();
+}
+
 test('native safety reports retain their draft after an error and submit without attachments or navigation', async ({
   page,
 }) => {
   await nativeBridge(page);
+  const fixtures = await installNativeApiFixtures(page);
+  fixtures.state.signedIn = false;
   await testTurnstile(page);
   await page.setViewportSize({ width: 390, height: 844 });
   const requests: Record<string, FormDataEntryValue>[] = [];
@@ -55,9 +69,7 @@ test('native safety reports retain their draft after an error and submit without
     );
   });
   await page.goto('/d');
-  await page
-    .getByRole('button', { name: 'Report a safety concern', exact: true })
-    .click();
+  await openNativeReport(page, 'Report a safety concern');
   const dialog = page.getByRole('dialog', {
     name: 'Report a safety concern',
     exact: true,
@@ -104,14 +116,17 @@ test('native safety reports retain their draft after an error and submit without
   expect(requests[0]).not.toHaveProperty('screenshot');
   expect(requests[0]).not.toHaveProperty('viewport');
   expect(requests[0]).not.toHaveProperty('locale');
-  await page.getByRole('button', { name: 'Report a bug', exact: true }).click();
+  await openNativeReport(page, 'Report a bug');
   const bug = page.getByRole('dialog', { name: 'Report a bug', exact: true });
   await bug
     .getByLabel('What happened?')
     .fill('Keep this ordinary bug report draft when closing the dialog.');
   await page.keyboard.press('Escape');
   await expect(bug).toHaveCount(0);
-  await page.getByRole('button', { name: 'Report a bug', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Sign in or sign up', exact: true })
+  ).toBeFocused();
+  await openNativeReport(page, 'Report a bug');
   await expect(bug.getByLabel('What happened?')).toHaveValue(
     'Keep this ordinary bug report draft when closing the dialog.'
   );

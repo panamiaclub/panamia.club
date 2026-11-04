@@ -20,8 +20,6 @@ import {
 } from 'next/navigation';
 import {
   ArrowLeft,
-  Bug,
-  Flag,
   MessageCircle,
   Store,
   UserRound,
@@ -34,10 +32,10 @@ import {
   useIdentity,
 } from '@/components/account/identity-provider';
 import { IdentityMenu } from '@/components/account/identity-menu';
+import { AuthMenu } from '@/components/account/auth-menu';
+import { MessagesLink } from '@/components/account/messages-link';
 import { NotificationsMenu } from '@/components/account/notifications-menu';
 import { ActingAsBar } from '@/components/account/acting-as-bar';
-import { OPEN_BUG_REPORT_EVENT } from '@/lib/mobile/native';
-import { openSafetyReport } from '@/lib/safety-report';
 import { cn } from '@/lib/utils';
 import {
   NATIVE_TABS,
@@ -191,26 +189,33 @@ function AppFrame({
         data-native-app
       >
         <header className={styles.header}>
-          {!root && (
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-label="Back"
-              onClick={() => {
-                if (window.history.length > 1) router.back();
-                else
-                  router.push(
-                    lastTab === 'directory'
-                      ? '/d'
-                      : lastTab === 'social'
-                        ? '/s'
-                        : '/groups'
-                  );
-              }}
-            >
-              <ArrowLeft size={22} aria-hidden="true" />
-            </button>
-          )}
+          <div className={styles.headerLeading}>
+            {!root && (
+              <button
+                type="button"
+                className={styles.iconButton}
+                aria-label="Back"
+                onClick={() => {
+                  if (window.history.length > 1) router.back();
+                  else
+                    router.push(
+                      lastTab === 'directory'
+                        ? '/d'
+                        : lastTab === 'social'
+                          ? '/s'
+                          : '/groups'
+                    );
+                }}
+              >
+                <ArrowLeft size={22} aria-hidden="true" />
+              </button>
+            )}
+            {eventSlug && eventSlug !== 'new' ? (
+              <NativeEventSave slug={decodeURIComponent(eventSlug)} />
+            ) : (
+              <MessagesLink />
+            )}
+          </div>
           <Link
             href="/d"
             className={styles.brand}
@@ -218,50 +223,18 @@ function AppFrame({
           >
             <Image
               src="/logos/pana_logo_long_orange.png"
-              width={128}
-              height={32}
-              alt="Pana Mia"
+              width={160}
+              height={40}
+              alt="Pana Mia Club"
               priority
             />
           </Link>
           <div className={styles.headerActions}>
-            {eventSlug && eventSlug !== 'new' && (
-              <NativeEventSave slug={decodeURIComponent(eventSlug)} />
-            )}
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-label="Report a safety concern"
-              onClick={() =>
-                openSafetyReport({
-                  type: 'other',
-                  url: window.location.origin + window.location.pathname,
-                })
-              }
-            >
-              <Flag size={19} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-label="Report a bug"
-              onClick={() =>
-                window.dispatchEvent(new Event(OPEN_BUG_REPORT_EVENT))
-              }
-            >
-              <Bug size={19} aria-hidden="true" />
-            </button>
             <NotificationsMenu />
             {signedIn ? (
-              <IdentityMenu compact />
+              <IdentityMenu compact includeReportActions />
             ) : (
-              <Link
-                href="/signin?callbackUrl=%2Fd"
-                className={styles.iconButton}
-                aria-label="Sign in"
-              >
-                <UserRound size={20} aria-hidden="true" />
-              </Link>
+              <AuthMenu compact includeReportActions />
             )}
           </div>
         </header>

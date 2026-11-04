@@ -23,6 +23,10 @@ the corresponding iPad screenshots.
   forwards cold and warm Universal Links and email-auth scheme links to Capacitor.
 - Camera, microphone, and foreground-location usage descriptions are included.
   Camera and microphone access is requested by the existing story UI, not at launch.
+- The compact header centers the Pana Mia Club wordmark, with messages on the
+  left and notifications/account on the right. Detail pages retain Back and
+  event-save controls. Account menus offer bug and safety reporting above
+  About Pana, including for signed-out visitors.
 - iOS offers email-link sign-in. Android's Google SDK is deliberately excluded
   from the iOS native package. Do not enable Google on iOS without implementing
   the corresponding Apple-compliant login options and configuring their credentials.

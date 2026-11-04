@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { LogIn, UserPlus } from 'lucide-react';
+import { LogIn, UserPlus, UserRound } from 'lucide-react';
 
 import { MenuSurface } from './menu-surface';
+import { AccountSupportLinks } from './account-support-links';
+import { cn } from '@/lib/utils';
 import styles from './identity.module.css';
 
 /**
@@ -33,14 +35,38 @@ const SIGN_UP_HREF = '/signin';
  * have an account. Same position, same panel, same gestures — signing in
  * changes what is inside it, not where it is.
  */
-export function AuthMenu({ triggerClassName }: { triggerClassName?: string }) {
+export function AuthMenu({
+  triggerClassName,
+  compact = false,
+  includeReportActions = false,
+}: {
+  triggerClassName?: string;
+  compact?: boolean;
+  includeReportActions?: boolean;
+}) {
   const { t } = useTranslation('common');
 
   return (
     <MenuSurface
       label={t('authMenu.open')}
-      triggerClassName={triggerClassName}
-      trigger={t('nav.signIn')}
+      triggerClassName={cn(
+        compact && styles.trigger,
+        compact && styles.triggerCompact,
+        triggerClassName
+      )}
+      trigger={
+        compact ? <UserRound size={20} aria-hidden="true" /> : t('nav.signIn')
+      }
+      footer={
+        includeReportActions
+          ? (close) => (
+              <>
+                <div className={styles.separator} />
+                <AccountSupportLinks onClose={close} includeReportActions />
+              </>
+            )
+          : undefined
+      }
     >
       {(close) => (
         <>
