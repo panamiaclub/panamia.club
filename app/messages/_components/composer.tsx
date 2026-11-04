@@ -7,6 +7,7 @@ import { RefusedComposer } from './chat-primitives';
 import { GifPicker, GifPreview } from './gif-picker';
 import { useGifSearch, useMirrorGif, type GifResult } from '@/lib/query/social';
 import { messageError, type MessageDraft } from '../_lib/workspace';
+import { useIsNativeApp } from '@/lib/mobile/use-native-app';
 
 export function Composer({
   canSend,
@@ -25,6 +26,7 @@ export function Composer({
   isSending: boolean;
   inputRef: RefObject<HTMLTextAreaElement | null>;
 }) {
+  const native = useIsNativeApp();
   const [pickerOpen, setPickerOpen] = useState(false);
   const hintId = useId();
   const mirror = useMirrorGif();
@@ -137,7 +139,7 @@ export function Composer({
           rows={1}
           placeholder="Write a little hello..."
           aria-label={`Message ${counterpartyName}`}
-          aria-describedby={hintId}
+          aria-describedby={native ? undefined : hintId}
           className={styles.messageInput}
         />
         <div className="flex items-center justify-between gap-3 px-2 pb-2">
@@ -171,19 +173,21 @@ export function Composer({
           </button>
         </div>
       </form>
-      <div
-        id={hintId}
-        className="text-pana-ink/60 mt-2 flex min-h-4 items-center justify-between gap-2 text-[10px] leading-relaxed"
-      >
-        <span>
-          {draft.text || draft.gif
-            ? 'Your draft stays with this conversation.'
-            : 'Make yourself at home. Say hello.'}
-        </span>
-        <span className="hidden flex-none lg:inline">
-          Enter to send · Shift + Enter for a new line
-        </span>
-      </div>
+      {!native && (
+        <div
+          id={hintId}
+          className="text-pana-ink/60 mt-2 flex min-h-4 items-center justify-between gap-2 text-[10px] leading-relaxed"
+        >
+          <span>
+            {draft.text || draft.gif
+              ? 'Your draft stays with this conversation.'
+              : 'Make yourself at home. Say hello.'}
+          </span>
+          <span className="hidden flex-none lg:inline">
+            Enter to send · Shift + Enter for a new line
+          </span>
+        </div>
+      )}
     </footer>
   );
 }

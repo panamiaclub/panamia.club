@@ -8,6 +8,7 @@ import {
 import type { SocialActorDisplay, SocialStatusDisplay } from '@/lib/interfaces';
 import type { DraftAttachment } from '@/lib/query/social';
 import { DIRECT_THREAD_REFUSED } from '@/lib/dm-refusal';
+import { calls as nativeCalls, nativeBridge } from './fixtures/native-bridge';
 
 const conversation = (page: Page) =>
   page.getByRole('region', { name: 'Open conversation' });
@@ -27,6 +28,7 @@ interface DirectMessagePost {
 }
 
 interface FixtureOptions {
+  native?: 'android' | 'ios';
   signedIn?: boolean;
   failSends?: number;
   failAccepts?: number;
@@ -43,6 +45,12 @@ interface FixtureOptions {
 // These tests render /messages and its production hooks. Only authenticated
 // HTTP and WebSocket boundaries are fixtures; no real messages or GIFs are sent.
 async function openMessages(page: Page, options: FixtureOptions = {}) {
+  if (options.native) {
+    await nativeBridge(page, {
+      platform: options.native,
+      googlePlugin: options.native === 'android',
+    });
+  }
   const now = Date.now();
   const actor = (
     id: string,
@@ -484,6 +492,8 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
         success: true,
         data: { committed: [], suggested: [] },
       });
+    if (path === '/api/notifications/unread-count')
+      return json(route, { success: true, data: { count: 0 } });
     if (path.startsWith('/api/notifications'))
       return json(route, {
         success: true,
@@ -1337,3 +1347,175 @@ test('keeps the refreshed mobile chat full-width with 44px primary controls', as
     path: test.info().outputPath('messages-mobile-chat.png'),
   });
 });
+
+for (const platform of ['android', 'ios'] as const) {
+  test(
+    `${platform} gives open direct messages a focused native screen and returns Back to the inbox`,
+    { tag: '@native' },
+    async ({ page }) => {
+      const fixture = await openMessages(page, { native: platform });
+      await page.setViewportSize({ width: 390, height: 844 });
+      const header = page.locator('[data-native-app] > header');
+      const nav = page.getByRole('navigation', { name: 'App navigation' });
+      const shortcut = header.getByRole('link', {
+        name: 'Messages',
+        exact: true,
+      });
+      const back = header.getByRole('button', {
+        name: 'Back to conversations',
+        exact: true,
+      });
+      await expect(nav).toBeVisible();
+      await expect(shortcut).toBeVisible();
+      await row(page, 'J. Downs').click();
+      await expect(input(page)).toBeVisible();
+      await expect(nav).toHaveCount(0);
+      await expect(shortcut).toHaveCount(0);
+      await expect(back).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Back to conversations', exact: true })
+      ).toHaveCount(1);
+      await expect(
+        page.getByRole('navigation', { name: 'Messaging legal links' })
+      ).toHaveCount(0);
+      await expect(
+        page.getByText('Make yourself at home. Say hello.', { exact: true })
+      ).toHaveCount(0);
+      const backBox = await back.boundingBox();
+      expect(backBox!.width).toBeGreaterThanOrEqual(44);
+      expect(backBox!.height).toBeGreaterThanOrEqual(44);
+      expect((await history(page).boundingBox())!.height).toBeGreaterThan(500);
+      const preview = test
+        .info()
+        .outputPath(`native-message-focus-${platform}.png`);
+      await page.screenshot({ path: preview });
+      await test.info().attach('native-message-focus-preview', {
+        path: preview,
+        contentType: 'image/png',
+      });
+      await input(page).fill('Keep this focused conversation draft.');
+      await expect(
+        page.getByText('Your draft stays with this conversation.', {
+          exact: true,
+        })
+      ).toHaveCount(0);
+      await page.setViewportSize({ width: 390, height: 520 });
+      await expect
+        .poll(async () => {
+          const send = await page
+            .getByRole('button', { name: 'Send message', exact: true })
+            .boundingBox();
+          return send ? send.y + send.height : Infinity;
+        })
+        .toBeLessThanOrEqual(520);
+      await back.click();
+      await expect(row(page, 'J. Downs')).toBeFocused();
+      await expect(nav).toBeVisible();
+      await expect(shortcut).toBeVisible();
+      await expect(page).toHaveURL(/\/messages$/);
+      await row(page, 'J. Downs').click();
+      await expect(input(page)).toHaveValue(
+        'Keep this focused conversation draft.'
+      );
+
+      if (platform === 'android') {
+        await expect
+          .poll(async () =>
+            (await nativeCalls(page)).some(
+              (call) =>
+                call.plugin === 'App' &&
+                call.method === 'addListener' &&
+                call.args.eventName === 'backButton'
+            )
+          )
+          .toBe(true);
+        await header.getByRole('button', { name: /Claribel/ }).click();
+        const openMenu = page.locator('[role="menu"][data-state="open"]');
+        await expect(openMenu).toBeVisible();
+        await page.evaluate(() =>
+          window.dispatchEvent(
+            new CustomEvent('native-auth-test.back', { detail: true })
+          )
+        );
+        await expect(openMenu).toHaveCount(0);
+        await expect(input(page)).toBeVisible();
+        await expect(nav).toHaveCount(0);
+        await page.evaluate(() =>
+          window.dispatchEvent(
+            new CustomEvent('native-auth-test.back', { detail: true })
+          )
+        );
+        await expect(row(page, 'J. Downs')).toBeFocused();
+        await expect(nav).toBeVisible();
+        await expect(page).toHaveURL(/\/messages$/);
+      }
+
+      await header
+        .getByRole('link', { name: 'Pana Mia directory', exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/d$/);
+      await expect(nav).toBeVisible();
+      await expect(shortcut).toBeVisible();
+      await expect(back).toHaveCount(0);
+      expect(fixture.posts).toHaveLength(0);
+      expect(fixture.pageErrors).toEqual([]);
+    }
+  );
+}
+
+test(
+  'iOS keeps the focused conversation above an offset keyboard viewport',
+  { tag: '@native' },
+  async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window, 'visualViewport', {
+        configurable: true,
+        value: Object.assign(new EventTarget(), {
+          height: 960,
+          offsetTop: 0,
+          scale: 1,
+        }),
+      });
+    });
+    await openMessages(page, { native: 'ios' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+      Object.assign(window.visualViewport!, { height: 844 });
+      window.visualViewport!.dispatchEvent(new Event('resize'));
+    });
+    await row(page, 'J. Downs').click();
+    await input(page).fill('An iOS keyboard draft.');
+    await page.evaluate(() => {
+      Object.assign(window.visualViewport!, { height: 390, offsetTop: 20 });
+      window.visualViewport!.dispatchEvent(new Event('resize'));
+    });
+    await expect
+      .poll(async () => {
+        const frame = await page.locator('[data-native-app]').boundingBox();
+        return {
+          top: Math.round(frame!.y),
+          height: Math.round(frame!.height),
+        };
+      })
+      .toEqual({ top: 20, height: 390 });
+    const send = await page
+      .getByRole('button', { name: 'Send message', exact: true })
+      .boundingBox();
+    expect(send!.y + send!.height).toBeLessThanOrEqual(410);
+    await page.evaluate(() => {
+      Object.assign(window.visualViewport!, { height: 844, offsetTop: 0 });
+      window.visualViewport!.dispatchEvent(new Event('resize'));
+    });
+    await expect(
+      page.getByRole('navigation', { name: 'App navigation' })
+    ).toHaveCount(0);
+    await page
+      .locator('[data-native-app] > header')
+      .getByRole('button', { name: 'Back to conversations', exact: true })
+      .click();
+    await expect(
+      page.getByRole('navigation', { name: 'App navigation' })
+    ).toBeVisible();
+    await expect(row(page, 'J. Downs')).toBeFocused();
+  }
+);

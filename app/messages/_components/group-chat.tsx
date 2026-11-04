@@ -421,7 +421,7 @@ export function GroupChatPlaceholder({
       <header className={styles.conversationHeader}>
         <button
           type="button"
-          className={`${styles.iconButton} ${standalone ? '' : styles.backButton}`}
+          className={`${styles.iconButton} ${styles.backButton} ${standalone ? styles.standaloneBackButton : ''}`}
           aria-label={standalone ? 'Back to group' : 'Back to conversations'}
           onClick={onBack}
         >
