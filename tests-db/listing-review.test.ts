@@ -918,6 +918,272 @@ test('online review retains approximate ZIP semantics and clears private street 
   assert.equal((await publicProfiles.getPublicListing(listingId))?.geo, null);
 });
 
+test('explicit public visiting saves require street, city, state and a recognized ZIP without changing data on errors', async () => {
+  await ownListing();
+  const personal = await getRow(personalId);
+  const other = await getRow(secondId);
+  const fullAddress = {
+    street1: '123 Synthetic Visiting Street',
+    city: 'Miami',
+    state: 'FL',
+    zipcode: '33138',
+  };
+  for (const field of ['street1', 'city', 'state', 'zipcode'] as const) {
+    for (const value of ['', ' \t ', null]) {
+      const before = await getRow(listingId);
+      const response = await address.POST(
+        request(editPath('saveAddress'), {
+          location_mode: 'storefront',
+          primary_address: { ...fullAddress, [field]: value },
+          counties: { broward: true },
+        })
+      );
+      assert.equal(response.status, 400, `${field}/${value}`);
+      const issue = await response.json();
+      assert.equal(issue.field, field);
+      assert.equal(issue.step, 'address');
+      assert.deepEqual(await getRow(listingId), before);
+    }
+  }
+  assert.equal(zipLookups.length, 0);
+  const before = await getRow(listingId);
+  assert.equal(
+    (
+      await address.POST(
+        request(editPath('saveAddress'), {
+          location_mode: 'storefront',
+          primary_address: { ...fullAddress, zipcode: '00000' },
+        })
+      )
+    ).status,
+    400
+  );
+  assert.deepEqual(await getRow(listingId), before);
+  const saved = await address.POST(
+    request(editPath('saveAddress'), {
+      location_mode: 'storefront',
+      primary_address: { ...fullAddress, zipcode: '00501-1234' },
+    })
+  );
+  assert.equal(saved.status, 200);
+  const row = await getRow(listingId);
+  assert.equal(row?.addressLine1, fullAddress.street1);
+  assert.equal(row?.addressLocality, fullAddress.city);
+  assert.equal(row?.addressRegion, fullAddress.state);
+  assert.equal(row?.addressPostalCode, '00501');
+  assert.equal(row?.addressLat, null);
+  assert.equal(row?.addressLng, null);
+  assert.equal(row?.onlineOnly, false);
+  assert.deepEqual(row?.geo, { zipArea: zipAreas['00501'] });
+  zipUnavailable = true;
+  assert.equal(
+    (
+      await address.POST(
+        request(editPath('saveAddress'), {
+          location_mode: 'storefront',
+          primary_address: { hours: 'By appointment' },
+        })
+      )
+    ).status,
+    200
+  );
+  assert.deepEqual((await getRow(listingId))?.counties, before?.counties);
+  assert.equal((await confirmBusiness()).status, 200);
+  assert.deepEqual(await getRow(personalId), personal);
+  assert.deepEqual(await getRow(secondId), other);
+  assert.equal(emails.length, 0);
+  assert.equal(activeId, personalId);
+});
+
+for (const mode of ['online', 'mobile'] as const) {
+  test(`explicit ${mode} saves need only a recognized base ZIP and clear all street/exact data without changing unrelated fields`, async () => {
+    await ownListing();
+    await db
+      .update(schema.profiles)
+      .set({
+        addressName: 'Private entrance',
+        addressLine1: 'A private home address',
+        addressLine2: 'Apartment 7',
+        addressLine3: 'Hidden courtyard',
+        addressLocality: 'Private city',
+        addressRegion: 'FL',
+        addressHours: 'Private hours',
+        addressGooglePlaceId: 'private-place',
+        addressLat: '25.8',
+        addressLng: '-80.2',
+        onlineOnly: mode === 'mobile',
+        geo: { type: 'Point', coordinates: [-80.2, 25.8] },
+        counties: { miami_dade: true, imported: true },
+      })
+      .where(eq(schema.profiles.id, listingId));
+    const before = await getRow(listingId);
+    for (const zipcode of ['', 'bad', '00000']) {
+      const response = await address.POST(
+        request(editPath('saveAddress'), {
+          location_mode: mode,
+          primary_address: { zipcode },
+        })
+      );
+      assert.equal(response.status, 400);
+      assert.equal((await response.json()).field, 'zipcode');
+      assert.deepEqual(await getRow(listingId), before);
+    }
+    zipUnavailable = true;
+    assert.equal(
+      (
+        await address.POST(
+          request(editPath('saveAddress'), {
+            location_mode: mode,
+            primary_address: { zipcode: '00501-1234' },
+          })
+        )
+      ).status,
+      503
+    );
+    assert.deepEqual(await getRow(listingId), before);
+    zipUnavailable = false;
+    assert.equal(
+      (
+        await address.POST(
+          request(editPath('saveAddress'), {
+            location_mode: mode,
+            primary_address: { zipcode: '00501-1234' },
+          })
+        )
+      ).status,
+      200
+    );
+    const row = await getRow(listingId);
+    for (const field of [
+      'addressName',
+      'addressLine1',
+      'addressLine2',
+      'addressLine3',
+      'addressHours',
+      'addressGooglePlaceId',
+      'addressLat',
+      'addressLng',
+    ] as const) {
+      assert.equal(row?.[field], null, field);
+    }
+    assert.equal(row?.onlineOnly, mode === 'online');
+    assert.equal(row?.addressPostalCode, '00501');
+    assert.equal(row?.addressLocality, mode === 'online' ? 'Holtsville' : null);
+    assert.equal(row?.addressRegion, mode === 'online' ? 'NY' : null);
+    assert.deepEqual(row?.geo, { zipArea: zipAreas['00501'] });
+    assert.deepEqual(row?.counties, before?.counties);
+    assert.deepEqual(row?.descriptions, before?.descriptions);
+    assert.equal(row?.lastReviewedAt, null);
+    assert.equal(row?.active, before?.active);
+    assert.equal(row?.email, before?.email);
+    assert.equal(emails.length, 0);
+    assert.equal(activeId, personalId);
+  });
+}
+
+test('public visiting mode cannot revive hidden online street data or an exact point and must be explicitly scoped', async () => {
+  await ownListing();
+  await db
+    .update(schema.profiles)
+    .set({
+      onlineOnly: true,
+      addressName: 'Private entrance',
+      addressLine1: 'Old private home',
+      addressLine2: 'Apartment 7',
+      addressLine3: 'Private courtyard',
+      addressLocality: 'Private city',
+      addressRegion: 'FL',
+      addressPostalCode: '33138',
+      addressHours: 'Private hours',
+      addressGooglePlaceId: 'private-place',
+      addressLat: '25.8',
+      addressLng: '-80.2',
+      geo: {
+        type: 'Point',
+        coordinates: [-80.2, 25.8],
+        zipArea: zipAreas['33138'],
+      },
+    })
+    .where(eq(schema.profiles.id, listingId));
+  const before = await getRow(listingId);
+  for (const body of [
+    { location_mode: 'storefront', primary_address: { zipcode: '33138' } },
+    { location_mode: 'storefront', online_only: true },
+    { location_mode: 'mobile', online_only: true },
+    { location_mode: 'online', online_only: false },
+    { location_mode: 'keep' },
+    { location_mode: '' },
+    { location_mode: null },
+  ]) {
+    assert.equal(
+      (await address.POST(request(editPath('saveAddress'), body))).status,
+      400
+    );
+    assert.deepEqual(await getRow(listingId), before);
+  }
+  for (const id of ['unmanaged-business', personalId, '']) {
+    assert.equal(
+      (
+        await address.POST(
+          request(editPath('saveAddress', id), {
+            location_mode: 'storefront',
+            primary_address: {
+              street1: 'Must not save',
+              city: 'Miami',
+              state: 'FL',
+              zipcode: '33138',
+            },
+          })
+        )
+      ).status,
+      403
+    );
+  }
+  assert.equal(
+    (
+      await address.POST(
+        request('/api/profile/saveAddress', {
+          location_mode: 'storefront',
+        })
+      )
+    ).status,
+    400
+  );
+  assert.equal(
+    (
+      await address.POST(
+        request(editPath('saveAddress'), {
+          location_mode: 'storefront',
+          primary_address: {
+            street1: '123 Public Visiting Street',
+            city: 'Miami',
+            state: 'FL',
+            zipcode: '33138',
+          },
+        })
+      )
+    ).status,
+    200
+  );
+  const row = await getRow(listingId);
+  assert.equal(row?.onlineOnly, false);
+  assert.equal(row?.addressLine1, '123 Public Visiting Street');
+  for (const field of [
+    'addressName',
+    'addressLine2',
+    'addressLine3',
+    'addressHours',
+    'addressGooglePlaceId',
+    'addressLat',
+    'addressLng',
+  ] as const) {
+    assert.equal(row?.[field], null, field);
+  }
+  assert.deepEqual(row?.geo, { zipArea: zipAreas['33138'] });
+  assert.equal(zipLookups.length, 0);
+  assert.equal(emails.length, 0);
+});
+
 test('business drafts remain manageable without a ZIP, but mobile review requires a ZIP while removing a previous public point', async () => {
   await ownListing();
   assert.equal(

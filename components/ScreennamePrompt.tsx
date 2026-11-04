@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useScreennameAvailability } from '@/hooks/use-screenname-availability';
 import {
   Dialog,
   DialogContent,
@@ -33,56 +34,20 @@ export default function ScreennamePrompt({
   const { t } = useTranslation('common');
   const [displayName, setDisplayName] = useState('');
   const [screenname, setScreenname] = useState('');
-  const [status, setStatus] = useState<
-    'idle' | 'checking' | 'available' | 'taken' | 'invalid'
-  >('idle');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const checkAvailability = useCallback(async (name: string) => {
-    if (!name || name.length < 3) {
-      setStatus('idle');
-      setError('');
-      return;
-    }
-
-    setStatus('checking');
-    setError('');
-
-    try {
-      const response = await fetch(
-        `/api/user/screenname/check?name=${encodeURIComponent(name)}`
-      );
-      const data = await response.json();
-
-      if (data.available) {
-        setStatus('available');
-        setError('');
-      } else {
-        setStatus(data.error?.includes('taken') ? 'taken' : 'invalid');
-        setError(data.error || 'Invalid screenname');
-      }
-    } catch {
-      setStatus('idle');
-      setError('Could not check availability');
-    }
-  }, []);
-
-  // Debounce check
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      checkAvailability(screenname);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [screenname, checkAvailability]);
+  const {
+    status,
+    error: availabilityError,
+    reject,
+  } = useScreennameAvailability(screenname, { enabled: open });
+  const screennameError = error || availabilityError;
 
   // Reset state when dialog opens
   useEffect(() => {
     if (open) {
       setDisplayName('');
       setScreenname('');
-      setStatus('idle');
       setError('');
       setIsSubmitting(false);
     }
@@ -117,8 +82,7 @@ export default function ScreennamePrompt({
         onSuccess(data.data.screenname);
         onOpenChange(false);
       } else {
-        setError(data.error || 'Failed to set screenname');
-        setStatus('invalid');
+        reject(data.error || 'Failed to set screenname');
       }
     } catch {
       setError('An error occurred. Please try again.');
@@ -148,7 +112,10 @@ export default function ScreennamePrompt({
                 required
                 placeholder={t('onboarding.namePlaceholder')}
                 disabled={isSubmitting}
-                onChange={(e) => setDisplayName(e.target.value)}
+                onChange={(e) => {
+                  setDisplayName(e.target.value);
+                  setError('');
+                }}
               />
               <p className="text-muted-foreground text-sm">
                 {t('onboarding.nameHint')}
@@ -167,7 +134,10 @@ export default function ScreennamePrompt({
                   maxLength={24}
                   autoComplete="username"
                   required
-                  onChange={(e) => setScreenname(e.target.value)}
+                  onChange={(e) => {
+                    setScreenname(e.target.value);
+                    setError('');
+                  }}
                   className={
                     status === 'available'
                       ? 'border-green-500 pr-10'
@@ -190,9 +160,9 @@ export default function ScreennamePrompt({
                   )}
                 </div>
               </div>
-              {error && (
+              {screennameError && (
                 <p role="alert" className="text-destructive text-sm">
-                  {error}
+                  {screennameError}
                 </p>
               )}
               <p className="text-muted-foreground text-sm">

@@ -71,6 +71,14 @@ or
 
 - No authentication required (for real-time validation in forms)
 - Validates format before checking database
+- Signed-in checks use the authenticated account to exclude its own personal
+  profile, current handle, and retired handles, matching the save endpoint.
+  A business listing sharing the account's email still reserves its handle.
+- Whitespace is trimmed and comparisons are case-insensitive in both checking
+  and saving. Personalized availability responses are private and not cached.
+- Welcome, modal, and account-settings forms share a debounced checker. Editing
+  the handle immediately invalidates the previous result; canceled or older
+  responses cannot approve or reject the new input.
 
 ### Set/Update Screenname
 
