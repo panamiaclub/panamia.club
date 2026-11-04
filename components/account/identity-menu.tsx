@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Check,
   Copy,
-  Info,
   LogOut,
   Plus,
   RefreshCw,
@@ -17,16 +16,14 @@ import {
 
 import { toast } from '@/hooks/use-toast';
 import { signOut } from '@/lib/auth-client';
-import { isNativeApp } from '@/lib/mobile/native';
 import { useMyGroups } from '@/lib/query/social';
 import { copyReferralLink } from '@/lib/referrals-client';
 import { useIdentity, type Identity } from './identity-provider';
 import { MenuSurface } from './menu-surface';
+import { AccountSupportLinks } from './account-support-links';
 import { AdminMenuLink, PanaSites } from './pana-sites';
 import styles from './identity.module.css';
 import { cn } from '@/lib/utils';
-
-const ABOUT_PANA_URL = 'https://panamia.club/';
 
 /** Up to two initials, so "Café Curú" reads as CC rather than C. */
 function initialsOf(name: string): string {
@@ -183,7 +180,10 @@ function MenuGroups({ onNavigate }: { onNavigate: () => void }) {
  * MenuSurface, which the signed-out menu wears too, so the control a visitor
  * meets before they have an account is the one they keep afterwards.
  */
-export function IdentityMenu({ compact = false }: { compact?: boolean } = {}) {
+export function IdentityMenu({
+  compact = false,
+  includeReportActions = false,
+}: { compact?: boolean; includeReportActions?: boolean } = {}) {
   const { t } = useTranslation(['common', 'toast']);
   const identity = useIdentity();
   const [copyingReferral, setCopyingReferral] = useState(false);
@@ -252,36 +252,10 @@ export function IdentityMenu({ compact = false }: { compact?: boolean } = {}) {
 
           <AdminMenuLink onNavigate={() => close(false)} />
 
-          <a
-            href={ABOUT_PANA_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            role="menuitem"
-            data-menu-row
-            onClick={async (event) => {
-              close(false);
-              if (!isNativeApp()) return;
-              event.preventDefault();
-              try {
-                const { Browser } = await import('@capacitor/browser');
-                await Browser.open({ url: ABOUT_PANA_URL });
-              } catch {
-                toast({
-                  title: t('toast:error'),
-                  description: t('identity.aboutPanaOpenFailed'),
-                  variant: 'destructive',
-                });
-              }
-            }}
-            className={cn(styles.row, styles.rowQuiet)}
-          >
-            <Info className="h-4 w-4 opacity-70" aria-hidden="true" />
-            <span className={styles.rowMeta}>
-              <span className={styles.rowName}>
-                {t('nav.siteMenu.aboutPana')}
-              </span>
-            </span>
-          </a>
+          <AccountSupportLinks
+            onClose={close}
+            includeReportActions={includeReportActions}
+          />
 
           {/* The one row in this menu you cannot undo by clicking again, so it
               is tinted — a speed bump, not an alarm. */}

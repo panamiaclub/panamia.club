@@ -8,12 +8,13 @@ async function ios(page: Page) {
 }
 
 for (const viewport of [
+  { width: 320, height: 568 },
   { width: 375, height: 667 },
   { width: 390, height: 844 },
   { width: 844, height: 390 },
   { width: 820, height: 1180 },
 ]) {
-  test(`iOS keeps the shared app screens usable at ${viewport.width}x${viewport.height}`, async ({
+  test(`iOS keeps a centered header and shared app screens usable at ${viewport.width}x${viewport.height}`, async ({
     page,
   }) => {
     await ios(page);
@@ -30,6 +31,38 @@ for (const viewport of [
       'Community',
       'Profile',
     ]);
+    const header = page.locator('[data-native-app] > header');
+    const brand = header.getByRole('img', { name: 'Pana Mia Club' });
+    const messages = header.getByRole('link', {
+      name: 'Messages',
+      exact: true,
+    });
+    const notifications = header.getByRole('button', {
+      name: /^Notifications/,
+    });
+    const account = header.getByRole('button', { name: /Native Viewer/ });
+    await expect(messages).toHaveAttribute('href', '/messages');
+    await expect(header.getByRole('button', { name: /^Report a/ })).toHaveCount(
+      0
+    );
+    const boxes = await Promise.all(
+      [header, brand, messages, notifications, account].map((node) =>
+        node.boundingBox()
+      )
+    );
+    const [frame, logo, inbox, bell, avatar] = boxes;
+    expect(boxes.every(Boolean)).toBe(true);
+    expect(
+      Math.abs(logo!.x + logo!.width / 2 - frame!.x - frame!.width / 2)
+    ).toBeLessThanOrEqual(1);
+    expect(inbox!.x + inbox!.width).toBeLessThanOrEqual(logo!.x);
+    expect(bell!.x).toBeGreaterThanOrEqual(logo!.x + logo!.width);
+    expect(avatar!.x).toBeGreaterThanOrEqual(bell!.x + bell!.width);
+    expect(frame!.height).toBeLessThanOrEqual(60);
+    for (const control of [inbox, bell, avatar]) {
+      expect(control!.width).toBeGreaterThanOrEqual(44);
+      expect(control!.height).toBeGreaterThanOrEqual(44);
+    }
     const bounds = await nav.boundingBox();
     expect(bounds).not.toBeNull();
     expect(Math.round(bounds!.y + bounds!.height)).toBe(viewport.height);
@@ -53,6 +86,104 @@ for (const viewport of [
     await nav.getByRole('link', { name: 'Directory', exact: true }).click();
     await expect(search).toBeVisible();
   });
+}
+
+for (const platform of ['android', 'ios'] as const) {
+  for (const signedIn of [false, true]) {
+    test(`${platform} account reports stay reachable for ${signedIn ? 'members' : 'guests'} without crowding the header`, async ({
+      page,
+    }) => {
+      await nativeBridge(page, {
+        platform,
+        googlePlugin: platform === 'android',
+      });
+      const fixtures = await installNativeApiFixtures(page);
+      fixtures.state.signedIn = signedIn;
+      await page.route('**/api/notifications/unread-count', (route) =>
+        route.fulfill({ json: { success: true, data: { count: 9 } } })
+      );
+      await page.setViewportSize({ width: 393, height: 852 });
+      await page.goto('/d');
+      const header = page.locator('[data-native-app] > header');
+      const account = header.getByRole('button', {
+        name: signedIn ? /Native Viewer/ : 'Sign in or sign up',
+        includeHidden: true,
+      });
+      if (signedIn) {
+        await expect(
+          header.getByRole('button', { name: 'Notifications, 9 unread' })
+        ).toBeVisible();
+        await expect(
+          header.getByRole('link', { name: 'Messages', exact: true })
+        ).toHaveAttribute('href', '/messages');
+      } else {
+        await expect(
+          header.getByRole('button', { name: /^Notifications/ })
+        ).toHaveCount(0);
+      }
+      const preview = test.info().outputPath('native-header-ui-preview.png');
+      await header.screenshot({ path: preview });
+      await test.info().attach('native-header-ui-preview', {
+        path: preview,
+        contentType: 'image/png',
+      });
+      await account.click();
+      const menu = page.getByRole('menu');
+      const ending = [
+        'Report a bug',
+        'Report a safety concern',
+        'About Pana',
+        ...(signedIn ? ['Sign Out'] : []),
+      ];
+      await expect(
+        menu
+          .getByRole('menuitem')
+          .filter({ hasText: /Report a|About Pana|Sign Out/ })
+      ).toHaveText(ending);
+      await menu
+        .getByRole('menuitem', { name: 'Report a bug', exact: true })
+        .click();
+      const bug = page.getByRole('dialog', {
+        name: 'Report a bug',
+        exact: true,
+      });
+      await expect(bug).toBeVisible();
+      await expect(account).toHaveAttribute('aria-expanded', 'false');
+      await expect(bug.locator('input[type=file]')).toHaveCount(1);
+      await bug
+        .getByLabel('What happened?')
+        .fill('Keep this account-menu draft.');
+      await page.keyboard.press('Escape');
+      await expect(bug).toHaveCount(0);
+      await expect(account).toBeFocused();
+      await account.click();
+      await page
+        .getByRole('menuitem', { name: 'Report a bug', exact: true })
+        .click();
+      await expect(bug.getByLabel('What happened?')).toHaveValue(
+        'Keep this account-menu draft.'
+      );
+      await page.keyboard.press('Escape');
+      await expect(account).toBeFocused();
+      await account.click();
+      await page
+        .getByRole('menuitem', { name: 'Report a safety concern', exact: true })
+        .click();
+      const safety = page.getByRole('dialog', {
+        name: 'Report a safety concern',
+        exact: true,
+      });
+      await expect(safety).toBeVisible();
+      await expect(account).toHaveAttribute('aria-expanded', 'false');
+      await expect(safety.locator('input[type=file]')).toHaveCount(0);
+      await expect(
+        safety.getByText(/do not copy, download, or attach/)
+      ).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(safety).toHaveCount(0);
+      await expect(account).toBeFocused();
+    });
+  }
 }
 
 test('the iOS frame follows the keyboard and restores tabs after dismissal', async ({

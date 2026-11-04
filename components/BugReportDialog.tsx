@@ -55,6 +55,7 @@ export default function BugReportDialog() {
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const reportReturnFocus = useRef<HTMLElement | null>(null);
   const { data: session } = useSession();
   const { toast } = useToast();
   const safety = reportType === 'safety';
@@ -70,7 +71,14 @@ export default function BugReportDialog() {
 
   const sessionEmail = session?.user?.email;
   useEffect(() => {
+    const rememberFocus = () => {
+      reportReturnFocus.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+    };
     const showBug = () => {
+      rememberFocus();
       if (reportType !== 'bug') {
         setMessage('');
         setScreenshot(null);
@@ -103,6 +111,7 @@ export default function BugReportDialog() {
         });
         return;
       }
+      rememberFocus();
       setReportType('safety');
       setTargetType(target.type);
       setTargetUrl(url);
@@ -333,7 +342,17 @@ export default function BugReportDialog() {
           </DialogTrigger>
         </div>
       )}
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto sm:max-w-xl"
+        onCloseAutoFocus={(event) => {
+          const target = reportReturnFocus.current;
+          reportReturnFocus.current = null;
+          if (target?.isConnected && !target.closest('[inert]')) {
+            event.preventDefault();
+            target.focus();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {safety ? 'Report a safety concern' : 'Report a bug'}
