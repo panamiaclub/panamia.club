@@ -109,12 +109,19 @@ existing direct ownership link) again on reads and writes. Invalid, foreign or
 personal profile scopes never fall back to the currently active identity.
 The journey does not switch the active-profile cookie.
 
-Existing information is prefilled and omitted values are preserved. Missing
-location is not classified as online-only: owners can keep it unconfirmed,
-provide a public visiting address/ZIP, choose an approximate online base ZIP, or
-remove a previous address for a mobile/appointment-based business. No private
-home address or guessed ZIP is required. Online ZIP validation and street/point
-privacy use the existing address API. Saving each section continues to the next;
+Existing information is prefilled and omitted values are preserved. Every
+business must provide a real, recognized five-digit US ZIP to complete its
+listing review, including online-only and mobile/appointment-based businesses.
+ZIP+4 is normalized to its first five digits, preserving leading zeros. A
+street or home address is never required. Keeping current location details
+preserves the other fields, but cannot skip a missing or invalid ZIP. Missing
+location is not classified as online-only. Owners may keep a confirmed public
+visiting address/point, use just a ZIP, choose an online base ZIP, or remove a
+previous address/point for a mobile business without marking it online-only.
+Without a visiting address, a ZIP is an approximate base area, not directions,
+a service/delivery boundary or an exact street point. ZIP validation and
+street/point privacy use the existing address API and verified ZIP cache.
+Saving each section continues to the next;
 Back returns to the preceding step and the six pills allow direct navigation.
 The first Back exits to the selected listing's permanent entry. Keeping location
 or photos unchanged uses the same continue action rather than a second save
@@ -123,11 +130,16 @@ button. Saving, skipping and switching steps never confirm the review.
 After Photos, `/listings/review?id={profileId}&complete=1` opens the final check
 inside the same wizard frame, with a read-only summary and Back to photos. It
 does not mark anything complete on arrival. Only the authenticated **Confirm
-business information** POST can save `lastReviewedAt`, complete the current
+business information** POST, after verifying the locked business's current ZIP,
+can save `lastReviewedAt`, complete the current
 reminder cycle and restore an eligible overdue-review pause; staff restrictions
 remain authoritative. The success screen is backed by the server's review state,
 not `complete` or `confirmed` query parameters alone. It links to the updated
 public listing when available and the exact business's management wizard.
+Direct requests, skipped steps, stale location data and URL flags cannot bypass
+ZIP verification. Unknown ZIPs return a Location-field error; temporary lookup
+failures are retryable and leave review, cycle and visibility unchanged. A
+previously verified ZIP does not require another network lookup.
 
 Cream/ink surfaces, orange actions, indigo step pills and progress are scoped to
 listing-review mode; ordinary personal editors retain their account styling and
@@ -137,6 +149,9 @@ visibility policies.
 
 This is a product UI path only. It does not create, schedule or send a campaign,
 import contacts, bulk-claim businesses, or modify existing listings on arrival.
+Published legacy listings without ZIPs remain published. There is no data
+backfill, migration or new background ZIP-based deactivation. Personal editors,
+intake drafts and edits to other business fields do not acquire a ZIP requirement.
 
 ### Inbox invitation shortcut (operator-issued, not an account login)
 
@@ -221,8 +236,10 @@ The last step of the listing journey now requires an explicit, authenticated
 **Confirm business information** action. It records `profiles.lastReviewedAt`
 and completes the current cycle atomically with cancellation of pending
 reminders. Merely opening `?complete=1`, signing in, claiming, or saving one
-section does not confirm the review. Existing values can be left unchanged;
-confirmation does not require a guessed ZIP or a private home address.
+section does not confirm the review. Existing values can be left unchanged
+when the business already has a verified US ZIP. Otherwise, add a real ZIP in
+Location before confirming; online and mobile businesses are not exempt.
+Never guess a ZIP or provide a private home address.
 
 Unclaimed businesses receive fresh seven-day inbox invitations in reminders.
 Claimed businesses receive a non-secret review link at their current managing

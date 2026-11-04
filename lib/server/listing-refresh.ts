@@ -24,6 +24,8 @@ import { listingInvitationIdentifier } from '@/lib/listing-invitation';
 import { verification } from '@/lib/schema';
 import { revalidatePublicListing } from './profile';
 import { revalidatePath } from 'next/cache';
+import { readOnlineZipArea, withOnlineZipArea } from '@/lib/online-zip';
+import { validateBusinessZip } from './online-zip';
 
 export type RefreshTransaction = Parameters<
   Parameters<typeof db.transaction>[0]
@@ -32,7 +34,9 @@ export type RefreshProfile = typeof profiles.$inferSelect;
 export interface RefreshFailure {
   success: false;
   error: string;
-  status: 400 | 403 | 404 | 409;
+  status: 400 | 403 | 404 | 409 | 503;
+  field?: 'zipcode';
+  step?: 'address';
 }
 const fail = (
   error: string,
@@ -277,6 +281,13 @@ export async function listingReviewState(
   return {
     profileId,
     lastReviewedAt: profile.lastReviewedAt?.toISOString() ?? null,
+    zipVerified: Boolean(
+      readOnlineZipArea(
+        profile.geo,
+        profile.addressPostalCode,
+        profile.addressCountry
+      )
+    ),
     remindersOptedOut: Boolean(
       listingStatus(profile.status).listingRefreshOptOutAt
     ),
@@ -323,6 +334,9 @@ export async function confirmListingReview(
     const cycle = await currentRefreshCycle(profileId, tx);
     if ((cycle?.id ?? null) !== expectedCycleId)
       return fail('The review cycle changed. Reload before confirming.');
+    // Validate the locked, current business, never submitted or stepper state.
+    const zip = await validateBusinessZip(profile);
+    if (!zip.success) return zip;
     const restored =
       cycle?.state === 'paused' && (await isReviewPausedListing(profile, tx));
     const status = listingStatus(profile.status);
@@ -332,6 +346,9 @@ export async function confirmListingReview(
       .update(profiles)
       .set({
         lastReviewedAt: now,
+        addressPostalCode: zip.area.postalCode,
+        addressCountry: 'US',
+        geo: withOnlineZipArea(profile.geo, zip.area),
         ...(restored ? { active: true, status } : {}),
       })
       .where(eq(profiles.id, profileId));

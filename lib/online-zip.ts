@@ -7,6 +7,9 @@ export interface OnlineZipArea {
   lng: number;
 }
 
+export const US_ZIP_REQUIRED_MESSAGE =
+  'Enter a valid five-digit US ZIP code. A street or home address is not required.';
+
 export function normalizeUsZip(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -35,13 +38,29 @@ export function isOnlineZipArea(value: unknown): value is OnlineZipArea {
 
 export function readOnlineZipArea(
   geo: unknown,
-  postalCode: unknown
+  postalCode: unknown,
+  country?: unknown
 ): OnlineZipArea | null {
   const zip = normalizeUsZip(postalCode);
-  if (!zip || !geo || typeof geo !== 'object' || Array.isArray(geo))
+  if (
+    !zip ||
+    (country != null &&
+      String(country).trim() !== '' &&
+      String(country).trim().toUpperCase() !== 'US') ||
+    !geo ||
+    typeof geo !== 'object' ||
+    Array.isArray(geo)
+  )
     return null;
   const area = (geo as Record<string, unknown>).zipArea;
   return isOnlineZipArea(area) && area.postalCode === zip ? area : null;
+}
+
+export function withOnlineZipArea(geo: unknown, zipArea: OnlineZipArea) {
+  return {
+    ...(geo && typeof geo === 'object' && !Array.isArray(geo) ? geo : {}),
+    zipArea,
+  };
 }
 
 export function onlineBusinessLocation(postalCode: unknown): string {

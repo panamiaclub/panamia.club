@@ -21,6 +21,7 @@ export const OPEN_REFRESH_STATES: ListingRefreshState[] = [
 export interface ListingReviewState {
   profileId: string;
   lastReviewedAt: string | null;
+  zipVerified: boolean;
   remindersOptedOut: boolean;
   cycle: {
     id: string;
@@ -44,6 +45,7 @@ export function isListingReviewState(
   if (
     state.profileId !== profileId ||
     !date(state.lastReviewedAt) ||
+    typeof state.zipVerified !== 'boolean' ||
     typeof state.remindersOptedOut !== 'boolean'
   )
     return false;

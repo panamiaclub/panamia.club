@@ -13,6 +13,7 @@ import {
 } from '@/lib/listing-review';
 import { listingReviewPath } from '@/lib/listing-url';
 import { listSelectedCategories } from '@/lib/profile';
+import { readMapPoint } from '@/lib/map/viewport';
 import {
   ListingReviewAccess,
   ListingReviewFrame,
@@ -51,13 +52,26 @@ function OwnedListingReview({
   const street = profile.addressLine1 ?? address?.street1;
   const city = profile.addressLocality ?? address?.city;
   const region = profile.addressRegion ?? address?.state;
+  const legacyPoint =
+    profile.geo &&
+    'coordinates' in profile.geo &&
+    Array.isArray(profile.geo.coordinates)
+      ? readMapPoint(profile.geo.coordinates[1], profile.geo.coordinates[0])
+      : null;
+  const publicPoint =
+    readMapPoint(profile.addressLat, profile.addressLng) ?? legacyPoint;
   const online = profile.onlineOnly === true || profile.online_only === true;
   const location = online
     ? zip
       ? `Online business - based near ZIP ${zip} (approximate area, not a visiting address)`
       : 'Online business - base ZIP not added'
-    : [street, city, region, zip].filter(Boolean).join(', ') ||
-      'No public location confirmed. You can manage this business without adding an address.';
+    : street
+      ? [street, city, region, zip].filter(Boolean).join(', ')
+      : publicPoint
+        ? `Public visiting map point${zip ? ` near ZIP ${zip}` : ''} (unchanged)`
+        : zip
+          ? `Based near ZIP ${zip} (base area, not a visiting address or service boundary)`
+          : 'Add a valid US ZIP in Location before confirming. A street or home address is not required.';
   const description = profile.descriptions?.details ?? profile.details;
   const shortDescription =
     profile.descriptions?.fiveWords ?? profile.five_words;

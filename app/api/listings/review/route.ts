@@ -11,9 +11,13 @@ import {
   denyCrossOriginInvitationWrite,
 } from '@/lib/server/listing-invitation-request';
 
-const failure = (error: string, status: number) =>
+const failure = (
+  error: string,
+  status: number,
+  location?: { field?: 'zipcode'; step?: 'address' }
+) =>
   NextResponse.json(
-    { success: false, error },
+    { success: false, error, ...location },
     { status, headers: invitationHeaders }
   );
 
@@ -85,7 +89,10 @@ export async function POST(request: NextRequest) {
       );
     return result.success
       ? NextResponse.json(result, { headers: invitationHeaders })
-      : failure(result.error, result.status);
+      : failure(result.error, result.status, {
+          field: result.field,
+          step: result.step,
+        });
   } catch (error) {
     console.error('[listing-review] confirmation failed', error);
     return failure(
