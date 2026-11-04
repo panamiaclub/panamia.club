@@ -11,6 +11,30 @@ export const LISTING_REVIEW_STEPS = [
 
 export type ListingReviewStep = (typeof LISTING_REVIEW_STEPS)[number]['key'];
 
+export type ListingLocationMode = 'storefront' | 'online' | 'mobile';
+
+export function isListingLocationMode(
+  value: unknown
+): value is ListingLocationMode {
+  return value === 'storefront' || value === 'online' || value === 'mobile';
+}
+
+export function publicVisitingAddressIssue(address: {
+  street1?: unknown;
+  city?: unknown;
+  state?: unknown;
+}) {
+  for (const [field, message] of [
+    ['street1', 'Enter the public street address where visitors are welcome.'],
+    ['city', 'Enter the city for the public visiting address.'],
+    ['state', 'Enter the state for the public visiting address.'],
+  ] as const) {
+    const value = address[field];
+    if (typeof value !== 'string' || !value.trim()) return { field, message };
+  }
+  return null;
+}
+
 export function listingReviewStepPath(
   profileId: string,
   step: ListingReviewStep

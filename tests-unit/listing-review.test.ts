@@ -6,6 +6,8 @@ import {
   listingReviewFinishPath,
   listingReviewNavigation,
   listingReviewStepPath,
+  isListingLocationMode,
+  publicVisitingAddressIssue,
 } from '@/lib/listing-review';
 import {
   listingClaimPath,
@@ -23,6 +25,29 @@ import {
   listingInvitationPath,
   readListingInvitationFragment,
 } from '@/lib/listing-invitation';
+
+test('location choices are explicit and a public visiting address needs street, city and state', () => {
+  for (const mode of ['storefront', 'online', 'mobile']) {
+    assert.equal(isListingLocationMode(mode), true);
+  }
+  for (const mode of [undefined, null, '', 'keep', 'public', true, {}]) {
+    assert.equal(isListingLocationMode(mode), false);
+  }
+  const address = {
+    street1: '123 Synthetic Street',
+    city: 'Miami',
+    state: 'FL',
+  };
+  assert.equal(publicVisitingAddressIssue(address), null);
+  for (const field of ['street1', 'city', 'state'] as const) {
+    for (const value of ['', ' \t ', null, undefined, 123, {}]) {
+      assert.equal(
+        publicVisitingAddressIssue({ ...address, [field]: value })?.field,
+        field
+      );
+    }
+  }
+});
 
 test('listing entry, review and editor destinations carry only the explicitly selected profile ID', () => {
   const id = 'public-id /?&';

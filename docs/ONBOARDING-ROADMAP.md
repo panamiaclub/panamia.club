@@ -112,17 +112,23 @@ The journey does not switch the active-profile cookie.
 Existing information is prefilled and omitted values are preserved. Every
 business must provide a real, recognized five-digit US ZIP to complete its
 listing review, including online-only and mobile/appointment-based businesses.
-ZIP+4 is normalized to its first five digits, preserving leading zeros. A
-street or home address is never required. A missing, invalid or not-yet-verified
-saved ZIP opens the required ZIP form directly, with **Save ZIP and continue**
-and no **Keep current location details** choice. Other location choices are
-optional: saving only the ZIP preserves the existing online flag, public
-address/point and service counties. A verified saved ZIP still allows keeping
-current location details unchanged; editing that ZIP changes the action to
-**Save ZIP and continue** until it matches the verified saved ZIP again. Missing
-location is not classified as online-only. Owners may keep a confirmed public
-visiting address/point, use just a ZIP, choose an online base ZIP, or remove a
-previous address/point for a mobile business without marking it online-only.
+ZIP+4 is normalized to its first five digits, preserving leading zeros. Location
+asks how people can find the business before showing the corresponding fields.
+**Public visiting address** requires a public street address, city, state and
+recognized ZIP; an exact map point remains optional. **Online** and
+**Mobile or by appointment** ask only for a recognized business base ZIP, never
+a street, private home address or exact point. A missing, invalid or
+not-yet-verified saved ZIP leaves all location choices unselected and offers no
+**Keep current location details** shortcut. Keyboard focus alone does not choose
+a mode. A verified saved ZIP still allows keeping current details unchanged,
+including legacy ZIP-only or public-point locations.
+
+Selecting a mode changes only the form until an explicit save. Online/mobile
+saves clear previous street/exact-point data while preserving unrelated service
+counties and profile fields; mobile does not mark the business online-only.
+Returning to a public visiting address never restores a legacy online row's
+hidden street or exact point without explicit entry. Missing location is not
+classified as online-only.
 Without a visiting address, a ZIP is an approximate base area, not directions,
 a service/delivery boundary or an exact street point. ZIP validation and
 street/point privacy use the existing address API and verified ZIP cache.
@@ -243,7 +249,8 @@ and completes the current cycle atomically with cancellation of pending
 reminders. Merely opening `?complete=1`, signing in, claiming, or saving one
 section does not confirm the review. Existing values can be left unchanged
 when the business already has a verified US ZIP. Otherwise, add a real ZIP in
-Location before confirming; online and mobile businesses are not exempt.
+Location before confirming; online and mobile businesses are not exempt. Choose
+the public visiting-address form or the ZIP-only online/mobile form as appropriate.
 Never guess a ZIP or provide a private home address.
 
 Unclaimed businesses receive fresh seven-day inbox invitations in reminders.

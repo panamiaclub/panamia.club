@@ -273,8 +273,9 @@ function ClaimStartContent() {
                     <p className="bg-pana-flame/10 rounded-xl p-3 text-sm font-semibold">
                       A ZIP has not been added yet. Every business needs a valid
                       five-digit US ZIP to complete its listing review,
-                      including online and mobile services. A street or home
-                      address is not required.
+                      including online and mobile services. Choose a public
+                      visiting address, or a ZIP-only base for an online or
+                      mobile business. Never enter a private home address.
                     </p>
                   )}
                   {message && (
