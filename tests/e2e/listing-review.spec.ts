@@ -1,5 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import {
+  normalizeUsZip,
+  readOnlineZipArea,
+  withOnlineZipArea,
+  US_ZIP_REQUIRED_MESSAGE,
+  type OnlineZipArea,
+} from '@/lib/online-zip';
 
 const listingId = 'public-business-id';
 const accountEmail = 'ana@personal.test';
@@ -24,6 +31,24 @@ const image = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a0u8AAAAASUVORK5CYII=',
   'base64'
 );
+const zipAreas: Record<string, OnlineZipArea> = {
+  '33138': {
+    postalCode: '33138',
+    country: 'US',
+    city: 'Miami',
+    region: 'FL',
+    lat: 25.8521,
+    lng: -80.1821,
+  },
+  '00501': {
+    postalCode: '00501',
+    country: 'US',
+    city: 'Holtsville',
+    region: 'NY',
+    lat: 40.8154,
+    lng: -73.0451,
+  },
+};
 
 test('listing proof HTTP responses preserve no-referrer through the production proxy', async ({
   request,
@@ -69,6 +94,9 @@ async function fixtures(
     uploadFailure?: boolean;
     staffSuspended?: boolean;
     admin?: boolean;
+    zip?: string | null;
+    verifiedZip?: boolean;
+    zipLookupUnavailable?: boolean;
   } = {}
 ) {
   let signedIn = options.signedIn === true;
@@ -85,6 +113,8 @@ async function fixtures(
   let currentAccountEmail = accountEmail;
   let switchOnAccept = options.accountChangesOnAccept === true;
   let reviewStateFailure = options.reviewStateFailure === true;
+  let zipLookupUnavailable = options.zipLookupUnavailable === true;
+  const savedZip = options.zip === undefined ? '33138' : options.zip;
   let used = false;
   const signIns: Record<string, unknown>[] = [];
   const claims: string[] = [];
@@ -139,7 +169,12 @@ async function fixtures(
       gallery1CDN: 'https://files.test.invalid/gallery.png',
     },
     onlineOnly: false,
-    addressPostalCode: null,
+    addressPostalCode: savedZip,
+    addressCountry: 'US',
+    geo:
+      options.verifiedZip !== false && savedZip && zipAreas[savedZip]
+        ? { zipArea: zipAreas[savedZip] }
+        : null,
     addressLine1: options.hasAddress ? 'An old visiting address' : null,
     addressLocality: null,
     addressRegion: null,
@@ -256,6 +291,13 @@ async function fixtures(
                 ? 'second-business'
                 : listingId,
               lastReviewedAt: profile.lastReviewedAt,
+              zipVerified: Boolean(
+                readOnlineZipArea(
+                  profile.geo,
+                  profile.addressPostalCode,
+                  profile.addressCountry
+                )
+              ),
               remindersOptedOut,
               cycle: reviewCycle,
             },
@@ -280,9 +322,33 @@ async function fixtures(
             },
           });
         } else if (body.action === 'confirm' && body.confirmed === true) {
+          const zip = normalizeUsZip(profile.addressPostalCode);
+          const stored = readOnlineZipArea(
+            profile.geo,
+            zip,
+            profile.addressCountry
+          );
+          if (!zip || !zipAreas[zip] || (!stored && zipLookupUnavailable)) {
+            await route.fulfill({
+              status: zip && zipAreas[zip] && zipLookupUnavailable ? 503 : 400,
+              json: {
+                success: false,
+                error: !zip
+                  ? US_ZIP_REQUIRED_MESSAGE
+                  : zipLookupUnavailable && zipAreas[zip]
+                    ? 'ZIP location lookup is temporarily unavailable. Please try again.'
+                    : 'We could not recognize that US ZIP. Check the code and try again.',
+                field: 'zipcode',
+                step: 'address',
+              },
+            });
+            return;
+          }
           const restored =
             options.refreshState === 'paused' && !options.staffSuspended;
           profile.lastReviewedAt = new Date().toISOString();
+          profile.addressPostalCode = zip;
+          profile.geo = withOnlineZipArea(profile.geo, zipAreas[zip]);
           if (restored) profile.active = true;
           reviewCycle = null;
           await route.fulfill({
@@ -566,7 +632,7 @@ async function fixtures(
             imageUrl: 'https://files.test.invalid/old-logo.png',
             publicPath: `/listings/${listingId}`,
             locationLabel: 'Location not added yet',
-            missingLocation: true,
+            missingLocation: !normalizeUsZip(profile.addressPostalCode),
             canManage: signedIn && owned && accountId === 'review-account',
             claimable: !owned && !options.otherOwner,
             published:
@@ -660,6 +726,8 @@ async function fixtures(
           json: {
             success: false,
             error: 'ZIP location lookup is temporarily unavailable.',
+            field: 'zipcode',
+            step: 'address',
           },
         });
         return;
@@ -694,20 +762,64 @@ async function fixtures(
       } else if (path === '/api/profile/saveAddress') {
         const address = body.primary_address as
           Record<string, unknown> | undefined;
-        if (address && 'zipcode' in address)
-          profile.addressPostalCode = address.zipcode;
+        const zip = normalizeUsZip(
+          address && 'zipcode' in address
+            ? address.zipcode
+            : profile.addressPostalCode
+        );
+        const online =
+          'online_only' in body ? body.online_only : profile.onlineOnly;
+        const scoped = url.searchParams.has('listingId');
+        const stored = readOnlineZipArea(
+          profile.geo,
+          zip,
+          profile.addressCountry
+        );
+        if (
+          (scoped || online === true) &&
+          (!zip || !zipAreas[zip] || (!stored && zipLookupUnavailable))
+        ) {
+          await route.fulfill({
+            status: zip && zipAreas[zip] && zipLookupUnavailable ? 503 : 400,
+            json: {
+              success: false,
+              error: !zip
+                ? US_ZIP_REQUIRED_MESSAGE
+                : zipLookupUnavailable && zipAreas[zip]
+                  ? 'ZIP location lookup is temporarily unavailable. Please try again.'
+                  : 'We could not recognize that US ZIP. Check the code and try again.',
+              field: 'zipcode',
+              step: 'address',
+            },
+          });
+          return;
+        }
+        if (address && 'zipcode' in address) profile.addressPostalCode = zip;
         if (address && 'street1' in address)
           profile.addressLine1 = address.street1;
         if (address && 'city' in address)
           profile.addressLocality = address.city;
         if (address && 'state' in address)
           profile.addressRegion = address.state;
+        for (const [field, column] of [
+          ['lat', 'addressLat'],
+          ['lng', 'addressLng'],
+          ['googlePlaceId', 'addressGooglePlaceId'],
+        ]) {
+          if (address && field in address)
+            profile[column] = address[field] || null;
+        }
+        if (address && 'lat' in address && 'lng' in address) profile.geo = null;
+        if ('counties' in body) profile.counties = body.counties;
         if ('online_only' in body) profile.onlineOnly = body.online_only;
         if (profile.onlineOnly === true) {
           profile.addressLine1 = null;
           profile.addressLat = null;
           profile.addressLng = null;
+          profile.geo = null;
         }
+        if (zip && zipAreas[zip])
+          profile.geo = withOnlineZipArea(profile.geo, zipAreas[zip]);
       }
       await route.fulfill({ json: { success: true } });
     } else if (path === '/api/profile/upload') {
@@ -759,6 +871,9 @@ async function fixtures(
     },
     restoreReviewStatus() {
       reviewStateFailure = false;
+    },
+    restoreZipLookup() {
+      zipLookupUnavailable = false;
     },
   };
 }
@@ -819,7 +934,7 @@ async function confirmReview(page: Page) {
 test('anonymous entry, Pana sign-in, explicit verification and all prefilled review steps stay on the exact business', async ({
   page,
 }) => {
-  const fixture = await fixtures(page, { newAccount: true });
+  const fixture = await fixtures(page, { newAccount: true, zip: null });
   await page.goto(entryPath);
   await expect(
     page.getByRole('heading', { name: 'Review and claim your listing' })
@@ -907,7 +1022,9 @@ test('anonymous entry, Pana sign-in, explicit verification and all prefilled rev
       exact: true,
     })
     .click();
-  await page.getByLabel('ZIP code', { exact: true }).fill('33138');
+  await page
+    .getByRole('textbox', { name: 'ZIP code', exact: true })
+    .fill('33138');
   await page.getByLabel('City', { exact: true }).fill('Miami');
   await page.getByLabel('State', { exact: true }).fill('FL');
   await page
@@ -1109,30 +1226,112 @@ test('untouched descriptions, categories and private contact stay unchanged and 
   });
 });
 
-test('missing location can be left unconfirmed without inventing a ZIP or online-only choice', async ({
-  page,
-}) => {
-  const fixture = await fixtures(page, { signedIn: true, owned: true });
-  await page.goto(`/account/profile/address?listingId=${listingId}`);
-  await expect(
-    page.getByRole('radio', {
-      name: 'Keep current location details for now',
+for (const [mode, label] of [
+  ['keep', 'Keep current location details for now'],
+  ['storefront', 'Public visiting address or ZIP area'],
+  ['online', 'Online business, without a public storefront'],
+  ['mobile', 'Mobile or by appointment, without a public address'],
+] as const) {
+  test(`Location requires a recognized ZIP for ${mode}, preserves privacy and accepts leading-zero ZIP+4 without a street address`, async ({
+    page,
+  }) => {
+    const fixture = await fixtures(page, {
+      signedIn: true,
+      owned: true,
+      hasAddress: true,
+      zip: null,
+    });
+    const before = structuredClone(fixture.profile);
+    await page.goto(locationPath);
+    await page.getByRole('radio', { name: label, exact: true }).click();
+    const zip = page.getByRole('textbox', {
+      name:
+        mode === 'online' || mode === 'mobile'
+          ? 'Business base ZIP code'
+          : 'ZIP code',
       exact: true,
-    })
-  ).toBeChecked();
-  await page
-    .getByRole('button', {
-      name: 'Keep location and continue',
+    });
+    const next = page.getByRole('button', {
+      name:
+        mode === 'keep' ? 'Keep location and continue' : 'Save and continue',
       exact: true,
-    })
-    .click();
-  await expect(
-    page.getByLabel('About this business', { exact: true })
-  ).toBeVisible();
-  expect(fixture.writes).toHaveLength(0);
-  expect(fixture.profile.addressPostalCode).toBeNull();
-  expect(fixture.profile.onlineOnly).toBe(false);
-});
+    });
+    await expect(zip).toBeVisible();
+    await expect(zip).toHaveAttribute('required', '');
+    await expect(zip).toHaveAttribute('aria-describedby', 'base-zip-note');
+    if (mode !== 'storefront') {
+      await expect(page.getByLabel('Street 1', { exact: true })).toBeHidden();
+      await expect(page.getByLabel('Latitude', { exact: true })).toBeHidden();
+    } else {
+      await expect(
+        page.getByLabel('Street 1', { exact: true })
+      ).not.toHaveAttribute('required');
+    }
+    for (const invalid of ['', 'bad', '1234', '331380']) {
+      await zip.fill(invalid);
+      await next.click();
+      await expect(page.locator('#zipcode-error')).toHaveText(
+        US_ZIP_REQUIRED_MESSAGE
+      );
+      await expect(zip).toBeFocused();
+      await expect(zip).toHaveAttribute('aria-invalid', 'true');
+      expect(fixture.writes).toHaveLength(0);
+    }
+    await zip.fill('00000');
+    await next.click();
+    await expect(page.locator('#address-save-error')).toContainText(
+      'could not recognize that US ZIP'
+    );
+    await expect(zip).toHaveAttribute('aria-invalid', 'true');
+    expect(fixture.profile).toEqual(before);
+    await zip.fill('00501-1234');
+    await next.click();
+    await expectWizard(page, 2);
+    expect(fixture.profile.addressPostalCode).toBe('00501');
+    expect(fixture.profile.onlineOnly).toBe(mode === 'online');
+    expect(fixture.profile.counties).toEqual(before.counties);
+    expect(fixture.profile.addressLine1).toBe(
+      mode === 'online' ? null : mode === 'mobile' ? '' : before.addressLine1
+    );
+    expect(fixture.profile.addressLat).toBe(
+      mode === 'online' || mode === 'mobile' ? null : before.addressLat
+    );
+    expect(fixture.reviewConfirmations).toHaveLength(0);
+    expect(fixture.switches).toHaveLength(0);
+    if (mode === 'keep') {
+      expect(fixture.writes.at(-1)?.body).toEqual({
+        primary_address: { zipcode: '00501' },
+      });
+    }
+  });
+}
+
+for (const online of [false, true]) {
+  test(`keeping a verified ZIP is a no-op and preserves the online choice (${online})`, async ({
+    page,
+  }) => {
+    const fixture = await fixtures(page, { signedIn: true, owned: true });
+    fixture.profile.onlineOnly = online;
+    const before = structuredClone(fixture.profile);
+    await page.goto(locationPath);
+    await page
+      .getByRole('radio', {
+        name: 'Keep current location details for now',
+        exact: true,
+      })
+      .click();
+    await expect(page.locator('#zipcode')).toHaveValue('33138');
+    await page
+      .getByRole('button', {
+        name: 'Keep location and continue',
+        exact: true,
+      })
+      .click();
+    await expectWizard(page, 2);
+    expect(fixture.writes).toHaveLength(0);
+    expect(fixture.profile).toEqual(before);
+  });
+}
 
 test('an unpublished business stays manageable without offering a broken public listing destination', async ({
   page,
@@ -1179,6 +1378,7 @@ test('online location uses the existing ZIP validation and does not submit a pre
     signedIn: true,
     owned: true,
     hasAddress: true,
+    zip: null,
   });
   await page.goto(`/account/profile/address?listingId=${listingId}`);
   await page
@@ -1211,13 +1411,14 @@ test('online location uses the existing ZIP validation and does not submit a pre
   expect(fixture.profile.addressLat).toBeNull();
 });
 
-test('mobile confirmation explicitly clears a previous public address without requiring a ZIP', async ({
+test('mobile location keeps the required ZIP while explicitly clearing a previous public address', async ({
   page,
 }) => {
   const fixture = await fixtures(page, {
     signedIn: true,
     owned: true,
     hasAddress: true,
+    zip: null,
   });
   await page.goto(`/account/profile/address?listingId=${listingId}`);
   await page
@@ -1227,6 +1428,7 @@ test('mobile confirmation explicitly clears a previous public address without re
     })
     .click();
   await expect(page.getByLabel('Street 1', { exact: true })).toBeHidden();
+  await page.getByLabel('Business base ZIP code').fill('33138');
   await page
     .getByRole('button', { name: 'Save and continue', exact: true })
     .click();
@@ -1237,7 +1439,7 @@ test('mobile confirmation explicitly clears a previous public address without re
     online_only: false,
     primary_address: {
       street1: '',
-      zipcode: '',
+      zipcode: '33138',
       lat: '',
       lng: '',
       googlePlaceId: '',
@@ -1252,6 +1454,7 @@ test('a failed location save stays on the form and explains the failure', async 
     signedIn: true,
     owned: true,
     addressFailure: true,
+    zip: null,
   });
   await page.goto(`/account/profile/address?listingId=${listingId}`);
   await page
@@ -1854,7 +2057,224 @@ test('finishing steps or adding completion query parameters does not confirm an 
   ]);
 });
 
-test('an overdue owner reviews the exact business and explicitly restores it without adding a ZIP or changing their login', async ({
+test('a skipped Location step and old confirmation flags cannot restore an overdue admin-owned listing without a ZIP', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    admin: true,
+    refreshState: 'paused',
+    zip: null,
+  });
+  fixture.profile.lastReviewedAt = '2025-01-01T00:00:00Z';
+  const before = structuredClone(fixture.profile);
+  await page.goto(`${reviewPath}&complete=1&confirmed=1`);
+  await expect(
+    page.getByRole('heading', {
+      name: 'Confirm your listing information',
+      exact: true,
+    })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      name: 'Your review is complete',
+      exact: true,
+    })
+  ).toHaveCount(0);
+  await page
+    .getByRole('checkbox', { name: /I reviewed this business/ })
+    .check();
+  await page
+    .getByRole('button', {
+      name: 'Confirm business information',
+      exact: true,
+    })
+    .click();
+  await expect(page.getByRole('alert')).toHaveText(US_ZIP_REQUIRED_MESSAGE);
+  expect(fixture.profile).toEqual(before);
+  const location = page.getByRole('link', {
+    name: 'Add or check ZIP in Location',
+    exact: true,
+  });
+  await expect(location).toHaveAttribute('href', locationPath);
+  await location.click();
+  await expectWizard(page, 1);
+  await expect(page.getByLabel('Street 1', { exact: true })).toBeHidden();
+  await page.locator('#zipcode').fill('33138');
+  await page
+    .getByRole('button', {
+      name: 'Keep location and continue',
+      exact: true,
+    })
+    .click();
+  await expectWizard(page, 2);
+  expect(fixture.profile.active).toBe(false);
+  expect(fixture.profile.lastReviewedAt).toBe(before.lastReviewedAt);
+  expect(fixture.profile.onlineOnly).toBe(false);
+  expect(fixture.profile.counties).toEqual(before.counties);
+  await page.getByRole('link', { name: '6. Photos', exact: true }).click();
+  await page
+    .getByRole('button', {
+      name: 'Continue to confirmation',
+      exact: true,
+    })
+    .click();
+  await confirmReview(page);
+  expect(fixture.profile.active).toBe(true);
+  expect(fixture.profile.lastReviewedAt).not.toBe(before.lastReviewedAt);
+  expect(fixture.profile.email).toBe(businessEmail);
+  expect(fixture.switches).toHaveLength(0);
+  expect(fixture.reviewConfirmations).toHaveLength(2);
+});
+
+test('final confirmation checks the current saved ZIP even after a valid Location and review state were loaded', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    refreshState: 'active',
+  });
+  await page.goto(`${reviewPath}&complete=1`);
+  await expect(
+    page.getByRole('heading', {
+      name: 'Confirm your listing information',
+      exact: true,
+    })
+  ).toBeVisible();
+  fixture.profile.addressPostalCode = '00000';
+  await page
+    .getByRole('checkbox', { name: /I reviewed this business/ })
+    .check();
+  await page
+    .getByRole('button', {
+      name: 'Confirm business information',
+      exact: true,
+    })
+    .click();
+  await expect(page.getByRole('alert')).toContainText(
+    'could not recognize that US ZIP'
+  );
+  await expect(
+    page.getByRole('link', {
+      name: 'Add or check ZIP in Location',
+      exact: true,
+    })
+  ).toHaveAttribute('href', locationPath);
+  expect(fixture.profile.lastReviewedAt).toBeNull();
+  expect(fixture.profile.active).toBe(true);
+  await expect(
+    page.getByRole('heading', {
+      name: 'Your review is complete',
+      exact: true,
+    })
+  ).toHaveCount(0);
+});
+
+test('a final ZIP lookup outage remains retryable without completing or restoring the listing', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    refreshState: 'paused',
+    verifiedZip: false,
+    zipLookupUnavailable: true,
+  });
+  const before = structuredClone(fixture.profile);
+  await page.goto(`${reviewPath}&complete=1`);
+  await page
+    .getByRole('checkbox', { name: /I reviewed this business/ })
+    .check();
+  await page
+    .getByRole('button', {
+      name: 'Confirm business information',
+      exact: true,
+    })
+    .click();
+  await expect(page.getByRole('alert')).toContainText(
+    'temporarily unavailable. Please try again.'
+  );
+  expect(fixture.profile).toEqual(before);
+  await expect(
+    page.getByRole('link', {
+      name: 'Add or check ZIP in Location',
+      exact: true,
+    })
+  ).toHaveAttribute('href', locationPath);
+  fixture.restoreZipLookup();
+  await confirmReview(page);
+  expect(fixture.profile.active).toBe(true);
+  expect(fixture.profile.addressPostalCode).toBe('33138');
+  expect(fixture.writes).toHaveLength(0);
+  expect(fixture.reviewConfirmations).toHaveLength(2);
+});
+
+test('keeping a public visiting point without a street does not relabel or remove it as an approximate ZIP location', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    hasAddress: true,
+  });
+  fixture.profile.addressLine1 = null;
+  await page.goto(locationPath);
+  await page
+    .getByRole('radio', {
+      name: 'Keep current location details for now',
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole('button', {
+      name: 'Keep location and continue',
+      exact: true,
+    })
+    .click();
+  await expectWizard(page, 2);
+  await page.goto(`${reviewPath}&complete=1`);
+  await expect(
+    page.getByText('Public visiting map point near ZIP 33138 (unchanged)', {
+      exact: true,
+    })
+  ).toBeVisible();
+  expect(fixture.profile.addressLat).toBe('25.8');
+  expect(fixture.profile.addressLng).toBe('-80.2');
+  expect(fixture.writes).toHaveLength(0);
+  expect(fixture.profile.onlineOnly).toBe(false);
+});
+
+test('a prefilled unverified ZIP+4 is normalized when keeping other location details', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    zip: '00501-1234',
+    verifiedZip: false,
+  });
+  const before = structuredClone(fixture.profile);
+  await page.goto(locationPath);
+  await expect(page.locator('#zipcode')).toHaveValue('00501-1234');
+  await page
+    .getByRole('button', {
+      name: 'Keep location and continue',
+      exact: true,
+    })
+    .click();
+  await expectWizard(page, 2);
+  expect(fixture.writes[0].body).toEqual({
+    primary_address: { zipcode: '00501' },
+  });
+  expect(fixture.profile.counties).toEqual(before.counties);
+  expect(fixture.profile.onlineOnly).toBe(false);
+  expect(fixture.profile.addressLine1).toBeNull();
+  expect(fixture.profile.addressLat).toBeNull();
+});
+
+test('an overdue owner with a verified ZIP explicitly restores only the exact business without changing their login', async ({
   page,
 }) => {
   const fixture = await fixtures(page, {
@@ -1876,7 +2296,7 @@ test('an overdue owner reviews the exact business and explicitly restores it wit
     page.getByRole('link', { name: 'View updated listing', exact: true })
   ).toHaveAttribute('href', `/listings/${listingId}`);
   expect(fixture.profile.active).toBe(true);
-  expect(fixture.profile.addressPostalCode).toBeNull();
+  expect(fixture.profile.addressPostalCode).toBe('33138');
   expect(fixture.profile.email).toBe(businessEmail);
   expect(fixture.switches).toHaveLength(0);
 });
@@ -2316,7 +2736,7 @@ test('a held cycle stays visible throughout the wizard and ends only with explic
   await confirmReview(page);
   expect(fixture.reviewConfirmations[0].cycleId).toBe('review-cycle');
   expect(fixture.profile.active).toBe(true);
-  expect(fixture.profile.addressPostalCode).toBeNull();
+  expect(fixture.profile.addressPostalCode).toBe('33138');
   expect(fixture.writes).toHaveLength(0);
 });
 
@@ -2343,6 +2763,7 @@ test('multiple managed business tabs and saves keep their own scope without chan
         json: {
           profileId: otherId,
           lastReviewedAt: null,
+          zipVerified: true,
           remindersOptedOut: false,
           cycle: null,
         },
@@ -2384,6 +2805,53 @@ test('multiple managed business tabs and saves keep their own scope without chan
   ]);
   expect(fixture.writes).toHaveLength(0);
   expect(fixture.switches).toHaveLength(0);
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+});
+
+test('the ordinary personal address editor can still save without a ZIP', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { signedIn: true, owned: true });
+  const business = structuredClone(fixture.profile);
+  const personalProfile = {
+    ...fixture.profile,
+    id: 'personal-id',
+    userId: 'review-account',
+    name: 'Ana Person',
+    email: accountEmail,
+    addressPostalCode: null,
+    geo: null,
+  };
+  const writes: Array<{ url: string; body: Record<string, unknown> }> = [];
+  await page.route(
+    (url) =>
+      url.pathname === '/api/getProfile' && !url.searchParams.has('listingId'),
+    (route) => route.fulfill({ json: { success: true, data: personalProfile } })
+  );
+  await page.route('**/api/profile/saveAddress', async (route) => {
+    writes.push({
+      url: route.request().url(),
+      body: route.request().postDataJSON(),
+    });
+    await route.fulfill({ json: { success: true } });
+  });
+  await page.goto('/account/profile/address');
+  await expect(
+    page.getByRole('heading', {
+      name: 'Profile - Edit Address and Geolocation',
+      exact: true,
+    })
+  ).toBeVisible();
+  await expect(page.locator('#zipcode')).toHaveValue('');
+  await expect(page.locator('#zipcode')).not.toHaveAttribute('required');
+  await page.getByRole('button', { name: 'Save Changes', exact: true }).click();
+  await expect(
+    page.getByText('Profile updated successfully!', { exact: true }).first()
+  ).toBeVisible();
+  expect(writes).toHaveLength(1);
+  expect(new URL(writes[0].url).searchParams.has('listingId')).toBe(false);
+  expect(writes[0].body.primary_address).toMatchObject({ zipcode: '' });
+  expect(fixture.profile).toEqual(business);
   expect(fixture.reviewConfirmations).toHaveLength(0);
 });
 

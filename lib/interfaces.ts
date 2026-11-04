@@ -170,6 +170,7 @@ export interface ProfileInterface {
   addressLocality?: string | null;
   addressRegion?: string | null;
   addressPostalCode?: string | null;
+  addressCountry?: string | null;
   addressHours?: string | null;
   addressLat?: string | null;
   addressLng?: string | null;

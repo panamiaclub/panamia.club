@@ -35,6 +35,16 @@ let onMail: (() => Promise<void>) | null = null;
 let ghlSuppressed = false;
 let ghlFails = false;
 let activeId = personalId;
+let zipUnavailable = false;
+const zipLookups: string[] = [];
+const zipArea = {
+  postalCode: '33138',
+  country: 'US',
+  city: 'Miami',
+  region: 'FL',
+  lat: 25.8521,
+  lng: -80.1821,
+};
 const emails: {
   template: string;
   variables: Record<string, unknown>;
@@ -101,6 +111,24 @@ mock.module(import.meta.resolve('../lib/federation/wrappers/actor.ts'), {
   namedExports: { ensureActorForProfile: async () => {} },
 });
 mock.method(globalThis, 'fetch', async (input: RequestInfo | URL) => {
+  const url = String(input);
+  if (/^https:\/\/api\.zippopotam\.us\/us\/\d{5}$/.test(url)) {
+    zipLookups.push(url);
+    if (zipUnavailable) return new Response('', { status: 503 });
+    if (!url.endsWith('/33138')) return new Response('', { status: 404 });
+    return Response.json({
+      'post code': '33138',
+      'country abbreviation': 'US',
+      places: [
+        {
+          'place name': zipArea.city,
+          'state abbreviation': zipArea.region,
+          latitude: String(zipArea.lat),
+          longitude: String(zipArea.lng),
+        },
+      ],
+    });
+  }
   throw new Error(
     `Unexpected network request in isolated test: ${String(input)}`
   );
@@ -238,6 +266,9 @@ beforeEach(async () => {
       descriptions: { details: 'Our existing business information' },
       addressLat: '25.8',
       addressLng: '-80.2',
+      addressPostalCode: '33138',
+      addressCountry: 'US',
+      geo: { zipArea },
       primaryImageCdn: 'https://files.test.invalid/logo.png',
       phoneNumber: 'private-business-phone',
     },
@@ -262,6 +293,8 @@ beforeEach(async () => {
   ghlSuppressed = false;
   ghlFails = false;
   activeId = personalId;
+  zipUnavailable = false;
+  zipLookups.length = 0;
   emails.length = 0;
   invalidated.length = 0;
 });
@@ -619,7 +652,7 @@ test('a paused unclaimed business can securely claim and confirm later, without 
   assert.equal((await response.json()).restored, true);
   assert.equal((await row())?.active, true);
   assert.equal((await row())?.lastReviewedAt?.getTime(), Date.now());
-  assert.equal((await row())?.addressPostalCode, null);
+  assert.equal((await row())?.addressPostalCode, '33138');
   assert.equal((await row())?.onlineOnly, false);
   assert.equal((await row())?.email, businessEmail);
   assert.equal((await row())?.userId, null);
@@ -638,7 +671,7 @@ test('a paused unclaimed business can securely claim and confirm later, without 
   );
 });
 
-test('an authorized confirmation stops all future reminders without requiring edits or location data', async (t) => {
+test('an authorized confirmation with an existing verified ZIP stops future reminders without requiring edits or a street address', async (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: start });
   await own();
   const id = await enroll();
@@ -653,13 +686,106 @@ test('an authorized confirmation stops all future reminders without requiring ed
   assert.equal(response.status, 200);
   const afterReview = await row();
   assert.deepEqual(afterReview?.descriptions, before?.descriptions);
-  assert.equal(afterReview?.addressPostalCode, null);
+  assert.equal(afterReview?.addressPostalCode, '33138');
+  assert.equal(zipLookups.length, 0);
   assert.equal(afterReview?.active, true);
   t.mock.timers.tick(90 * 86_400_000);
   await job.runListingRefreshes();
   assert.equal(notices().length, 1);
   assert.equal((await cycle())?.state, 'completed');
   assert.equal((await row())?.active, true);
+});
+
+test('missing ZIP alone never enrolls, emails or hides an existing published business', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: start });
+  await db
+    .update(schema.profiles)
+    .set({
+      addressPostalCode: null,
+      geo: null,
+    })
+    .where(eq(schema.profiles.id, businessId));
+  const before = await row();
+  t.mock.timers.tick(90 * 86_400_000);
+  await job.runListingRefreshes();
+  assert.deepEqual(await row(), before);
+  assert.equal((await db.select().from(schema.listingRefreshCycles)).length, 0);
+  assert.equal(emails.length, 0);
+  assert.equal(zipLookups.length, 0);
+  assert.equal(
+    (await publicProfiles.getPublicListing(businessId))?.id,
+    businessId
+  );
+});
+
+test('ZIP failures cannot complete open cycles, cancel pending deliveries, change opt-out policy or restore an overdue listing', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: start });
+  await own();
+  const id = await enroll();
+  await tickThroughReminders(t);
+  t.mock.timers.tick(2 * 86_400_000);
+  await job.runListingRefreshes();
+  assert.equal((await cycle())?.state, 'paused');
+  assert.equal((await row())?.active, false);
+  const pending = await db.query.listingRefreshDeliveries.findFirst({
+    where: eq(schema.listingRefreshDeliveries.cycleId, id),
+  });
+  assert.ok(pending);
+  await db
+    .update(schema.listingRefreshDeliveries)
+    .set({
+      status: 'sending',
+      sentAt: null,
+    })
+    .where(eq(schema.listingRefreshDeliveries.id, pending.id));
+  for (const state of ['queued', 'active', 'held', 'paused'] as const) {
+    await db
+      .update(schema.listingRefreshCycles)
+      .set({ state })
+      .where(eq(schema.listingRefreshCycles.id, id));
+    for (const zipcode of [null, 'bad-zip', '00000', '33138']) {
+      await db
+        .update(schema.profiles)
+        .set({
+          addressPostalCode: zipcode,
+          geo: null,
+        })
+        .where(eq(schema.profiles.id, businessId));
+      zipUnavailable = zipcode === '33138';
+      const before = await row();
+      const beforeCycle = await cycle();
+      const beforeDeliveries = await db
+        .select()
+        .from(schema.listingRefreshDeliveries);
+      const beforeEmails = emails.length;
+      const beforeInvalidations = invalidated.length;
+      const response = await confirm(id);
+      assert.equal(response.status, zipUnavailable ? 503 : 400);
+      const error = await response.json();
+      assert.equal(error.field, 'zipcode');
+      assert.equal(error.step, 'address');
+      assert.deepEqual(await row(), before);
+      assert.deepEqual(await cycle(), beforeCycle);
+      assert.deepEqual(
+        await db.select().from(schema.listingRefreshDeliveries),
+        beforeDeliveries
+      );
+      assert.equal(emails.length, beforeEmails);
+      assert.equal(invalidated.length, beforeInvalidations);
+    }
+  }
+  zipUnavailable = false;
+  assert.equal((await confirm(id)).status, 200);
+  assert.equal((await cycle())?.state, 'completed');
+  assert.equal((await row())?.active, true);
+  assert.equal(
+    (
+      await db.query.listingRefreshDeliveries.findFirst({
+        where: eq(schema.listingRefreshDeliveries.id, pending.id),
+      })
+    )?.status,
+    'cancelled'
+  );
 });
 
 test('missing confirmation, wrong listing, wrong account and stale cycles cannot stop reminders or overwrite a personal identity', async () => {

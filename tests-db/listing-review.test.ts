@@ -43,6 +43,25 @@ const uploaded: string[] = [];
 const deleted: string[] = [];
 const preparedActors: string[] = [];
 const invalidated: string[] = [];
+const zipLookups: string[] = [];
+const zipAreas = {
+  '33138': {
+    postalCode: '33138',
+    country: 'US',
+    city: 'Miami',
+    region: 'FL',
+    lat: 25.8521,
+    lng: -80.1821,
+  },
+  '00501': {
+    postalCode: '00501',
+    country: 'US',
+    city: 'Holtsville',
+    region: 'NY',
+    lat: 40.8154,
+    lng: -73.0451,
+  },
+} as const;
 
 mock.module(import.meta.resolve('../lib/db.ts'), { namedExports: { db } });
 mock.module(import.meta.resolve('../auth.ts'), {
@@ -99,16 +118,20 @@ mock.module(import.meta.resolve('../lib/blob/api.ts'), {
 mock.method(globalThis, 'fetch', async (input: RequestInfo | URL) => {
   const url = String(input);
   assert.match(url, /^https:\/\/api\.zippopotam\.us\/us\/\d{5}$/);
+  zipLookups.push(url);
   if (zipUnavailable) return new Response('', { status: 503 });
+  const zip = url.slice(-5);
+  const area = zipAreas[zip as keyof typeof zipAreas];
+  if (!area) return new Response('', { status: 404 });
   return Response.json({
-    'post code': '33138',
+    'post code': area.postalCode,
     'country abbreviation': 'US',
     places: [
       {
-        'place name': 'Miami',
-        'state abbreviation': 'FL',
-        latitude: '25.8521',
-        longitude: '-80.1821',
+        'place name': area.city,
+        'state abbreviation': area.region,
+        latitude: String(area.lat),
+        longitude: String(area.lng),
       },
     ],
   });
@@ -261,6 +284,7 @@ beforeEach(async () => {
     deleted.length =
     preparedActors.length =
     invalidated.length =
+    zipLookups.length =
       0;
 });
 
@@ -295,6 +319,20 @@ async function ownListing() {
   await db
     .insert(schema.profileOwners)
     .values({ profileId: listingId, userId, role: 'owner' });
+}
+
+function confirmBusiness(overrides: Record<string, unknown> = {}) {
+  return reviewApi.POST(
+    invitationRequest('/api/listings/review', {
+      profileId: listingId,
+      cycleId: null,
+      action: 'confirm',
+      confirmed: true,
+      expectedOwnerId: session?.user.id,
+      expectedOwnerEmail: session?.user.email,
+      ...overrides,
+    })
+  );
 }
 
 test('the listing-specific public entry is read-only and excludes all private contact and pending-owner fields', async () => {
@@ -858,9 +896,29 @@ test('online review retains approximate ZIP semantics and clears private street 
     503
   );
   assert.deepEqual(await getRow(listingId), before);
+  const lookups = zipLookups.length;
+  assert.equal(
+    (
+      await address.POST(
+        request(editPath('saveAddress'), {
+          online_only: false,
+          primary_address: { zipcode: '33138' },
+        })
+      )
+    ).status,
+    200
+  );
+  const visiting = await getRow(listingId);
+  assert.equal(visiting?.onlineOnly, false);
+  assert.equal(visiting?.addressLine1, null);
+  assert.equal(visiting?.addressLat, null);
+  assert.equal(visiting?.addressLng, null);
+  assert.deepEqual(visiting?.geo, { zipArea: zipAreas['33138'] });
+  assert.equal(zipLookups.length, lookups);
+  assert.equal((await publicProfiles.getPublicListing(listingId))?.geo, null);
 });
 
-test('business details remain manageable without a ZIP, and mobile confirmation removes a previous public point', async () => {
+test('business drafts remain manageable without a ZIP, but mobile review requires a ZIP while removing a previous public point', async () => {
   await ownListing();
   assert.equal(
     (
@@ -885,6 +943,19 @@ test('business details remain manageable without a ZIP, and mobile confirmation 
       geo: { type: 'Point', coordinates: [-80.2, 25.8] },
     })
     .where(eq(schema.profiles.id, listingId));
+  const before = await getRow(listingId);
+  assert.equal(
+    (
+      await address.POST(
+        request(editPath('saveAddress'), {
+          online_only: false,
+          primary_address: { street1: '', zipcode: '', lat: '', lng: '' },
+        })
+      )
+    ).status,
+    400
+  );
+  assert.deepEqual(await getRow(listingId), before);
   assert.equal(
     (
       await address.POST(
@@ -897,8 +968,8 @@ test('business details remain manageable without a ZIP, and mobile confirmation 
             street3: '',
             city: '',
             state: '',
-            zipcode: '',
-            country: '',
+            zipcode: '33138',
+            country: 'US',
             hours: '',
             googlePlaceId: '',
             lat: '',
@@ -912,11 +983,274 @@ test('business details remain manageable without a ZIP, and mobile confirmation 
   row = await getRow(listingId);
   assert.equal(row?.onlineOnly, false);
   assert.equal(row?.addressLine1, null);
-  assert.equal(row?.addressPostalCode, null);
+  assert.equal(row?.addressPostalCode, '33138');
   assert.equal(row?.addressLat, null);
   assert.equal(row?.addressLng, null);
   assert.equal(row?.addressGooglePlaceId, null);
-  assert.equal(row?.geo, null);
+  assert.deepEqual(row?.geo, { zipArea: zipAreas['33138'] });
+  assert.equal((await confirmBusiness()).status, 200);
+  assert.equal(zipLookups.length, 1);
+});
+
+test('final confirmation rejects missing, malformed, unknown and foreign ZIPs for public, online and mobile businesses, including direct owners and admin managers', async () => {
+  await ownListing();
+  await db.insert(schema.users).values({
+    id: 'direct-review-owner',
+    name: 'Direct Owner',
+    email: 'direct@personal.test.invalid',
+    accountType: 'directory',
+  });
+  const personal = await getRow(personalId);
+  const other = await getRow(secondId);
+  const accounts = await db.select().from(schema.users);
+  for (const access of ['owner-link', 'direct-owner', 'admin-manager']) {
+    session = {
+      user: {
+        id: access === 'direct-owner' ? 'direct-review-owner' : userId,
+        email:
+          access === 'direct-owner'
+            ? 'direct@personal.test.invalid'
+            : accountEmail,
+        name: 'Ana Person',
+        isAdmin: access === 'admin-manager',
+      },
+    };
+    for (const mode of ['public', 'online', 'mobile']) {
+      for (const zipcode of [
+        null,
+        '',
+        '3313',
+        '331380',
+        'not-a-zip',
+        '00000',
+      ]) {
+        await db
+          .update(schema.profiles)
+          .set({
+            userId: access === 'direct-owner' ? 'direct-review-owner' : null,
+            onlineOnly: mode === 'online',
+            addressPostalCode: zipcode,
+            addressCountry: 'US',
+            addressLine1: mode === 'public' ? 'Public visiting location' : null,
+            addressLat: mode === 'public' ? '25.8' : null,
+            addressLng: mode === 'public' ? '-80.2' : null,
+            geo: { zipArea: zipAreas['33138'] },
+          })
+          .where(eq(schema.profiles.id, listingId));
+        const before = await getRow(listingId);
+        const response = await confirmBusiness({
+          zipcode: '33138',
+          complete: true,
+          confirmedLocation: true,
+        });
+        assert.equal(response.status, 400, `${access}/${mode}/${zipcode}`);
+        const error = await response.json();
+        assert.equal(error.success, false);
+        assert.equal(error.field, 'zipcode');
+        assert.equal(error.step, 'address');
+        assert.match(error.error, /ZIP/);
+        assert.deepEqual(await getRow(listingId), before);
+      }
+    }
+  }
+  await db
+    .update(schema.profiles)
+    .set({
+      addressPostalCode: '33138',
+      addressCountry: 'CA',
+    })
+    .where(eq(schema.profiles.id, listingId));
+  assert.equal((await confirmBusiness()).status, 400);
+  assert.deepEqual(await getRow(personalId), personal);
+  assert.deepEqual(await getRow(secondId), other);
+  assert.deepEqual(await db.select().from(schema.users), accounts);
+  assert.equal((await db.select().from(schema.listingRefreshCycles)).length, 0);
+  assert.equal(
+    (await db.select().from(schema.listingRefreshDeliveries)).length,
+    0
+  );
+  assert.equal(invalidated.length, 0);
+  assert.equal(emails.length, 0);
+  assert.equal(activeId, personalId);
+});
+
+test('a ZIP-only review save normalizes ZIP+4 and leading zeros without clearing public visiting details, counties or legacy points', async () => {
+  await ownListing();
+  await db
+    .update(schema.profiles)
+    .set({
+      addressName: 'Visiting entrance',
+      addressLine1: 'A confirmed public visiting address',
+      addressLine2: 'Suite 7',
+      addressLine3: 'Courtyard',
+      addressLocality: 'Keep this city',
+      addressRegion: 'NY',
+      addressCountry: 'US',
+      addressHours: 'By appointment',
+      addressGooglePlaceId: 'public-place',
+      addressLat: '40.8',
+      addressLng: '-73.0',
+      counties: { miami_dade: true, imported: true },
+      geo: { type: 'Point', coordinates: [-73, 40.8], imported: 'preserve' },
+    })
+    .where(eq(schema.profiles.id, listingId));
+  const before = await getRow(listingId);
+  const response = await address.POST(
+    request(editPath('saveAddress'), {
+      primary_address: { zipcode: ' 00501-1234 ' },
+    })
+  );
+  assert.equal(response.status, 200);
+  const afterSave = await getRow(listingId);
+  assert.deepEqual(afterSave, {
+    ...before,
+    updatedAt: afterSave?.updatedAt,
+    addressPostalCode: '00501',
+    geo: {
+      type: 'Point',
+      coordinates: [-73, 40.8],
+      imported: 'preserve',
+      zipArea: zipAreas['00501'],
+    },
+  });
+  assert.deepEqual(zipLookups, ['https://api.zippopotam.us/us/00501']);
+  const state = await (
+    await reviewApi.GET(request(`/api/listings/review?profileId=${listingId}`))
+  ).json();
+  assert.equal(state.zipVerified, true);
+  zipUnavailable = true;
+  assert.equal((await confirmBusiness()).status, 200);
+  assert.equal((await getRow(listingId))?.addressPostalCode, '00501');
+  assert.equal(zipLookups.length, 1);
+  assert.deepEqual((await getRow(listingId))?.geo, afterSave?.geo);
+});
+
+test('review address saves reject invalid or unknown ZIPs without saving any accompanying edits', async () => {
+  await ownListing();
+  for (const online_only of [false, true]) {
+    for (const zipcode of ['', 'bad', '1234', '331380', '00000']) {
+      const before = await getRow(listingId);
+      const response = await address.POST(
+        request(editPath('saveAddress'), {
+          online_only,
+          primary_address: { zipcode, street1: 'Must not be saved' },
+          counties: { broward: true },
+        })
+      );
+      assert.equal(response.status, 400);
+      const error = await response.json();
+      assert.equal(error.field, 'zipcode');
+      assert.equal(error.step, 'address');
+      assert.deepEqual(await getRow(listingId), before);
+    }
+  }
+  assert.equal(invalidated.length, 0);
+});
+
+test('stale saved ZIPs, cached metadata and URL flags never authorize completion or a success state', async () => {
+  await ownListing();
+  await db
+    .update(schema.profiles)
+    .set({
+      addressPostalCode: '33138',
+      geo: { zipArea: zipAreas['33138'] },
+    })
+    .where(eq(schema.profiles.id, listingId));
+  assert.equal((await confirmBusiness()).status, 200);
+  const reviewedAt = (await getRow(listingId))?.lastReviewedAt;
+  await db
+    .update(schema.profiles)
+    .set({
+      addressPostalCode: null,
+    })
+    .where(eq(schema.profiles.id, listingId));
+  const before = await getRow(listingId);
+  const state = await (
+    await reviewApi.GET(
+      request(
+        `/api/listings/review?profileId=${listingId}&complete=1&confirmed=1&zipcode=33138`
+      )
+    )
+  ).json();
+  assert.ok(state.lastReviewedAt);
+  assert.equal(state.zipVerified, false);
+  assert.equal((await confirmBusiness({ zipcode: '33138' })).status, 400);
+  assert.deepEqual(await getRow(listingId), before);
+  assert.deepEqual((await getRow(listingId))?.lastReviewedAt, reviewedAt);
+  assert.equal(zipLookups.length, 0);
+});
+
+test('temporary ZIP lookup failures leave all review data untouched and can be retried, then verified ZIPs need no more lookups', async () => {
+  await ownListing();
+  await db
+    .update(schema.profiles)
+    .set({
+      addressPostalCode: '33138-1234',
+      addressLine1: 'Public visiting address',
+      geo: { type: 'Point', coordinates: [-80.2, 25.8] },
+    })
+    .where(eq(schema.profiles.id, listingId));
+  const before = await getRow(listingId);
+  zipUnavailable = true;
+  for (const response of [
+    await address.POST(
+      request(editPath('saveAddress'), {
+        primary_address: { zipcode: '33138', street1: 'Must not be saved' },
+      })
+    ),
+    await confirmBusiness(),
+  ]) {
+    assert.equal(response.status, 503);
+    const data = await response.json();
+    assert.match(data.error, /temporarily unavailable.*try again/i);
+    assert.equal(data.field, 'zipcode');
+    assert.equal(data.step, 'address');
+  }
+  assert.deepEqual(await getRow(listingId), before);
+  assert.equal(invalidated.length, 0);
+  zipUnavailable = false;
+  assert.equal((await confirmBusiness()).status, 200);
+  assert.equal((await getRow(listingId))?.addressPostalCode, '33138');
+  assert.equal((await getRow(listingId))?.addressLine1, before?.addressLine1);
+  assert.equal(zipLookups.length, 3);
+  zipUnavailable = true;
+  assert.equal((await confirmBusiness()).status, 200);
+  assert.equal(zipLookups.length, 3);
+  assert.equal(emails.length, 0);
+});
+
+test('personal address editors and unscoped business drafts may still omit a ZIP, and published legacy listings stay public', async () => {
+  await ownListing();
+  const response = await address.POST(
+    request('/api/profile/saveAddress', {
+      primary_address: { city: 'My personal city', zipcode: '' },
+    })
+  );
+  assert.equal(response.status, 200);
+  assert.equal((await getRow(personalId))?.addressPostalCode, null);
+  activeId = listingId;
+  assert.equal(
+    (
+      await address.POST(
+        request('/api/profile/saveAddress', {
+          primary_address: { city: 'Draft business city', zipcode: '' },
+        })
+      )
+    ).status,
+    200
+  );
+  assert.equal((await getRow(listingId))?.addressPostalCode, null);
+  assert.equal((await getRow(listingId))?.active, true);
+  assert.equal((await getRow(listingId))?.lastReviewedAt, null);
+  assert.equal(
+    (await publicProfiles.getPublicListing(listingId))?.id,
+    listingId
+  );
+  const before = await getRow(listingId);
+  assert.equal((await confirmBusiness()).status, 400);
+  assert.deepEqual(await getRow(listingId), before);
+  assert.equal(emails.length, 0);
+  assert.equal(zipLookups.length, 0);
 });
 
 function invitationRequest(
@@ -1318,6 +1652,17 @@ test('a valid invitation supports a different chosen login, explicit acceptance 
   );
   assert.equal(reviewState.status, 200);
   assert.equal((await reviewState.json()).lastReviewedAt, null);
+  assert.equal((await confirmBusiness()).status, 400);
+  assert.equal(
+    (
+      await address.POST(
+        request(editPath('saveAddress'), {
+          primary_address: { zipcode: '33138' },
+        })
+      )
+    ).status,
+    200
+  );
   const completed = await reviewApi.POST(
     invitationRequest('/api/listings/review', {
       profileId: listingId,

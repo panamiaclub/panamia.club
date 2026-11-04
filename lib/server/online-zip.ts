@@ -3,6 +3,7 @@ import {
   isOnlineZipArea,
   normalizeUsZip,
   readOnlineZipArea,
+  US_ZIP_REQUIRED_MESSAGE,
   type OnlineZipArea,
 } from '@/lib/online-zip';
 
@@ -105,6 +106,55 @@ interface ZipProfile {
   addressPostalCode?: unknown;
   addressCountry?: unknown;
   geo?: unknown;
+}
+
+export interface BusinessZipFailure {
+  success: false;
+  error: string;
+  status: 400 | 503;
+  field: 'zipcode';
+  step: 'address';
+}
+
+export async function validateBusinessZip(
+  profile: Omit<ZipProfile, 'id'>
+): Promise<{ success: true; area: OnlineZipArea } | BusinessZipFailure> {
+  const failure = (
+    error: string,
+    status: BusinessZipFailure['status'] = 400
+  ): BusinessZipFailure => ({
+    success: false,
+    error,
+    status,
+    field: 'zipcode',
+    step: 'address',
+  });
+  const zip = normalizeUsZip(profile.addressPostalCode);
+  if (
+    !zip ||
+    (profile.addressCountry != null &&
+      String(profile.addressCountry).trim() !== '' &&
+      String(profile.addressCountry).trim().toUpperCase() !== 'US')
+  )
+    return failure(US_ZIP_REQUIRED_MESSAGE);
+
+  try {
+    const area =
+      readOnlineZipArea(profile.geo, zip, profile.addressCountry) ??
+      (await getOnlineZipArea(zip));
+    return area
+      ? { success: true, area }
+      : failure(
+          'We could not recognize that US ZIP. Check the code and try again.'
+        );
+  } catch (error) {
+    if (!(error instanceof ZipLookupUnavailableError)) throw error;
+    console.error('Business ZIP verification unavailable:', error);
+    return failure(
+      'ZIP location lookup is temporarily unavailable. Please try again.',
+      503
+    );
+  }
 }
 
 /** Resolve only existing public ZIPs; callers choose which rows need a fallback. */
