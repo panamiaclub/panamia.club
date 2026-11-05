@@ -22,6 +22,7 @@ export interface ListingReviewState {
   profileId: string;
   lastReviewedAt: string | null;
   zipVerified: boolean;
+  primaryPhotoSaved: boolean;
   remindersOptedOut: boolean;
   cycle: {
     id: string;
@@ -46,6 +47,7 @@ export function isListingReviewState(
     state.profileId !== profileId ||
     !date(state.lastReviewedAt) ||
     typeof state.zipVerified !== 'boolean' ||
+    typeof state.primaryPhotoSaved !== 'boolean' ||
     typeof state.remindersOptedOut !== 'boolean'
   )
     return false;

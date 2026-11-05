@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, MessageCircle, ShieldCheck } from 'lucide-react';
-import { Dialog } from '@/components/ui/dialog';
 import styles from '@/components/messages/workspace.module.css';
 import { useNativeConversation } from '@/components/mobile/native-app-context';
 import {
@@ -16,14 +15,22 @@ import {
 } from '@/lib/query/social';
 import {
   ConversationList,
-  type ListEntry,
+  type InboxIssue,
   type MessageFolder,
 } from './conversation-list';
 import { ChatAvatar, ChatName, type ChatActor } from './chat-primitives';
 import { Transcript } from './transcript';
 import { Composer } from './composer';
-import { NewMessageDialog } from './new-message-dialog';
-import { GroupMessagesWorkspace } from './group-messages-workspace';
+import { GroupConversation, useGroupChatState } from './group-chat';
+import { useGroupChats, useGroupChatThread } from '../_lib/group-chat-query';
+import {
+  inboxKey,
+  inboxSelection,
+  mergeInboxEntries,
+  type DirectInboxEntry,
+  type InboxEntry,
+  type InboxSelection,
+} from '../_lib/inbox';
 import { useDmSocket } from '../_lib/use-dm-socket';
 import { remoteHost } from '../_lib/format';
 import {
@@ -37,8 +44,10 @@ import {
 
 export function MessagesView({
   initialGroupHandle,
+  initialActorId,
 }: {
   initialGroupHandle?: string;
+  initialActorId?: string;
 }) {
   const conversations = useConversations();
   // Changing the active profile clears the query cache. Remount all local DM
@@ -48,6 +57,7 @@ export function MessagesView({
       key={conversations.data?.viewerActorId ?? 'no-actor'}
       conversations={conversations}
       initialGroupHandle={initialGroupHandle}
+      initialActorId={initialActorId}
     />
   );
 }
@@ -55,36 +65,51 @@ export function MessagesView({
 function MessagesWorkspace({
   conversations,
   initialGroupHandle,
+  initialActorId,
 }: {
   conversations: ReturnType<typeof useConversations>;
   initialGroupHandle?: string;
+  initialActorId?: string;
 }) {
   const viewerActorId = conversations.data?.viewerActorId ?? null;
   const localDomain = conversations.data?.localDomain ?? null;
-  const [view, setView] = useState<MessageFolder>(
-    initialGroupHandle ? 'groups' : 'inbox'
+  const initialSelection = useMemo<InboxSelection | null>(
+    () =>
+      initialGroupHandle
+        ? { kind: 'group', id: initialGroupHandle }
+        : initialActorId
+          ? { kind: 'direct', id: initialActorId }
+          : null,
+    [initialGroupHandle, initialActorId]
   );
-  const [groupStarted, setGroupStarted] = useState(!!initialGroupHandle);
-  const [activeActorId, setActiveActorId] = useState<string | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [query, setQuery] = useState('');
+  const [view, setView] = useState<MessageFolder>('inbox');
+  const [selection, setSelection] = useState(initialSelection);
+  const activeActorId = selection?.kind === 'direct' ? selection.id : null;
+  const activeGroupHandle = selection?.kind === 'group' ? selection.id : null;
+  const [detailOpen, setDetailOpen] = useState(!!initialSelection);
   const [drafts, setDrafts] = useState<Record<string, MessageDraft>>({});
   const [outgoing, setOutgoing] = useState<OutgoingMessage[]>([]);
-  const [newActors, setNewActors] = useState<ChatActor[]>([]);
-  const [newMessageOpen, setNewMessageOpen] = useState(false);
+  const [newConversations, setNewConversations] = useState<DirectInboxEntry[]>(
+    []
+  );
   const [triageErrors, setTriageErrors] = useState<
     Record<string, string | null>
   >({});
   const [announcement, setAnnouncement] = useState('');
-  const activeSelection = useRef<string | null>(null);
+  const activeSelection = useRef(initialSelection);
+  const previousInitialSelection = useRef(initialSelection);
+  const pendingInitialActor = useRef(initialActorId ?? null);
   const activeRowRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLElement>(null);
   const conversationRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const sending = useRef(new Set<string>());
-  const focusComposerOnClose = useRef(false);
-  const focusWhenLoaded = useRef<string | null>(null);
+  const focusWhenLoaded = useRef(initialActorId ?? null);
 
-  const thread = useConversation(view === 'groups' ? null : activeActorId);
+  const thread = useConversation(activeActorId);
+  const groups = useGroupChats(!!viewerActorId);
+  const groupThread = useGroupChatThread(activeGroupHandle, !!viewerActorId);
+  const groupState = useGroupChatState(viewerActorId, setAnnouncement);
   const requests = useDmRequests(!!viewerActorId);
   const acceptRequest = useAcceptDmRequest();
   const deleteRequest = useDeleteDmRequest();
@@ -92,25 +117,47 @@ function MessagesWorkspace({
   useDmSocket(!!viewerActorId);
 
   const requestList = requests.data ?? [];
-  const requestEntries: ListEntry[] = requestList.map((entry) => ({
+  const requestEntries: DirectInboxEntry[] = requestList.map((entry) => ({
+    kind: 'direct',
     actor: entry.sender,
     lastMessage: entry.messages[entry.messages.length - 1] ?? null,
     requestedAt: entry.requestedAt,
   }));
-  const inboxEntries: ListEntry[] = (
+  const inboxEntries: DirectInboxEntry[] = (
     conversations.data?.conversations ?? []
   ).map((entry) => ({
+    kind: 'direct',
     actor: entry.counterparty,
     lastMessage: entry.lastMessage,
   }));
   const existingIds = new Set(inboxEntries.map((entry) => entry.actor.id));
-  const allInbox: ListEntry[] = [
-    ...newActors
-      .filter((actor) => !existingIds.has(actor.id))
-      .map((actor) => ({ actor, lastMessage: null })),
+  const allInbox: DirectInboxEntry[] = [
+    ...newConversations.filter((entry) => !existingIds.has(entry.actor.id)),
     ...inboxEntries,
   ];
-  const entries = view === 'requests' ? requestEntries : allInbox;
+  const groupMismatch =
+    !!groups.data && groups.data.viewerActorId !== viewerActorId;
+  const groupEntries =
+    groupMismatch || conversationUnavailable(groups.error)
+      ? []
+      : (groups.data?.groups ?? []);
+  useEffect(() => {
+    if (
+      !groups.data ||
+      groups.data.viewerActorId !== viewerActorId ||
+      conversationUnavailable(groups.error)
+    )
+      return;
+    for (const group of groups.data.groups) {
+      if (group.lastMessage)
+        groupState.confirm(group.handle, [group.lastMessage]);
+    }
+  }, [groups.data, groups.error, viewerActorId, groupState.confirm]);
+
+  const entries =
+    view === 'requests'
+      ? requestEntries
+      : mergeInboxEntries(allInbox, groupEntries);
   const allEntries = [
     ...new Map(
       [...allInbox, ...requestEntries].map((entry) => [entry.actor.id, entry])
@@ -131,7 +178,7 @@ function MessagesWorkspace({
     activeOutgoing,
     thread.data?.messages ?? []
   );
-  const requestsReady = !requests.isLoading && !requests.isError;
+  const requestsReady = !!viewerActorId && requests.isSuccess;
   const canReply =
     thread.data?.canSend === 'allow' && !isInboundRequest && requestsReady;
   const draft = activeActorId
@@ -141,16 +188,106 @@ function MessagesWorkspace({
     (entry) => entry.actor.id === activeActorId
   )?.actor;
   const unavailable = conversationUnavailable(thread.error);
+  const isListLoading =
+    view === 'requests'
+      ? requests.isLoading
+      : conversations.isLoading || (!!viewerActorId && groups.isLoading);
+  const issues: InboxIssue[] = [];
+  if (view === 'requests' ? requests.isError : conversations.isError) {
+    issues.push({
+      id: 'direct',
+      message: 'Could not load these conversations. Please try again.',
+      onRetry: () => {
+        void (view === 'requests'
+          ? requests.refetch()
+          : conversations.refetch());
+      },
+    });
+  }
+  if (view === 'inbox' && (groups.isError || groupMismatch)) {
+    issues.push({
+      id: 'groups',
+      message: groupMismatch
+        ? 'Your active profile changed. Reload Messages to continue.'
+        : 'Could not load group chats. Please try again.',
+      onRetry: () => {
+        if (groupMismatch) window.location.reload();
+        else void groups.refetch();
+      },
+    });
+  }
 
-  const activate = useCallback((actorId: string | null) => {
-    activeSelection.current = actorId;
-    setActiveActorId(actorId);
+  const activate = useCallback((next: InboxSelection | null) => {
+    activeSelection.current = next;
+    setSelection(next);
   }, []);
 
   useEffect(() => {
-    if (view !== 'groups' && activeActorId === null && entries.length > 0)
-      activate(entries[0].actor.id);
-  }, [view, activeActorId, entries, activate]);
+    if (previousInitialSelection.current === initialSelection) return;
+    previousInitialSelection.current = initialSelection;
+    pendingInitialActor.current =
+      initialSelection?.kind === 'direct' ? initialSelection.id : null;
+    focusWhenLoaded.current = pendingInitialActor.current;
+    activate(initialSelection);
+    setView('inbox');
+    setDetailOpen(!!initialSelection);
+  }, [initialSelection, activate]);
+
+  useEffect(() => {
+    if (
+      activeSelection.current === null &&
+      !isListLoading &&
+      entries.length > 0
+    )
+      activate(inboxSelection(entries[0]));
+  }, [selection, isListLoading, entries, activate]);
+
+  useEffect(() => {
+    const actorId = pendingInitialActor.current;
+    if (!actorId || !requestsReady) return;
+    pendingInitialActor.current = null;
+    if (
+      activeSelection.current?.kind === 'direct' &&
+      activeSelection.current.id === actorId &&
+      requestList.some((entry) => entry.sender.id === actorId)
+    ) {
+      setView('requests');
+    }
+  }, [requestList, requestsReady]);
+
+  const rememberActor = useCallback((actor: ChatActor) => {
+    const entry: DirectInboxEntry = {
+      kind: 'direct',
+      actor,
+      lastMessage: null,
+      startedAt: new Date().toISOString(),
+    };
+    setNewConversations((current) =>
+      current.some((candidate) => candidate.actor.id === actor.id)
+        ? current
+        : [entry, ...current]
+    );
+  }, []);
+
+  useEffect(() => {
+    if (
+      initialActorId &&
+      activeActorId === initialActorId &&
+      thread.data?.counterparty.id === initialActorId &&
+      requestsReady &&
+      !isInboundRequest &&
+      !unavailable
+    )
+      rememberActor(thread.data.counterparty);
+  }, [
+    initialActorId,
+    activeActorId,
+    thread.data,
+    requestsReady,
+    isInboundRequest,
+    unavailable,
+    rememberActor,
+  ]);
 
   useEffect(() => {
     if (!thread.data || !activeActorId) return;
@@ -181,9 +318,10 @@ function MessagesWorkspace({
     });
   }, [activeActorId, thread.data, requestsReady]);
 
-  const selectThread = (actorId: string) => {
-    activate(actorId);
-    setQuery('');
+  const selectThread = (entry: InboxEntry) => {
+    pendingInitialActor.current = null;
+    focusWhenLoaded.current = null;
+    activate(inboxSelection(entry));
     setDetailOpen(true);
     requestAnimationFrame(() =>
       conversationRef.current?.focus({ preventScroll: true })
@@ -191,38 +329,23 @@ function MessagesWorkspace({
   };
 
   const changeView = (next: MessageFolder) => {
-    if (next === 'groups') setGroupStarted(true);
+    pendingInitialActor.current = null;
+    focusWhenLoaded.current = null;
     setView(next);
     activate(null);
-    setQuery('');
     setDetailOpen(false);
   };
 
   const backToList = useCallback(() => {
     setDetailOpen(false);
     requestAnimationFrame(() =>
-      activeRowRef.current?.focus({ preventScroll: true })
+      (activeRowRef.current ?? listRef.current)?.focus({
+        preventScroll: true,
+      })
     );
   }, []);
 
-  useNativeConversation(view !== 'groups' && detailOpen ? backToList : null);
-
-  const rememberActor = (actor: ChatActor) => {
-    setNewActors((current) => [
-      actor,
-      ...current.filter((entry) => entry.id !== actor.id),
-    ]);
-  };
-
-  const choosePerson = (actor: ChatActor) => {
-    const request = requestList.some((entry) => entry.sender.id === actor.id);
-    if (!request) rememberActor(actor);
-    setView(request ? 'requests' : 'inbox');
-    focusComposerOnClose.current = true;
-    focusWhenLoaded.current = actor.id;
-    selectThread(actor.id);
-    setNewMessageOpen(false);
-  };
+  useNativeConversation(detailOpen ? backToList : null);
 
   const transmit = async (message: OutgoingMessage) => {
     sending.current.add(message.recipientActorId);
@@ -312,9 +435,11 @@ function MessagesWorkspace({
     try {
       await acceptRequest.mutateAsync(actor.id);
       rememberActor(actor);
-      if (activeSelection.current === actor.id) {
+      if (
+        activeSelection.current?.kind === 'direct' &&
+        activeSelection.current.id === actor.id
+      ) {
         setView('inbox');
-        setQuery('');
         setDetailOpen(true);
       }
       setAnnouncement(`Request from ${actor.name || actor.username} accepted.`);
@@ -333,13 +458,15 @@ function MessagesWorkspace({
     setTriageErrors((current) => ({ ...current, [actorId]: null }));
     try {
       await deleteRequest.mutateAsync(actorId);
-      if (activeSelection.current === actorId) {
+      if (
+        activeSelection.current?.kind === 'direct' &&
+        activeSelection.current.id === actorId
+      ) {
         activate(null);
-        setQuery('');
         setDetailOpen(false);
       }
-      setNewActors((current) =>
-        current.filter((actor) => actor.id !== actorId)
+      setNewConversations((current) =>
+        current.filter((entry) => entry.actor.id !== actorId)
       );
       setDrafts((current) => {
         const next = { ...current };
@@ -359,39 +486,26 @@ function MessagesWorkspace({
   };
 
   return (
-    <Dialog open={newMessageOpen} onOpenChange={setNewMessageOpen}>
-      <div
-        className={`profile-card ${styles.workspace}`}
-        data-inactive={view === 'groups'}
-      >
+    <>
+      <div className={`profile-card ${styles.workspace}`}>
         <ConversationList
           entries={entries}
           view={view}
           onChangeView={changeView}
           viewerActorId={viewerActorId}
           localDomain={localDomain}
-          activeActorId={activeActorId}
+          activeKey={selection ? inboxKey(selection) : null}
           activeRowRef={activeRowRef}
+          listRef={listRef}
           requestCount={requestEntries.length}
           onSelect={selectThread}
-          isLoading={
-            view === 'requests' ? requests.isLoading : conversations.isLoading
-          }
-          error={
-            (view === 'requests' ? requests.isError : conversations.isError)
-              ? 'Could not load these conversations. Please try again.'
-              : null
-          }
-          onRetry={() => {
-            void (view === 'requests'
-              ? requests.refetch()
-              : conversations.refetch());
-          }}
+          isLoading={isListLoading}
+          issues={issues}
           detailOpen={detailOpen}
           drafts={drafts}
           outgoing={outgoing}
-          query={query}
-          onQueryChange={setQuery}
+          groupDrafts={groupState.drafts}
+          groupOutgoing={groupState.outgoing}
         />
         <section
           ref={conversationRef}
@@ -400,7 +514,18 @@ function MessagesWorkspace({
           data-mobile-hidden={!detailOpen}
           aria-label="Open conversation"
         >
-          {thread.data && !unavailable ? (
+          {activeGroupHandle ? (
+            <GroupConversation
+              key={activeGroupHandle}
+              handle={activeGroupHandle}
+              viewerActorId={viewerActorId}
+              thread={groupThread}
+              state={groupState}
+              detailOpen={detailOpen}
+              onBack={backToList}
+              conversationRef={conversationRef}
+            />
+          ) : thread.data && !unavailable ? (
             <>
               <Transcript
                 key={activeActorId}
@@ -496,9 +621,7 @@ function MessagesWorkspace({
             <EmptyState
               actor={selectedActor}
               localDomain={localDomain}
-              isLoading={
-                (thread.isLoading && !!activeActorId) || conversations.isLoading
-              }
+              isLoading={(thread.isLoading && !!activeActorId) || isListLoading}
               error={
                 thread.isError
                   ? unavailable
@@ -516,38 +639,10 @@ function MessagesWorkspace({
           )}
         </section>
       </div>
-      {groupStarted && (
-        <GroupMessagesWorkspace
-          active={view === 'groups'}
-          viewerActorId={viewerActorId}
-          initialHandle={initialGroupHandle}
-          requestCount={requestEntries.length}
-          onChangeView={changeView}
-          onAnnounce={setAnnouncement}
-        />
-      )}
       <span role="status" className="sr-only">
         {announcement}
       </span>
-      {newMessageOpen && (
-        <NewMessageDialog
-          entries={allEntries}
-          viewerActorId={viewerActorId}
-          localDomain={localDomain}
-          onChoose={choosePerson}
-          onCloseAutoFocus={(event) => {
-            if (!focusComposerOnClose.current) return;
-            event.preventDefault();
-            focusComposerOnClose.current = false;
-            requestAnimationFrame(() =>
-              (inputRef.current ?? conversationRef.current)?.focus({
-                preventScroll: true,
-              })
-            );
-          }}
-        />
-      )}
-    </Dialog>
+    </>
   );
 }
 
@@ -621,7 +716,7 @@ function EmptyState({
                 ? 'Open Pana Social to finish setting up messaging for this profile.'
                 : view === 'requests'
                   ? 'No message requests waiting for you.'
-                  : 'Choose a conversation or start something new with a pana.')}
+                  : "Choose a conversation, or open a pana's profile to say hello.")}
         </p>
         {error && (
           <button

@@ -25,6 +25,7 @@ import {
   FollowButton,
   RelationshipBadge,
   SendVoiceMemoButton,
+  SendMessageButton,
   BlockMenu,
 } from '@/components/social';
 import { Button } from '@/components/ui/button';
@@ -326,6 +327,10 @@ function renderActions({
 
   return (
     <>
+      <SendMessageButton
+        actorId={actor.id}
+        name={actor.name || actor.username}
+      />
       <SendVoiceMemoButton
         recipient={{
           id: actor.id,

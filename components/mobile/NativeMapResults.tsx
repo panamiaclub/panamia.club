@@ -15,8 +15,10 @@ import { Globe, MapPin } from 'lucide-react';
 import { nativeMapPins, type NativeResult } from '@/lib/mobile/browse';
 import { mapContainsPoint, type MapBounds } from '@/lib/map/viewport';
 import {
+  NATIVE_SHEET_STOPS as STOPS,
   nativePreviewHeight,
   nativeSheetHeights,
+  nativeSheetStopForDrag,
   type NativeSheetStop,
 } from '@/lib/mobile/map-sheet';
 import {
@@ -38,8 +40,6 @@ const MapCanvas = dynamic(
   () => import('@/app/directory/search/_components/map-canvas'),
   { ssr: false }
 );
-const STOPS: NativeSheetStop[] = ['peek', 'half', 'expanded'];
-
 export default function NativeMapResults({
   items,
   mapItems = items,
@@ -77,6 +77,7 @@ export default function NativeMapResults({
   const viewport = useRef<HTMLDivElement>(null);
   const viewerFramePending = useRef(false);
   const heading = useRef<HTMLElement>(null);
+  const handle = useRef<HTMLButtonElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const cardNodes = useRef(new Map<string, HTMLDivElement>());
   const [height, setHeight] = useState(0);
@@ -85,7 +86,6 @@ export default function NativeMapResults({
   const [clusterId, setClusterId] = useState<string | null>(null);
   const [previewKey, setPreviewKey] = useState<string | null>(null);
   const [previewHeight, setPreviewHeight] = useState<number | null>(null);
-  const [dragHeight, setDragHeight] = useState<number | null>(null);
   const [bounds, setBounds] = useState<MapBounds | null>(null);
   const [view, setView] = useState<MapFrame>(() =>
     frameForPoints(nativeMapPins(mapItems).map((pin) => pin.coords))
@@ -122,9 +122,10 @@ export default function NativeMapResults({
   const heights = nativeSheetHeights(height, controlsInset);
   const sheetHeight = Math.min(
     height,
-    dragHeight ?? (preview ? (previewHeight ?? heights.half) : heights[stop])
+    preview ? (previewHeight ?? heights.half) : heights[stop]
   );
   const covered = height > 0 && height < 250 && sheetHeight > height - 64;
+  const coveredRef = useRef(covered);
   const wasPreview = useRef(false);
   const previousFilter = useRef(filterKey);
   const drag = useRef<{
@@ -133,6 +134,7 @@ export default function NativeMapResults({
     height: number;
     current: number;
     moved: boolean;
+    target: HTMLElement;
   } | null>(null);
   const suppressClick = useRef(false);
 
@@ -146,7 +148,19 @@ export default function NativeMapResults({
     return () => observer.disconnect();
   }, []);
 
+  useLayoutEffect(() => {
+    area.current?.style.setProperty(
+      '--native-map-peek-height',
+      `${heights.peek}px`
+    );
+    area.current?.style.setProperty(
+      '--native-sheet-height',
+      `${sheetHeight || 118}px`
+    );
+  }, [heights.peek, sheetHeight]);
+
   useEffect(() => {
+    coveredRef.current = covered;
     if (active) onControlsCovered(covered);
   }, [active, covered, onControlsCovered]);
 
@@ -328,29 +342,37 @@ export default function NativeMapResults({
     ),
   }));
 
-  const endDrag = (
-    event: PointerEvent<HTMLButtonElement>,
-    cancelled = false
-  ) => {
+  const moveSheet = (nextHeight: number) => {
+    area.current?.style.setProperty('--native-sheet-height', `${nextHeight}px`);
+    const nextCovered = height > 0 && height < 250 && nextHeight > height - 64;
+    if (active && nextCovered !== coveredRef.current) {
+      coveredRef.current = nextCovered;
+      onControlsCovered(nextCovered);
+    }
+  };
+
+  const endDrag = (event: PointerEvent<HTMLElement>, cancelled = false) => {
     const gesture = drag.current;
     if (!gesture || gesture.id !== event.pointerId) return;
     drag.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
+    if (gesture.target.hasPointerCapture(event.pointerId)) {
+      gesture.target.releasePointerCapture(event.pointerId);
     }
     if (gesture.moved) {
-      suppressClick.current = true;
+      suppressClick.current = !cancelled && gesture.target === handle.current;
       if (!cancelled) {
-        const closest = STOPS.reduce((best, candidate) =>
-          Math.abs(heights[candidate] - gesture.current) <
-          Math.abs(heights[best] - gesture.current)
-            ? candidate
-            : best
+        const next = nativeSheetStopForDrag(
+          heights,
+          gesture.height,
+          gesture.current
         );
-        setStop(closest);
+        setPreviewKey(null);
+        setStop(next);
+        moveSheet(heights[next]);
+        return;
       }
     }
-    setDragHeight(null);
+    moveSheet(gesture.height);
   };
 
   const unpinned =
@@ -377,7 +399,6 @@ export default function NativeMapResults({
       <div
         className={styles.mapViewport}
         ref={viewport}
-        style={{ bottom: sheetHeight }}
         hidden={height > 0 && sheetHeight >= height}
       >
         <MapCanvas
@@ -405,21 +426,60 @@ export default function NativeMapResults({
 
       <section
         className={styles.sheet}
-        style={{ height: sheetHeight || 118 }}
         aria-label={`${label} results`}
         data-preview={preview || undefined}
       >
-        <header className={styles.sheetHeader} ref={heading}>
+        <header
+          className={styles.sheetHeader}
+          ref={heading}
+          onPointerDown={(event) => {
+            if (!event.isPrimary || event.button !== 0 || drag.current) return;
+            const button =
+              event.target instanceof Element
+                ? event.target.closest('button')
+                : null;
+            if (button && button !== handle.current) return;
+            const target = button ?? event.currentTarget;
+            suppressClick.current = false;
+            drag.current = {
+              id: event.pointerId,
+              y: event.clientY,
+              height: sheetHeight,
+              current: sheetHeight,
+              moved: false,
+              target,
+            };
+            target.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            const gesture = drag.current;
+            if (!gesture || gesture.id !== event.pointerId) return;
+            const delta = gesture.y - event.clientY;
+            if (!gesture.moved && Math.abs(delta) < 5) return;
+            gesture.moved = true;
+            gesture.current = Math.max(
+              heights.peek,
+              Math.min(heights.expanded, gesture.height + delta)
+            );
+            // Move the sheet without re-rendering every pin and result card.
+            moveSheet(gesture.current);
+          }}
+          onPointerUp={(event) => endDrag(event)}
+          onPointerCancel={(event) => endDrag(event, true)}
+          onLostPointerCapture={(event) => endDrag(event, true)}
+        >
           <button
             type="button"
             className={styles.sheetHandle}
+            ref={handle}
             aria-label="Resize results"
             aria-expanded={stop !== 'peek' || preview}
-            onClick={() => {
-              if (suppressClick.current) {
+            onClick={(event) => {
+              if (event.detail > 0 && suppressClick.current) {
                 suppressClick.current = false;
                 return;
               }
+              suppressClick.current = false;
               setPreviewKey(null);
               setStop(STOPS[(STOPS.indexOf(stop) + 1) % STOPS.length]);
             }}
@@ -444,33 +504,6 @@ export default function NativeMapResults({
                 setStop('peek');
               }
             }}
-            onPointerDown={(event) => {
-              if (event.button !== 0) return;
-              suppressClick.current = false;
-              drag.current = {
-                id: event.pointerId,
-                y: event.clientY,
-                height: sheetHeight,
-                current: sheetHeight,
-                moved: false,
-              };
-              event.currentTarget.setPointerCapture(event.pointerId);
-            }}
-            onPointerMove={(event) => {
-              const gesture = drag.current;
-              if (!gesture || gesture.id !== event.pointerId) return;
-              const delta = gesture.y - event.clientY;
-              if (!gesture.moved && Math.abs(delta) < 5) return;
-              gesture.moved = true;
-              setPreviewKey(null);
-              gesture.current = Math.max(
-                heights.peek,
-                Math.min(heights.expanded, gesture.height + delta)
-              );
-              setDragHeight(gesture.current);
-            }}
-            onPointerUp={(event) => endDrag(event)}
-            onPointerCancel={(event) => endDrag(event, true)}
           >
             <span aria-hidden="true" />
           </button>

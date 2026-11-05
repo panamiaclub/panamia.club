@@ -19,6 +19,7 @@ import {
 import {
   nativePreviewHeight,
   nativeSheetHeights,
+  nativeSheetStopForDrag,
 } from '@/lib/mobile/map-sheet';
 import { getDirectorySearchParams } from '@/app/directory/search/_lib/search-params';
 import {
@@ -434,5 +435,53 @@ describe('shared URL parsing and measured map sheet', () => {
     }
     assert.equal(nativeSheetHeights(142, 106).expanded, 142);
     assert.equal(nativeSheetHeights(600, 106).expanded, 486);
+  });
+
+  it('advances a sheet stop for short deliberate swipes in either direction', () => {
+    const heights = nativeSheetHeights(721, 106);
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.peek, heights.peek + 23),
+      'peek'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.peek, heights.peek + 24),
+      'half'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.half, heights.half + 24),
+      'expanded'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.expanded, heights.expanded - 24),
+      'half'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.half, heights.half - 24),
+      'peek'
+    );
+  });
+
+  it('still follows long drags and never snaps beyond the available stops', () => {
+    const heights = nativeSheetHeights(721, 106);
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.peek, heights.expanded),
+      'expanded'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.expanded, heights.peek),
+      'peek'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.peek, heights.peek),
+      'peek'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.expanded, heights.expanded),
+      'expanded'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(nativeSheetHeights(0, 106), 0, 0),
+      'peek'
+    );
   });
 });

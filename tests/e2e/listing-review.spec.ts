@@ -8,6 +8,8 @@ import {
   type OnlineZipArea,
 } from '@/lib/online-zip';
 import {
+  hasListingPrimaryPhoto,
+  LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE,
   isListingLocationMode,
   publicVisitingAddressIssue,
 } from '@/lib/listing-review';
@@ -96,6 +98,7 @@ async function fixtures(
     wrongReviewState?: boolean;
     descriptionFailure?: boolean;
     uploadFailure?: boolean;
+    primaryPhoto?: string | null;
     staffSuspended?: boolean;
     admin?: boolean;
     zip?: string | null;
@@ -119,6 +122,10 @@ async function fixtures(
   let reviewStateFailure = options.reviewStateFailure === true;
   let zipLookupUnavailable = options.zipLookupUnavailable === true;
   const savedZip = options.zip === undefined ? '33138' : options.zip;
+  const savedPrimaryPhoto =
+    options.primaryPhoto === undefined
+      ? 'https://files.test.invalid/old-logo.png'
+      : options.primaryPhoto;
   let used = false;
   const signIns: Record<string, unknown>[] = [];
   const claims: string[] = [];
@@ -169,9 +176,10 @@ async function fixtures(
     categories: { food: true },
     socials: { website: 'https://bakery.test', instagram: 'anabakery' },
     images: {
-      primaryCDN: 'https://files.test.invalid/old-logo.png',
+      primaryCDN: savedPrimaryPhoto,
       gallery1CDN: 'https://files.test.invalid/gallery.png',
     },
+    primaryImageCdn: savedPrimaryPhoto,
     onlineOnly: false,
     addressPostalCode: savedZip,
     addressCountry: 'US',
@@ -214,7 +222,16 @@ async function fixtures(
         });
       }
       if (url.hostname === 'files.test.invalid') {
-        return route.fulfill({ contentType: 'image/png', body: image });
+        return route.fulfill({
+          contentType: 'image/svg+xml',
+          body: `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">
+            <rect width="320" height="180" rx="18" fill="#303e8c"/>
+            <circle cx="60" cy="90" r="32" fill="#f28444"/>
+            <text x="60" y="101" text-anchor="middle" fill="#110d0d" font-family="sans-serif" font-size="32" font-weight="700">A</text>
+            <text x="108" y="88" fill="#fff7ec" font-family="sans-serif" font-size="25" font-weight="700">Ana Bakery</text>
+            <text x="108" y="113" fill="#fff7ec" font-family="sans-serif" font-size="13">SYNTHETIC PREVIEW</text>
+          </svg>`,
+        });
       }
       if (url.hostname === 'challenges.cloudflare.com') {
         return route.fulfill({
@@ -307,6 +324,9 @@ async function fixtures(
                   profile.addressCountry
                 )
               ),
+              primaryPhotoSaved: hasListingPrimaryPhoto(
+                profile.primaryImageCdn
+              ),
               remindersOptedOut,
               cycle: reviewCycle,
             },
@@ -349,6 +369,18 @@ async function fixtures(
                     : 'We could not recognize that US ZIP. Check the code and try again.',
                 field: 'zipcode',
                 step: 'address',
+              },
+            });
+            return;
+          }
+          if (!hasListingPrimaryPhoto(profile.primaryImageCdn)) {
+            await route.fulfill({
+              status: 400,
+              json: {
+                success: false,
+                error: LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE,
+                field: 'primary',
+                step: 'images',
               },
             });
             return;
@@ -904,11 +936,22 @@ async function fixtures(
         });
         return;
       }
-      profile.images = {
-        primaryCDN: 'https://files.test.invalid/new-logo.png',
-        gallery1CDN: 'https://files.test.invalid/gallery.png',
-      };
-      await route.fulfill({ json: { success: true } });
+      const multipart = route.request().postData() ?? '';
+      const images = { ...(profile.images as Record<string, unknown>) };
+      for (const field of ['primary', 'gallery1', 'gallery2', 'gallery3']) {
+        if (new RegExp(`name="${field}"; filename="[^"]+"`).test(multipart)) {
+          const url = `https://files.test.invalid/${field === 'primary' ? 'new-logo' : `new-${field}`}.png`;
+          images[`${field}CDN`] = url;
+          if (field === 'primary') profile.primaryImageCdn = url;
+        }
+      }
+      profile.images = images;
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { id: listingId, primaryImageCdn: profile.primaryImageCdn },
+        },
+      });
     } else {
       await route.fulfill({
         status: 404,
@@ -995,6 +1038,64 @@ async function confirmReview(page: Page) {
   await expect(
     page.getByRole('heading', { name: 'Your review is complete', exact: true })
   ).toBeVisible();
+}
+
+async function expectReviewFooter(page: Page) {
+  const form = page.locator('main form');
+  const submit = form.locator('button[type="submit"]');
+  await expect(submit).toHaveCount(1);
+  const footer = submit.locator('..');
+  const back = footer.getByRole('link');
+  await expect(back).toHaveCount(1);
+  expect(
+    await submit.evaluate((button) => {
+      const footer = button.parentElement;
+      const form = button.closest('form');
+      if (!footer || !form) return false;
+      const fields = Array.from(
+        form.querySelectorAll<HTMLElement>(
+          'input:not([type="hidden"]):not([aria-hidden="true"]), textarea, button[role="checkbox"], button[role="radio"]'
+        )
+      ).filter((field) => field.getClientRects().length > 0);
+      return (
+        fields.length > 0 &&
+        form.lastElementChild === footer &&
+        getComputedStyle(footer).position === 'static' &&
+        getComputedStyle(footer).order === '0' &&
+        fields.every(
+          (field) =>
+            Boolean(
+              field.compareDocumentPosition(footer) &
+              Node.DOCUMENT_POSITION_FOLLOWING
+            ) &&
+            field.getBoundingClientRect().bottom <=
+              footer.getBoundingClientRect().top
+        )
+      );
+    })
+  ).toBe(true);
+  const lastField = form
+    .locator(
+      'input:not([type="hidden"]):not([aria-hidden="true"]):visible, textarea:visible, button[role="checkbox"]:visible, button[role="radio"]:visible'
+    )
+    .last();
+  await lastField.focus();
+  await page.keyboard.press('Tab');
+  await expect(back).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(submit).toBeFocused();
+  await expect(submit).toBeInViewport();
+  expect(
+    await submit.evaluate((button) => {
+      const rect = button.getBoundingClientRect();
+      return button.contains(
+        document.elementFromPoint(
+          rect.x + rect.width / 2,
+          rect.y + rect.height / 2
+        )
+      );
+    })
+  ).toBe(true);
 }
 
 test('anonymous entry, Pana sign-in, explicit verification and all prefilled review steps stay on the exact business', async ({
@@ -2303,6 +2404,518 @@ test('the mobile review keeps photos unchanged and offers exact-business complet
   expect(fixture.writes).toHaveLength(0);
 });
 
+test('Photos requires a saved primary photo and rejects both empty continuation and gallery-only selections', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    primaryPhoto: null,
+    refreshState: 'active',
+  });
+  const before = structuredClone(fixture.profile);
+  await page.goto(`/account/profile/images?listingId=${listingId}`);
+  const primary = page.locator('#images_primary');
+  await expect(primary).toHaveAttribute('aria-required', 'true');
+  await expect(
+    page.getByText('Gallery photos are optional.', { exact: false })
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Continue to confirmation', exact: true })
+    .click();
+  await expect(page.getByRole('alert')).toHaveText(
+    LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE
+  );
+  await expect(primary).toBeFocused();
+  await page.locator('#images_gallery2').setInputFiles({
+    name: 'gallery.png',
+    mimeType: 'image/png',
+    buffer: image,
+  });
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expect(page.getByRole('alert')).toHaveText(
+    LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE
+  );
+  await expect(primary).toBeFocused();
+  await expectWizard(page, 6);
+  expect(fixture.writes).toHaveLength(0);
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+  expect(fixture.profile).toEqual(before);
+});
+
+test('gallery updates keep an existing primary and advance only after the scoped saved profile is refetched', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { signedIn: true, owned: true });
+  const primary = fixture.profile.primaryImageCdn;
+  await page.goto(`/account/profile/images?listingId=${listingId}`);
+  await expect(page.locator('#images_primary')).toHaveAttribute(
+    'aria-required',
+    'false'
+  );
+  await page.locator('#images_gallery2').setInputFiles({
+    name: 'gallery.png',
+    mimeType: 'image/png',
+    buffer: image,
+  });
+  const refetched = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname === '/api/getProfile' &&
+      url.searchParams.get('listingId') === listingId
+    );
+  });
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await (await refetched).finished();
+  await expect(page).toHaveURL(`${reviewPath}&complete=1`);
+  expect(fixture.profile.primaryImageCdn).toBe(primary);
+  expect((fixture.profile.images as Record<string, unknown>).gallery2CDN).toBe(
+    'https://files.test.invalid/new-gallery2.png'
+  );
+  expect(fixture.writes).toEqual([
+    { path: '/api/profile/upload', listingId, body: { uploaded: true } },
+  ]);
+  expect(fixture.profile.lastReviewedAt).toBeNull();
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+});
+
+test('a new primary remains pending through upload and refetch before Photos can advance or restore a listing', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    primaryPhoto: null,
+    refreshState: 'paused',
+  });
+  let releaseUpload: (() => void) | undefined;
+  let releaseRead: (() => void) | undefined;
+  let readStarted: (() => void) | undefined;
+  let uploaded = false;
+  const uploadGate = new Promise<void>((resolve) => {
+    releaseUpload = resolve;
+  });
+  const readGate = new Promise<void>((resolve) => {
+    releaseRead = resolve;
+  });
+  const refetchStarted = new Promise<void>((resolve) => {
+    readStarted = resolve;
+  });
+  const primaryUrl = 'https://files.test.invalid/saved-primary.png';
+  await page.route(
+    '**/api/profile/upload?listingId=public-business-id',
+    async (route) => {
+      await uploadGate;
+      uploaded = true;
+      fixture.profile.primaryImageCdn = primaryUrl;
+      (fixture.profile.images as Record<string, unknown>).primaryCDN =
+        primaryUrl;
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { id: listingId, primaryImageCdn: primaryUrl },
+        },
+      });
+    }
+  );
+  await page.route(
+    '**/api/getProfile?listingId=public-business-id',
+    async (route) => {
+      if (!uploaded) return route.fallback();
+      readStarted?.();
+      await readGate;
+      await route.fulfill({ json: { success: true, data: fixture.profile } });
+    }
+  );
+  await page.goto(`/account/profile/images?listingId=${listingId}`);
+  await page.locator('#images_primary').setInputFiles({
+    name: 'primary.webp',
+    mimeType: 'image/webp',
+    buffer: image,
+  });
+  const uploadStarted = page.waitForRequest(
+    (request) => new URL(request.url()).pathname === '/api/profile/upload'
+  );
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  expect(
+    new URL((await uploadStarted).url()).searchParams.get('listingId')
+  ).toBe(listingId);
+  await expect(
+    page.getByRole('button', { name: 'Uploading...', exact: true })
+  ).toBeDisabled();
+  await expect(page.locator('#images_primary')).toBeDisabled();
+  const back = page
+    .locator('main form')
+    .getByRole('link', { name: 'Back', exact: true });
+  await expect(back).toHaveAttribute('aria-disabled', 'true');
+  await back.click({ force: true });
+  await expect(page).toHaveURL(
+    `/account/profile/images?listingId=${listingId}`
+  );
+  expect(fixture.profile.primaryImageCdn).toBeNull();
+  releaseUpload?.();
+  await refetchStarted;
+  await expect(
+    page.getByRole('button', { name: 'Uploading...', exact: true })
+  ).toBeDisabled();
+  await expect(page).toHaveURL(
+    `/account/profile/images?listingId=${listingId}`
+  );
+  expect(fixture.profile.lastReviewedAt).toBeNull();
+  expect(fixture.profile.active).toBe(false);
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+  releaseRead?.();
+  await expect(page).toHaveURL(`${reviewPath}&complete=1`);
+  await confirmReview(page);
+  expect(fixture.profile.primaryImageCdn).toBe(primaryUrl);
+  expect(fixture.profile.active).toBe(true);
+  expect(fixture.reviewConfirmations).toHaveLength(1);
+});
+
+for (const outcome of [
+  { label: 'empty success', data: undefined },
+  { label: 'empty primary', data: { id: listingId, primaryImageCdn: '' } },
+  {
+    label: 'other business',
+    data: {
+      id: 'other-business',
+      primaryImageCdn: 'https://files.test.invalid/other.png',
+    },
+  },
+  {
+    label: 'personal avatar',
+    data: {
+      id: 'personal-id',
+      primaryImageCdn: 'https://files.test.invalid/avatar.png',
+    },
+  },
+  {
+    label: 'site placeholder',
+    data: { id: listingId, primaryImageCdn: '/logos/logo.png' },
+  },
+]) {
+  test(`an ${outcome.label} upload response cannot count as a saved business primary photo`, async ({
+    page,
+  }) => {
+    const fixture = await fixtures(page, {
+      signedIn: true,
+      owned: true,
+      primaryPhoto: null,
+    });
+    await page.route(
+      '**/api/profile/upload?listingId=public-business-id',
+      (route) => route.fulfill({ json: { success: true, data: outcome.data } })
+    );
+    await page.goto(`/account/profile/images?listingId=${listingId}`);
+    await page.locator('#images_primary').setInputFiles({
+      name: 'primary.png',
+      mimeType: 'image/png',
+      buffer: image,
+    });
+    await page
+      .getByRole('button', { name: 'Save and continue', exact: true })
+      .click();
+    await expect(page.getByRole('alert')).toContainText(
+      'saved primary photo could not be verified'
+    );
+    await expectWizard(page, 6);
+    expect(
+      await page
+        .locator('#images_primary')
+        .evaluate((input: HTMLInputElement) => input.files?.length)
+    ).toBe(1);
+    expect(fixture.profile.primaryImageCdn).toBeNull();
+    expect(fixture.profile.lastReviewedAt).toBeNull();
+    expect(fixture.reviewConfirmations).toHaveLength(0);
+  });
+}
+
+for (const outcome of [
+  'removed primary',
+  'wrong business',
+  'unavailable read',
+]) {
+  test(`a ${outcome} on upload refetch cannot advance using an earlier saved-photo response`, async ({
+    page,
+  }) => {
+    const fixture = await fixtures(page, {
+      signedIn: true,
+      owned: true,
+      primaryPhoto: null,
+    });
+    let uploaded = false;
+    await page.route(
+      '**/api/profile/upload?listingId=public-business-id',
+      (route) => {
+        uploaded = true;
+        return route.fulfill({
+          json: {
+            success: true,
+            data: {
+              id: listingId,
+              primaryImageCdn: 'https://files.test.invalid/saved-primary.png',
+            },
+          },
+        });
+      }
+    );
+    await page.route(
+      '**/api/getProfile?listingId=public-business-id',
+      (route) => {
+        if (!uploaded) return route.fallback();
+        return route.fulfill({
+          status: outcome === 'unavailable read' ? 503 : 200,
+          json:
+            outcome === 'unavailable read'
+              ? { error: 'Fixture saved-profile read unavailable' }
+              : {
+                  success: true,
+                  data: {
+                    ...fixture.profile,
+                    id:
+                      outcome === 'wrong business'
+                        ? 'other-business'
+                        : listingId,
+                  },
+                },
+        });
+      }
+    );
+    await page.goto(`/account/profile/images?listingId=${listingId}`);
+    await page.locator('#images_primary').setInputFiles({
+      name: 'primary.png',
+      mimeType: 'image/png',
+      buffer: image,
+    });
+    await page
+      .getByRole('button', { name: 'Save and continue', exact: true })
+      .click();
+    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page).toHaveURL(
+      `/account/profile/images?listingId=${listingId}`
+    );
+    await expect(
+      page.getByRole('heading', {
+        name: 'Confirm your listing information',
+        exact: true,
+      })
+    ).toHaveCount(0);
+    expect(fixture.profile.lastReviewedAt).toBeNull();
+    expect(fixture.reviewConfirmations).toHaveLength(0);
+  });
+}
+
+test('a failed primary upload keeps the unsaved selection on Photos and never satisfies final confirmation', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    primaryPhoto: null,
+    uploadFailure: true,
+  });
+  await page.goto(`/account/profile/images?listingId=${listingId}`);
+  await page.locator('#images_primary').setInputFiles({
+    name: 'primary.png',
+    mimeType: 'image/png',
+    buffer: image,
+  });
+  await page
+    .getByRole('button', { name: 'Save and continue', exact: true })
+    .click();
+  await expect(page.getByRole('alert')).toHaveText(
+    'Photo storage is temporarily unavailable.'
+  );
+  await expectWizard(page, 6);
+  expect(
+    await page
+      .locator('#images_primary')
+      .evaluate((input: HTMLInputElement) => input.files?.length)
+  ).toBe(1);
+  expect(fixture.profile.primaryImageCdn).toBeNull();
+  expect(fixture.profile.lastReviewedAt).toBeNull();
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+});
+
+test('keeping an existing photo still checks its current saved value before continuing', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { signedIn: true, owned: true });
+  await page.goto(`/account/profile/images?listingId=${listingId}`);
+  await expect(
+    page.getByRole('img', { name: 'Primary', exact: true })
+  ).toBeVisible();
+  fixture.profile.primaryImageCdn = null;
+  (fixture.profile.images as Record<string, unknown>).primaryCDN = null;
+  await page
+    .getByRole('button', { name: 'Continue to confirmation', exact: true })
+    .click();
+  await expect(page.getByRole('alert')).toHaveText(
+    LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE
+  );
+  await expectWizard(page, 6);
+  expect(fixture.writes).toHaveLength(0);
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+});
+
+test('a direct final-check link with historical confirmation flags cannot succeed without a current saved primary', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    primaryPhoto: null,
+  });
+  fixture.profile.lastReviewedAt = '2025-01-01T00:00:00Z';
+  const before = structuredClone(fixture.profile);
+  await page.goto(
+    `${reviewPath}&complete=1&confirmed=1&primaryPhotoSaved=true`
+  );
+  await expect(
+    page.getByRole('heading', { name: 'Your review is complete', exact: true })
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('link', {
+      name: 'Add or check primary photo in Photos',
+      exact: true,
+    })
+  ).toHaveAttribute('href', `/account/profile/images?listingId=${listingId}`);
+  await page
+    .getByRole('checkbox', { name: /I reviewed this business/ })
+    .check();
+  await expect(
+    page.getByRole('button', {
+      name: 'Confirm business information',
+      exact: true,
+    })
+  ).toBeDisabled();
+  expect(fixture.profile).toEqual(before);
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+  expect(fixture.writes).toHaveLength(0);
+});
+
+test('stale photo removal is denied at final confirmation without restoring an overdue business or erasing history', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, {
+    signedIn: true,
+    owned: true,
+    refreshState: 'paused',
+  });
+  fixture.profile.lastReviewedAt = '2025-01-01T00:00:00Z';
+  await page.goto(`${reviewPath}&complete=1`);
+  await expect(
+    page.getByRole('heading', {
+      name: 'Confirm your listing information',
+      exact: true,
+    })
+  ).toBeVisible();
+  fixture.profile.primaryImageCdn = null;
+  (fixture.profile.images as Record<string, unknown>).primaryCDN = null;
+  const before = structuredClone(fixture.profile);
+  await page
+    .getByRole('checkbox', { name: /I reviewed this business/ })
+    .check();
+  await page
+    .getByRole('button', { name: 'Confirm business information', exact: true })
+    .click();
+  await expect(page.getByRole('alert')).toHaveText(
+    LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE
+  );
+  await expect(
+    page.getByRole('link', {
+      name: 'Add or check primary photo in Photos',
+      exact: true,
+    })
+  ).toHaveAttribute('href', `/account/profile/images?listingId=${listingId}`);
+  await expect(
+    page.getByRole('heading', { name: 'Your review is complete', exact: true })
+  ).toHaveCount(0);
+  expect(fixture.profile).toEqual(before);
+  expect(fixture.profile.active).toBe(false);
+  expect(fixture.reviewConfirmations).toHaveLength(1);
+  expect(fixture.writes).toHaveLength(0);
+});
+
+for (const viewport of [
+  { width: 1280, height: 900, label: 'desktop' },
+  { width: 390, height: 844, label: 'mobile' },
+]) {
+  test.describe(`Photos at ${viewport.label} size`, () => {
+    test.use({
+      hasTouch: viewport.label !== 'desktop',
+      isMobile: viewport.label !== 'desktop',
+    });
+    for (const saved of [false, true]) {
+      test(`actual ${viewport.label} Photos shows the ${saved ? 'existing' : 'required'} primary state with a bottom footer`, async ({
+        page,
+      }) => {
+        const fixture = await fixtures(page, {
+          signedIn: true,
+          owned: true,
+          primaryPhoto: saved ? undefined : null,
+          refreshState: 'held',
+        });
+        await page.setViewportSize(viewport);
+        await page.goto(`/account/profile/images?listingId=${listingId}`);
+        await expectWizard(page, 6);
+        await expect(
+          page.getByText(
+            saved
+              ? 'Your saved primary photo meets this requirement. Continue without a new upload to keep it.'
+              : 'Required: choose and save a primary photo for this business. Gallery photos alone do not meet this requirement.',
+            { exact: true }
+          )
+        ).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+        if (!saved) {
+          const next = page.getByRole('button', {
+            name: 'Continue to confirmation',
+            exact: true,
+          });
+          if (viewport.label === 'desktop') await next.click();
+          else await next.tap();
+          await expect(page.getByRole('alert')).toHaveText(
+            LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE
+          );
+        }
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({
+          path: test
+            .info()
+            .outputPath(
+              `photos-${saved ? 'existing' : 'required'}-${viewport.label}-top.png`
+            ),
+        });
+        await page.locator('#images_primary').scrollIntoViewIfNeeded();
+        await page.screenshot({
+          path: test
+            .info()
+            .outputPath(
+              `photos-${saved ? 'existing' : 'required'}-${viewport.label}-primary.png`
+            ),
+        });
+        await expectReviewFooter(page);
+        await page.screenshot({
+          path: test
+            .info()
+            .outputPath(
+              `photos-${saved ? 'existing' : 'required'}-${viewport.label}.png`
+            ),
+        });
+        expect(fixture.writes).toHaveLength(0);
+        expect(fixture.reviewConfirmations).toHaveLength(0);
+      });
+    }
+  });
+}
+
 test('invitation opening and scanner inspection never sign in, claim, email or expose private contacts and proof in network URLs', async ({
   page,
 }) => {
@@ -3027,6 +3640,7 @@ test('owners can opt out of review reminders without confirming, hiding, or edit
     signedIn: true,
     owned: true,
     refreshState: 'active',
+    primaryPhoto: null,
   });
   await page.goto(reviewPath);
   await page.locator('summary').filter({ hasText: 'Review reminders' }).click();
@@ -3297,7 +3911,15 @@ test('a pending photo save cannot pull the owner back after they navigate to ano
     '**/api/profile/upload?listingId=public-business-id',
     async (route) => {
       await uploaded;
-      await route.fulfill({ json: { success: true } });
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            id: listingId,
+            primaryImageCdn: fixture.profile.primaryImageCdn,
+          },
+        },
+      });
     }
   );
   await page.goto(`/account/profile/images?listingId=${listingId}`);
@@ -3438,6 +4060,7 @@ test('multiple managed business tabs and saves keep their own scope without chan
           profileId: otherId,
           lastReviewedAt: null,
           zipVerified: true,
+          primaryPhotoSaved: true,
           remindersOptedOut: false,
           cycle: null,
         },
@@ -3541,6 +4164,8 @@ test('ordinary personal editors keep their existing frame, controls and unscoped
     email: accountEmail,
     descriptions: { details: 'My personal introduction' },
     pronouns: { sheher: true },
+    primaryImageCdn: null,
+    images: {},
   };
   const writes: Record<string, unknown>[] = [];
   await page.route('**/api/profile/switch', (route) =>
@@ -3597,6 +4222,13 @@ test('ordinary personal editors keep their existing frame, controls and unscoped
         page.getByLabel('Pana account email', { exact: true })
       ).toBeDisabled();
     }
+    if (key === 'images') {
+      await expect(page.locator('#images_primary')).toHaveAttribute(
+        'aria-required',
+        'false'
+      );
+      await expect(page.locator('#primary-photo-requirement')).toHaveCount(0);
+    }
   }
   await page.goto('/account/profile/desc');
   await page
@@ -3612,6 +4244,47 @@ test('ordinary personal editors keep their existing frame, controls and unscoped
   expect(
     (fixture.profile.descriptions as Record<string, unknown>).details
   ).toBe('Our existing description');
+  expect(fixture.reviewConfirmations).toHaveLength(0);
+});
+
+test('ordinary personal photo drafts can still save a gallery without a primary or review response metadata', async ({
+  page,
+}) => {
+  const fixture = await fixtures(page, { signedIn: true, owned: true });
+  const business = structuredClone(fixture.profile);
+  const personal = {
+    ...fixture.profile,
+    id: 'personal-id',
+    userId: 'review-account',
+    name: 'Ana Person',
+    primaryImageCdn: null,
+    images: {},
+  };
+  await page.route(
+    (url) =>
+      url.pathname === '/api/getProfile' && !url.searchParams.has('listingId'),
+    (route) => route.fulfill({ json: { success: true, data: personal } })
+  );
+  const uploads: string[] = [];
+  await page.route('**/api/profile/upload', (route) => {
+    uploads.push(route.request().url());
+    return route.fulfill({ json: { success: true } });
+  });
+  await page.goto('/account/profile/images');
+  await page.locator('#images_gallery1').setInputFiles({
+    name: 'gallery.png',
+    mimeType: 'image/png',
+    buffer: image,
+  });
+  await page.getByRole('button', { name: 'Save Changes', exact: true }).click();
+  await expect(
+    page.getByText('Images uploaded successfully!', { exact: true })
+  ).toBeVisible();
+  await expect(page).toHaveURL('/account/profile/images');
+  expect(uploads).toHaveLength(1);
+  expect(new URL(uploads[0]).searchParams.has('listingId')).toBe(false);
+  expect(personal.primaryImageCdn).toBeNull();
+  expect(fixture.profile).toEqual(business);
   expect(fixture.reviewConfirmations).toHaveLength(0);
 });
 
@@ -3767,94 +4440,111 @@ for (const viewport of [
 for (const viewport of [
   { width: 1280, height: 900, label: 'desktop' },
   { width: 390, height: 844, label: 'mobile' },
+  { width: 320, height: 720, label: 'narrow-mobile' },
 ]) {
-  test(`actual ${viewport.label} wizard screens use the site palette, touch-sized pills and readable actions`, async ({
-    page,
-  }) => {
-    const fixture = await fixtures(page, {
-      signedIn: true,
-      owned: true,
-      refreshState: 'held',
+  test.describe(`Wizard at ${viewport.label} size`, () => {
+    test.use({
+      hasTouch: viewport.label !== 'desktop',
+      isMobile: viewport.label !== 'desktop',
     });
-    await page.setViewportSize(viewport);
-    await page.goto(reviewPath);
-    for (const [index, [key, label]] of wizardSteps.entries()) {
-      if (index > 0)
-        await page
-          .getByRole('link', { name: `${index + 1}. ${label}`, exact: true })
-          .click();
-      await expectWizard(page, index + 1);
-      await page.evaluate(() => document.fonts.ready);
-      if (process.env.LISTING_REVIEW_VISUAL_FONT) {
-        expect(
-          await page.evaluate(() =>
-            Array.from(document.fonts).some(
-              (face) =>
-                face.family.replace(/["']/g, '') === 'Nunito' &&
-                face.status === 'loaded'
+    test(`actual ${viewport.label} wizard screens use the site palette, touch-sized pills and readable actions`, async ({
+      page,
+    }) => {
+      const fixture = await fixtures(page, {
+        signedIn: true,
+        owned: true,
+        refreshState: 'held',
+      });
+      await page.setViewportSize(viewport);
+      await page.goto(reviewPath);
+      for (const [index, [key, label]] of wizardSteps.entries()) {
+        if (index > 0) {
+          const pill = page.getByRole('link', {
+            name: `${index + 1}. ${label}`,
+            exact: true,
+          });
+          if (viewport.label === 'desktop') await pill.click();
+          else await pill.tap();
+        }
+        await expectWizard(page, index + 1);
+        await page.evaluate(() => document.fonts.ready);
+        if (process.env.LISTING_REVIEW_VISUAL_FONT) {
+          expect(
+            await page.evaluate(() =>
+              Array.from(document.fonts).some(
+                (face) =>
+                  face.family.replace(/["']/g, '') === 'Nunito' &&
+                  face.status === 'loaded'
+              )
             )
+          ).toBe(true);
+        }
+        const main = page.getByRole('main');
+        expect(
+          await main.evaluate(
+            (element) => getComputedStyle(element).backgroundColor
+          )
+        ).toBe('rgb(255, 247, 236)');
+        const current = page
+          .getByRole('navigation', { name: 'Listing review', exact: true })
+          .locator('[aria-current="step"]');
+        expect(
+          await current.evaluate(
+            (element) => getComputedStyle(element).backgroundColor
+          )
+        ).toBe('rgb(48, 62, 140)');
+        for (const pill of await page
+          .getByRole('navigation', { name: 'Listing review', exact: true })
+          .getByRole('link')
+          .all()) {
+          expect((await pill.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+        }
+        const primary = page.locator('main form button[type="submit"]');
+        expect((await primary.boundingBox())?.height).toBeGreaterThanOrEqual(
+          44
+        );
+        expect(
+          await primary.evaluate(
+            (element) => getComputedStyle(element).backgroundColor
+          )
+        ).toBe('rgb(242, 132, 68)');
+        expect(
+          await primary.evaluate((element) => getComputedStyle(element).color)
+        ).toBe('rgb(17, 13, 13)');
+        if (viewport.label === 'mobile') {
+          await page.keyboard.press('Escape');
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.screenshot({
+            path: test.info().outputPath(`wizard-${key}-mobile-top.png`),
+          });
+        }
+        await expectReviewFooter(page);
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= window.innerWidth
           )
         ).toBe(true);
-      }
-      const main = page.getByRole('main');
-      expect(
-        await main.evaluate(
-          (element) => getComputedStyle(element).backgroundColor
-        )
-      ).toBe('rgb(255, 247, 236)');
-      const current = page
-        .getByRole('navigation', { name: 'Listing review', exact: true })
-        .locator('[aria-current="step"]');
-      expect(
-        await current.evaluate(
-          (element) => getComputedStyle(element).backgroundColor
-        )
-      ).toBe('rgb(48, 62, 140)');
-      for (const pill of await page
-        .getByRole('navigation', { name: 'Listing review', exact: true })
-        .getByRole('link')
-        .all()) {
-        expect((await pill.boundingBox())?.height).toBeGreaterThanOrEqual(44);
-      }
-      const primary = page.locator('main form button[type="submit"]');
-      expect((await primary.boundingBox())?.height).toBeGreaterThanOrEqual(44);
-      expect(
-        await primary.evaluate(
-          (element) => getComputedStyle(element).backgroundColor
-        )
-      ).toBe('rgb(242, 132, 68)');
-      expect(
-        await primary.evaluate((element) => getComputedStyle(element).color)
-      ).toBe('rgb(17, 13, 13)');
-      if (viewport.label === 'mobile') {
-        await page.keyboard.press('Escape');
-        await page.evaluate(() => window.scrollTo(0, 0));
         await page.screenshot({
-          path: test.info().outputPath(`wizard-${key}-mobile-top.png`),
+          path: test.info().outputPath(`wizard-${key}-${viewport.label}.png`),
+          fullPage: viewport.label === 'desktop',
         });
       }
-      await primary.focus();
-      await expect(primary).toBeFocused();
-      expect(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= window.innerWidth
-        )
-      ).toBe(true);
+      const next = page.getByRole('button', {
+        name: 'Continue to confirmation',
+        exact: true,
+      });
+      if (viewport.label === 'desktop') await next.click();
+      else await next.tap();
+      await expect(
+        page.getByText('Final check', { exact: true })
+      ).toBeVisible();
       await page.screenshot({
-        path: test.info().outputPath(`wizard-${key}-${viewport.label}.png`),
+        path: test.info().outputPath(`wizard-confirm-${viewport.label}.png`),
         fullPage: viewport.label === 'desktop',
       });
-    }
-    await page
-      .getByRole('button', { name: 'Continue to confirmation', exact: true })
-      .click();
-    await expect(page.getByText('Final check', { exact: true })).toBeVisible();
-    await page.screenshot({
-      path: test.info().outputPath(`wizard-confirm-${viewport.label}.png`),
-      fullPage: viewport.label === 'desktop',
+      expect(fixture.writes).toHaveLength(0);
+      expect(fixture.reviewConfirmations).toHaveLength(0);
     });
-    expect(fixture.writes).toHaveLength(0);
-    expect(fixture.reviewConfirmations).toHaveLength(0);
   });
 }
 
