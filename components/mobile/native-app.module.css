@@ -1,5 +1,6 @@
 .app {
   --native-dock-space: calc(58px + max(8px, env(safe-area-inset-bottom)) + 8px);
+  --native-scroll-space: var(--native-dock-space);
   position: fixed;
   inset: 0;
   display: flex;
@@ -26,6 +27,10 @@
   --native-dock-space: 8px;
 }
 
+.app[data-native-conversation] {
+  --native-scroll-space: 0px;
+}
+
 .app [hidden] {
   display: none !important;
 }
@@ -39,12 +44,12 @@
   z-index: 60;
   display: grid;
   flex: none;
-  grid-template-columns: 88px minmax(0, 1fr) 88px;
+  grid-template-columns: 92px minmax(0, 1fr) 92px;
   align-items: center;
   gap: 0;
-  height: 44px;
-  min-height: 44px;
-  padding: 0 8px;
+  height: 52px;
+  min-height: 52px;
+  padding: 3px 8px;
   border-bottom: 1px solid rgb(17 13 13 / 0.1);
   background: var(--color-pana-cream);
 }
@@ -69,7 +74,7 @@
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -114,30 +119,28 @@
   height: 100%;
   overflow: auto;
   overscroll-behavior: contain;
+  padding-bottom: var(--native-scroll-space);
+  scroll-padding-bottom: var(--native-scroll-space);
 }
 
 .bottomNav {
+  position: absolute;
   z-index: 40;
+  right: calc(11px + env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  left: calc(11px + env(safe-area-inset-left));
   display: grid;
   flex: none;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 3px;
   height: 58px;
-  margin: 8px 11px max(8px, env(safe-area-inset-bottom));
+  margin: 0;
   padding: 4px 6px;
   border: 1px solid rgb(17 13 13 / 0.15);
   border-radius: 34px;
   background: rgb(255 247 236 / 0.95);
   box-shadow: 0 5px 16px rgb(44 30 17 / 0.1);
   backdrop-filter: blur(20px);
-}
-
-.app[data-native-map] .bottomNav {
-  position: absolute;
-  right: calc(11px + env(safe-area-inset-right));
-  bottom: max(8px, env(safe-area-inset-bottom));
-  left: calc(11px + env(safe-area-inset-left));
-  margin: 0;
 }
 
 :global(html[data-native-platform='ios']) .chips button,
@@ -1034,11 +1037,6 @@
 @media (max-height: 480px) {
   .categoryRow {
     display: none;
-  }
-
-  .header {
-    min-height: 44px;
-    padding-block: 0;
   }
 
   .navItem {
