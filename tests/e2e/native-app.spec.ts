@@ -375,7 +375,7 @@ test('native sheet header accepts short touch swipes without disturbing map geom
   await cdp.detach();
 });
 
-test('native directory shows complete In map and Online collections with camera-stable photo selection', async ({
+test('native directory shows complete In map and Without location collections with camera-stable photo selection', async ({
   page,
 }) => {
   const businesses: SearchResultsInterface[] = Array.from(
@@ -424,7 +424,11 @@ test('native directory shows complete In map and Online collections with camera-
   ).toHaveCount(27);
   await expect(
     map(page)
-      .getByRole('region', { name: 'Online', exact: true, includeHidden: true })
+      .getByRole('region', {
+        name: 'Without location',
+        exact: true,
+        includeHidden: true,
+      })
       .locator('article[data-result-id]')
   ).toHaveCount(20);
   const pin = map(page).getByRole('button', {
@@ -522,7 +526,7 @@ test('native location sharing ignores old radius links and can recenter after br
   expect(queries().at(-1)?.get('geolng')).toBe('-80.19');
   await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
   const online = map(page).getByRole('region', {
-    name: 'Online',
+    name: 'Without location',
     exact: true,
     includeHidden: true,
   });
@@ -583,32 +587,76 @@ test('native location sharing ignores old radius links and can recenter after br
 
 for (const viewport of [
   { width: 390, height: 844 },
+  { width: 320, height: 568 },
   { width: 740, height: 320 },
+  { width: 740, height: 270 },
 ]) {
   test(`native directory dropdowns keep branded, accessible filters at ${viewport.width}x${viewport.height}`, async ({
     page,
   }, testInfo) => {
     const fixtures = await native(page);
     await page.setViewportSize(viewport);
-    await page.goto('/d?radius=5');
+    await page.goto('/d?radius=5&sort=recommended');
     await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
-    await page.getByRole('button', { name: 'Directory filters' }).tap();
-    const dialog = page.getByRole('dialog', { name: 'Directory filters' });
-    await expect(dialog.getByRole('button', { name: /^Radius/ })).toHaveCount(
-      0
-    );
-    const category = dialog.getByRole('button', { name: /^Categories/ });
-    const cream = await category.evaluate(
-      (node) => getComputedStyle(node).backgroundColor
-    );
-    await expect(dialog).toHaveCSS('background-color', cream);
+    const filters = page.getByRole('group', { name: 'Directory filters' });
+    await expect(filters.getByRole('button')).toHaveText([
+      'Category',
+      'Visit',
+      'Certified',
+      'Events',
+    ]);
+    await expect(page.getByRole('button', { name: /^Sort/ })).toHaveCount(0);
+    await expect(
+      page.getByRole('search').getByRole('button', { name: 'Use my location' })
+    ).toBeVisible();
+    const category = filters.getByRole('button', { name: /^Category/ });
     await expect(category).toHaveCSS('border-radius', '999px');
+    for (const button of await filters.getByRole('button').all()) {
+      const box = (await button.boundingBox())!;
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+      const face = await button.evaluate((node) => {
+        const style = getComputedStyle(node, '::before');
+        return (
+          node.getBoundingClientRect().height -
+          parseFloat(style.top) -
+          parseFloat(style.bottom)
+        );
+      });
+      expect(face).toBe(32);
+    }
+    const canvas = map(page).locator('.maplibregl-canvas');
+    const camera = map(page).locator('.dirsearch-mapcanvas[data-map-center]');
+    const before = {
+      bounds: await canvas.boundingBox(),
+      center: await camera.getAttribute('data-map-center'),
+      zoom: await camera.getAttribute('data-map-zoom'),
+    };
+    const bounded = async (panel: Locator) => {
+      await expect(panel).toBeInViewport({ ratio: 1 });
+      const box = (await panel.boundingBox())!;
+      const dock = (await page
+        .getByRole('navigation', { name: 'App navigation' })
+        .boundingBox())!;
+      const header = (await page
+        .locator('[data-native-app] > header')
+        .boundingBox())!;
+      expect(box.y).toBeGreaterThanOrEqual(header.y + header.height);
+      expect(box.y + box.height).toBeLessThanOrEqual(dock.y - 7);
+      await expect(
+        panel.getByRole('button', { name: 'Done', exact: true })
+      ).toBeInViewport({ ratio: 1 });
+    };
     await category.tap();
-    const menu = dialog.getByRole('menu', {
-      name: 'Categories',
+    const dialog = page.getByRole('dialog', {
+      name: 'Category',
       exact: true,
     });
-    await expect(menu).toHaveCSS('background-color', cream);
+    await expect(dialog).toHaveCSS('background-color', 'rgb(255, 247, 236)');
+    await bounded(dialog);
+    const menu = dialog.getByRole('menu', { name: 'Category', exact: true });
     const choices = menu.getByRole('menuitemcheckbox');
     await choices.first().press('End');
     await expect(choices.last()).toBeFocused();
@@ -624,15 +672,21 @@ for (const viewport of [
     await expect(
       menu.getByRole('menuitemcheckbox', { name: 'Art', exact: true })
     ).toHaveAttribute('aria-checked', 'true');
-    await menu.scrollIntoViewIfNeeded();
     await page.screenshot({
       path: testInfo.outputPath('native-category-open.png'),
       animations: 'disabled',
     });
-    await menu.getByRole('button', { name: 'Clear categories' }).focus();
+    await choices.last().focus();
+    await page.keyboard.press('Tab');
+    await expect(
+      dialog.getByRole('button', { name: 'Clear all', exact: true })
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
+      dialog.getByRole('button', { name: 'Done', exact: true })
+    ).toBeFocused();
     await page.keyboard.press('Escape');
-    await expect(menu).toHaveCount(0);
-    await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveCount(0);
     await expect(category).toBeFocused();
     await category.tap();
     expect(
@@ -642,29 +696,42 @@ for (const viewport of [
         return event.defaultPrevented;
       }, NATIVE_BACK_BUTTON_EVENT)
     ).toBe(true);
-    await expect(menu).toHaveCount(0);
-    await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveCount(0);
     await expect(category).toBeFocused();
-    const sort = dialog.getByRole('button', { name: /^Sort/ });
-    await sort.press('ArrowDown');
-    const sortMenu = dialog.getByRole('menu', { name: 'Sort', exact: true });
-    await expect(
-      sortMenu.getByRole('menuitemradio', { name: /Nearest/ })
-    ).toBeDisabled();
-    await expect(sortMenu).toHaveCSS('background-color', cream);
-    await sortMenu.scrollIntoViewIfNeeded();
-    await page.screenshot({
-      path: testInfo.outputPath('native-sort-open.png'),
-      animations: 'disabled',
+    const visit = filters.getByRole('button', { name: /^Visit/ });
+    await visit.press('ArrowDown');
+    const visitDialog = page.getByRole('dialog', {
+      name: 'Visit',
+      exact: true,
     });
-    await sortMenu
-      .getByRole('menuitemradio', { name: 'Most recommended', exact: true })
+    await bounded(visitDialog);
+    await visitDialog
+      .getByRole('menuitemradio', { name: /^Online / })
       .press('Enter');
-    await expect(sortMenu).toHaveCount(0);
-    await dialog.getByRole('checkbox', { name: 'Pana certified only' }).check();
-    await dialog
-      .getByRole('checkbox', { name: 'Hosting upcoming events' })
-      .check();
+    await expect(visitDialog).toBeVisible();
+    await visitDialog
+      .getByRole('button', { name: 'Done', exact: true })
+      .click();
+    await expect(visit).toBeFocused();
+    await filters.getByRole('button', { name: /^Certified/ }).tap();
+    const certified = page.getByRole('dialog', {
+      name: 'Certified',
+      exact: true,
+    });
+    await bounded(certified);
+    await certified
+      .getByRole('menuitemradio', { name: 'Pana certified only', exact: true })
+      .click();
+    await certified.getByRole('button', { name: 'Done', exact: true }).click();
+    await filters.getByRole('button', { name: /^Events/ }).tap();
+    const events = page.getByRole('dialog', { name: 'Events', exact: true });
+    await bounded(events);
+    await events
+      .getByRole('menuitemradio', {
+        name: 'Hosting upcoming events',
+        exact: true,
+      })
+      .click();
     await expect
       .poll(() => {
         const request = fixtures.state.requests
@@ -680,24 +747,23 @@ for (const viewport of [
         ];
       })
       .toEqual(['art+food', 'recommended', 'true', 'true', 'all']);
-    await dialog
-      .getByRole('button', { name: 'Clear filters', exact: true })
-      .tap();
+    await events.getByRole('button', { name: 'Clear all', exact: true }).tap();
     await expect(
-      dialog.getByRole('checkbox', { name: 'Pana certified only' })
-    ).not.toBeChecked();
-    await expect(
-      dialog.getByRole('checkbox', { name: 'Hosting upcoming events' })
-    ).not.toBeChecked();
-    await dialog
-      .getByRole('button', { name: 'Show results', exact: true })
-      .tap();
-    await expect(dialog).toHaveCount(0);
+      events.getByRole('menuitemradio', { name: 'All listings', exact: true })
+    ).toHaveAttribute('aria-checked', 'true');
+    await events.getByRole('button', { name: 'Done', exact: true }).tap();
+    await expect(events).toHaveCount(0);
+    await expect(filters.getByRole('button')).toHaveText([
+      'Category',
+      'Visit',
+      'Certified',
+      'Events',
+    ]);
     await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
     await expect(
       map(page)
         .getByRole('region', {
-          name: 'Online',
+          name: 'Without location',
           exact: true,
           includeHidden: true,
         })
@@ -710,10 +776,221 @@ for (const viewport of [
           (item) => new URLSearchParams(item.query).get('radius') === 'all'
         )
     ).toBe(true);
+    expect(await canvas.boundingBox()).toEqual(before.bounds);
+    expect(await camera.getAttribute('data-map-center')).toBe(before.center);
+    expect(await camera.getAttribute('data-map-zoom')).toBe(before.zoom);
+    await category.click();
+    await page
+      .getByRole('navigation', { name: 'App navigation' })
+      .getByRole('link', { name: 'Directory', exact: true })
+      .click();
+    await expect(dialog).toHaveCount(0);
   });
 }
 
-test('native In map follows zoom, pan, and resizing while unlocated matches remain in Online', async ({
+test('native Visit filters the complete directory without mistaking missing coordinates for online service', async ({
+  page,
+}) => {
+  const zip = {
+    postalCode: '33138',
+    country: 'US' as const,
+    city: 'Miami',
+    region: 'FL',
+    lat: 25.8,
+    lng: -80.2,
+  };
+  const businesses: SearchResultsInterface[] = Array.from(
+    { length: 47 },
+    (_, index) => ({
+      _id: `visit-${index}`,
+      id: `visit-${index}`,
+      name: `Visit business ${index}`,
+      screenname: `visit-${index}`,
+      score: 1,
+      score_details: {},
+      details: 'Complete Visit fixture',
+      five_words: 'Complete Visit fixture',
+      geo:
+        index % 5 === 0
+          ? null
+          : { coordinates: [-80.21 + index * 0.001, 25.76] },
+      images: { primaryCDN: '/logos/pana_logo_long_orange.png' },
+      primary_address: { city: 'Miami', zipcode: '33138' },
+      categories: [index % 2 === 0 ? 'art' : 'food'],
+      online_only: index % 3 === 0,
+      online_zip: index % 6 === 0 ? zip : null,
+      certified: index % 2 === 0,
+      nextEvent:
+        index % 4 === 0
+          ? {
+              slug: 'fixture-event',
+              title: 'Upcoming gathering',
+              startsAt: '2027-01-01T18:00:00Z',
+              timezone: 'America/New_York',
+              online: false,
+              venueCity: 'Miami',
+            }
+          : null,
+      socials: {},
+    })
+  );
+  const fixtures = await native(page, { businesses });
+  await page.goto('/d');
+  const results = map(page);
+  const filters = page.getByRole('group', { name: 'Directory filters' });
+  const camera = results.locator('.dirsearch-mapcanvas[data-map-center]');
+  const canvas = results.locator('.maplibregl-canvas');
+  await expect(
+    results.getByRole('heading', { name: '47 listings', exact: true })
+  ).toBeVisible();
+  await expect(results.locator('.maplibregl-marker button')).toHaveCount(26);
+  const before = {
+    bounds: await canvas.boundingBox(),
+    center: await camera.getAttribute('data-map-center'),
+    zoom: await camera.getAttribute('data-map-zoom'),
+  };
+  const requests = () =>
+    fixtures.state.requests.filter(
+      (item) => item.pathname === '/api/getDirectorySearch'
+    );
+  const initialRequests = requests().length;
+  const selectVisit = async (name: RegExp) => {
+    await filters.getByRole('button', { name: /^Visit/ }).click();
+    const dialog = page.getByRole('dialog', { name: 'Visit', exact: true });
+    await dialog.getByRole('menuitemradio', { name }).click();
+    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+  };
+  const unlocated = results.getByRole('region', {
+    name: 'Without location',
+    exact: true,
+    includeHidden: true,
+  });
+  await selectVisit(/^In person /);
+  await expect(
+    results.getByRole('heading', { name: '31 listings', exact: true })
+  ).toBeVisible();
+  await expect(results.locator('.maplibregl-marker button')).toHaveCount(25);
+  await expect(unlocated.locator('article')).toHaveCount(6);
+  await expect(
+    unlocated.locator('article[data-result-id="visit-5"]')
+  ).toHaveCount(1);
+  await expect(
+    unlocated.locator('article[data-result-id="visit-15"]')
+  ).toHaveCount(0);
+  await selectVisit(/^Online /);
+  await expect(
+    results.getByRole('heading', { name: '16 listings', exact: true })
+  ).toBeVisible();
+  await expect(results.locator('.maplibregl-marker button')).toHaveCount(1);
+  await expect(unlocated.locator('article')).toHaveCount(8);
+  await expect(
+    unlocated.locator('article[data-result-id="visit-15"]')
+  ).toHaveCount(1);
+  await expect(
+    unlocated.locator('article[data-result-id="visit-5"]')
+  ).toHaveCount(0);
+  expect(requests()).toHaveLength(initialRequests);
+  await scope(page, 'Events');
+  await expect(
+    map(page, 'Events').getByRole('heading', {
+      name: '24 events shown',
+      exact: true,
+    })
+  ).toBeVisible();
+  await scope(page, 'Directory');
+  await expect(
+    results.getByRole('heading', { name: '16 listings', exact: true })
+  ).toBeVisible();
+  for (const [label, option] of [
+    ['Category', 'Art'],
+    ['Certified', 'Pana certified only'],
+    ['Events', 'Hosting upcoming events'],
+  ]) {
+    await filters
+      .getByRole('button', { name: new RegExp(`^${label}`) })
+      .click();
+    const dialog = page.getByRole('dialog', { name: label, exact: true });
+    await dialog
+      .getByRole(label === 'Category' ? 'menuitemcheckbox' : 'menuitemradio', {
+        name: option,
+        exact: true,
+      })
+      .click();
+    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+  }
+  await expect(
+    results.getByRole('heading', { name: '4 listings', exact: true })
+  ).toBeVisible();
+  await expect(results.locator('.dirsearch-zip-label')).toHaveText('331384');
+  await filters.getByRole('button', { name: /^Visit/ }).click();
+  const visit = page.getByRole('dialog', { name: 'Visit', exact: true });
+  await visit.getByRole('button', { name: 'Clear all', exact: true }).click();
+  await expect(
+    visit.getByRole('menuitemradio', { name: /^Both / })
+  ).toHaveAttribute('aria-checked', 'true');
+  await visit.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(
+    results.getByRole('heading', { name: '47 listings', exact: true })
+  ).toBeVisible();
+  expect(await canvas.boundingBox()).toEqual(before.bounds);
+  expect(await camera.getAttribute('data-map-center')).toBe(before.center);
+  expect(await camera.getAttribute('data-map-zoom')).toBe(before.zoom);
+  await results
+    .getByRole('button', { name: 'Visit business 46', exact: true })
+    .click();
+  await fitted(page);
+  expect(fixtures.state.unhandled).toEqual([]);
+});
+
+test('native Clear all preserves search and location while clearing legacy link filters', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: 25.761689, longitude: -80.191788 });
+  const fixtures = await native(page);
+  await page.goto('/d?q=Bay&certified=true&mentors=true&sort=name');
+  const search = page.getByRole('searchbox', { name: 'Search directory' });
+  const location = page
+    .getByRole('search')
+    .getByRole('button', { name: 'Use my location' });
+  await expect(search).toHaveValue('Bay');
+  await location.click();
+  await expect(location).toHaveAttribute('aria-pressed', 'true');
+  await page
+    .getByRole('group', { name: 'Directory filters' })
+    .getByRole('button', { name: /^Category/ })
+    .click();
+  const category = page.getByRole('dialog', { name: 'Category', exact: true });
+  await expect(category).toContainText(
+    'Additional mentoring or language filters'
+  );
+  await category
+    .getByRole('button', { name: 'Clear all', exact: true })
+    .click();
+  await expect(category).not.toContainText(
+    'Additional mentoring or language filters'
+  );
+  await category.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(
+    map(page).getByRole('heading', { name: '1 listing', exact: true })
+  ).toBeVisible();
+  await expect(search).toHaveValue('Bay');
+  await expect(location).toHaveAttribute('aria-pressed', 'true');
+  await expect
+    .poll(() => {
+      const request = fixtures.state.requests
+        .filter((item) => item.pathname === '/api/getDirectorySearch')
+        .at(-1)!;
+      const params = new URLSearchParams(request.query);
+      return ['q', 'geolat', 'geolng', 'certified', 'mentors', 'sort'].map(
+        (key) => params.get(key)
+      );
+    })
+    .toEqual(['Bay', '25.76', '-80.19', null, null, 'nearest']);
+});
+
+test('native In map follows zoom, pan, and resizing while unlocated matches remain in Without location', async ({
   page,
 }) => {
   const points = [
@@ -778,7 +1055,7 @@ test('native In map follows zoom, pan, and resizing while unlocated matches rema
     includeHidden: true,
   });
   const online = map(page).getByRole('region', {
-    name: 'Online',
+    name: 'Without location',
     exact: true,
     includeHidden: true,
   });
