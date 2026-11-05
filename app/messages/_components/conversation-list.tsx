@@ -15,6 +15,7 @@ import {
 import { inboxKey, inboxSelection, type InboxEntry } from '../_lib/inbox';
 import {
   unconfirmedMessages,
+  messageDraftPreview,
   type MessageDraft,
   type OutgoingMessage,
 } from '../_lib/workspace';
@@ -165,12 +166,7 @@ export function ConversationList({
               entry.kind === 'direct'
                 ? drafts[entry.actor.id]
                 : groupDrafts[entry.group.handle];
-            const hasDraft = !!(
-              draft?.text.trim() ||
-              draft?.gif ||
-              draft?.isMirroring ||
-              draft?.gifError
-            );
+            const draftPreview = draft ? messageDraftPreview(draft) : null;
             const latest =
               entry.kind === 'direct'
                 ? latestOutgoing.get(entry.actor.id)
@@ -226,17 +222,12 @@ export function ConversationList({
                       </span>
                     </span>
                     <span className="text-pana-ink/60 mt-1 block truncate text-xs leading-relaxed">
-                      {hasDraft ? (
+                      {draftPreview ? (
                         <>
                           <span className="text-pana-red-deep font-bold">
                             Draft:{' '}
                           </span>
-                          {draft.text ||
-                            (draft.isMirroring
-                              ? 'Saving GIF...'
-                              : draft.gifError
-                                ? 'GIF not saved'
-                                : 'GIF')}
+                          {draftPreview}
                         </>
                       ) : localMessage ? (
                         <span

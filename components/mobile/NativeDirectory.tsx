@@ -1,21 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { LocateFixed, Search, SlidersHorizontal } from 'lucide-react';
+import { LocateFixed, Search } from 'lucide-react';
 import { ScopeMenu } from '@/components/directory-scope-bar';
 import { FilterMenu } from '@/components/ui/filter-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { profileCategoryList } from '@/lib/lists';
 import { searchParamsToString, useSearch } from '@/lib/query/directory';
 import { useMyGroups } from '@/lib/query/social';
 import { useNativeEvents, useNativeGroups } from '@/lib/query/native-app';
-import { nativeBusiness, nativeEvent, nativeGroup } from '@/lib/mobile/browse';
+import {
+  matchesNativeVisit,
+  nativeBusiness,
+  nativeEvent,
+  nativeGroup,
+  type NativeDirectoryVisit,
+} from '@/lib/mobile/browse';
 import { getDirectorySearchParams } from '@/app/directory/search/_lib/search-params';
 import { useViewerLocation } from '@/app/p/[user]/_lib/use-viewer-location';
 import { useToast } from '@/hooks/use-toast';
@@ -26,12 +25,19 @@ import styles from './native-app.module.css';
 
 const SCOPES = ['directory', 'event', 'group'] as const;
 type NativeScope = (typeof SCOPES)[number];
-const SORTS = [
-  { value: 'relevance', label: 'Best match' },
-  { value: 'nearest', label: 'Nearest' },
-  { value: 'recommended', label: 'Most recommended' },
-  { value: 'name', label: 'A-Z' },
-] as const;
+const VISITS = [
+  {
+    value: 'both',
+    label: 'Both',
+    hint: 'In-person and online-only listings together',
+  },
+  {
+    value: 'in-person',
+    label: 'In person',
+    hint: 'Local businesses and services',
+  },
+  { value: 'online', label: 'Online', hint: 'Businesses marked online-only' },
+] satisfies { value: NativeDirectoryVisit; label: string; hint: string }[];
 
 function readRequest(request: string | null) {
   const url = new URL(request || '/d', 'https://native.invalid');
@@ -63,10 +69,11 @@ export default function NativeDirectory({
   const [query, setQuery] = useState(initial.params.searchTerm);
   const [term, setTerm] = useState(query.trim());
   const [filterVersion, setFilterVersion] = useState(0);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [visit, setVisit] = useState<NativeDirectoryVisit>('both');
   const [covered, setCovered] = useState({ directory: false, event: false });
   const previousRequest = useRef(request);
   const input = useRef<HTMLInputElement>(null);
+  const filterBoundary = useRef<HTMLDivElement>(null);
   const { signedIn, viewerKey } = useNativeViewer();
   const location = useViewerLocation();
   const { toast } = useToast();
@@ -102,6 +109,7 @@ export default function NativeDirectory({
     const next = readRequest(request);
     setScope(next.scope);
     setParams(next.params);
+    setVisit('both');
     setQuery(next.params.searchTerm);
     setTerm(next.params.searchTerm.trim());
     setFilterVersion((version) => version + 1);
@@ -134,12 +142,19 @@ export default function NativeDirectory({
       [
         ...(directory.data?.data ?? []),
         ...(directory.data?.map?.unmappedResults ?? []),
-      ].map(nativeBusiness),
-    [directory.data]
+      ]
+        // Map responses include every matching mapped and unlocated listing,
+        // so Visit refines the complete set, never just a paginated subset.
+        .filter((result) => matchesNativeVisit(result, visit))
+        .map(nativeBusiness),
+    [directory.data, visit]
   );
   const mappedBusinesses = useMemo(
-    () => (directory.data?.data ?? []).map(nativeBusiness),
-    [directory.data]
+    () =>
+      (directory.data?.data ?? [])
+        .filter((result) => matchesNativeVisit(result, visit))
+        .map(nativeBusiness),
+    [directory.data, visit]
   );
   const eventItems = useMemo(
     () =>
@@ -182,7 +197,7 @@ export default function NativeDirectory({
   );
   const searching = term !== query.trim();
   const categories = params.filterCategories.split('+').filter(Boolean);
-  const total = directory.data?.map?.totalResults ?? 0;
+  const total = businesses.length;
   const scopeLabel =
     scope === 'directory'
       ? 'Directory'
@@ -200,6 +215,34 @@ export default function NativeDirectory({
     params.expertise ||
     params.languages ||
     params.freeOnly;
+  const clearFilters = useCallback(() => {
+    setParams(getDirectorySearchParams(new URLSearchParams()));
+    setVisit('both');
+    setFilterVersion((version) => version + 1);
+  }, []);
+  const filterCaption = (label: string) => (
+    <>
+      <strong>{label}</strong>
+      {hasLegacyFilters && (
+        <span>
+          Additional mentoring or language filters from your link are active.
+          Clear all removes them.
+        </span>
+      )}
+      {location.status === 'denied' && (
+        <span role="status">
+          Location is unavailable. Showing all areas; you can allow location in
+          your device settings.
+        </span>
+      )}
+    </>
+  );
+  const menuProps = {
+    appearance: 'surface' as const,
+    compact: true,
+    onClearAll: clearFilters,
+    boundaryRef: filterBoundary,
+  };
 
   return (
     <div
@@ -207,6 +250,11 @@ export default function NativeDirectory({
       data-controls-covered={controlsCovered || undefined}
     >
       <h1 className="sr-only">Directory</h1>
+      <div
+        ref={filterBoundary}
+        className={styles.filterBoundary}
+        aria-hidden="true"
+      />
       <div className={styles.directoryControls}>
         <form
           className={styles.search}
@@ -259,44 +307,6 @@ export default function NativeDirectory({
           {scope === 'directory' && (
             <button
               type="button"
-              className={styles.iconButton}
-              aria-label="Directory filters"
-              onClick={() => setFiltersOpen(true)}
-            >
-              <SlidersHorizontal size={18} aria-hidden="true" />
-            </button>
-          )}
-        </form>
-
-        {scope === 'directory' && (
-          <div className={styles.categoryRow}>
-            <div className={styles.chips} aria-label="Business categories">
-              {[{ value: '', desc: 'All' }, ...profileCategoryList].map(
-                (category) => (
-                  <button
-                    type="button"
-                    key={category.value}
-                    aria-pressed={
-                      category.value
-                        ? categories.includes(category.value)
-                        : categories.length === 0
-                    }
-                    onClick={() => {
-                      setParams((current) => ({
-                        ...current,
-                        pageNum: 1,
-                        filterCategories: category.value,
-                      }));
-                      setFilterVersion((version) => version + 1);
-                    }}
-                  >
-                    {category.desc}
-                  </button>
-                )
-              )}
-            </div>
-            <button
-              type="button"
               className={styles.locate}
               aria-label="Use my location"
               aria-pressed={location.status === 'granted'}
@@ -305,6 +315,92 @@ export default function NativeDirectory({
             >
               <LocateFixed size={18} aria-hidden="true" />
             </button>
+          )}
+        </form>
+
+        {scope === 'directory' && (
+          <div
+            className={styles.filterRow}
+            role="group"
+            aria-label="Directory filters"
+          >
+            <FilterMenu
+              {...menuProps}
+              label="Category"
+              caption={filterCaption('Category')}
+              options={profileCategoryList.map((category) => ({
+                value: category.value,
+                label: category.desc,
+              }))}
+              selected={categories}
+              onChange={(values) =>
+                setParams((current) => ({
+                  ...current,
+                  pageNum: 1,
+                  filterCategories: values.join('+'),
+                }))
+              }
+            />
+            <FilterMenu
+              {...menuProps}
+              label="Visit"
+              caption={filterCaption('Visit')}
+              single
+              defaultValue="both"
+              options={VISITS}
+              selected={[visit]}
+              onChange={([value]) => {
+                const next = VISITS.find((option) => option.value === value);
+                if (!next) throw new Error('Unknown directory visit option');
+                setVisit(next.value);
+              }}
+            />
+            <FilterMenu
+              {...menuProps}
+              label="Certified"
+              caption={filterCaption('Certified')}
+              single
+              defaultValue="all"
+              options={[
+                { value: 'all', label: 'All listings' },
+                {
+                  value: 'certified',
+                  label: 'Pana certified only',
+                  triggerLabel: 'Certified',
+                },
+              ]}
+              selected={[params.certifiedOnly ? 'certified' : 'all']}
+              onChange={([value]) =>
+                setParams((current) => ({
+                  ...current,
+                  pageNum: 1,
+                  certifiedOnly: value === 'certified',
+                }))
+              }
+            />
+            <FilterMenu
+              {...menuProps}
+              label="Events"
+              caption={filterCaption('Events')}
+              single
+              defaultValue="all"
+              options={[
+                { value: 'all', label: 'All listings' },
+                {
+                  value: 'events',
+                  label: 'Hosting upcoming events',
+                  triggerLabel: 'Events',
+                },
+              ]}
+              selected={[params.withEventsOnly ? 'events' : 'all']}
+              onChange={([value]) =>
+                setParams((current) => ({
+                  ...current,
+                  pageNum: 1,
+                  withEventsOnly: value === 'events',
+                }))
+              }
+            />
           </div>
         )}
       </div>
@@ -314,14 +410,15 @@ export default function NativeDirectory({
           <NativeMapResults
             items={businesses}
             mapItems={mappedBusinesses}
-            unmappedCount={directory.data?.map?.unmappedCount}
             directorySections
             label="Directory"
             count={`${total} ${total === 1 ? 'listing' : 'listings'}`}
             filterKey={JSON.stringify([
               searchParamsToString({ ...queryFilters, pageNum: 1 }),
+              visit,
               filterVersion,
             ])}
+            frameKey={term}
             active={active && scope === 'directory'}
             loading={directory.isPending || searching}
             failed={directory.isError || directory.data?.success === false}
@@ -402,113 +499,6 @@ export default function NativeDirectory({
           </button>
         )}
       </div>
-
-      <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <DialogContent className={styles.filtersDialog}>
-          <DialogHeader>
-            <DialogTitle>Directory filters</DialogTitle>
-            <DialogDescription>
-              Move the map to browse an area. Refine the results here without
-              changing your search category.
-            </DialogDescription>
-          </DialogHeader>
-          <FilterMenu
-            label="Categories"
-            appearance="surface"
-            options={profileCategoryList.map((category) => ({
-              value: category.value,
-              label: category.desc,
-            }))}
-            selected={categories}
-            onChange={(values) =>
-              setParams((current) => ({
-                ...current,
-                pageNum: 1,
-                filterCategories: values.join('+'),
-              }))
-            }
-          />
-          <FilterMenu
-            label="Sort"
-            appearance="surface"
-            single
-            defaultValue="relevance"
-            selected={[sort]}
-            options={SORTS.map((option) => ({
-              ...option,
-              disabledReason:
-                option.value === 'nearest' && !location.coords
-                  ? 'Use your location first'
-                  : undefined,
-            }))}
-            onChange={([value]) => {
-              const next = SORTS.find((option) => option.value === value);
-              if (!next) throw new Error('Unknown directory sort');
-              setParams((current) => ({
-                ...current,
-                pageNum: 1,
-                sort: next.value,
-              }));
-            }}
-          />
-          <label>
-            <input
-              type="checkbox"
-              checked={params.certifiedOnly}
-              onChange={(event) =>
-                setParams((current) => ({
-                  ...current,
-                  pageNum: 1,
-                  certifiedOnly: event.target.checked,
-                }))
-              }
-            />
-            Pana certified only
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={params.withEventsOnly}
-              onChange={(event) =>
-                setParams((current) => ({
-                  ...current,
-                  pageNum: 1,
-                  withEventsOnly: event.target.checked,
-                }))
-              }
-            />
-            Hosting upcoming events
-          </label>
-          {hasLegacyFilters && (
-            <p>
-              Additional mentoring or language filters from your link are
-              active.
-            </p>
-          )}
-          {location.status === 'denied' && (
-            <p role="status">
-              Location is unavailable. Showing all areas; you can allow location
-              in your device settings.
-            </p>
-          )}
-          <button
-            type="button"
-            className={styles.loadMore}
-            onClick={() =>
-              setParams(getDirectorySearchParams(new URLSearchParams()))
-            }
-          >
-            Clear filters
-          </button>
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={() => setFiltersOpen(false)}
-          >
-            Show results
-          </button>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

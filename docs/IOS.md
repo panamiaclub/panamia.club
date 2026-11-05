@@ -21,6 +21,14 @@ the corresponding iPad screenshots.
   selection scrolls the complete list to a highlighted, measured two-profile
   preview while the map stays fixed. Status-bar and home-indicator safe areas
   remain protected; very short landscape views show one profile when needed.
+- Location sits inside search, above compact Category, Visit, Certified, and
+  Events dropdowns. Visit uses declared online-only status, not missing
+  coordinates: Both includes all, In person excludes online-only listings,
+  and Online includes them. Unlocated results remain under Without location.
+  Menus include Clear all and Done, remain above the dock, and preserve the
+  map camera while refining results. Clear all keeps search text and location.
+  Very short landscape views place the filters alongside search so pins remain
+  reachable without hiding the filter controls.
 - The header contains its 44px controls with vertical breathing room. The tab
   dock floats over Social, Community, and Profile as well as the map, with
   scroll space to keep final content reachable. Keyboard and conversation
@@ -54,6 +62,11 @@ the corresponding iPad screenshots.
   extra heading, search or compose controls. Requests stays separate; new text
   chats start from Message on another pana's profile, with the target preserved
   through sign-in. The same compact inbox is used on the website.
+- Chat keeps Pana colours with a compact one-row composer that grows as you type.
+  Phone Return adds a newline; Send submits. The photo control uses the standard
+  file picker, not a new native plugin, and discloses the existing shareable-media
+  link model. Photos are re-encoded without camera metadata before uploading;
+  photo/GIF drafts, failed uploads and retry remain scoped to their conversation.
 - iOS offers email-link sign-in. Android's Google SDK is deliberately excluded
   from the iOS native package. Do not enable Google on iOS without implementing
   the corresponding Apple-compliant login options and configuring their credentials.

@@ -50,6 +50,7 @@ export default function NativeMapResults({
   label,
   count,
   filterKey,
+  frameKey,
   active,
   loading,
   failed,
@@ -66,6 +67,8 @@ export default function NativeMapResults({
   label: string;
   count: string;
   filterKey: string;
+  /** Refinements keep the camera; a new search term may fit new results. */
+  frameKey?: string;
   active: boolean;
   loading: boolean;
   failed: boolean;
@@ -92,7 +95,9 @@ export default function NativeMapResults({
   const [stop, setStop] = useState<NativeSheetStop>('peek');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectionRequest, setSelectionRequest] = useState(0);
-  const [collection, setCollection] = useState<'mapped' | 'online'>('mapped');
+  const [collection, setCollection] = useState<'mapped' | 'unlocated'>(
+    'mapped'
+  );
   const [previewKey, setPreviewKey] = useState<string | null>(null);
   const [previewHeight, setPreviewHeight] = useState<number | null>(null);
   const [bounds, setBounds] = useState<MapBounds | null>(null);
@@ -116,7 +121,7 @@ export default function NativeMapResults({
     );
     return mapItems.filter((item) => ids.has(item.id));
   }, [pins, mapItems, bounds]);
-  const onlineItems = useMemo(() => {
+  const unlocatedItems = useMemo(() => {
     const ids = new Set(
       pins.flatMap((pin) => pin.items.map((item) => item.id))
     );
@@ -125,7 +130,7 @@ export default function NativeMapResults({
   const results = directorySections
     ? collection === 'mapped'
       ? inMapItems
-      : onlineItems
+      : unlocatedItems
     : items;
   const selectedIndex = results.findIndex((item) => item.id === selectedId);
   const selected = selectedIndex >= 0 ? results[selectedIndex] : null;
@@ -157,6 +162,8 @@ export default function NativeMapResults({
     height > 0 && availableHeight < 250 && availableHeight - sheetHeight < 64;
   const coveredRef = useRef(covered);
   const previousFilter = useRef(filterKey);
+  const framedKey = useRef<string | null>(null);
+  const waitingForFrame = frameKey !== undefined && (!measured || loading);
   const drag = useRef<{
     id: number;
     y: number;
@@ -207,24 +214,33 @@ export default function NativeMapResults({
     setPreviewKey(null);
     setSelectedId(null);
     setCollection('mapped');
-    setStop('half');
+    setStop(directorySections ? 'peek' : 'half');
     scroller.current?.scrollTo({ top: 0 });
-  }, [filterKey]);
+  }, [filterKey, directorySections]);
 
   useEffect(() => {
+    if (waitingForFrame) return;
     const decision = onResultsArrived(
       viewerFramePending.current,
       latestPins.current.length
     );
     viewerFramePending.current = decision.viewerFramePending;
+    if (
+      frameKey !== undefined &&
+      (!decision.reframe || framedKey.current === frameKey)
+    ) {
+      framedKey.current = frameKey;
+      return;
+    }
     if (!decision.reframe) return;
+    framedKey.current = frameKey ?? null;
     setView(
       frameForPoints(
         latestPins.current.map((pin) => pin.coords),
         frameSize.current
       )
     );
-  }, [pinKey, filterKey, measured]);
+  }, [pinKey, filterKey, frameKey, measured, waitingForFrame]);
 
   // Successful location requests publish a new viewer object, including repeat taps.
   useEffect(() => {
@@ -584,17 +600,17 @@ export default function NativeMapResults({
               <button
                 type="button"
                 role="tab"
-                id={`${sheetId}-online-tab`}
-                aria-controls={`${sheetId}-online`}
-                aria-selected={collection === 'online'}
+                id={`${sheetId}-unlocated-tab`}
+                aria-controls={`${sheetId}-unlocated`}
+                aria-selected={collection === 'unlocated'}
                 onClick={() => {
-                  setCollection('online');
+                  setCollection('unlocated');
                   setPreviewKey(null);
                   setStop((current) => (current === 'peek' ? 'half' : current));
                   scroller.current?.scrollTo({ top: 0 });
                 }}
               >
-                Online {onlineItems.length}
+                Without location {unlocatedItems.length}
               </button>
             </div>
           )}
@@ -646,19 +662,19 @@ export default function NativeMapResults({
                 </section>
                 <section
                   className={styles.resultSection}
-                  aria-label="Online"
-                  id={`${sheetId}-online`}
-                  hidden={collection !== 'online'}
+                  aria-label="Without location"
+                  id={`${sheetId}-unlocated`}
+                  hidden={collection !== 'unlocated'}
                 >
                   <h3>
-                    Online <span>{onlineItems.length}</span>
+                    Without location <span>{unlocatedItems.length}</span>
                   </h3>
                   <p className={styles.resultSectionCopy}>
                     Listings without a usable map location. This does not imply
                     online service.
                   </p>
-                  {onlineItems.map(resultCard)}
-                  {!loading && !failed && onlineItems.length === 0 && (
+                  {unlocatedItems.map(resultCard)}
+                  {!loading && !failed && unlocatedItems.length === 0 && (
                     <p className={styles.resultSectionCopy}>
                       No matching listings without a map location.
                     </p>

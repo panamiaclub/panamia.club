@@ -8,6 +8,7 @@ import {
   usesNativeAppLayout,
 } from '@/lib/mobile/app-navigation';
 import {
+  matchesNativeVisit,
   nativeBusiness,
   nativeCalendarEvent,
   nativeCoords,
@@ -271,6 +272,64 @@ describe('native navigation', () => {
 });
 
 describe('native data models', () => {
+  it('filters Visit using declared online-only status, not coordinates or ZIP placement', () => {
+    const area = {
+      postalCode: '33138',
+      country: 'US' as const,
+      city: 'Miami',
+      region: 'FL',
+      lat: 25.8521,
+      lng: -80.1821,
+    };
+    const listings: SearchResultsInterface[] = [
+      { ...business, _id: 'physical', online_only: false },
+      { ...business, _id: 'unlocated-physical', geo: null },
+      {
+        ...business,
+        _id: 'approximate-physical',
+        geo: null,
+        online_only: false,
+        primary_address: { city: 'Miami', zipcode: '33138' },
+        zip_area: area,
+      },
+      {
+        ...business,
+        _id: 'private-online',
+        online_only: true,
+        primary_address: { city: 'Miami', zipcode: '33138' },
+        online_zip: area,
+      },
+      {
+        ...business,
+        _id: 'unlocated-online',
+        geo: null,
+        online_only: true,
+      },
+    ];
+    const ids = (visit: Parameters<typeof matchesNativeVisit>[1]) =>
+      listings
+        .filter((item) => matchesNativeVisit(item, visit))
+        .map((item) => item._id);
+    assert.deepEqual(
+      ids('both'),
+      listings.map((item) => item._id)
+    );
+    assert.deepEqual(ids('in-person'), [
+      'physical',
+      'unlocated-physical',
+      'approximate-physical',
+    ]);
+    assert.deepEqual(ids('online'), ['private-online', 'unlocated-online']);
+    const online = listings
+      .filter((item) => matchesNativeVisit(item, 'online'))
+      .map(nativeBusiness);
+    assert.ok(online.every((item) => item.coords === null));
+    assert.deepEqual(
+      nativeMapPins(online).map((pin) => pin.coords),
+      [{ lat: area.lat, lng: area.lng }]
+    );
+  });
+
   it('validates actual coordinates without making up fallback positions', () => {
     assert.deepEqual(nativeCoords('25.76', '-80.19'), {
       lat: 25.76,

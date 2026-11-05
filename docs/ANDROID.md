@@ -73,13 +73,26 @@ next sheet position. Scrolling the results remains independent of the sheet.
 
 The compact native layout uses a 52px app header, a 58px rounded navigation
 dock, and a 54px collapsed results row showing total listings and the In map
-count. Device safe areas and 44px touch targets are preserved. In map and Online
+count. Device safe areas and 44px touch targets are preserved. In map and Without location
 tabs keep unlocated listings available without a banner covering the map.
 Tapping a photo pin or ZIP bubble scrolls the complete list to its highlighted
 listing and opens a measured two-profile preview, not a filtered single-card
 view. The last listing is shown with the preceding profile. A list with only
 one match shows that profile; short landscape views clamp to the available
 space. Drag up to browse more, or collapse the sheet to return to the map.
+
+The location action is inside search. Category, Visit, Certified, and Events
+dropdown pills sit directly below it with 32px faces and 44px hit areas.
+Visit uses the listing's declared online-only setting: In person excludes
+online-only listings, Online includes them, and Both includes all. Missing
+coordinates do not determine Visit availability. The complete mapped and
+unlocated collections are filtered together, not just one results page.
+Each menu has Clear all and Done, keyboard navigation, Escape, outside-tap,
+and native Back dismissal. Clear all preserves search text and shared location.
+Menus fit above the dock, including in short landscape views. Very short,
+wide views place filters alongside search to leave map pins reachable. Opening or
+refining them keeps the map camera and canvas fixed. A new search can reframe
+its results. Desktop web filters and sorting are unchanged.
 
 The header leaves vertical breathing room around its 44px controls. The dock
 floats over Directory, Social, Community, and Profile; scrolling pages include
