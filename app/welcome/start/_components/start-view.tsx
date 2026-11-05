@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Compass, MessagesSquare, Store } from 'lucide-react';
+import { ArrowRight, Compass, Newspaper, Store } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 interface Door {
@@ -30,7 +30,7 @@ const BROWSE_DOORS: readonly Door[] = [
   {
     id: 'social',
     href: '/s',
-    icon: MessagesSquare,
+    icon: Newspaper,
     titleKey: 'onboarding.startSocialTitle',
     bodyKey: 'onboarding.startSocialBody',
   },

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   CalendarDays,
   Compass,
-  MessageCircle,
+  Newspaper,
   PenLine,
   ShieldCheck,
   Star,
@@ -34,7 +34,7 @@ import { cn } from '@/lib/utils';
  * upstream to drift from, so they stay here where they cost nothing.
  */
 const SITE_ICONS: Record<string, LucideIcon> = {
-  social: MessageCircle,
+  social: Newspaper,
   ink: PenLine,
   vizion: Video,
   directory: Compass,

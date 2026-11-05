@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { formatDistanceToNow } from 'date-fns';
-import { Bell, CheckCheck, Inbox, MessageCircle } from 'lucide-react';
+import { Bell, CheckCheck, Inbox, MessagesSquare } from 'lucide-react';
 
 import { useSession } from '@/lib/auth-client';
 import {
@@ -187,7 +187,7 @@ export function NotificationsMenu() {
             className={cn(styles.row, styles.rowQuiet)}
           >
             <span className={styles.siteIcon} aria-hidden="true">
-              <MessageCircle className="h-4 w-4" />
+              <MessagesSquare className="h-4 w-4" />
             </span>
             <span className={styles.rowMeta}>
               <span className={styles.rowName}>

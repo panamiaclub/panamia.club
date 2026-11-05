@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { MessageCircle } from 'lucide-react';
+import { MessagesSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useSession } from '@/lib/auth-client';
@@ -43,7 +43,7 @@ export function MessagesLink() {
       title={t('notifications.messages')}
     >
       <span className={styles.messagesIcon} aria-hidden="true">
-        <MessageCircle className="h-[18px] w-[18px]" />
+        <MessagesSquare className="h-[18px] w-[18px]" />
       </span>
     </Link>
   );

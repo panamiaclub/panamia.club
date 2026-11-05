@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageCircle } from 'lucide-react';
+import { MessagesSquare } from 'lucide-react';
 import styles from '@/components/messages/workspace.module.css';
 
 export type MessageFolder = 'inbox' | 'requests';
@@ -25,7 +25,7 @@ export function MessageFolders({
         aria-pressed={view === 'inbox'}
         onClick={() => onChange('inbox')}
       >
-        <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+        <MessagesSquare className="h-3.5 w-3.5" aria-hidden="true" />
         Messages
       </button>
       <button

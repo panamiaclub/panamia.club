@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { MessageCircle } from 'lucide-react';
+import { MessagesSquare } from 'lucide-react';
 import { useSession } from '@/lib/auth-client';
 import { WorkspacePage } from '@/components/messages/workspace-page';
 import { MessagesView } from './messages-view';
@@ -31,7 +31,7 @@ export function MessagesPageContent({
         />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-          <MessageCircle
+          <MessagesSquare
             className="text-pana-indigo h-10 w-10"
             aria-hidden="true"
           />
