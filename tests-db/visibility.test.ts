@@ -1427,6 +1427,63 @@ describe('new mutual-only posts preserve their circle without becoming messages'
     assert.equal(await status.getStatus(created.id, 'circle_follower'), null);
   });
 
+  it('rejects audio metadata in public posts, direct messages, and group posts without writing rows', async () => {
+    const { createStory } = await import('@/lib/federation/wrappers/stories');
+    const beforeRows = await db.select().from(schema.socialStatuses);
+    const beforeAttachments = await db.select().from(schema.socialAttachments);
+    for (const attachment of [
+      { type: 'audio', mediaType: 'audio/ogg' },
+      { type: 'Audio', mediaType: 'audio/webm' },
+      { type: 'video', mediaType: 'AUDIO/MP4' },
+    ]) {
+      const body = {
+        content: 'Keep my draft',
+        attachments: [
+          { ...attachment, url: 'https://visibility.invalid/existing.ogg' },
+        ],
+      };
+      for (const visibility of ['public', 'direct']) {
+        const response = await apiPost({
+          ...body,
+          visibility,
+          ...(visibility === 'direct' ? { recipientActorIds: [pana] } : {}),
+        });
+        assert.equal(response.status, 400);
+        assert.equal(
+          (await response.json()).error,
+          'Audio attachments are no longer supported.'
+        );
+        const story = await createStory(owner, {
+          ...attachment,
+          url: 'https://visibility.invalid/existing.ogg',
+        });
+        assert.equal(story.success, false);
+        assert.equal(story.error, 'Stories support photos and videos only');
+      }
+      const response = await groupPostsRoute.POST(
+        new NextRequest(
+          'https://visibility.invalid/api/social/groups/circle_room/posts',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          }
+        ),
+        { params: Promise.resolve({ handle: 'circle_room' }) }
+      );
+      assert.equal(response.status, 400);
+      assert.equal(
+        (await response.json()).error,
+        'Audio attachments are no longer supported.'
+      );
+    }
+    assert.deepEqual(await db.select().from(schema.socialStatuses), beforeRows);
+    assert.deepEqual(
+      await db.select().from(schema.socialAttachments),
+      beforeAttachments
+    );
+  });
+
   it('rejects empty posts, invalid bodies, and invalid Panas audience combinations', async () => {
     const beforeRows = await db
       .select({ id: schema.socialStatuses.id })

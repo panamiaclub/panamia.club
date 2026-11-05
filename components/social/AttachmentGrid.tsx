@@ -1,16 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Volume2 } from 'lucide-react';
-import { WaveformPlayer } from './WaveformPlayer';
-
-/* Audio only. Opus in an Ogg container is still unreliable on iOS — Safari's
-   Opus support was CAF-only until 17.4 — so the audio fallback stays. Video no
-   longer needs one: it is H.264/AAC MP4, which every Safari has played since
-   iOS 3.2. */
-const isSafari = () =>
-  typeof navigator !== 'undefined' &&
-  /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+import { isAudioAttachment, isVisualAttachment } from '@/lib/media/attachments';
 
 export interface AttachmentDisplay {
   id: string;
@@ -25,43 +16,6 @@ export interface AttachmentDisplay {
 
 interface AttachmentGridProps {
   attachments: AttachmentDisplay[];
-}
-
-function AudioPlayer({ attachment }: { attachment: AttachmentDisplay }) {
-  if (isSafari()) {
-    return (
-      <div className="bg-muted flex items-center gap-3 rounded-lg border p-3 text-sm">
-        <Volume2 className="text-muted-foreground h-5 w-5 shrink-0" />
-        <span className="text-muted-foreground">
-          Please use Chrome or Firefox 💛
-        </span>
-      </div>
-    );
-  }
-
-  // Use WaveformPlayer if peaks are available
-  if (attachment.peaks && attachment.peaks.length > 0) {
-    return (
-      <WaveformPlayer
-        url={attachment.url}
-        peaks={attachment.peaks}
-        mediaType={attachment.mediaType || 'audio/ogg'}
-      />
-    );
-  }
-
-  // Fallback to basic audio player
-  return (
-    <div className="bg-muted flex items-center gap-3 rounded-lg border p-3">
-      <Volume2 className="text-muted-foreground h-5 w-5 shrink-0" />
-      <audio controls className="h-8 w-full" preload="metadata">
-        <source
-          src={attachment.url}
-          type={attachment.mediaType || 'audio/ogg'}
-        />
-      </audio>
-    </div>
-  );
 }
 
 function VideoPlayer({ attachment }: { attachment: AttachmentDisplay }) {
@@ -109,9 +63,17 @@ function ImageItem({ attachment }: { attachment: AttachmentDisplay }) {
 export function AttachmentGrid({ attachments }: AttachmentGridProps) {
   if (!attachments.length) return null;
 
-  const images = attachments.filter((a) => a.type === 'image');
-  const audio = attachments.filter((a) => a.type === 'audio');
-  const videos = attachments.filter((a) => a.type === 'video');
+  const visible = attachments.filter(isVisualAttachment);
+  const images = visible.filter((a) => a.type === 'image');
+  const videos = visible.filter((a) => a.type === 'video');
+
+  if (!visible.length) {
+    return attachments.some(isAudioAttachment) ? (
+      <p className="text-muted-foreground mt-3 text-sm">
+        Attachment unavailable.
+      </p>
+    ) : null;
+  }
 
   return (
     <div className="mt-3 space-y-2">
@@ -131,11 +93,6 @@ export function AttachmentGrid({ attachments }: AttachmentGridProps) {
           ))}
         </div>
       )}
-
-      {/* Audio players */}
-      {audio.map((a) => (
-        <AudioPlayer key={a.id} attachment={a} />
-      ))}
 
       {/* Video players */}
       {videos.map((a) => (

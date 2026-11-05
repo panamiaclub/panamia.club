@@ -177,8 +177,8 @@ export default function PrivacyPolicyPage() {
             browser cookies.
           </p>
           <p>
-            Photos, video, audio, and other files are processed when you choose
-            to upload or send them. Camera and microphone permissions support
+            Photos, video, and other files are processed when you choose to
+            upload or send them. Camera and microphone permissions support
             features you request, such as capturing media or joining a call.
             Declining a permission prevents the associated feature. A
             location-based feature uses the location or address you supply for

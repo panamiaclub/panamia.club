@@ -2,9 +2,9 @@
  * MultiMediaUpload
  *
  * Parallel to MediaUpload, but for multiple attachments of mixed kinds
- * (image + audio + video) — the shape the social composer needs. Extracts the
+ * (image + video) — the shape the social composer needs. Extracts the
  * upload logic that used to live inline in PostComposer:
- *   - audio → transcode to Opus, video → transcode to MP4 (both in-browser),
+ *   - video → transcode to MP4 in-browser,
  *     then PUT directly to R2 via a presigned URL from `presignEndpoint`.
  *   - images → multipart POST to `imageUploadEndpoint`.
  *
@@ -18,23 +18,16 @@ import { useId, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import Image from 'next/image';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
-import { ImagePlus, X, Volume2, Loader2, Video } from 'lucide-react';
+import { ImagePlus, X, Loader2, Video } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
-import { transcodeToOpus, transcodeToMp4Video } from '@/lib/media/transcode';
+import { transcodeToMp4Video } from '@/lib/media/transcode';
+import { isAudioAttachment, isVisualAttachment } from '@/lib/media/attachments';
 
-/* Audio only. Video is H.264/AAC MP4, which every Safari plays; Opus in an
-   Ogg container is still unreliable on iOS, so the audio warning stays. */
-const isSafari = () =>
-  typeof navigator !== 'undefined' &&
-  /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-const DEFAULT_ACCEPT =
-  'image/jpeg,image/png,image/webp,image/gif,audio/*,video/*';
-const PHOTO_VIDEO_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,video/*';
+const DEFAULT_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,video/*';
 
 export interface UploadedMedia {
-  type: string; // 'image' | 'audio' | 'video'
+  type: string; // 'image' | 'video'
   mediaType: string;
   url: string;
   name: string;
@@ -43,7 +36,7 @@ export interface UploadedMedia {
 export interface MediaUploadHandle {
   addFiles: (files: File[]) => Promise<UploadedMedia[]>;
   isUploading: () => boolean;
-  openPicker: (kind: 'media' | 'audio') => void;
+  openPicker: () => void;
 }
 
 /** The same playable attachments in the writing and formatting-preview views. */
@@ -56,16 +49,19 @@ export function MediaAttachments({
   onRemove?: (index: number) => void;
   disabled?: boolean;
 }) {
-  if (!value.length) return null;
+  const attachments = value
+    .map((attachment, index) => ({ attachment, index }))
+    .filter(({ attachment }) => isVisualAttachment(attachment));
+  if (!attachments.length) return null;
 
   return (
     <div
-      className={`grid min-w-0 gap-3 ${value.length > 1 ? 'grid-cols-2' : ''}`}
+      className={`grid min-w-0 gap-3 ${attachments.length > 1 ? 'grid-cols-2' : ''}`}
     >
-      {value.map((attachment, index) => (
+      {attachments.map(({ attachment, index }) => (
         <figure
           key={`${attachment.url}-${index}`}
-          className={`border-pana-ink/10 bg-pana-cream/40 relative min-w-0 overflow-hidden rounded-2xl border ${attachment.type === 'audio' ? 'col-span-full' : ''}`}
+          className="border-pana-ink/10 bg-pana-cream/40 relative min-w-0 overflow-hidden rounded-2xl border"
         >
           {attachment.type === 'image' ? (
             <Image
@@ -76,7 +72,7 @@ export function MediaAttachments({
               unoptimized
               className="aspect-4/3 max-h-80 w-full object-cover"
             />
-          ) : attachment.type === 'video' ? (
+          ) : (
             <video
               src={attachment.url}
               controls
@@ -85,22 +81,6 @@ export function MediaAttachments({
               aria-label={attachment.name || 'Attached video'}
               className="max-h-80 w-full bg-black"
             />
-          ) : (
-            <div className="space-y-2 p-3 pt-4">
-              <div className="text-pana-ink flex items-center gap-2 pr-9 text-xs font-bold">
-                <Volume2 className="h-4 w-4 flex-none" aria-hidden="true" />
-                <span className="min-w-0 [overflow-wrap:anywhere]">
-                  {attachment.name || 'Attached audio'}
-                </span>
-              </div>
-              <audio
-                src={attachment.url}
-                controls
-                preload="metadata"
-                aria-label={attachment.name || 'Attached audio'}
-                className="h-10 w-full min-w-0"
-              />
-            </div>
           )}
           {onRemove && (
             <button
@@ -128,7 +108,7 @@ interface MultiMediaUploadProps {
   accept?: string;
   /** Multipart image upload endpoint returning { success, data: UploadedMedia }. */
   imageUploadEndpoint: string;
-  /** Presigned-URL endpoint (POST { filename, contentType, size }) for audio/video. */
+  /** Presigned-URL endpoint (POST { filename, contentType, size }) for video. */
   presignEndpoint: string;
   /** R2 key prefix, e.g. "social/media". */
   pathPrefix: string;
@@ -166,17 +146,15 @@ export default function MultiMediaUpload({
   ref,
 }: MultiMediaUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const audioInputRef = useRef<HTMLInputElement>(null);
   const busy = useRef(false);
   const hintId = useId();
   const [uploading, setUploading] = useState(false);
   const [videoProgress, setVideoProgress] = useState<number | null>(null);
-  const [safariNotice, setSafariNotice] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const { toast } = useToast();
   const { t } = useTranslation('toast');
 
-  // Transcoded audio/video: get a presigned URL, then PUT the blob to R2.
+  // Transcoded video: get a presigned URL, then PUT the blob to R2.
   const presignPut = async (
     blob: Blob,
     contentType: string,
@@ -216,14 +194,16 @@ export default function MultiMediaUpload({
 
     const errors: string[] = [];
     const supported = files.filter((file) => {
-      const matches = accept.split(',').some((pattern) => {
-        const rule = pattern.trim();
-        return rule.startsWith('.')
-          ? file.name.toLowerCase().endsWith(rule.toLowerCase())
-          : rule.endsWith('/*')
-            ? file.type.startsWith(rule.slice(0, -1))
-            : file.type === rule;
-      });
+      const matches =
+        !isAudioAttachment({ mediaType: file.type }) &&
+        accept.split(',').some((pattern) => {
+          const rule = pattern.trim();
+          return rule.startsWith('.')
+            ? file.name.toLowerCase().endsWith(rule.toLowerCase())
+            : rule.endsWith('/*')
+              ? file.type.startsWith(rule.slice(0, -1))
+              : file.type === rule;
+        });
       if (!matches) errors.push(`Unsupported file: ${file.name}.`);
       return matches;
     });
@@ -237,13 +217,6 @@ export default function MultiMediaUpload({
     const filesToUpload = supported.slice(0, available);
     if (!filesToUpload.length) return [];
 
-    if (
-      filesToUpload.some((file) => file.type.startsWith('audio/')) &&
-      isSafari()
-    ) {
-      setSafariNotice(true);
-    }
-
     busy.current = true;
     setUploading(true);
     onUploadingChange?.(true);
@@ -251,16 +224,7 @@ export default function MultiMediaUpload({
     try {
       for (const file of filesToUpload) {
         try {
-          if (file.type.startsWith('audio/')) {
-            const ogg = await transcodeToOpus(file);
-            const url = await presignPut(ogg, 'audio/ogg', 'ogg');
-            added.push({
-              type: 'audio',
-              mediaType: 'audio/ogg',
-              url,
-              name: file.name,
-            });
-          } else if (file.type.startsWith('video/')) {
+          if (file.type.startsWith('video/')) {
             setVideoProgress(0);
             const mp4 = await transcodeToMp4Video(file, (ratio) =>
               setVideoProgress(Math.round(ratio * 100))
@@ -316,9 +280,9 @@ export default function MultiMediaUpload({
   useImperativeHandle(ref, () => ({
     addFiles,
     isUploading: () => busy.current,
-    openPicker: (kind) => {
+    openPicker: () => {
       if (disabled || busy.current || value.length >= maxItems) return;
-      (kind === 'audio' ? audioInputRef : fileInputRef).current?.click();
+      fileInputRef.current?.click();
     },
   }));
 
@@ -348,8 +312,7 @@ export default function MultiMediaUpload({
     showControls ||
     (showAttachments && value.length > 0) ||
     uploading ||
-    mediaError ||
-    safariNotice;
+    mediaError;
 
   return (
     <div className={hasVisibleContent ? wrapperClassName : 'hidden'}>
@@ -357,21 +320,11 @@ export default function MultiMediaUpload({
         ref={fileInputRef}
         type="file"
         multiple
-        accept={friendly ? PHOTO_VIDEO_ACCEPT : accept}
+        accept={accept}
         aria-label={friendly ? 'Choose photos or videos' : 'Choose media'}
         className="hidden"
         onChange={handleFileSelect}
       />
-      <input
-        ref={audioInputRef}
-        type="file"
-        multiple
-        accept="audio/*"
-        aria-label="Choose audio"
-        className="hidden"
-        onChange={handleFileSelect}
-      />
-
       {friendly && showAttachments && (
         <MediaAttachments
           value={value}
@@ -425,25 +378,6 @@ export default function MultiMediaUpload({
                     </span>
                   )}
                 </span>
-              </button>
-              <button
-                type="button"
-                aria-label="Add audio"
-                onClick={() => audioInputRef.current?.click()}
-                disabled={pickerDisabled}
-                className={
-                  presentation === 'compact'
-                    ? 'composer-chip'
-                    : 'border-pana-ink/10 bg-pana-cream/70 text-pana-ink/70 hover:border-pana-indigo/40 hover:text-pana-indigo focus-visible:ring-pana-indigo flex w-17 flex-none flex-col items-center justify-center gap-1 rounded-2xl border px-3 py-3 text-xs font-extrabold focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-45 sm:w-20'
-                }
-              >
-                <Volume2
-                  className={
-                    presentation === 'composer' ? 'h-5 w-5' : 'h-4 w-4'
-                  }
-                  aria-hidden="true"
-                />
-                Audio
               </button>
             </div>
             <p
@@ -508,45 +442,38 @@ export default function MultiMediaUpload({
         </p>
       )}
 
-      {safariNotice && (
-        <p className="composer-media-block text-muted-foreground rounded-md border px-3 py-2 text-sm">
-          {`Audio playback requires Chrome or Firefox \u{1F49B} — your upload will succeed but won't play on this device.`}
-        </p>
-      )}
-
-      {!friendly && showAttachments && value.length > 0 && (
+      {!friendly && showAttachments && value.some(isVisualAttachment) && (
         <div className="composer-media-block flex flex-wrap gap-2">
-          {value.map((att, i) => (
-            <div key={i} className="group relative">
-              {att.type === 'image' ? (
-                <Image
-                  src={att.url}
-                  alt={att.name || ''}
-                  width={80}
-                  height={80}
-                  className="h-20 w-20 rounded-md border object-cover"
-                  unoptimized
-                />
-              ) : (
-                <div className="bg-muted flex h-20 w-20 items-center justify-center rounded-md border">
-                  {att.type === 'video' ? (
-                    <Video className="text-muted-foreground h-6 w-6" />
+          {value.map(
+            (att, i) =>
+              isVisualAttachment(att) && (
+                <div key={i} className="group relative">
+                  {att.type === 'image' ? (
+                    <Image
+                      src={att.url}
+                      alt={att.name || ''}
+                      width={80}
+                      height={80}
+                      className="h-20 w-20 rounded-md border object-cover"
+                      unoptimized
+                    />
                   ) : (
-                    <Volume2 className="text-muted-foreground h-6 w-6" />
+                    <div className="bg-muted flex h-20 w-20 items-center justify-center rounded-md border">
+                      <Video className="text-muted-foreground h-6 w-6" />
+                    </div>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => removeAt(i)}
+                    disabled={disabled || uploading}
+                    aria-label={`Remove ${att.name || 'attachment'}`}
+                    className="bg-destructive text-destructive-foreground absolute -top-1.5 -right-1.5 rounded-full p-1 disabled:opacity-45"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
                 </div>
-              )}
-              <button
-                type="button"
-                onClick={() => removeAt(i)}
-                disabled={disabled || uploading}
-                aria-label={`Remove ${att.name || 'attachment'}`}
-                className="bg-destructive text-destructive-foreground absolute -top-1.5 -right-1.5 rounded-full p-1 disabled:opacity-45"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
+              )
+          )}
         </div>
       )}
     </div>

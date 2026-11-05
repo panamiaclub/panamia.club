@@ -10,7 +10,6 @@ import { useSession } from '@/lib/auth-client';
 import { useIsNativeApp } from '@/lib/mobile/use-native-app';
 import { SocialEligibilityGate } from '@/components/social';
 import { useTimeline, usePublicTimeline, useMyActor } from '@/lib/query/social';
-import type { SocialStatusDisplay } from '@/lib/interfaces';
 import { FeedPostCard } from './feed-post-card';
 import { FeedRail } from './feed-rail';
 import { StoriesRail } from './stories-rail';
@@ -29,7 +28,7 @@ const PostComposer = dynamic(
   { ssr: false }
 );
 
-type FeedFilter = 'panas' | 'everyone' | 'voice';
+type FeedFilter = 'panas' | 'everyone';
 
 const FEED_FILTERS: { id: FeedFilter; label: string; hint: string }[] = [
   {
@@ -42,22 +41,7 @@ const FEED_FILTERS: { id: FeedFilter; label: string; hint: string }[] = [
     label: 'Panas',
     hint: 'Posts from your mutual Panas, your groups, and you.',
   },
-  {
-    id: 'voice',
-    label: 'Voice notes',
-    hint: 'Audio posts from your mutual Panas, your groups, and you.',
-  },
 ];
-
-function hasAudio(status: SocialStatusDisplay): boolean {
-  return Boolean(
-    status.attachments?.some(
-      (attachment) =>
-        attachment.type === 'audio' ||
-        attachment.mediaType?.startsWith('audio/')
-    )
-  );
-}
 
 /**
  * The Pana Social feed.
@@ -142,14 +126,7 @@ function FeedContent({
   const everyone = usePublicTimeline();
 
   const source = filter === 'everyone' ? everyone : home;
-  const statuses = source.data?.statuses ?? [];
-
-  /* Voice filters what the timeline already returned rather than asking for
-     audio posts specifically, because no endpoint offers that. The honest
-     consequence is that it only sees the current page: a member whose voice
-     memos are all older than the newest 20 posts gets an empty tab. The empty
-     state says so rather than implying none exist. */
-  const posts = filter === 'voice' ? statuses.filter(hasAudio) : statuses;
+  const posts = source.data?.statuses ?? [];
 
   const activeFilter = FEED_FILTERS.find((entry) => entry.id === filter);
   const actor = me?.actor ?? null;
@@ -211,7 +188,7 @@ function FeedContent({
             withModules(
               posts.map((post) => <FeedPostCard key={post.id} status={post} />)
             )
-          ) : filter === 'panas' && statuses.length === 0 ? (
+          ) : filter === 'panas' ? (
             <FeedEmpty />
           ) : (
             <FilterEmpty filter={filter} />
@@ -337,7 +314,7 @@ function FeedError({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="reserved-slot items-start p-6">
       <p className="reserved-slot-title">That didn&apos;t load</p>
-      <p className="text-pana-ink/65 text-[13px] font-medium leading-snug">
+      <p className="text-pana-ink/65 text-[13px] leading-snug font-medium">
         Something went wrong fetching the timeline. This is a problem on our
         side, not an empty feed.
       </p>
@@ -357,7 +334,7 @@ function FeedEmpty() {
     <div className="space-y-5">
       <div className="reserved-slot items-start p-6">
         <p className="reserved-slot-title">Your Panas feed starts here</p>
-        <p className="text-pana-ink/65 text-[13px] font-medium leading-snug">
+        <p className="text-pana-ink/65 text-[13px] leading-snug font-medium">
           When you and someone follow each other, you become Panas. Their posts,
           your own posts, and posts from groups you join will appear here.
         </p>
@@ -381,10 +358,9 @@ function FilterEmpty({ filter }: { filter: FeedFilter }) {
   return (
     <div className="reserved-slot items-start p-6">
       <p className="reserved-slot-title">Nothing under {label} right now</p>
-      <p className="text-pana-ink/65 text-[13px] font-medium leading-snug">
-        {filter === 'voice'
-          ? 'No voice memos in the posts loaded so far. Older ones further down the timeline will not show up here yet.'
-          : 'No public posts yet. Share a post with Everyone to start the conversation.'}
+      <p className="text-pana-ink/65 text-[13px] leading-snug font-medium">
+        No public posts yet. Share a post with Everyone to start the
+        conversation.
       </p>
     </div>
   );

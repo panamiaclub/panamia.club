@@ -19,8 +19,8 @@ type DmModel = 'mail' | 'chat';
  *
  * Why this route exists: Pana Social has no DM feature, but it does have a
  * substrate - `visibility: 'direct'` statuses addressed through `recipientTo`,
- * two API routes, and a read-only list at /updates. Voice memos already send
- * this way. So the question is not "build DMs or not", it is "which shape does
+ * two API routes, and a read-only list at /updates.
+ * So the question is not "build DMs or not", it is "which shape does
  * the thing we already half-have grow into", and that is a product decision
  * best made by looking at both. */
 export function DmsMock({ surfaces }: { surfaces: MockSurface[] }) {
@@ -111,7 +111,6 @@ function ModelNotes({ model }: { model: DmModel }) {
           'Federates. A DM to a Mastodon account works, because this is how Mastodon DMs already work.',
           'Inherits the block filtering from #258 with no new surface to audit.',
           'Async by design, which suits panas who are not sitting in an app.',
-          'Voice memos already send exactly this way.',
         ]}
         costs={[
           'No realtime. A reply appears on refresh or poll.',
@@ -132,7 +131,7 @@ function ModelNotes({ model }: { model: DmModel }) {
         costs={[
           'New infrastructure: chat_messages, a DO class, authenticated /ws upgrade.',
           'Does not federate. CHAT-ROADMAP assumes it never will.',
-          'Two parallel DM systems unless the direct-status path is retired, and voice memos live on that path.',
+          'Two parallel DM systems unless the direct-status path is retired.',
           'Block, mute, and report all need re-implementing against a second store.',
           'Moderation gets harder: a transcript is not a status, so nothing we built applies.',
         ]}

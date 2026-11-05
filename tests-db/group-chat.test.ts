@@ -377,6 +377,31 @@ describe('native group chat persistence', () => {
     if (retry.success)
       assert.equal(retry.data.attachments?.[0].name, draft.attachments[0].name);
   });
+  it('rejects audio metadata without storing or delivering a group message', async () => {
+    for (const attachment of [
+      { type: 'audio', mediaType: 'audio/ogg' },
+      { type: 'audio', mediaType: 'audio/webm' },
+      { type: 'video', mediaType: 'AUDIO/MP4' },
+    ]) {
+      const result = await chat.sendGroupChatMessage('garden', 'alice', {
+        ...input('An old recording'),
+        attachments: [
+          { ...attachment, url: 'https://uploads.chat.invalid/old.ogg' },
+        ],
+      });
+      assert.deepEqual(result, {
+        success: false,
+        error: 'Audio attachments are no longer supported.',
+        status: 400,
+      });
+    }
+    assert.deepEqual(
+      await db.select().from(schema.socialGroupChatMessages),
+      []
+    );
+    assert.deepEqual(notices, []);
+  });
+
   it('never sends file metadata to the live mailbox', async () => {
     await chat.sendGroupChatMessage('garden', 'alice', {
       ...input('Private caption'),

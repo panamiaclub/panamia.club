@@ -304,10 +304,10 @@ export const APP_PLACE_PICKS = LISTINGS.map((listing) => ({
     why: `Matches your interest in ${matches.join(' & ').toLowerCase()}`,
   }));
 
-// Keep private voice memos and content-warning posts out of this public-feed
+// Keep content-warning posts out of this public-feed
 // sketch rather than dropping the access controls those fixtures depend on.
 export const APP_POSTS = MOCK_POSTS.filter(
-  (post) => !post.voice && !post.contentWarning && !post.group
+  (post) => !post.contentWarning && !post.group
 );
 
 const STORY_MEDIA = [

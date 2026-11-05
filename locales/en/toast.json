@@ -72,18 +72,6 @@
   "socialEnabledDesc": "You can now post and follow others!",
   "socialEnableFailed": "Failed to enable social features. Please try again.",
 
-  "browserNotSupported": "Browser not supported",
-  "browserNotSupportedDesc": "Voice memos require Chrome or Firefox. Please use Chrome or Firefox",
-  "microphoneDenied": "Microphone access denied",
-  "microphoneDeniedDesc": "Please allow microphone access to record voice memos.",
-  "noRecipients": "No recipients",
-  "noRecipientsDesc": "Please add at least one recipient.",
-  "emptyMessage": "Empty message",
-  "emptyMessageDesc": "Please record a voice memo or write a message.",
-  "voiceMessageSent": "Message sent",
-  "voiceMemoSentDesc": "Your voice memo has been sent.",
-  "textMessageSentDesc": "Your message has been sent.",
-
   "geolocationNotSupported": "Geolocation not supported",
   "geolocationNotSupportedDesc": "Your browser does not support geolocation.",
   "locationAdded": "Location added",

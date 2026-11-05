@@ -307,9 +307,4 @@ export const RESERVED_MODULES: ReservedModule[] = [
     description:
       'Named lists of businesses a Pana vouches for, plus saved posts and zines they want to point people at.',
   },
-  {
-    title: 'Voice memos',
-    description:
-      'Short audio notes between Panas — already in the social schema, not yet on the profile.',
-  },
 ];

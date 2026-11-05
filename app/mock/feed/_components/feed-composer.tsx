@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Calendar, ImagePlus, Lock, MapPin, Mic, Users } from 'lucide-react';
+import { Calendar, ImagePlus, Lock, MapPin, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   MOCK_MY_GROUPS,
@@ -24,10 +24,6 @@ import {
  * important action behind an unlabelled icon that says nothing about what you
  * can post. This is the opposite — an open box, addressed to the reader by
  * name, with every post type named next to it.
- *
- * The chips are not decoration either. Voice memos and group posts already
- * exist in the schema and nobody finds them, because there is currently no
- * surface that mentions them.
  *
  * It renders in the empty state too. A new account is told to post — removing
  * the box it would post in is how an onboarding step becomes a dead end.
@@ -92,10 +88,6 @@ export function FeedComposer({ state = 'populated' }: { state?: FeedState }) {
         <button type="button" className="composer-chip">
           <ImagePlus className="h-3.5 w-3.5" aria-hidden="true" />
           Photo
-        </button>
-        <button type="button" className="composer-chip">
-          <Mic className="h-3.5 w-3.5" aria-hidden="true" />
-          Voice memo
         </button>
         <button type="button" className="composer-chip">
           <Calendar className="h-3.5 w-3.5" aria-hidden="true" />

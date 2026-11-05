@@ -20,6 +20,7 @@ import {
 } from 'date-fns';
 import type { SocialActorDisplay, SocialStatusDisplay } from '@/lib/interfaces';
 import type { ChatMessage } from '@/lib/chat';
+import { isAudioAttachment } from '@/lib/media/attachments';
 
 export function toDate(value: string | Date | null | undefined): Date | null {
   if (!value) return null;
@@ -138,27 +139,19 @@ export function plainTextSnippet(html: string): string {
     .trim();
 }
 
-/**
- * What to call a message that is only an attachment.
- *
- * This used to be the single string "Sent a voice memo", which was true for
- * as long as a voice memo was the only thing that could be attached. It is
- * not any more: a GIF announcing itself in the sidebar as a voice memo is a
- * small lie, but it is the kind that makes someone distrust the rest of the
- * screen. The label now comes from what was actually sent.
- */
+/** What to call a message that is only an attachment. */
 export function attachmentLabel(
   attachments: SocialStatusDisplay['attachments']
 ): string {
-  const first = attachments?.[0];
-  if (!first) return 'Message';
+  const first = attachments?.find(
+    (attachment) => !isAudioAttachment(attachment)
+  );
+  if (!first) return attachments?.length ? 'Attachment unavailable' : 'Message';
 
   const mediaType = (first.mediaType ?? '').toLowerCase();
   const type = (first.type ?? '').toLowerCase();
 
   if (mediaType === 'image/gif') return 'GIF';
-  if (type === 'audio' || mediaType.startsWith('audio/'))
-    return 'Sent a voice memo';
   if (type === 'video' || mediaType.startsWith('video/')) return 'Video';
   if (type === 'image' || mediaType.startsWith('image/')) return 'Photo';
   return 'Attachment';
