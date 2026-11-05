@@ -135,6 +135,20 @@ describe('viewerFrame', () => {
 });
 
 describe('frameForPoints', () => {
+  it('fits a short measured map without changing the default web frame', () => {
+    const points = [
+      { lat: 25.76, lng: -80.19 },
+      { lat: 26.12, lng: -80.14 },
+    ];
+    const normal = frameForPoints(points);
+    const short = frameForPoints(points, 80);
+    assert.deepEqual(frameForPoints(points, FALLBACK_MAP_PX), normal);
+    assert.deepEqual(short.center, normal.center);
+    assert.ok(short.zoom < normal.zoom);
+    assert.ok(short.zoom >= 3);
+    assert.deepEqual(frameForPoints(points, 600), normal);
+  });
+
   it('falls back to the covered region when there is nothing to show', () => {
     const frame = frameForPoints([]);
     assert.deepEqual(frame.center, DEFAULT_CENTER);

@@ -133,7 +133,10 @@ export function onResultsArrived(
  * level, where a lone marker on an empty tile tells you nothing about where it
  * is.
  */
-export function frameForPoints(points: Coords[]): MapFrame {
+export function frameForPoints(
+  points: Coords[],
+  sizePx = FALLBACK_MAP_PX
+): MapFrame {
   if (points.length === 0) return { center: DEFAULT_CENTER, zoom: 9 };
 
   const lats = points.map((point) => point.lat);
@@ -149,7 +152,17 @@ export function frameForPoints(points: Coords[]): MapFrame {
   ];
 
   const span = Math.max(maxLat - minLat, (maxLng - minLng) * 0.85);
-  if (span < 0.005) return { center, zoom: 13 };
-
-  return { center, zoom: clampZoom(Math.log2(360 / span) - 1.2) };
+  const zoom = span < 0.005 ? 13 : Math.log2(360 / span) - 1.2;
+  // A short landscape map must still frame its pins above the sheet and dock.
+  const adjustment = Math.min(
+    0,
+    Math.log2(Math.max(1, sizePx) / FALLBACK_MAP_PX)
+  );
+  return {
+    center,
+    zoom: Math.max(
+      adjustment < 0 ? 3 : MIN_ZOOM,
+      Math.min(MAX_ZOOM, zoom + adjustment)
+    ),
+  };
 }

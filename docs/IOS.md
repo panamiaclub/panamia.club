@@ -16,6 +16,11 @@ the corresponding iPad screenshots.
 
 ## What is prepared
 
+- The directory uses the compact 44px app header, a 58px rounded tab dock,
+  and a 54px results row with listing and In map counts. Pin and ZIP-bubble
+  selection scrolls the complete list to a highlighted, measured two-profile
+  preview while the map stays fixed. Status-bar and home-indicator safe areas
+  remain protected; very short landscape views show one profile when needed.
 - The native frame respects the notch, landscape insets, home indicator, and
   visible keyboard viewport. Tabs hide while the keyboard covers the screen,
   form text avoids WebKit's focus zoom, and story captions stay above the keyboard.
