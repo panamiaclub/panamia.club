@@ -291,6 +291,10 @@
   font-weight: 800;
 }
 
+.inboxFolders {
+  margin-top: 12px;
+}
+
 .folders button[aria-pressed='true'] {
   background: white;
   color: var(--color-pana-indigo);

@@ -184,7 +184,9 @@ export function IdentityRail({
           {/* Signed-out viewers get no actions at all, so the row collapses
               rather than leaving a band of empty space under the tags. */}
           {actions && (
-            <div className="mt-4 flex items-center gap-2">{actions}</div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {actions}
+            </div>
           )}
         </div>
 

@@ -85,8 +85,10 @@ out for group and event conversations.
 
 ## Current Messages workspace
 
-The approved `/mock/dm-chat` layout is applied to `/messages`, sharing
-`components/messages/workspace.module.css` but no mock data or simulated send controls.
+The production `/messages` workspace shares transcript/composer primitives and
+`components/messages/workspace.module.css` with `/mock/dm-chat`, but no mock data or
+simulated send controls. Its compact inbox intentionally omits the mock's heading,
+marketing copy, search field and New message button on both the website and native apps.
 Messages belongs to Pana Social's route registry and retains the real masthead and account menu.
 The workspace fills the remaining viewport, with legal links kept below it in browsers.
 Native messaging omits the legal footer and composer helper text. Opening a conversation
@@ -101,8 +103,15 @@ an existing attachment leave too little room above the composer.
 
 - Desktop conversation and transcript panes scroll independently; the composer stays in view.
   Mobile uses a list/detail flow with Back navigation, including during loading and errors.
-- Conversation filtering is local. **New message** searches the existing actor API by name or
-  handle, excludes the viewer, and opens the same gated conversation endpoint as an existing chat.
+- Individual and group conversations share one inbox ordered by recent activity;
+  Requests remains separate and contains only held individual messages. A subtle group icon
+  identifies group rows. Separate selection keys, drafts and delivery paths keep the two
+  conversation types distinct; membership and consent checks are unchanged.
+- Start a text chat using **Message** on another pana's profile. The shared personal/business
+  profile action opens `/messages?to=<actor-id>` through the existing gated DM endpoint.
+  Incoming requests still need explicit acceptance. Sign-in preserves the selected target,
+  and existing standalone group links (`/messages?group=<handle>`) open the same mixed inbox.
+  Newly started profile chats stay easy to find while their first draft is still unsent.
 - DMs stay out of profile **Posts** lists and counts, including the sender's and recipient's
   views. Profile filtering happens before pagination and also excludes direct replies when
   requested. Public, followers-only, Panas, and readable group posts retain their audiences;
