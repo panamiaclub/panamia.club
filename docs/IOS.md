@@ -73,9 +73,14 @@ the corresponding iPad screenshots.
   through sign-in. The same compact inbox is used on the website.
 - Chat keeps Pana colours with a compact one-row composer that grows as you type.
   Phone Return adds a newline; Send submits. The photo control uses the standard
-  file picker, not a new native plugin, and discloses the existing shareable-media
-  link model. Photos are re-encoded without camera metadata before uploading;
-  photo/GIF drafts, failed uploads and retry remain scoped to their conversation.
+  file picker directly, not a new native plugin or intermediary menu. Conversation
+  details explain the existing shareable-media link model. Photos are re-encoded
+  without camera metadata before uploading; photo/GIF drafts, failed uploads and
+  retry remain scoped to their conversation.
+- While the iOS keyboard is open, the chat composer uses balanced 8px padding
+  rather than reserving the home-indicator inset above the keyboard. Dismissing
+  the keyboard restores the normal safe area; attachment and send controls
+  remain aligned with the growing input.
 - iOS offers email-link sign-in. Android's Google SDK is deliberately excluded
   from the iOS native package. Do not enable Google on iOS without implementing
   the corresponding Apple-compliant login options and configuring their credentials.

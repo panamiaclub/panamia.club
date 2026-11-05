@@ -10,13 +10,6 @@ import {
 } from 'react';
 import { ArrowUp, ImagePlus, LoaderCircle, X } from 'lucide-react';
 import styles from '@/components/messages/workspace.module.css';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { RefusedComposer } from './chat-primitives';
 import { GifPicker, GifPreview } from './gif-picker';
 import { useGifSearch, useMirrorGif, type GifResult } from '@/lib/query/social';
@@ -52,12 +45,12 @@ export function Composer({
 }) {
   const native = useIsNativeApp();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
   const [localPhoto, setLocalPhoto] = useState<string | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const photoBusy = useRef(false);
   const hintId = useId();
+  const photoHintId = useId();
   const mirror = useMirrorGif();
   const gifAvailability = useGifSearch('', canSend === 'allow');
   const gifsEnabled = gifAvailability.data?.enabled ?? false;
@@ -256,37 +249,26 @@ export function Composer({
             if (file) void attachPhoto(file);
           }}
         />
-        <DropdownMenu
-          open={photoMenuOpen}
-          onOpenChange={(open) => {
-            setPhotoMenuOpen(open);
-            if (open) setPickerOpen(false);
+        <button
+          type="button"
+          className={styles.attachButton}
+          aria-label="Attach a photo"
+          aria-describedby={photoHintId}
+          title="Attach a photo (up to 10 MB)"
+          disabled={
+            savingGif || savingPhoto || !!draft.photo || !!draft.photoFile
+          }
+          onClick={() => {
+            setPickerOpen(false);
+            fileInput.current?.click();
           }}
         >
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className={styles.attachButton}
-              aria-label="Attach a photo"
-              disabled={
-                savingGif || savingPhoto || !!draft.photo || !!draft.photoFile
-              }
-            >
-              <ImagePlus size={23} aria-hidden="true" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="max-w-64">
-            <DropdownMenuLabel>Photo attachment</DropdownMenuLabel>
-            <DropdownMenuItem onSelect={() => fileInput.current?.click()}>
-              <ImagePlus className="mr-2 h-4 w-4" aria-hidden="true" />
-              Choose photo
-            </DropdownMenuItem>
-            <p className="text-pana-ink/65 px-2 py-2 text-xs leading-relaxed">
-              One photo, up to 10 MB. Photos use Pana media links: anyone with a
-              copied link can view the image. They are not end-to-end encrypted.
-            </p>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          <ImagePlus size={23} aria-hidden="true" />
+        </button>
+        <span id={photoHintId} className="sr-only">
+          One photo, up to 10 MB. Photos use shareable Pana media links, not
+          end-to-end encryption. See Conversation details for more information.
+        </span>
         <div className={styles.composeField}>
           <textarea
             ref={inputRef}

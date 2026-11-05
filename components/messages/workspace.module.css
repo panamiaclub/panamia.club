@@ -853,11 +853,21 @@
   box-shadow: none;
 }
 
+:global(html[data-native-platform='ios'][data-native-keyboard])
+  .composer.compactComposer {
+  padding-bottom: 8px;
+}
+
 .composeRow {
   display: flex;
   align-items: flex-end;
   gap: 6px;
   min-width: 0;
+}
+
+.composeRow > .attachButton,
+.composeRow > .compactSendButton {
+  margin-bottom: 1px;
 }
 
 .composeField {

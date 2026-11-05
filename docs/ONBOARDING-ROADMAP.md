@@ -212,9 +212,11 @@ to `/listings/invite?id={publicProfileId}` on the same origin; use the same
 browser, or reopen the original invitation in the browser already signed in.
 
 Signed-in visitors see the account that would manage the listing and can change
-accounts before **Confirm claim and review**. Signed-out visitors choose their
-own Pana email through the existing passwordless form and explicitly confirm
-after returning. Business and personal emails can differ. A valid invitation
+accounts before **Confirm claim and review**. Signed-out visitors see **Sign in
+or create an account**, first-time Google/email guidance, and the business name
+they will confirm after returning. Existing members use their Pana account.
+Business and personal login emails can differ; a personal public profile or
+screenname is not required to manage a business. A valid invitation
 replaces the second business-inbox verification email, not the chosen account's
 sign-in. Existing public claim links without invitations keep their original
 account-bound verification. Already-authorized managers may go directly to the
@@ -317,6 +319,10 @@ palette, current PNG wordmark, inline table layout and text fallbacks match the
 site without changing unrelated authentication or admin templates. The job's
 `reminderNotice` flag selects presentation only; deadlines, recipient selection,
 proof URLs, opt-outs and successful-delivery lifecycle rules are unchanged.
+All refresh stages put the new-account and different-login-email reassurance
+before the review button and detailed ZIP/photo instructions in both HTML and
+plain text. The invitation guidance still requires sign-in and explicit claim
+confirmation for an unclaimed listing, not a second business verification email.
 
 For a private, no-send preview, run
 `yarn tsx scripts\preview-listing-emails.ts <private-output-directory>`.

@@ -299,9 +299,9 @@ export function Transcript<T extends PendingChatMessage>({
             read receipts or online indicators.
           </p>
           <p className="text-pana-ink/65">
-            Photos use hosted Pana media links, not end-to-end encryption.
-            Someone with a copied image link can view it outside this
-            conversation.
+            Attach one photo per message, up to 10 MB. Photos use hosted Pana
+            media links, not end-to-end encryption. Someone with a copied image
+            link can view it outside this conversation.
           </p>
           {group && (
             <p className="text-pana-ink/65">
