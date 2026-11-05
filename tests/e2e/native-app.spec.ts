@@ -939,6 +939,21 @@ test('native Visit filters the complete directory without mistaking missing coor
     .getByRole('button', { name: 'Visit business 46', exact: true })
     .click();
   await fitted(page);
+  await page
+    .getByRole('searchbox', { name: 'Search directory', exact: true })
+    .fill('Visit business 46');
+  await expect(
+    results.getByRole('heading', { name: '1 listing', exact: true })
+  ).toBeVisible();
+  await expect
+    .poll(async () => {
+      const [lat, lng] = (await camera.getAttribute('data-map-center'))!
+        .split(',')
+        .map(Number);
+      return Math.max(Math.abs(lat - 25.76), Math.abs(lng + 80.164));
+    })
+    .toBeLessThan(0.000001);
+  expect(await canvas.boundingBox()).toEqual(before.bounds);
   expect(fixtures.state.unhandled).toEqual([]);
 });
 
