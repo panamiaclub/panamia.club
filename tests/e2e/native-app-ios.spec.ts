@@ -71,6 +71,123 @@ test.describe('iOS results sheet', () => {
   });
 });
 
+for (const platform of ['android', 'ios'] as const) {
+  test(`${platform} keeps native header controls route-aware across Messages and Account`, async ({
+    page,
+  }) => {
+    await nativeBridge(page, {
+      platform,
+      googlePlugin: platform === 'android',
+    });
+    await installNativeApiFixtures(page);
+    await page.route('**/api/social/messages/conversations', (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            conversations: [],
+            viewerActorId: 'actor-personal',
+            localDomain: 'example.invalid',
+          },
+        },
+      })
+    );
+    await page.route('**/api/social/messages/groups', (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            groups: [],
+            viewerActorId: 'actor-personal',
+            localDomain: 'example.invalid',
+          },
+        },
+      })
+    );
+    await page.route('**/api/social/dm-requests', (route) =>
+      route.fulfill({ json: { success: true, data: { requests: [] } } })
+    );
+    await page.route('**/api/getSessionUser', (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            _id: 'native-test-user',
+            name: 'Native Viewer',
+            email: 'native@example.invalid',
+            screenname: 'native-viewer',
+          },
+        },
+      })
+    );
+    await page.route('**/api/getProfile', (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            _id: 'personal',
+            name: 'Native Viewer',
+            screenname: 'native-viewer',
+            defaultCcLicense: 'cc-by-4',
+            images: {},
+          },
+        },
+      })
+    );
+    await page.route('**/api/crm/contact', (route) =>
+      route.fulfill({ json: { success: true, data: null } })
+    );
+    await page.route('**/api/account/crm', (route) =>
+      route.fulfill({ json: { contact: null } })
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/d');
+    const header = page.locator('[data-native-app] > header');
+    const messages = header.getByRole('link', {
+      name: 'Messages',
+      exact: true,
+    });
+    const back = header.getByRole('button', { name: 'Back', exact: true });
+    await expect(messages).toBeVisible();
+    await expect(back).toHaveCount(0);
+    await messages.click();
+    await expect(page).toHaveURL(/\/messages$/);
+    await expect(
+      page.getByRole('group', { name: 'Message folders' })
+    ).toBeVisible();
+    await expect(messages).toHaveCount(0);
+    await expect(back).toBeVisible();
+    await back.click();
+    await expect(page).toHaveURL(/\/d$/);
+    await expect(messages).toBeVisible();
+    await expect(back).toHaveCount(0);
+    await header.getByRole('button', { name: /Native Viewer/ }).click();
+    await page.locator('[role="menuitem"][href="/account/user/edit"]').click();
+    await expect(page).toHaveURL(/\/account\/user\/edit$/);
+    await expect(
+      page.getByRole('heading', { name: 'Native Viewer', exact: true })
+    ).toBeVisible();
+    await expect(back).toHaveCount(0);
+    await expect(messages).toBeVisible();
+    await expect(
+      page
+        .getByRole('navigation', { name: 'App navigation' })
+        .getByRole('link', { name: 'Profile', exact: true })
+    ).toHaveAttribute('aria-current', 'page');
+    await page.goto('/account/privacy');
+    await expect(
+      page.getByRole('link', { name: 'Delete account', exact: true })
+    ).toHaveAttribute('href', '/form/delete-account');
+    await expect(back).toBeVisible();
+    await back.click();
+    await expect(page).toHaveURL(/\/account\/user\/edit$/);
+    await expect(back).toHaveCount(0);
+    await expect(
+      page.getByRole('heading', { name: 'Native Viewer', exact: true })
+    ).toBeVisible();
+  });
+}
+
 for (const viewport of [
   { width: 320, height: 568 },
   { width: 375, height: 667 },

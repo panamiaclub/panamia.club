@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   NATIVE_TABS,
   nativeDeepLinkTarget,
+  nativeHeaderForPath,
   nativeRootForPath,
   usesNativeAppLayout,
 } from '@/lib/mobile/app-navigation';
@@ -100,6 +101,74 @@ const group: GroupSearchSummary = {
 };
 
 describe('native navigation', () => {
+  it('keeps only Back in the Messages header, including nested message routes', () => {
+    for (const pathname of ['/messages', '/messages/', '/messages/thread']) {
+      assert.deepEqual(nativeHeaderForPath(pathname, '/p/viewer'), {
+        showBack: true,
+        showMessages: false,
+      });
+    }
+  });
+
+  it('treats the personal Profile destination and Account aliases as header roots without hiding their content', () => {
+    for (const pathname of [
+      '/p/viewer',
+      '/account',
+      '/account/user',
+      '/account/user/edit',
+    ]) {
+      assert.deepEqual(nativeHeaderForPath(pathname, '/p/viewer'), {
+        showBack: false,
+        showMessages: true,
+      });
+      assert.equal(nativeRootForPath(pathname), null);
+    }
+    assert.equal(
+      nativeHeaderForPath('/p/mar%C3%ADa', '/p/mar%C3%ADa').showBack,
+      false
+    );
+    assert.equal(nativeHeaderForPath('/account', '/account').showBack, false);
+  });
+
+  it('retains Back on nested settings, other profiles and real detail pages', () => {
+    for (const pathname of [
+      '/account/privacy',
+      '/account/profile/edit',
+      '/account/user/notifications',
+      '/form/delete-account',
+      '/p/someone-else',
+      '/p/viewer/post',
+      '/e/coffee',
+      '/g/garden/chat',
+    ]) {
+      assert.deepEqual(nativeHeaderForPath(pathname, '/p/viewer'), {
+        showBack: true,
+        showMessages: true,
+      });
+    }
+  });
+
+  it('does not hide controls for similarly prefixed routes or add Back to retained root tabs', () => {
+    assert.equal(
+      nativeHeaderForPath('/messages-archive', '/p/viewer').showMessages,
+      true
+    );
+    assert.equal(
+      nativeHeaderForPath('/p/viewer-other', '/p/viewer').showBack,
+      true
+    );
+    for (const pathname of ['/d', '/s', '/groups']) {
+      assert.deepEqual(nativeHeaderForPath(pathname, '/p/viewer'), {
+        showBack: false,
+        showMessages: true,
+      });
+    }
+    assert.equal(
+      nativeHeaderForPath('/', '/p/viewer', 'social').showBack,
+      false
+    );
+  });
+
   it('opens the main app in Directory with the approved tab order', () => {
     assert.deepEqual(
       NATIVE_TABS.map(({ id }) => id),
