@@ -7,6 +7,70 @@ async function ios(page: Page) {
   return installNativeApiFixtures(page);
 }
 
+test.use({
+  launchOptions: async ({ browserName }, use) => {
+    await use(
+      browserName === 'chromium'
+        ? { args: ['--enable-unsafe-swiftshader'] }
+        : {}
+    );
+  },
+});
+
+test.describe('iOS results sheet', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  test('iOS sheet expansion and header dragging keep the map fixed', async ({
+    page,
+  }) => {
+    await ios(page);
+    await page.goto('/d');
+    const results = page.locator('[data-map-results="Directory"]');
+    const canvas = results.locator('.maplibregl-canvas');
+    await expect(canvas).toBeVisible();
+    const before = await canvas.boundingBox();
+    const sheet = results.getByRole('region', { name: 'Directory results' });
+    const handle = sheet.getByRole('button', { name: 'Resize results' });
+    await expect
+      .poll(async () => (await handle.boundingBox())!.height)
+      .toBeGreaterThanOrEqual(44);
+    const peekHeight = (await sheet.boundingBox())!.height;
+    const attribution = results.locator('.maplibregl-ctrl-attrib');
+    const attributionBox = (await attribution.boundingBox())!;
+    expect(attributionBox.y + attributionBox.height).toBeLessThanOrEqual(
+      (await sheet.boundingBox())!.y
+    );
+
+    await sheet.getByRole('button', { name: 'List', exact: true }).click();
+    await expect
+      .poll(async () => (await sheet.boundingBox())!.height)
+      .toBeGreaterThan(peekHeight + 100);
+    expect(await canvas.boundingBox()).toEqual(before);
+    await handle.press('Home');
+    await expect
+      .poll(async () => (await sheet.boundingBox())!.height)
+      .toBe(peekHeight);
+
+    const title = sheet.getByRole('heading', { name: '3 listings' });
+    const box = (await title.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y - 64, { steps: 8 });
+    await page.mouse.up();
+    await expect(handle).toHaveAttribute('aria-expanded', 'true');
+    await expect
+      .poll(async () => (await sheet.boundingBox())!.height)
+      .toBeGreaterThan(peekHeight + 100);
+    expect(await canvas.boundingBox()).toEqual(before);
+  });
+});
+
 for (const viewport of [
   { width: 320, height: 568 },
   { width: 375, height: 667 },
