@@ -18,6 +18,7 @@ import {
 } from '@/lib/mobile/browse';
 import {
   nativePreviewHeight,
+  nativePreviewRange,
   nativeSheetHeights,
   nativeSheetStopForDrag,
 } from '@/lib/mobile/map-sheet';
@@ -419,11 +420,21 @@ describe('shared URL parsing and measured map sheet', () => {
     assert.equal(query.get('radius'), 'all');
   });
 
-  it('fits a selected card with exactly twelve pixels above and below', () => {
+  it('fits the measured preview span with twelve pixels above and below', () => {
     assert.equal(nativePreviewHeight(600, 48, 160), 232);
     assert.equal(nativePreviewHeight(142, 30, 78), 132);
     assert.equal(nativePreviewHeight(80, 30, 78), 80);
     assert.equal(nativePreviewHeight(0, 48, 160), 0);
+  });
+
+  it('selects up to two adjacent profiles without changing listing order', () => {
+    assert.deepEqual(nativePreviewRange(9, 0), { start: 0, end: 2 });
+    assert.deepEqual(nativePreviewRange(9, 4), { start: 4, end: 6 });
+    assert.deepEqual(nativePreviewRange(9, 8), { start: 7, end: 9 });
+    assert.deepEqual(nativePreviewRange(1, 0), { start: 0, end: 1 });
+    assert.deepEqual(nativePreviewRange(0, -1), { start: 0, end: 0 });
+    assert.deepEqual(nativePreviewRange(9, -1), { start: 0, end: 2 });
+    assert.deepEqual(nativePreviewRange(9, 8, 1), { start: 8, end: 9 });
   });
 
   it('orders sheet stops and stays within available height, including landscape', () => {
@@ -435,6 +446,7 @@ describe('shared URL parsing and measured map sheet', () => {
     }
     assert.equal(nativeSheetHeights(142, 106).expanded, 142);
     assert.equal(nativeSheetHeights(600, 106).expanded, 486);
+    assert.equal(nativeSheetHeights(600, 106).peek, 54);
   });
 
   it('advances a sheet stop for short deliberate swipes in either direction', () => {
