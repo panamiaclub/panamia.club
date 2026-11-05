@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { installNativeApiFixtures } from './fixtures/native-app-api';
 import { NATIVE_BACK_BUTTON_EVENT } from '@/lib/mobile/native';
 import type { SearchResultsInterface } from '@/lib/query/directory';
@@ -220,6 +220,144 @@ for (const label of ['Directory', 'Events']) {
   });
 }
 
+test('native results sheets expand over a stable map without moving its pins', async ({
+  page,
+}) => {
+  await native(page);
+  await page.goto('/d');
+  for (const label of ['Directory', 'Events']) {
+    if (label === 'Events') await scope(page, 'Events');
+    const results = map(page, label);
+    const camera = results.locator('.dirsearch-mapcanvas[data-map-center]');
+    await expect
+      .poll(async () => {
+        const center = (await camera.getAttribute('data-map-center'))!
+          .split(',')
+          .map(Number);
+        return Math.abs(center[0] - 25.94);
+      })
+      .toBeLessThan(0.000001);
+    const canvas = results.locator('.maplibregl-canvas');
+    const marker = results.locator('.maplibregl-marker').first();
+    const before = {
+      canvas: await canvas.boundingBox(),
+      marker: await marker.boundingBox(),
+      center: await camera.getAttribute('data-map-center'),
+      zoom: await camera.getAttribute('data-map-zoom'),
+    };
+    const sheet = results.getByRole('region', { name: `${label} results` });
+    const peekHeight = (await sheet.boundingBox())!.height;
+    await sheet.getByRole('button', { name: 'List', exact: true }).click();
+    await expect
+      .poll(async () => (await sheet.boundingBox())!.height)
+      .toBeGreaterThan(peekHeight + 100);
+    expect(await canvas.boundingBox()).toEqual(before.canvas);
+    expect(await marker.boundingBox()).toEqual(before.marker);
+    expect(await camera.getAttribute('data-map-center')).toBe(before.center);
+    expect(await camera.getAttribute('data-map-zoom')).toBe(before.zoom);
+    await sheet.getByRole('button', { name: 'Map', exact: true }).click();
+    await expect
+      .poll(async () => (await sheet.boundingBox())!.height)
+      .toBe(peekHeight);
+    expect(await canvas.boundingBox()).toEqual(before.canvas);
+  }
+});
+
+test('native sheet header accepts short touch swipes without disturbing map geometry or list scrolling', async ({
+  page,
+  context,
+}) => {
+  const businesses: SearchResultsInterface[] = Array.from(
+    { length: 343 },
+    (_, index) => ({
+      _id: `sheet-business-${index}`,
+      id: `sheet-business-${index}`,
+      name: `Sheet business ${index}`,
+      screenname: `sheet-business-${index}`,
+      score: 1,
+      score_details: {},
+      details: 'A sheet interaction fixture.',
+      five_words: 'A sheet interaction fixture.',
+      geo:
+        index < 31 ? { coordinates: [-80.19 + index * 0.0001, 25.76] } : null,
+      images: { primaryCDN: '/logos/pana_logo_long_orange.png' },
+      primary_address: { city: 'Miami' },
+      socials: {},
+    })
+  );
+  await native(page, { businesses });
+  await page.goto('/d');
+  const results = map(page);
+  const sheet = results.getByRole('region', { name: 'Directory results' });
+  const handle = sheet.getByRole('button', { name: 'Resize results' });
+  const title = sheet.getByRole('heading', { name: '343 listings' });
+  await expect(title).toBeVisible();
+  await expect(results.locator('.maplibregl-marker')).toHaveCount(31);
+  const canvas = results.locator('.maplibregl-canvas');
+  const before = await canvas.boundingBox();
+  const peekHeight = (await sheet.boundingBox())!.height;
+  const cdp = await context.newCDPSession(page);
+  const swipe = async (
+    target: Locator,
+    distance: number,
+    cancelled = false
+  ) => {
+    const box = (await target.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x, y }],
+    });
+    for (let step = 1; step <= 8; step++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x, y: y - (distance * step) / 8 }],
+      });
+      expect(await canvas.boundingBox()).toEqual(before);
+    }
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: cancelled ? 'touchCancel' : 'touchEnd',
+      touchPoints: [],
+    });
+  };
+
+  await swipe(title, 64);
+  await expect(handle).toHaveAttribute('aria-expanded', 'true');
+  await expect
+    .poll(async () => (await sheet.boundingBox())!.height)
+    .toBeGreaterThan(peekHeight + 100);
+  const halfHeight = (await sheet.boundingBox())!.height;
+  await swipe(title, 64, true);
+  expect((await sheet.boundingBox())!.height).toBe(halfHeight);
+  await handle.press('End');
+  await expect
+    .poll(async () => (await sheet.boundingBox())!.height)
+    .toBeGreaterThan(halfHeight);
+  const expandedHeight = (await sheet.boundingBox())!.height;
+  const list = sheet
+    .getByRole('region', { name: 'In map', exact: true })
+    .locator('..');
+  await swipe(list, 120);
+  await expect
+    .poll(() => list.evaluate((node) => node.scrollTop))
+    .toBeGreaterThan(40);
+  expect((await sheet.boundingBox())!.height).toBe(expandedHeight);
+  await swipe(title, -64);
+  await expect
+    .poll(async () => (await sheet.boundingBox())!.height)
+    .toBe(halfHeight);
+  await handle.press('Home');
+  await expect(handle).toHaveAttribute('aria-expanded', 'false');
+  await expect
+    .poll(async () => (await sheet.boundingBox())!.height)
+    .toBe(peekHeight);
+  await handle.tap();
+  await expect(handle).toHaveAttribute('aria-expanded', 'true');
+  expect(await canvas.boundingBox()).toEqual(before);
+  await cdp.detach();
+});
+
 test('native directory shows complete In map and Online collections with camera-stable photo selection', async ({
   page,
 }) => {
@@ -371,6 +509,11 @@ test('native location sharing ignores old radius links and can recenter after br
   await expect(online.locator('article')).toHaveCount(1);
   const requests = queries().length;
   const box = (await map(page).locator('canvas').boundingBox())!;
+  const sheet = (await map(page)
+    .getByRole('region', { name: 'Directory results' })
+    .boundingBox())!;
+  // The canvas now stays fixed behind the sheet; pan in its exposed area.
+  const panY = box.y + Math.min(box.height, sheet.y - box.y) * 0.55;
   for (let step = 0; step < 4; step++) {
     const bounds = JSON.parse(
       (await canvas.getAttribute('data-map-bounds'))!
@@ -378,9 +521,9 @@ test('native location sharing ignores old radius links and can recenter after br
     const farLng = viewer.longitude + 0.18;
     if (farLng >= bounds.west && farLng <= bounds.east) break;
     const previous = (await center())[1];
-    await page.mouse.move(box.x + box.width * 0.85, box.y + box.height * 0.55);
+    await page.mouse.move(box.x + box.width * 0.85, panY);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.55, {
+    await page.mouse.move(box.x + box.width * 0.15, panY, {
       steps: 20,
     });
     await page.mouse.up();
