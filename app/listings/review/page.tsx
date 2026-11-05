@@ -7,6 +7,7 @@ import { useSession } from '@/lib/auth-client';
 import { useProfile } from '@/lib/query/profile';
 import {
   LISTING_REVIEW_STEPS,
+  hasListingPrimaryPhoto,
   listingReviewFinishPath,
   listingReviewStepPath,
   type ListingReviewStep,
@@ -75,8 +76,9 @@ function OwnedListingReview({
   const description = profile.descriptions?.details ?? profile.details;
   const shortDescription =
     profile.descriptions?.fiveWords ?? profile.five_words;
+  const savedPrimaryPhoto = hasListingPrimaryPhoto(profile.images?.primaryCDN);
   const photos = [
-    profile.images?.primaryCDN,
+    savedPrimaryPhoto ? profile.images?.primaryCDN : undefined,
     profile.images?.gallery1CDN,
     profile.images?.gallery2CDN,
     profile.images?.gallery3CDN,
@@ -109,9 +111,9 @@ function OwnedListingReview({
             .join(' - ') || 'No public links added.'
         );
       case 'images':
-        return photos.length
-          ? `${photos.length} existing photo${photos.length === 1 ? '' : 's'}. Only replace the ones you choose.`
-          : 'Add a logo or photos when you are ready.';
+        return savedPrimaryPhoto
+          ? `Primary photo saved. ${photos.length} existing photo${photos.length === 1 ? '' : 's'}. Only replace the ones you choose; gallery photos are optional.`
+          : 'A saved primary business photo is required before confirming. Gallery photos alone do not meet this requirement.';
     }
   }
 

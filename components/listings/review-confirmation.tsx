@@ -12,6 +12,7 @@ import {
 } from '@/lib/listing-refresh';
 import { listingReviewPath } from '@/lib/listing-url';
 import {
+  LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE,
   listingReviewFinishPath,
   listingReviewStepPath,
 } from '@/lib/listing-review';
@@ -43,7 +44,9 @@ export function ListingReviewConfirmation({
   const [checked, setChecked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [locationError, setLocationError] = useState(false);
+  const [requirementStep, setRequirementStep] = useState<
+    'address' | 'images' | null
+  >(null);
   const [restored, setRestored] = useState(false);
   const state = useQuery<ListingReviewState, Error>({
     queryKey: ['listing-review-state', profileId, session?.user?.id],
@@ -66,6 +69,7 @@ export function ListingReviewConfirmation({
     state.isSuccess &&
     Boolean(state.data?.lastReviewedAt) &&
     state.data?.zipVerified === true &&
+    state.data?.primaryPhotoSaved === true &&
     !state.data?.cycle;
 
   async function submit(
@@ -74,7 +78,7 @@ export function ListingReviewConfirmation({
     if (!state.data || !session?.user?.id || saving) return;
     setSaving(true);
     setError('');
-    setLocationError(false);
+    setRequirementStep(null);
     try {
       const response = await fetch('/api/listings/review', {
         method: 'POST',
@@ -98,15 +102,14 @@ export function ListingReviewConfirmation({
         (action === 'confirm' &&
           (!('profileId' in data) || data.profileId !== profileId))
       ) {
-        setLocationError(
-          Boolean(
-            data &&
-            typeof data === 'object' &&
-            'field' in data &&
-            data.field === 'zipcode' &&
-            'step' in data &&
-            data.step === 'address'
-          )
+        setRequirementStep(
+          data && typeof data === 'object' && 'field' in data && 'step' in data
+            ? data.field === 'zipcode' && data.step === 'address'
+              ? 'address'
+              : data.field === 'primary' && data.step === 'images'
+                ? 'images'
+                : null
+            : null
         );
         throw new Error(
           data &&
@@ -155,8 +158,9 @@ export function ListingReviewConfirmation({
           </p>
           <p className="mt-1">
             Only the final confirmation completes this review. A valid US ZIP is
-            required for every business. Public visiting locations need an
-            address; online and mobile services need only a base ZIP.
+            required for every business, along with a saved primary business
+            photo. An existing primary photo counts. Public visiting locations
+            need an address; online and mobile services need only a base ZIP.
           </p>
         </aside>
       )}
@@ -238,8 +242,24 @@ export function ListingReviewConfirmation({
                   cycle. Every business needs a valid five-digit US ZIP in
                   Location. Public visiting locations need a street address,
                   city, state and ZIP; online and mobile services need only a
-                  base ZIP. Never enter a private home address.
+                  base ZIP. Never enter a private home address. A saved primary
+                  business photo is also required. An existing primary photo
+                  counts; gallery photos are optional.
                 </p>
+                {state.data?.primaryPhotoSaved === false && (
+                  <div className={`${styles.note} space-y-3`}>
+                    <p>{LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE}</p>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className={styles.secondary}
+                    >
+                      <Link href={listingReviewStepPath(profileId, 'images')}>
+                        Add or check primary photo in Photos
+                      </Link>
+                    </Button>
+                  </div>
+                )}
                 <div className="flex items-start gap-3">
                   <Checkbox
                     id="confirm-listing-information"
@@ -272,6 +292,7 @@ export function ListingReviewConfirmation({
                       !checked ||
                       saving ||
                       !state.data ||
+                      !state.data.primaryPhotoSaved ||
                       state.isError ||
                       state.isFetching
                     }
@@ -304,10 +325,12 @@ export function ListingReviewConfirmation({
           <p role="alert" className={styles.error}>
             {error}
           </p>
-          {locationError ? (
+          {requirementStep ? (
             <Button asChild variant="outline" className={styles.secondary}>
-              <Link href={listingReviewStepPath(profileId, 'address')}>
-                Add or check ZIP in Location
+              <Link href={listingReviewStepPath(profileId, requirementStep)}>
+                {requirementStep === 'address'
+                  ? 'Add or check ZIP in Location'
+                  : 'Add or check primary photo in Photos'}
               </Link>
             </Button>
           ) : (

@@ -93,6 +93,12 @@ export default function AccountProfileDesc() {
     );
   }
 
+  const actions = (
+    <ProfileEditorActions
+      review={review}
+      pending={isLoading || mutation.isPending}
+    />
+  );
   return (
     <ProfileEditorFrame
       listingId={review.listingId}
@@ -106,10 +112,7 @@ export default function AccountProfileDesc() {
         onSubmit={submitForm}
         className="space-y-6"
       >
-        <ProfileEditorActions
-          review={review}
-          pending={isLoading || mutation.isPending}
-        />
+        {!review.active && actions}
 
         <div className="space-y-2">
           <Label htmlFor="name">
@@ -209,6 +212,7 @@ export default function AccountProfileDesc() {
             Profile updated successfully!
           </div>
         )}
+        {review.active && actions}
       </form>
     </ProfileEditorFrame>
   );

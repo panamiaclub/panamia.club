@@ -12,6 +12,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
+  hasListingPrimaryPhoto,
+  LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE,
+} from '@/lib/listing-review';
+import {
   ListingReviewAccess,
   ListingReviewLoading,
   ProfileEditorActions,
@@ -40,18 +44,24 @@ export default function AccountProfileImages() {
   const profileId = profile?.id ?? profile?._id;
   const hasNewPhotos =
     photoChoice?.id === profileId && photoChoice?.selected === true;
+  const savedPrimaryPhoto = hasListingPrimaryPhoto(profile?.images?.primaryCDN);
 
   const submitForm = async (e: FormEvent) => {
     e.preventDefault();
+    if (uploading) return;
     const form = e.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
+    const primary = formData.get('primary');
+    const hasFiles = Array.from(formData.values()).some(
+      (value) => value instanceof File && value.size > 0
+    );
     if (
       review.active &&
-      !Array.from(formData.values()).some(
-        (value) => value instanceof File && value.size > 0
-      )
+      !savedPrimaryPhoto &&
+      !(primary instanceof File && primary.size > 0)
     ) {
-      review.onSaved();
+      setUploadError(LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE);
+      form.querySelector<HTMLInputElement>('#images_primary')?.focus();
       return;
     }
     setUploading(true);
@@ -59,30 +69,53 @@ export default function AccountProfileImages() {
     setUploadSuccess(false);
 
     try {
-      const { data: result } = await axios.post(
-        profileEditorUrl('/api/profile/upload', review.listingId),
-        formData,
-        {
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-
-      /* A 200 from this endpoint does not on its own mean anything was
-         stored, so the body is what decides. Reporting success on the
-         absence of a thrown error is how uploads appeared to work here for
-         a long time while saving nothing. */
-      if (!result?.success) {
-        setUploadError(
-          result?.error || 'Failed to upload images. Please try again.'
+      if (!review.active || hasFiles) {
+        const { data: result } = await axios.post<{
+          success?: boolean;
+          error?: string;
+          data?: { id?: string; primaryImageCdn?: unknown };
+        }>(
+          profileEditorUrl('/api/profile/upload', review.listingId),
+          formData,
+          {
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'multipart/form-data',
+            },
+          }
         );
-        return;
+
+        if (!result?.success) {
+          throw new Error(
+            result?.error || 'Failed to upload images. Please try again.'
+          );
+        }
+        if (
+          review.active &&
+          (result.success !== true ||
+            result.data?.id !== review.listingId ||
+            !hasListingPrimaryPhoto(result.data?.primaryImageCdn))
+        ) {
+          throw new Error(
+            'The saved primary photo could not be verified. Reload Photos and try again.'
+          );
+        }
       }
 
+      const saved = await refetch();
+      if (review.active) {
+        if (!saved.isSuccess || saved.data.id !== review.listingId) {
+          throw new Error(
+            'Could not check the saved photos for this business. Please try again.'
+          );
+        }
+        if (!hasListingPrimaryPhoto(saved.data.images?.primaryCDN)) {
+          setUploadError(LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE);
+          form.querySelector<HTMLInputElement>('#images_primary')?.focus();
+          return;
+        }
+      }
       setUploadSuccess(true);
-      await refetch();
 
       // Clear file inputs
       form.reset();
@@ -96,7 +129,10 @@ export default function AccountProfileImages() {
           ? error.response.data.error
           : '';
       setUploadError(
-        fromServer || 'Failed to upload images. Please try again.'
+        fromServer ||
+          (error instanceof Error
+            ? error.message
+            : 'Failed to upload images. Please try again.')
       );
     } finally {
       setUploading(false);
@@ -139,6 +175,20 @@ export default function AccountProfileImages() {
     );
   }
 
+  const actions = (
+    <ProfileEditorActions
+      review={review}
+      pending={uploading}
+      continueLabel={
+        hasNewPhotos ? 'Save and continue' : 'Continue to confirmation'
+      }
+      pendingLabel={
+        review.active && !hasNewPhotos
+          ? 'Checking saved photos...'
+          : 'Uploading...'
+      }
+    />
+  );
   return (
     <ProfileEditorFrame
       listingId={review.listingId}
@@ -152,30 +202,27 @@ export default function AccountProfileImages() {
         onSubmit={submitForm}
         onChange={
           review.active
-            ? (event) =>
+            ? (event) => {
+                setUploadError('');
                 setPhotoChoice({
                   id: profileId,
                   selected: Array.from(
                     new FormData(event.currentTarget).values()
                   ).some((value) => value instanceof File && value.size > 0),
-                })
+                });
+              }
             : undefined
         }
         className="space-y-6"
       >
-        <ProfileEditorActions
-          review={review}
-          pending={uploading}
-          continueLabel={
-            hasNewPhotos ? 'Save and continue' : 'Continue to confirmation'
-          }
-          pendingLabel="Uploading..."
-        />
+        {!review.active && actions}
 
         {review.active && (
           <p className={reviewStyles.note}>
-            Photos are optional. Only the images you choose will be replaced;
-            continuing without a new upload keeps all current photos.
+            A saved primary business photo is required to complete this review.
+            An existing primary photo counts; you do not need to upload it
+            again. Gallery photos are optional. Only the images you choose will
+            be replaced.
           </p>
         )}
 
@@ -208,17 +255,39 @@ export default function AccountProfileImages() {
                 id="images_primary"
                 name="primary"
                 accept="image/png, image/jpeg, image/webp"
+                disabled={review.active && uploading}
+                aria-required={review.active && !savedPrimaryPhoto}
+                aria-invalid={
+                  review.active && !savedPrimaryPhoto && Boolean(uploadError)
+                    ? true
+                    : undefined
+                }
+                aria-describedby={
+                  review.active
+                    ? `primary-photo-requirement${uploadError ? ' photo-upload-error' : ''}`
+                    : undefined
+                }
               />
               <p className="text-sm text-gray-500">
                 Accepted images are jpg, png, and webp
               </p>
+              {review.active && (
+                <p
+                  id="primary-photo-requirement"
+                  className={reviewStyles.helper}
+                >
+                  {savedPrimaryPhoto
+                    ? 'Your saved primary photo meets this requirement. Continue without a new upload to keep it.'
+                    : 'Required: choose and save a primary photo for this business. Gallery photos alone do not meet this requirement.'}
+                </p>
+              )}
             </div>
 
-            {data?.images?.primaryCDN && (
+            {(review.active ? savedPrimaryPhoto : data?.images?.primaryCDN) && (
               <div className="rounded-md border p-4">
                 <p className="mb-2 text-sm font-medium">Current Image:</p>
                 <img
-                  src={data.images.primaryCDN}
+                  src={data?.images?.primaryCDN}
                   alt="Primary"
                   className="max-h-48 w-auto rounded-md"
                 />
@@ -245,6 +314,7 @@ export default function AccountProfileImages() {
                 id="images_gallery1"
                 name="gallery1"
                 accept="image/png, image/jpeg, image/webp"
+                disabled={review.active && uploading}
               />
               <p className="text-sm text-gray-500">
                 Accepted images are jpg, png, and webp
@@ -282,6 +352,7 @@ export default function AccountProfileImages() {
                 id="images_gallery2"
                 name="gallery2"
                 accept="image/png, image/jpeg, image/webp"
+                disabled={review.active && uploading}
               />
               <p className="text-sm text-gray-500">
                 Accepted images are jpg, png, and webp
@@ -319,6 +390,7 @@ export default function AccountProfileImages() {
                 id="images_gallery3"
                 name="gallery3"
                 accept="image/png, image/jpeg, image/webp"
+                disabled={review.active && uploading}
               />
               <p className="text-sm text-gray-500">
                 Accepted images are jpg, png, and webp
@@ -340,6 +412,7 @@ export default function AccountProfileImages() {
 
         {uploadError && (
           <div
+            id="photo-upload-error"
             role="alert"
             className={
               review.active
@@ -356,6 +429,7 @@ export default function AccountProfileImages() {
             Images uploaded successfully!
           </div>
         )}
+        {review.active && actions}
       </form>
     </ProfileEditorFrame>
   );

@@ -7,7 +7,7 @@ export function listingClaim(params: Record<string, unknown>) {
   const instructions =
     'If that was you, use the same Pana account and confirm below. The link works once and expires in an hour. Claiming gives that account access to edit this business; it does not change your personal login.';
   const reviewGuidance =
-    'If you are completing a listing review, finish with "Confirm business information" after claiming.';
+    'If you are completing a listing review, finish with "Confirm business information" after claiming. A valid US ZIP and a saved primary business photo are required. An existing primary photo counts; you do not need to upload it again. Gallery photos are optional.';
   const safety =
     "If you don't recognise this, ignore this email and nothing changes. Whoever asked cannot get access without this link.";
 

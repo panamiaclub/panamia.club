@@ -132,37 +132,49 @@ classified as online-only.
 Without a visiting address, a ZIP is an approximate base area, not directions,
 a service/delivery boundary or an exact street point. ZIP validation and
 street/point privacy use the existing address API and verified ZIP cache.
-Saving each section continues to the next;
-Back returns to the preceding step and the six pills allow direct navigation.
+Each review editor has one Back/continue footer after its editable fields in DOM
+and keyboard order, including **Continue to confirmation** at the end of Photos.
+There is no duplicate top or sticky next action. Saving each section continues
+to the next; Back returns to the preceding step and the six pills allow direct navigation.
 The first Back exits to the selected listing's permanent entry. Keeping location
 or photos unchanged uses the same continue action rather than a second save
-button. Saving, skipping and switching steps never confirm the review.
+button. A saved **primary business photo** is required to finish the review.
+An existing real saved primary photo counts without another upload. Gallery
+photos remain optional and cannot substitute for the primary; neither an
+unsaved selection, failed/empty upload response, personal avatar nor site
+placeholder meets the requirement. Photos checks the scoped upload response and
+refetches this business before continuing. Saving, skipping and switching steps
+never confirm the review, and optional steps need not be visited.
 
 After Photos, `/listings/review?id={profileId}&complete=1` opens the final check
 inside the same wizard frame, with a read-only summary and Back to photos. It
 does not mark anything complete on arrival. Only the authenticated **Confirm
-business information** POST, after verifying the locked business's current ZIP,
-can save `lastReviewedAt`, complete the current
+business information** POST, after verifying the locked business's current ZIP
+and saved primary photo, can save `lastReviewedAt`, complete the current
 reminder cycle and restore an eligible overdue-review pause; staff restrictions
 remain authoritative. The success screen is backed by the server's review state,
 not `complete` or `confirmed` query parameters alone. It links to the updated
 public listing when available and the exact business's management wizard.
-Direct requests, skipped steps, stale location data and URL flags cannot bypass
-ZIP verification. Unknown ZIPs return a Location-field error; temporary lookup
-failures are retryable and leave review, cycle and visibility unchanged. A
+Direct requests, skipped steps, stale location/photo data and URL flags cannot
+bypass these requirements. A missing primary photo returns a Photos-field error before
+any completion/restoration writes, with a link back to Photos. Historical review
+timestamps are preserved when requirements are no longer met. No external
+image-existence lookup is made. Unknown ZIPs return a Location-field error;
+temporary lookup failures are retryable and leave review, cycle and visibility unchanged. A
 previously verified ZIP does not require another network lookup.
 
 Cream/ink surfaces, orange actions, indigo step pills and progress are scoped to
 listing-review mode; ordinary personal editors retain their account styling and
 save behavior. Review deadlines, holds and errors stay in the wizard. Reminder
 preferences are available in a compact disclosure without changing campaign or
-visibility policies.
+visibility policies, including when the business has no primary photo.
 
 This is a product UI path only. It does not create, schedule or send a campaign,
 import contacts, bulk-claim businesses, or modify existing listings on arrival.
-Published legacy listings without ZIPs remain published. There is no data
-backfill, migration or new background ZIP-based deactivation. Personal editors,
-intake drafts and edits to other business fields do not acquire a ZIP requirement.
+Published legacy listings without ZIPs or primary photos remain published. There
+is no data backfill, migration or new background requirement-based deactivation.
+Personal editors, intake drafts and edits to other business fields do not
+acquire these review requirements.
 
 ### Inbox invitation shortcut (operator-issued, not an account login)
 

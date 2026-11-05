@@ -106,6 +106,12 @@ export default function AccountProfileContact() {
     );
   }
 
+  const actions = (
+    <ProfileEditorActions
+      review={review}
+      pending={isLoading || mutation.isPending}
+    />
+  );
   return (
     <ProfileEditorFrame
       listingId={review.listingId}
@@ -119,10 +125,7 @@ export default function AccountProfileContact() {
         onSubmit={submitForm}
         className="space-y-6"
       >
-        <ProfileEditorActions
-          review={review}
-          pending={isLoading || mutation.isPending}
-        />
+        {!review.active && actions}
 
         <div className="space-y-2">
           <Label htmlFor="email">
@@ -286,6 +289,7 @@ export default function AccountProfileContact() {
             Profile updated successfully!
           </div>
         )}
+        {review.active && actions}
       </form>
     </ProfileEditorFrame>
   );
