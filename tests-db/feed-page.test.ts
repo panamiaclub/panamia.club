@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import { createElement, type ComponentProps, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
-let publicPosts = [{ id: 'public-post' }];
-let publicError = false;
+let feedPosts = [{ id: 'pana-post' }, { id: 'community-post' }];
+let feedError = false;
+let more = false;
+let native = false;
 
 mock.module(import.meta.resolve('../lib/auth-client.ts'), {
   namedExports: {
@@ -21,6 +23,9 @@ mock.module(import.meta.resolve('next/navigation'), {
 mock.module(import.meta.resolve('next/dynamic'), {
   defaultExport: () => () => null,
 });
+mock.module(import.meta.resolve('../lib/mobile/use-native-app.ts'), {
+  namedExports: { useIsNativeApp: () => native },
+});
 mock.module(import.meta.resolve('../components/social/index.ts'), {
   namedExports: {
     SocialEligibilityGate: ({ children }: { children: ReactNode }) => children,
@@ -34,14 +39,13 @@ mock.module(import.meta.resolve('../lib/query/social.ts'), {
   namedExports: {
     useMyActor: () => ({ data: { actor: null } }),
     useTimeline: () => ({
-      data: { statuses: [{ id: 'panas-post' }] },
-      isLoading: false,
-      isError: false,
-    }),
-    usePublicTimeline: () => ({
-      data: { statuses: publicPosts },
-      isLoading: false,
-      isError: publicError,
+      data: { pages: [{ statuses: feedPosts }] },
+      isPending: false,
+      isError: feedError,
+      hasNextPage: more,
+      isFetching: false,
+      isFetchingNextPage: false,
+      isFetchNextPageError: false,
     }),
   },
 });
@@ -71,42 +75,68 @@ for (const [path, name] of [
 const { FeedPage } = await import('../app/s/_components/feed-page');
 after(() => mock.restoreAll());
 
-it('opens Everyone first and keeps Panas available as an unselected tab', () => {
-  const html = renderToStaticMarkup(createElement(FeedPage));
-  const tabs = [...html.matchAll(/<button\b[^>]*role="tab"[^>]*>/g)].map(
-    (match) => match[0]
-  );
-
-  assert.equal(tabs.length, 2);
-  assert.match(tabs[0], /id="feed-tab-everyone"/);
-  assert.match(tabs[0], /aria-selected="true"/);
-  assert.match(tabs[1], /id="feed-tab-panas"/);
-  assert.match(tabs[1], /aria-selected="false"/);
-  assert.doesNotMatch(html, /feed-tab-voice|Voice notes/);
-  assert.match(html, /aria-labelledby="feed-tab-everyone"/);
-  assert.match(html, /data-post-id="public-post"/);
-  assert.doesNotMatch(html, /data-post-id="panas-post"/);
-});
-
-it('an empty default feed explains the absence of public posts', () => {
-  publicPosts = [];
+it('uses one mixed feed without reading tabs or a replacement filter row on web and native', () => {
   try {
-    const html = renderToStaticMarkup(createElement(FeedPage));
-    assert.match(html, /No public posts yet/);
-    assert.doesNotMatch(html, /Your Panas feed starts here/);
+    for (const isNative of [false, true]) {
+      native = isNative;
+      const html = renderToStaticMarkup(createElement(FeedPage));
+      assert.match(html, /<section[^>]*aria-label="Community feed"/);
+      assert.match(html, /data-post-id="pana-post"/);
+      assert.match(html, /data-post-id="community-post"/);
+      assert.doesNotMatch(
+        html,
+        /role="tab"|role="tabpanel"|Feed filters|native-feed-filters|feed-tab-/
+      );
+    }
   } finally {
-    publicPosts = [{ id: 'public-post' }];
+    native = false;
   }
 });
 
-it('a failure in Everyone is not hidden by a populated Panas feed', () => {
-  publicError = true;
+it('an empty mixed feed does not require mutual connections before getting started', () => {
+  const saved = feedPosts;
+  feedPosts = [];
   try {
     const html = renderToStaticMarkup(createElement(FeedPage));
-    assert.match(html, /Something went wrong fetching the timeline/);
-    assert.doesNotMatch(html, /data-post-id="panas-post"/);
-    assert.doesNotMatch(html, /No public posts yet/);
+    assert.match(html, /Your community feed starts here/);
+    assert.match(html, /Share a moment with Everyone/);
+    assert.doesNotMatch(html, /Your Panas feed starts here/);
   } finally {
-    publicError = false;
+    feedPosts = saved;
+  }
+});
+
+it('a failed refresh is visible without discarding already loaded posts', () => {
+  feedError = true;
+  try {
+    const html = renderToStaticMarkup(createElement(FeedPage));
+    assert.match(html, /Could not refresh the feed/);
+    assert.match(html, /data-post-id="pana-post"/);
+    assert.match(html, /data-post-id="community-post"/);
+    assert.doesNotMatch(html, /all caught up|No posts yet/);
+  } finally {
+    feedError = false;
+  }
+});
+
+it('offers the next page instead of falsely announcing the feed is caught up', () => {
+  more = true;
+  try {
+    const html = renderToStaticMarkup(createElement(FeedPage));
+    assert.match(html, /Load more posts/);
+    assert.doesNotMatch(html, /all caught up/);
+  } finally {
+    more = false;
+  }
+});
+
+it('renders a post only once when pages overlap after a feed refresh', () => {
+  const saved = feedPosts;
+  feedPosts = [{ id: 'pana-post' }, { id: 'pana-post' }];
+  try {
+    const html = renderToStaticMarkup(createElement(FeedPage));
+    assert.equal([...html.matchAll(/data-post-id="pana-post"/g)].length, 1);
+  } finally {
+    feedPosts = saved;
   }
 });

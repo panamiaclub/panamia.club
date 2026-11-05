@@ -1,11 +1,11 @@
 /**
- * GET /api/social/timeline - Get Panas timeline (mutual follows + own + joined groups)
+ * GET /api/social/timeline - Mixed community feed with a gentle mutual-Pana boost
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getActiveProfileWithActor } from '@/lib/server/active-profile';
-import { getHomeTimeline } from '@/lib/federation';
+import { getFeedTimeline, parseFeedCursor } from '@/lib/federation';
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -27,10 +27,26 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = request.nextUrl;
-  const cursor = searchParams.get('cursor') || undefined;
-  const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50);
+  const token = searchParams.get('cursor');
+  const cursor = token ? parseFeedCursor(token) : undefined;
+  const limit = Number(searchParams.get('limit') ?? '20');
+  if (
+    (token && !cursor) ||
+    !Number.isInteger(limit) ||
+    limit < 1 ||
+    limit > 50
+  ) {
+    return NextResponse.json(
+      { success: false, error: 'Invalid feed cursor or limit' },
+      { status: 400 }
+    );
+  }
 
-  const result = await getHomeTimeline(profile.socialActor.id, cursor, limit);
+  const result = await getFeedTimeline(
+    profile.socialActor.id,
+    cursor ?? undefined,
+    limit
+  );
 
   return NextResponse.json({
     success: true,

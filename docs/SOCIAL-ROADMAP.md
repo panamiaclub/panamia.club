@@ -300,13 +300,15 @@ feature sets. SocialFollow is now the sole follow mechanism.
 
 **Status**: Complete
 
-**Goal**: Users can post, discover the public community feed, and switch to their mutual Panas
+**Goal**: Users can post and discover the community in one feed with a gentle mutual-Pana preference
 
 - [x] Friendly social-card composer with public Everyone default and mutual-only Panas sharing
 - [x] Prominent photo/video action, inline playable video, file drop and image paste
 - [x] Media-only posts, four-attachment limit, upload-busy protection, and visible draft-preserving errors
 - [x] Optional content warning and formatting preview under More; saved account license applied server-side
-- [x] Everyone opens by default; Panas shows mutual follows, own posts, and joined groups (`/s`)
+- [x] One mixed feed replaces the Everyone/Panas reading tabs on web and native (`/s`)
+- [x] Server-side six-hour recency boost for mutual Panas, with local community discovery and joined-group posts
+- [x] Ranked cursor pagination and Load more; no false caught-up notice while more posts exist
 - [x] Post detail page (`/status/[statusId]`)
 - [x] Reply to posts (inline composer on post detail)
 - [x] Like posts (optimistic UI with `useLikePost`/`useUnlikePost`)
@@ -323,9 +325,19 @@ feature sets. SocialFollow is now the sole follow mechanism.
 - Pages: `app/{s,p/[user],status/[statusId]}/`
 
 **Hybrid Layout**: Actor profile page uses tabs (Posts | Followers | Following)
-instead of separate pages. The feed opens on Everyone, with an optional Panas tab.
-Panas requires accepted follows in both directions; group membership still adds joined-group posts
-independently of follows.
+instead of separate pages. The feed has no reading tabs or replacement filter row.
+It combines local public posts with the existing mutual-Pana, own-post, and joined-group audience.
+Panas requires accepted follows in both directions; membership grants group access independently.
+The composer still offers Everyone/Panas as publishing audiences.
+
+**Feed order**: A mutual Pana receives a fixed six-hour boost to publication time,
+then posts sort newest-first by that value with ID as the tie-breaker. This favors
+recent connections without pinning old posts or using engagement/tracking signals.
+Ordering happens in Postgres before pagination. A versioned cursor contains the
+last boosted time and ID, so ties, nonsequential IDs, and deleted boundary posts do
+not skip history. Loaded pages remain visible during retryable errors. Public
+discovery and the existing relationship/group predicates are shared with the
+standalone timeline wrappers, not reimplemented in the client.
 
 ### Phase 4B: Markdown Editor & Media Attachments
 
@@ -669,7 +681,7 @@ SOCIAL_ADMIN_EMAIL=admin@pana.social
 1. Enable social features in account settings
 2. Choose a handle (@screenname@pana.social)
 3. Post updates, follow others, engage with content
-4. Browse Everyone by default, or switch to Panas for mutual follows, own posts, and joined groups
+4. Browse one community feed that gently favors recent mutual-Pana posts while retaining public discovery and joined groups
 5. Follow accounts from other servers (@user@mastodon.social)
 
 ### For Article Readers
