@@ -170,7 +170,7 @@ for (const platform of ['android', 'ios'] as const) {
       await page.goto('/d');
       const header = page.locator('[data-native-app] > header');
       const account = header.getByRole('button', {
-        name: signedIn ? /Native Viewer/ : 'Sign in or sign up',
+        name: signedIn ? /Native Viewer/ : 'Create account or sign in',
         includeHidden: true,
       });
       if (signedIn) {

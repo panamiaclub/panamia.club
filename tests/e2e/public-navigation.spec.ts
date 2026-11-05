@@ -434,16 +434,22 @@ test.describe('Custom Sign-In Page', () => {
     const res = await page.goto('/signin');
     expect(res?.status()).toBe(200);
     await expect(page.locator('h1').first()).toContainText(
-      'Welcome to Pana MIA'
+      'Create an account or sign in'
     );
   });
 
   test('signin page displays Pana MIA branding', async ({ page }) => {
     await page.goto('/signin', { waitUntil: 'domcontentloaded' });
 
-    // Check for welcome message - wait longer for client-side hydration
-    const welcomeText = page.getByText('Welcome to Pana MIA');
-    await expect(welcomeText).toBeVisible({ timeout: 15000 });
+    await expect(
+      page.locator('#signin-card').getByRole('heading', {
+        name: 'Create an account or sign in',
+        exact: true,
+      })
+    ).toBeVisible({ timeout: 15000 });
+    await expect(
+      page.locator('img[src*="pana_logo_long_orange"]').first()
+    ).toBeVisible();
   });
 
   // These two tests previously asserted that Google and Apple buttons were
@@ -464,9 +470,12 @@ test.describe('Custom Sign-In Page', () => {
 
     // Wait for hydration via something unconditional before counting, so an
     // empty result means "none rendered" rather than "not rendered yet".
-    await expect(page.getByText('Welcome to Pana MIA')).toBeVisible({
-      timeout: 15000,
-    });
+    await expect(
+      page.getByRole('heading', {
+        name: 'Create an account or sign in',
+        exact: true,
+      })
+    ).toBeVisible({ timeout: 15000 });
 
     const deadProviderButtons = page.getByRole('button', {
       name: /^Continue with /,
@@ -482,13 +491,16 @@ test.describe('Custom Sign-In Page', () => {
     // first. Without this the toggle check can resolve false purely because
     // React has not hydrated, silently skipping the click and leaving the
     // assertion below to fail 15s later for the wrong reason.
-    await expect(page.getByText('Welcome to Pana MIA')).toBeVisible({
-      timeout: 15000,
-    });
+    await expect(
+      page.getByRole('heading', {
+        name: 'Create an account or sign in',
+        exact: true,
+      })
+    ).toBeVisible({ timeout: 15000 });
 
     const emailInput = page.getByPlaceholder('your@email.com');
     const emailToggle = page.getByRole('button', {
-      name: 'Sign in with email',
+      name: 'Continue with email',
     });
 
     // With OAuth configured the form sits behind a toggle; with none it is
@@ -513,7 +525,10 @@ test.describe('Custom Sign-In Page', () => {
     await page.goto('/signin', { waitUntil: 'domcontentloaded' });
 
     // Find the "Contact us" link in the signin card (not footer) - wait for hydration
-    const contactLink = page.locator('.max-w-md a[href^="/form/contact-us"]');
+    const contactLink = page.getByRole('link', {
+      name: 'Contact us',
+      exact: true,
+    });
     await expect(contactLink).toBeVisible({ timeout: 15000 });
   });
 
@@ -525,7 +540,7 @@ test.describe('Custom Sign-In Page', () => {
     // on a redirect.
     expect(res?.status()).toBe(200);
     await expect(page.locator('h1').first()).toContainText(
-      'Welcome to Pana MIA'
+      'Create an account or sign in'
     );
     await expect(page).toHaveURL(
       /^https?:\/\/[^/]+\/signin\?callbackUrl=(\/|%2F)m(\/|%2F)discover$/

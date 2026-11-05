@@ -860,7 +860,7 @@ test.describe('Mentoring Features', () => {
     expect(res?.status()).toBe(200);
     await expect(page).toHaveURL(/^https?:\/\/[^/]+\/signin/);
     await expect(page.locator('h1').first()).toContainText(
-      'Welcome to Pana MIA'
+      'Create an account or sign in'
     );
   });
 });

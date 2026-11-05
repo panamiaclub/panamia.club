@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import {
   DEFAULT_SURFACE,
+  getRootDomain,
   originForFrom,
   resolveSurface,
 } from '@/lib/panaverse/surfaces';
@@ -51,7 +52,7 @@ function resolveEnabledOAuthProviders(): string[] {
 export async function generateMetadata(): Promise<Metadata> {
   const { surface } = await currentSurface();
   return {
-    title: `Sign in | ${surface.name}`,
+    title: `Create an account or sign in | ${surface.name}`,
     // A sign-in page has nothing to index, and indexing one per surface
     // hostname would just compete with itself.
     robots: { index: false, follow: false },
@@ -75,6 +76,7 @@ export default async function SignInPage() {
       mainSiteUrl={isMainSite ? null : originForFrom(DEFAULT_SURFACE, host)}
       enabledOAuthProviders={resolveEnabledOAuthProviders()}
       googleClientId={process.env.GOOGLE_CLIENT_ID?.trim() || null}
+      isProductionSite={host.includes(getRootDomain())}
     />
   );
 }
