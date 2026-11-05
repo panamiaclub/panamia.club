@@ -48,6 +48,21 @@ export function usesNativeAppLayout(pathname: string): boolean {
   );
 }
 
+export function nativeHeaderForPath(
+  pathname: string,
+  profileHref: string,
+  surfaceId = 'www'
+) {
+  const profileRoot =
+    pathname === profileHref ||
+    ['/account', '/account/user', '/account/user/edit'].includes(pathname);
+  return {
+    showBack: !nativeRootForPath(pathname, surfaceId) && !profileRoot,
+    showMessages:
+      pathname !== '/messages' && !pathname.startsWith('/messages/'),
+  };
+}
+
 export function nativeDeepLinkTarget(
   value: string,
   currentOrigin: string,

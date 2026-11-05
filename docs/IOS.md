@@ -32,6 +32,9 @@ the corresponding iPad screenshots.
   left and notifications/account on the right. Detail pages retain Back and
   event-save controls. Account menus offer bug and safety reporting above
   About Pana, including for signed-out visitors.
+- Messages hides its own header shortcut throughout the inbox, requests and
+  conversation flow, leaving Back as the leading control. The personal Profile
+  tab and Account landing omit Back; nested settings and other profiles retain it.
 - Open conversations hide the bottom tabs and header message shortcut. The
   header Back control returns to the message list without losing its draft;
   standalone group chats retain Back to group. Native messaging omits the

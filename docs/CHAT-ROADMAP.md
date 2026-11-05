@@ -91,8 +91,9 @@ simulated send controls. Its compact inbox intentionally omits the mock's headin
 marketing copy, search field and New message button on both the website and native apps.
 Messages belongs to Pana Social's route registry and retains the real masthead and account menu.
 The workspace fills the remaining viewport, with legal links kept below it in browsers.
-Native messaging omits the legal footer and composer helper text. Opening a conversation
-hides the app's bottom tabs, redundant message shortcut, and inner Back control; the
+Native messaging omits the legal footer and composer helper text. Its header message
+shortcut stays hidden throughout Messages, including the inbox and Requests.
+Opening a conversation hides the app's bottom tabs and inner Back control; the
 app-header Back (and Android hardware Back) returns to the message list, preserving drafts
 and restoring focus. Standalone group chats keep their existing Back-to-group destination.
 The chat uses a warm, lightly textured cream/butter canvas, distinct sender bubbles, shared
