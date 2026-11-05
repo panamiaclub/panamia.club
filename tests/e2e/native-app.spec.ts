@@ -151,6 +151,75 @@ test('Directory is the native front door, with actual identity and branded categ
   expect(fixtures.state.unhandled).toEqual([]);
 });
 
+for (const label of ['Directory', 'Events']) {
+  test(`native ${label} map supports pinch zoom without zoom buttons`, async ({
+    page,
+    context,
+  }) => {
+    await native(page);
+    await page.goto('/d');
+    if (label === 'Events') await scope(page, 'Events');
+
+    const results = map(page, label);
+    const camera = results.locator('.dirsearch-mapcanvas[data-map-zoom]');
+    const surface = results.locator('.maplibregl-canvas');
+    await expect(surface).toBeVisible();
+    await expect
+      .poll(async () => {
+        const center = (await camera.getAttribute('data-map-center'))!
+          .split(',')
+          .map(Number);
+        return Math.max(
+          Math.abs(center[0] - 25.94),
+          Math.abs(center[1] + 80.165)
+        );
+      })
+      .toBeLessThan(0.000001);
+    await expect(
+      results.getByRole('button', { name: /^Zoom (in|out)$/ })
+    ).toHaveCount(0);
+
+    const box = (await surface.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height * 0.4;
+    const cdp = await context.newCDPSession(page);
+    const pinch = async (from: number, to: number) => {
+      const points = (offset: number) => [
+        { id: 0, x: x - offset, y },
+        { id: 1, x: x + offset, y },
+      ];
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: points(from),
+      });
+      for (let step = 1; step <= 12; step++) {
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: points(from + ((to - from) * step) / 12),
+        });
+        await page.waitForTimeout(16);
+      }
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
+    };
+
+    const before = Number(await camera.getAttribute('data-map-zoom'));
+    await pinch(40, 110);
+    await expect
+      .poll(async () => Number(await camera.getAttribute('data-map-zoom')))
+      .toBeGreaterThan(before + 1);
+    const zoomedIn = Number(await camera.getAttribute('data-map-zoom'));
+    await pinch(110, 40);
+    await expect
+      .poll(async () => Number(await camera.getAttribute('data-map-zoom')))
+      .toBeLessThan(zoomedIn - 1);
+    expect(await page.evaluate(() => window.visualViewport?.scale)).toBe(1);
+    await cdp.detach();
+  });
+}
+
 test('native directory shows complete In map and Online collections with camera-stable photo selection', async ({
   page,
 }) => {
@@ -526,9 +595,7 @@ test('native In map follows zoom, pan, and resizing while unlocated matches rema
     .toBeLessThan(0.000001);
   for (let step = 0; step < 3; step++) {
     const zoom = Number(await canvas.getAttribute('data-map-zoom'));
-    await map(page)
-      .getByRole('button', { name: 'Zoom in', exact: true })
-      .click();
+    await map(page).locator('.maplibregl-canvas').press('Equal');
     await expect
       .poll(async () => Number(await canvas.getAttribute('data-map-zoom')))
       .toBeGreaterThan(zoom + 0.99);

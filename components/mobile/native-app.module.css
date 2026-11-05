@@ -285,19 +285,6 @@
   height: 100%;
 }
 
-.mapResults :global(.maplibregl-ctrl-top-left) {
-  top: 72px;
-}
-
-.mapResults[data-map-results='Directory'] :global(.maplibregl-ctrl-top-left) {
-  top: 112px;
-}
-
-.mapResults :global(.maplibregl-ctrl-group button) {
-  width: 36px;
-  height: 36px;
-}
-
 .offMap {
   position: absolute;
   right: 8px;

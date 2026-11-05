@@ -63,6 +63,10 @@ Events use real venue locations on the map. Community separates **Yours**
 (joined groups, pending requests, plans, saved events) from **Discover**.
 Profile opens your existing personal profile page.
 
+Directory and Events maps support two-finger pinch-to-zoom without on-map
+zoom buttons. Rotation and tilt stay disabled. The website's directory map
+also supports pinch-to-zoom and keeps zoom buttons for mouse and trackpad users.
+
 These are deployed web changes, not a new APK requirement. Apply
 `drizzle/0073_event_bookmarks.sql` before deploying the Worker, then reload the
 app. Saving an event is a private bookmark, not an RSVP. Normal browsers keep
