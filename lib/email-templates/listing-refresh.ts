@@ -26,7 +26,7 @@ export function listingRefresh(params: Record<string, unknown>) {
   const confirmation =
     'Signing in or claiming alone does not finish the review. At the end, choose "Confirm business information" to complete it.';
   const reviewGuidance =
-    'Check your description, category, photos and links. Every business needs a valid five-digit US ZIP to complete its listing review, including online and mobile services. In Location, choose how people can find your business. A public visiting location needs a street address, city, state and ZIP. Online and mobile services need only a business base ZIP, not a street or home address. This ZIP is only an approximate base area, not a service or delivery boundary. Use a real ZIP; do not make one up.';
+    'Check your description, category, photos and links. Every business needs a valid five-digit US ZIP to complete its listing review, including online and mobile services. A saved primary business photo is also required. An existing primary photo counts; you do not need to upload it again. Gallery photos are optional. In Location, choose how people can find your business. A public visiting location needs a street address, city, state and ZIP. Online and mobile services need only a business base ZIP, not a street or home address. This ZIP is only an approximate base area, not a service or delivery boundary. Use a real ZIP; do not make one up.';
   const accountGuidance =
     'Already manage this listing? Use the Pana account that manages it. If it is unclaimed, verify access to the business inbox and choose your own Pana account. Your personal login email can be different from the business contact.';
   const invitationGuidance =

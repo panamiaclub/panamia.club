@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   LISTING_REVIEW_STEPS,
+  hasListingPrimaryPhoto,
   isClaimListingContext,
   listingReviewFinishPath,
   listingReviewNavigation,
@@ -25,6 +26,46 @@ import {
   listingInvitationPath,
   readListingInvitationFragment,
 } from '@/lib/listing-invitation';
+
+test('only a real saved primary media URL meets the business-review photo requirement', () => {
+  for (const value of [
+    'https://files.test.invalid/profile/business/primary123.jpg',
+    'https://legacy-media.test.invalid/business-logo.png',
+    'https://legacy-media.test.invalid/logos/business-logo.png',
+    'https://legacy-media.test.invalid/icons/business-logo.webp',
+    '/profile/business/primary123.webp',
+    '/img/businesses/synthetic-bakery.jpg',
+    ' https://files.test.invalid/saved-photo.png ',
+  ]) {
+    assert.equal(hasListingPrimaryPhoto(value), true, value);
+  }
+  for (const value of [
+    undefined,
+    null,
+    '',
+    ' \t\n ',
+    true,
+    {},
+    { primaryCDN: 'https://files.test.invalid/gallery.jpg' },
+    'data:image/png;base64,c2VlZC1wbGFjZWhvbGRlcg==',
+    'blob:https://directory.test.invalid/unsaved-file',
+    'javascript:alert(1)',
+    '//files.test.invalid/photo.png',
+    'profile/business/primary123.jpg',
+    'https://files.test.invalid/',
+    'https://user:password@files.test.invalid/photo.jpg',
+    '/logos/logo.png',
+    'https://directory.test.invalid/logos/pana_logo_long_blue.png',
+    '/meta_image.jpg',
+    '/social-preview-flower.jpg',
+    '/favicon.png',
+    '/images/placeholder.png',
+    'https://files.test.invalid/default-avatar.png',
+    'https://files.test.invalid/%70laceholder.png',
+  ]) {
+    assert.equal(hasListingPrimaryPhoto(value), false, String(value));
+  }
+});
 
 test('location choices are explicit and a public visiting address needs street, city and state', () => {
   for (const mode of ['storefront', 'online', 'mobile']) {
