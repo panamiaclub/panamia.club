@@ -3,7 +3,6 @@
 import { MessageAvatar } from '@/components/messages/message-avatar';
 import {
   AlertCircle,
-  AudioLines,
   BadgeCheck,
   Check,
   Clock3,
@@ -84,49 +83,6 @@ export function ChatName({
           aria-label={`Federated — ${person.remoteHost}`}
         />
       )}
-    </span>
-  );
-}
-
-/* Voice memos are the only DM Pana Social can send today, so the chat view
-   has to have an answer for them. `tone="dark"` is for the viewer's own
-   bubble, which is indigo for the contrast reason above. */
-export function ChatWaveform({
-  peaks,
-  duration,
-  tone = 'light',
-}: {
-  peaks: number[];
-  duration: string;
-  tone?: 'light' | 'dark';
-}) {
-  const dark = tone === 'dark';
-  const barColor = dark ? 'bg-pana-cream/55' : 'bg-pana-flame';
-  const textColor = dark ? 'text-pana-cream/75' : 'text-pana-ink/55';
-  const buttonColor = dark
-    ? 'bg-pana-cream/20 text-pana-cream'
-    : 'bg-pana-flame text-pana-ink';
-
-  return (
-    <span className="flex items-center gap-3">
-      <span
-        className={`flex h-8 w-8 flex-none items-center justify-center rounded-full ${buttonColor}`}
-        aria-hidden="true"
-      >
-        <AudioLines className="h-4 w-4" />
-      </span>
-      <span className="flex flex-1 items-center gap-[3px]" aria-hidden="true">
-        {peaks.map((peak, index) => (
-          <span
-            key={index}
-            className={`w-[3px] flex-1 rounded-full ${barColor}`}
-            style={{ height: `${Math.max(4, peak * 28)}px` }}
-          />
-        ))}
-      </span>
-      <span className={`flex-none text-xs font-bold tabular-nums ${textColor}`}>
-        {duration}
-      </span>
     </span>
   );
 }

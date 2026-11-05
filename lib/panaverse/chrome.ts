@@ -5,8 +5,8 @@
  * footer. A few are doorways rather than rooms — they belong to the panaverse
  * as a whole rather than to any one surface, and they carry their own framing.
  * Sign-in is the case that matters: it is reachable from every hostname, it is
- * the first thing a signed-out visitor sees, and wrapping it in a directory nav
- * they cannot use yet only buries the one control on the page.
+ * the first thing a signed-out visitor sees, and supplies a focused account
+ * masthead and legal footer instead of the usual site prompts and footer.
  *
  * The root layout consults this to decide whether to render main-site chrome,
  * which is why it lives beside the surface registry rather than inside a route.

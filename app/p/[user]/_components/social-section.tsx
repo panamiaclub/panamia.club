@@ -9,7 +9,6 @@ import {
   PostList,
   FollowButton,
   ActorCard,
-  SendVoiceMemoButton,
   SendMessageButton,
 } from '@/components/social';
 import { useActor, useActorPosts, useFollows } from '@/lib/query/social';
@@ -135,16 +134,6 @@ export function SocialSection({ handle }: { handle: string }) {
                 <SendMessageButton
                   actorId={actor.id}
                   name={actor.name || actor.username}
-                />
-                <SendVoiceMemoButton
-                  recipient={{
-                    id: actor.id,
-                    username: actor.username,
-                    displayName: actor.name || actor.username,
-                    avatarUrl: actor.iconUrl || undefined,
-                    uri: actor.uri,
-                  }}
-                  size="sm"
                 />
                 <FollowButton
                   username={actor.username}

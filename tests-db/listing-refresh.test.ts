@@ -788,6 +788,142 @@ test('ZIP failures cannot complete open cycles, cancel pending deliveries, chang
   );
 });
 
+test('a missing primary photo leaves every open cycle and delivery unchanged, including an eligible overdue pause', async () => {
+  await own();
+  const { pauseGuard, isReviewPausedListing, listingStatus } =
+    await import('../lib/server/listing-refresh-status');
+  const personal = await db.query.profiles.findFirst({
+    where: eq(schema.profiles.id, personalId),
+  });
+  const other = await db.query.profiles.findFirst({
+    where: eq(schema.profiles.id, otherBusinessId),
+  });
+  const accounts = await db.select().from(schema.users);
+  const owners = await db.select().from(schema.profileOwners);
+  for (const state of ['queued', 'active', 'held', 'paused'] as const) {
+    await db.delete(schema.listingRefreshDeliveries);
+    await db.delete(schema.listingRefreshCycles);
+    const id = `missing-photo-${state}`;
+    await db
+      .update(schema.profiles)
+      .set({
+        primaryImageCdn: null,
+        galleryImages: {
+          gallery1CDN: 'https://files.test.invalid/gallery.png',
+        },
+        lastReviewedAt: new Date('2025-01-01T00:00:00Z'),
+        active: state !== 'paused',
+        status: {
+          source: 'business_intake',
+          approved: new Date(start).toISOString(),
+        },
+      })
+      .where(eq(schema.profiles.id, businessId));
+    await db.insert(schema.listingRefreshCycles).values({
+      id,
+      profileId: businessId,
+      state,
+      reminderCount: state === 'paused' ? 4 : 1,
+      startedAt: new Date(start),
+      dueAt: daysAfter(new Date(start), 30),
+      pausedAt: state === 'paused' ? daysAfter(new Date(start), 30) : null,
+      nextReminderAt: state === 'active' ? daysAfter(new Date(start), 7) : null,
+      holdReason: state === 'held' ? 'operator_hold' : null,
+    });
+    if (state === 'paused') {
+      const current = await row();
+      assert.ok(current);
+      await db
+        .update(schema.profiles)
+        .set({
+          status: {
+            ...listingStatus(current.status),
+            refreshPause: {
+              reason: 'review_overdue',
+              cycleId: id,
+              guard: await pauseGuard(current),
+            },
+          },
+        })
+        .where(eq(schema.profiles.id, businessId));
+      assert.equal(await isReviewPausedListing(await row()), true);
+    }
+    await db.insert(schema.listingRefreshDeliveries).values({
+      cycleId: id,
+      round: 1,
+      status: 'sending',
+      recipientHash: await refreshDigest(personalEmail),
+      routingHash: await refreshDigest('isolated-photo-fixture'),
+      stopTokenHash: await refreshDigest('isolated-stop-fixture'),
+      attemptedAt: new Date(start),
+    });
+    const before = await row();
+    const cycleBefore = await cycle();
+    const deliveriesBefore = await db
+      .select()
+      .from(schema.listingRefreshDeliveries);
+    const response = await confirm(id, {
+      primaryPhotoSaved: true,
+      primaryImageCdn: 'https://files.test.invalid/submitted-photo.png',
+    });
+    assert.equal(response.status, 400, state);
+    assert.equal((await response.json()).field, 'primary');
+    assert.deepEqual(await row(), before, state);
+    assert.deepEqual(await cycle(), cycleBefore, state);
+    assert.deepEqual(
+      await db.select().from(schema.listingRefreshDeliveries),
+      deliveriesBefore,
+      state
+    );
+    assert.equal(invalidated.length, 0);
+
+    for (const action of ['stop_reminders', 'allow_reminders']) {
+      const preference = await review.POST(
+        request('/api/listings/review', {
+          profileId: businessId,
+          action,
+          cycleId: id,
+          expectedOwnerId: userId,
+          expectedOwnerEmail: personalEmail,
+        })
+      );
+      assert.equal(preference.status, 200, `${state}/${action}`);
+      assert.equal((await row())?.active, before?.active);
+      assert.deepEqual((await row())?.lastReviewedAt, before?.lastReviewedAt);
+    }
+    if (state === 'paused') {
+      assert.equal((await cycle())?.state, 'paused');
+      await db
+        .update(schema.profiles)
+        .set({
+          primaryImageCdn: 'https://files.test.invalid/saved-primary.png',
+        })
+        .where(eq(schema.profiles.id, businessId));
+      const completed = await confirm(id);
+      assert.equal(completed.status, 200);
+      assert.equal((await completed.json()).restored, true);
+      assert.equal((await row())?.active, true);
+      assert.equal((await cycle())?.state, 'completed');
+    }
+  }
+  assert.deepEqual(
+    await db.query.profiles.findFirst({
+      where: eq(schema.profiles.id, personalId),
+    }),
+    personal
+  );
+  assert.deepEqual(
+    await db.query.profiles.findFirst({
+      where: eq(schema.profiles.id, otherBusinessId),
+    }),
+    other
+  );
+  assert.deepEqual(await db.select().from(schema.users), accounts);
+  assert.deepEqual(await db.select().from(schema.profileOwners), owners);
+  assert.equal(zipLookups.length, 0);
+  assert.equal(emails.length, 0);
+});
+
 test('missing confirmation, wrong listing, wrong account and stale cycles cannot stop reminders or overwrite a personal identity', async () => {
   await own();
   const id = await enroll();
@@ -909,6 +1045,10 @@ test('late reminders remain a week apart and the final notice always gets at lea
 
 test('opt-out inspection is read-only; explicit scoped opt-out stops reminders but neither claims nor hides a business', async (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: start });
+  await db
+    .update(schema.profiles)
+    .set({ primaryImageCdn: null })
+    .where(eq(schema.profiles.id, businessId));
   const id = await enroll();
   await job.runListingRefreshes();
   const link = new URL(String(notices()[0].variables.stopUrl));

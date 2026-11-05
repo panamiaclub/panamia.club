@@ -33,7 +33,7 @@ async function openNativeReport(
 ) {
   await page
     .locator('[data-native-app] > header')
-    .getByRole('button', { name: 'Sign in or sign up', exact: true })
+    .getByRole('button', { name: 'Create account or sign in', exact: true })
     .click();
   await page.getByRole('menuitem', { name, exact: true }).click();
 }
@@ -124,7 +124,7 @@ test('native safety reports retain their draft after an error and submit without
   await page.keyboard.press('Escape');
   await expect(bug).toHaveCount(0);
   await expect(
-    page.getByRole('button', { name: 'Sign in or sign up', exact: true })
+    page.getByRole('button', { name: 'Create account or sign in', exact: true })
   ).toBeFocused();
   await openNativeReport(page, 'Report a bug');
   await expect(bug.getByLabel('What happened?')).toHaveValue(
@@ -159,15 +159,28 @@ test.describe('sign-in hydration', () => {
   }) => {
     await page.goto('/signin');
     await expect(
+      page.getByRole('heading', {
+        name: 'Create an account or sign in',
+        exact: true,
+      })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', {
+        name: 'Menu',
+        exact: true,
+        disabled: false,
+      })
+    ).toHaveCount(0);
+    await expect(
       page.getByRole('button', { name: 'Continue with Google' })
     ).toBeDisabled();
     await expect(
-      page.getByRole('button', { name: 'Sign in with email' })
+      page.getByRole('button', { name: 'Continue with email' })
     ).toBeDisabled();
     await page.goto('/signin?error=INVALID_TOKEN');
     await expect(page.getByPlaceholder('your@email.com')).toBeDisabled();
     await expect(
-      page.getByRole('button', { name: 'Send sign-in link', exact: true })
+      page.getByRole('button', { name: 'Email me a link', exact: true })
     ).toBeDisabled();
   });
 
@@ -447,7 +460,7 @@ test.describe('app email-link handoff', () => {
     await page.goto('/signin');
     await page.getByPlaceholder('your@email.com').fill('member@example.test');
     const button = page.getByRole('button', {
-      name: 'Send sign-in link',
+      name: 'Email me a link',
       exact: true,
     });
     await expect(button).toBeEnabled();

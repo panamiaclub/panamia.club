@@ -23,6 +23,7 @@ test('review-state guards reject another business, invalid dates and unsupported
     profileId: 'business',
     lastReviewedAt: null,
     zipVerified: false,
+    primaryPhotoSaved: false,
     remindersOptedOut: false,
     cycle: {
       id: 'cycle',
@@ -44,6 +45,12 @@ test('review-state guards reject another business, invalid dates and unsupported
     isListingReviewState({ ...state, zipVerified: 'true' }, 'business'),
     false
   );
+  for (const primaryPhotoSaved of [undefined, null, 'true', 1]) {
+    assert.equal(
+      isListingReviewState({ ...state, primaryPhotoSaved }, 'business'),
+      false
+    );
+  }
   assert.equal(
     isListingReviewState(
       { ...state, cycle: { ...state.cycle, state: 'unknown' } },
@@ -149,6 +156,9 @@ test('every refresh stage preserves personalized proof links, deadline and compl
       '"Confirm business information"',
       'Every business needs a valid five-digit US ZIP',
       'including online and mobile services.',
+      'A saved primary business photo is also required.',
+      'An existing primary photo counts; you do not need to upload it again.',
+      'Gallery photos are optional.',
       'A public visiting location needs a street address, city, state and ZIP.',
       'Online and mobile services need only a business base ZIP, not a street or home address.',
       'only an approximate base area, not a service or delivery boundary.',

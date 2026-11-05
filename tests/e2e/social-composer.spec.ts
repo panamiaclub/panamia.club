@@ -751,9 +751,11 @@ test('compact composer keeps media and Everyone/Panas visible at desktop, tablet
   await expect(
     composer.getByRole('button', { name: 'Add photos or video', exact: false })
   ).toBeVisible();
-  await expect(
-    composer.getByRole('button', { name: 'Add audio' })
-  ).toBeVisible();
+  await expect(composer.getByRole('button', { name: 'Add audio' })).toHaveCount(
+    0
+  );
+  await expect(page.getByRole('tab', { name: 'Voice notes' })).toHaveCount(0);
+  await expect(composer.getByLabel('Choose audio')).toHaveCount(0);
   await composer.getByRole('button', { name: 'Audience: Everyone' }).click();
   await expect(page.getByRole('menuitemradio')).toHaveCount(2);
   await expect(
@@ -778,12 +780,7 @@ test('compact composer keeps media and Everyone/Panas visible at desktop, tablet
     expect(
       await composer.evaluate((node) => node.scrollWidth <= node.clientWidth)
     ).toBe(true);
-    for (const name of [
-      'Add photos or video',
-      'Add audio',
-      'Audience: Everyone',
-      'Post',
-    ]) {
+    for (const name of ['Add photos or video', 'Audience: Everyone', 'Post']) {
       const action = composer.getByRole('button', { name, exact: true });
       const target = await action.boundingBox();
       expect(target!.height).toBeGreaterThanOrEqual(44);
@@ -841,13 +838,53 @@ test('writing expands the card, Done collapses an empty draft, and labelled butt
     /image\/.*video\/\*/
   );
   await photoChooser.setFiles([]);
-  const audio = page.waitForEvent('filechooser');
+  expect(await photoChooser.element().getAttribute('accept')).not.toContain(
+    'audio'
+  );
+});
+
+test('rejects dropped and pasted audio without uploading or losing the text draft', async ({
+  page,
+}) => {
+  const { composer, posts, uploads, videoUploads } = await openComposer(page);
   await composer
-    .getByRole('button', { name: 'Add audio', exact: true })
-    .click();
-  const audioChooser = await audio;
-  expect(await audioChooser.element().getAttribute('accept')).toBe('audio/*');
-  await audioChooser.setFiles([]);
+    .getByRole('textbox', { name: 'Write a post' })
+    .fill('Keep this text');
+  for (const kind of ['drop', 'paste'] as const) {
+    await composer.evaluate((node, kind) => {
+      const data = new DataTransfer();
+      data.items.add(
+        new File(['recording'], 'memo.ogg', { type: 'audio/ogg' })
+      );
+      node.dispatchEvent(
+        kind === 'drop'
+          ? new DragEvent('drop', {
+              dataTransfer: data,
+              bubbles: true,
+              cancelable: true,
+            })
+          : new ClipboardEvent('paste', {
+              clipboardData: data,
+              bubbles: true,
+              cancelable: true,
+            })
+      );
+    }, kind);
+    await expect(composer.getByRole('alert')).toContainText(
+      'Unsupported file: memo.ogg.'
+    );
+  }
+  await expect(
+    composer.getByRole('textbox', { name: 'Write a post' })
+  ).toHaveValue('Keep this text');
+  expect(uploads()).toBe(0);
+  expect(videoUploads.metadata).toHaveLength(0);
+  expect(posts).toHaveLength(0);
+  await expect(composer.locator('audio')).toHaveCount(0);
+  await composer.getByRole('button', { name: 'Post', exact: true }).click();
+  await expect.poll(() => posts.length).toBe(1);
+  expect(posts[0]).toMatchObject({ content: 'Keep this text' });
+  expect(posts[0]).not.toHaveProperty('attachments');
 });
 
 test('real image upload blocks early submission, then allows a public media-only post', async ({

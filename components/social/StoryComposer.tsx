@@ -153,7 +153,7 @@ export function StoryComposer({ onClose, onPosted }: StoryComposerProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => mediaInput.current?.openPicker('media')}
+                  onClick={() => mediaInput.current?.openPicker()}
                   disabled={posting || uploading}
                   className="border-input hover:bg-muted flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold disabled:opacity-50"
                 >
@@ -228,7 +228,7 @@ export function StoryComposer({ onClose, onPosted }: StoryComposerProps) {
               onClose={close}
               onChooseFromGallery={() => {
                 setCameraOpen(false);
-                mediaInput.current?.openPicker('media');
+                mediaInput.current?.openPicker();
               }}
               onCapture={async (file) => {
                 if (!mediaInput.current) {

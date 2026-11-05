@@ -1,7 +1,7 @@
 /**
  * POST /api/social/media/upload
  *
- * Issues a presigned R2 PUT URL so the browser can upload audio/video directly
+ * Issues a presigned R2 PUT URL so the browser can upload video directly
  * to R2 — bypassing the Worker request body size limit for large files.
  *
  * Images continue to use /api/social/media (small enough to flow through the Worker).
@@ -15,7 +15,7 @@ import { auth } from '@/auth';
 
 // video/webm is still accepted so an upload already in flight when this
 // deployed does not 400; new uploads are all video/mp4.
-const ALLOWED_TYPES = ['audio/ogg', 'video/mp4', 'video/webm'];
+const ALLOWED_TYPES = ['video/mp4', 'video/webm'];
 const MAX_SIZE = 200 * 1024 * 1024; // 200 MB
 const PRESIGN_TTL = 300; // seconds
 

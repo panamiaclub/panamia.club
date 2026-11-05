@@ -107,12 +107,19 @@ See [ARTICLE-ROADMAP.md](./ARTICLE-ROADMAP.md) Stage 14 for Fediverse integratio
 Multimedia microblogging platform integrated into the community. Built on [ActivityPub](https://www.w3.org/TR/activitypub/) for federation with Mastodon, Pixelfed, and other fediverse servers. Features include:
 
 - **Posting**: Markdown-formatted posts with content warnings and visibility controls (public, unlisted, followers-only)
-- **Media Attachments**: Images (jpeg, png, webp, gif) and audio (webm voice memos), up to 4 per post
+- **Media Attachments**: Images (jpeg, png, webp, gif) and video (H.264/AAC MP4), up to 4 per post
 - **Timeline**: Home feed (posts from followed accounts) and public feed
 - **Engagement**: Like, reply, and follow other community members
 - **Markdown Editor**: Write/Preview tabs with live markdown preview
 - **ActivityPub**: Server-side markdown-to-HTML conversion for federation compatibility
-- **Voice Memos**: Send private voice messages to 1-8 recipients with auto-expiration after 30 days
+- **Direct Messages**: Private conversations at `/messages`, with text and GIF attachments and a 30-day visibility window
+
+Audio notes and voice memos are retired. Recording, standalone audio uploads,
+playback, and the Voice notes feed filter are removed, including from the mocks.
+Existing recording files and attachment rows are preserved, not deleted. The
+interface hides recordings; an audio-only message or post shows an unavailable
+attachment notice instead of an empty player. Photo/video capture, video sound,
+and mentoring calls are unchanged.
 
 See [SOCIAL-ROADMAP.md](./SOCIAL-ROADMAP.md) for implementation details.
 
@@ -223,7 +230,7 @@ Ideas that were intentionally deferred — not forgotten. Revisit once the Cloud
 | Upgrade                 | Why Deferred                     | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | ----------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Yarn PnP (Plug'n'Play)  | Cloudflare migration in progress | Currently on Berry v4 with `nodeLinker: node-modules`. PnP eliminates `node_modules` entirely for faster installs and stricter dependency isolation, but requires editor plugins and some packages may need patching. Low-risk upgrade once the new hosting is proven.                                                                                                                                                                            |
-| Self-hosted FFmpeg WASM | Cloudflare 25 MiB asset limit    | `ffmpeg-core.wasm` (30.7 MiB) is currently loaded from jsDelivr CDN at runtime (`lib/media/transcode.ts`). This is a **privacy concern** — users encoding video or audio have their requests routed through a third-party CDN, which could log timing/IP data. Preferred solution: host the WASM in Cloudflare R2 and serve via a `pana.social` subdomain so no third-party network request is made. Blocked until R2 is set up for this project. |
+| Self-hosted FFmpeg WASM | Cloudflare 25 MiB asset limit    | `ffmpeg-core.wasm` (30.7 MiB) is currently loaded from jsDelivr CDN at runtime (`lib/media/transcode.ts`). This is a **privacy concern** — users encoding video have their requests routed through a third-party CDN, which could log timing/IP data. Preferred solution: host the WASM in Cloudflare R2 and serve via a `pana.social` subdomain so no third-party network request is made. Blocked until R2 is set up for this project. |
 
 ---
 

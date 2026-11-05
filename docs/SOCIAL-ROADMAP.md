@@ -303,7 +303,7 @@ feature sets. SocialFollow is now the sole follow mechanism.
 **Goal**: Users can post, discover the public community feed, and switch to their mutual Panas
 
 - [x] Friendly social-card composer with public Everyone default and mutual-only Panas sharing
-- [x] Prominent photo/video and audio actions, inline playable media, file drop and image paste
+- [x] Prominent photo/video action, inline playable video, file drop and image paste
 - [x] Media-only posts, four-attachment limit, upload-busy protection, and visible draft-preserving errors
 - [x] Optional content warning and formatting preview under More; saved account license applied server-side
 - [x] Everyone opens by default; Panas shows mutual follows, own posts, and joined groups (`/s`)
@@ -323,7 +323,7 @@ feature sets. SocialFollow is now the sole follow mechanism.
 - Pages: `app/{s,p/[user],status/[statusId]}/`
 
 **Hybrid Layout**: Actor profile page uses tabs (Posts | Followers | Following)
-instead of separate pages. The feed opens on Everyone, with optional Panas and Voice notes tabs.
+instead of separate pages. The feed opens on Everyone, with an optional Panas tab.
 Panas requires accepted follows in both directions; group membership still adds joined-group posts
 independently of follows.
 
@@ -344,34 +344,29 @@ independently of follows.
 **Media Attachments**:
 
 - [x] Upload endpoint (`POST /api/social/media`) using Cloudflare R2 storage
-- [x] Accepted types: images (jpeg, png, webp, gif) and audio (webm for voice memos)
+- [x] Accepted types: images (jpeg, png, webp, gif) and video (mp4, legacy webm)
 - [x] Max file size: 10 MB, max 4 attachments per post
 - [x] `SocialAttachment` records created alongside status
 - [x] Thumbnail previews in PostComposer with remove button
-- [x] `AttachmentGrid` component for display (responsive image grid, inline audio player)
+- [x] `AttachmentGrid` component for display (responsive image grid, inline video)
 - [x] Attachments included in all timeline queries
 
 **Files**:
 
 - `components/social/PostComposer.tsx` — Write/Preview tabs, media upload button, attachment previews
-- `components/social/AttachmentGrid.tsx` — Responsive display grid for images and audio
+- `components/social/AttachmentGrid.tsx` — Responsive display grid for images and video
 - `app/api/social/media/route.ts` — R2 upload endpoint
 - `lib/federation/wrappers/status.ts` — MD-to-HTML via `marked`, `SocialAttachment` creation
 - `lib/federation/wrappers/timeline.ts` — `include: { attachments: true }` on all queries
 - `lib/interfaces.ts` — `attachments` field on `SocialStatusDisplay`
 
-**FLOSS Audio/Video Expansion**
+**Video Expansion**
 
 **Status**: Complete
 
-The current media implementation has two gaps to address:
-
-1. **Audio/webm Safari bug** — `audio/webm` (the only accepted audio type) is not playable on Safari or iOS. Voice memo users on iPhone cannot hear recordings.
-2. **No video support** — video MIME types are not accepted by the upload endpoint.
-
 **FLOSS codec philosophy**: The project favors royalty-free, open codecs consistent with `docs/FLOSS-ALTERNATIVES.md`. H.264/AAC (MP4) carries patent licensing obligations through at least 2028. HLS is an Apple-controlled proprietary container format. WebM, VP9, AV1, and Opus are royalty-free and have no patent encumbrances.
 
-**Safari coverage**: Superseded — see "Video: H.264 switch" below. The original plan targeted Chromium and Firefox only and showed Safari users an unsupported-browser message. That reasoning no longer holds for video: WebKit shipped full WebM support in Safari 17.4 (March 2024), and H.264/AAC MP4 plays on every Safari ever shipped. Video now targets all browsers. Audio (Opus in Ogg) is still Chromium/Firefox-only and keeps its fallback message.
+**Safari coverage**: The original plan targeted Chromium and Firefox only and showed Safari users an unsupported-browser message. Video now targets all browsers: WebKit shipped full WebM support in Safari 17.4 (March 2024), and H.264/AAC MP4 plays on every Safari ever shipped.
 
 **Video: H.264 switch**: Video is transcoded to H.264/AAC MP4, not VP8/WebM. Two reasons:
 
@@ -392,28 +387,21 @@ Encoder flags that are load-bearing (`lib/media/transcode.ts`):
 
 | Format | Codec       | Container            | Use                                      |
 | ------ | ----------- | -------------------- | ---------------------------------------- |
-| Audio  | Opus        | `.ogg` / `.webm`     | Voice memos, audio posts                 |
 | Video  | H.264 + AAC | `.mp4`               | Short video clips                        |
 | Video  | VP8 + Opus  | `.webm`              | Legacy: posts predating the H.264 switch |
 | Images | —           | jpeg, png, webp, gif | Unchanged                                |
 
 **Playback compatibility**:
 
-| Browser       | audio/ogg (Opus) | video/mp4 (H.264) |
-| ------------- | ---------------- | ----------------- |
-| Chrome / Edge | (yes)            | (yes)             |
-| Firefox       | (yes)            | (yes)             |
-| Safari / iOS  | (no)             | (yes)             |
+| Browser       | video/mp4 (H.264) |
+| ------------- | ---------------- |
+| Chrome / Edge | (yes)            |
+| Firefox       | (yes)            |
+| Safari / iOS  | (yes)            |
 
 **Client-side transcoding with ffmpeg.wasm**:
 
 [`@ffmpeg/ffmpeg`](https://github.com/ffmpegwasm/ffmpeg.wasm) runs a WebAssembly build of ffmpeg in the browser. Transcoding happens before upload — the server receives a finished `.mp4` file and stores it without any server-side processing. The `@ffmpeg/ffmpeg` JS wrapper is MIT; the `@ffmpeg/core` wasm binary it loads is GPL-2.0-or-later, because it is built `--enable-gpl` with x264/x265.
-
-Audio pipeline:
-
-```
-MediaRecorder (audio/webm, browser-native) → ffmpeg.wasm → audio/ogg (Opus) → upload
-```
 
 Video pipeline:
 
@@ -435,62 +423,33 @@ const ACCEPTED_TYPES = [
   'image/png',
   'image/webp',
   'image/gif',
-  'audio/ogg', // Opus audio (replaces audio/webm)
   'video/mp4', // H.264/AAC video
   'video/webm', // legacy: posts predating the H.264 switch
 ];
 ```
 
-The existing `audio/webm` MIME type accepted by `VoiceMemoComposer` will be removed from the server allowlist once the client-side Opus transcode is in place.
-
 **Implementation tasks**:
 
-- [x] Add `@ffmpeg/ffmpeg`, `@ffmpeg/util`, `@ffmpeg/core`, and `@vidstack/react` to dependencies
-- [x] Create `scripts/copy-ffmpeg-wasm.js` — copies WASM to `public/ffmpeg/` via postinstall
-- [x] Create `lib/media/transcode.ts` — `transcodeToOpus` and `transcodeToMp4Video` via ffmpeg.wasm singleton
-- [x] Update `PostComposer.tsx` — run audio/video through transcode before upload, show "Transcoding… X%"
-- [x] Update `VoiceMemoComposer.tsx` — replace raw `audio/webm` upload with Opus transcode, Safari guard
-- [x] Update `app/api/social/media/route.ts` — accept `audio/ogg` and `video/mp4`, remove `audio/webm`
-- [x] Update `AttachmentGrid.tsx` — native `<video>` for all browsers, Safari fallback for audio only
-- [x] Add Safari/iOS "Please use Chrome or Firefox" notice for audio/video playback
+- [x] Use `@ffmpeg/ffmpeg` and `@ffmpeg/util` for client-side video transcoding
+- [x] `lib/media/transcode.ts` — `transcodeToMp4Video` via ffmpeg.wasm singleton
+- [x] `MultiMediaUpload.tsx` — transcode video before upload and show progress
+- [x] `app/api/social/media/route.ts` — accept images and video, reject standalone audio
+- [x] `AttachmentGrid.tsx` — native `<video>` for all browsers
 
 ### Phase 4C: Voice Memo Direct Messages
 
-**Status**: Complete
+**Status**: Retired (November 2026)
 
-**Goal**: Send private voice memos to other users
+The recorder, dedicated composer, profile buttons, audio upload/transcode support,
+waveform players, and Voice notes filter are removed. Upload endpoints and all
+local status/group-chat writers reject audio, including metadata referencing an
+already-uploaded recording. Existing recordings are hidden by the shared attachment
+renderer; audio-only history gets an unavailable-attachment notice.
 
-Voice memos are ActivityPub `direct` visibility messages sent to specific recipients (1-8 users). They use the existing post infrastructure but with a dedicated composer and auto-expiration.
-
-**Features**:
-
-- [x] @-mention autocomplete for recipient selection (1-8 recipients)
-- [x] Voice recording (WebM audio, max 60 seconds)
-- [x] Optional text content alongside or instead of voice recording
-- [x] Direct visibility (recipients receive via ActivityPub `recipientTo`)
-- [x] Auto-expiration: 30-day soft delete via `expiresAt` timestamp (was 7; see
-      `drizzle/0062_dm_expiry_30_days.sql`)
-- [x] Profile page "Send Voice Memo" button
-- [x] Relocated notifications to `/updates/` with VoiceMemoComposer integration
-
-**Technical Details**:
-
-- `expiresAt` field on `SocialStatus` for soft delete
-- Timeline queries filter out statuses where `expiresAt < now()`
-- `VoiceMemoComposer` component with recipient chips and audio recording
-- `SendVoiceMemoButton` component for profile pages
-- Actor search API (`GET /api/social/actors/search`) for @-autocomplete
-
-**Files**:
-
-- `components/social/VoiceMemoComposer.tsx` — DM-specific composer with recipient selection
-- `components/social/SendVoiceMemoButton.tsx` — Dialog trigger for profile pages
-- `app/api/social/actors/search/route.ts` — Actor username search for autocomplete
-- `lib/federation/wrappers/status.ts` — `direct` visibility + `expiresAt` handling
-- `lib/federation/wrappers/timeline.ts` — `notExpiredFilter` on all timeline queries
-- `app/updates/page.tsx` — Relocated from `/account/notifications/`
-
-**TODO**: Hard delete of expired DMs and their R2 attachments — tracked in Phase 11.
+No recording files, attachment rows, or waveform columns are deleted by this
+change. Ordinary direct messages, recipient consent gates, actor search, and the
+30-day visibility window remain in use at `/messages` and `/updates`. Video sound,
+story capture, and mentoring calls are unaffected. See [CHAT-ROADMAP.md](./CHAT-ROADMAP.md).
 
 ### Phase 5: Article Announcements
 

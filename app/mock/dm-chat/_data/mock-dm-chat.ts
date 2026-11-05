@@ -110,12 +110,6 @@ export interface MockChatMessage {
   body?: string;
   /** A browser-only stand-in for a selected GIF attachment. */
   gif?: MockGif;
-  /** socialAttachments with mediaType audio/*. Visual sample only. */
-  voice?: {
-    duration: string;
-    /** Peak heights 0-1. Sixteen samples reads as a waveform at this width. */
-    peaks: number[];
-  };
   /** Clock time, pre-formatted. Rendered once per bubble group. */
   time: string;
   /** Day label, drives the day separators. */
@@ -150,11 +144,6 @@ export interface MockChatThread {
   unreadCount: number;
   gate: MockGateState;
 }
-
-const WAVEFORM = [
-  0.2, 0.5, 0.8, 0.4, 0.9, 0.6, 0.3, 0.7, 1, 0.5, 0.2, 0.6, 0.85, 0.4, 0.3,
-  0.15,
-];
 
 /** The signed-in reader. Same person as the feed, profile and /mock/dms. */
 export const MOCK_CHAT_VIEWER: MockChatPerson = {
@@ -366,30 +355,20 @@ const THREAD_BEE: MockChatThread = {
   ],
 };
 
-/* Voice memo. The only DM Pana Social can actually send in production today,
-   so a chat view that could not render one would be mocking a feature set we
-   do not have. */
 const THREAD_GBARRIOS: MockChatThread = {
   id: 'gbarrios',
   person: GBARRIOS,
   lastActive: 'Yesterday',
-  unreadCount: 1,
+  unreadCount: 0,
   gate: 'allow',
   messages: [
-    {
-      id: 'gb-1',
-      from: 'them',
-      day: 'Yesterday',
-      time: '4:48 PM',
-      voice: { duration: '0:42', peaks: WAVEFORM },
-    },
     {
       id: 'gb-2',
       from: 'me',
       day: 'Yesterday',
       time: '7:30 PM',
       delivery: 'sent',
-      body: 'Listened twice. The part about the Allapattah landlords is the piece — that is the one to lead with.',
+      body: 'The part about the Allapattah landlords is the piece — that is the one to lead with.',
     },
   ],
 };
@@ -556,12 +535,11 @@ export const INCOMING_LIVE_MESSAGE: MockChatMessage = {
   body: 'also bring the orange extension cord if you can find it',
 };
 
-/** Snippet for the conversation list. Voice memos have no text to show. */
+/** Snippet for the conversation list. */
 export function threadSnippet(thread: MockChatThread): string {
   const last = thread.messages[thread.messages.length - 1];
   if (!last) return '';
   const prefix = last.from === 'me' ? 'You: ' : '';
-  if (last.voice) return `${prefix}Voice memo (${last.voice.duration})`;
   if (last.gif) return `${prefix}GIF${last.body ? ` - ${last.body}` : ''}`;
   return prefix + (last.body ?? '');
 }

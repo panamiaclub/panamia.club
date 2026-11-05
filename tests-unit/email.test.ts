@@ -271,6 +271,9 @@ describe('listing email presentation on the real transport path', () => {
       'ignore this email and nothing changes.',
       'Whoever asked cannot get access without this link.',
       '"Confirm business information"',
+      'A valid US ZIP and a saved primary business photo are required.',
+      'An existing primary photo counts; you do not need to upload it again.',
+      'Gallery photos are optional.',
     ]) {
       assert.ok(rendered.html.includes(escape(copy)));
       assert.ok(rendered.text.includes(copy));
@@ -292,6 +295,9 @@ describe('listing email presentation on the real transport path', () => {
         'Staff approval is separate',
         'The sign-in link expires shortly',
         'If you did not request this listing, ignore this email.',
+        'A saved primary business photo is also required.',
+        'An existing primary photo counts; you do not need to upload it again.',
+        'Gallery photos are optional.',
       ]) {
         assert.ok(rendered.html.includes(escape(copy)));
         assert.ok(rendered.text.includes(copy));

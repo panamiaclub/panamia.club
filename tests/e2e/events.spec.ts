@@ -185,7 +185,7 @@ test.describe('Events — Auth-Protected Pages', () => {
     // every possible outcome, including outcomes this route cannot produce.
     await expect(page).toHaveURL(/^https?:\/\/[^/]+\/signin/);
     await expect(page.locator('h1').first()).toContainText(
-      'Welcome to Pana MIA'
+      'Create an account or sign in'
     );
   });
 
@@ -201,7 +201,7 @@ test.describe('Events — Auth-Protected Pages', () => {
       timeout: 15000,
     });
     await expect(page.locator('h1').first()).toContainText(
-      'Welcome to Pana MIA'
+      'Create an account or sign in'
     );
   });
 });
