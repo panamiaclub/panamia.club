@@ -625,6 +625,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@capawesome/capacitor-file-picker@npm:^8.1.1":
+  version: 8.1.1
+  resolution: "@capawesome/capacitor-file-picker@npm:8.1.1"
+  peerDependencies:
+    "@capacitor/core": ">=8.0.0"
+  checksum: 10c0/d1fe28a78803e11eb8cc3aa746d22f959fda4b84e354991c9d294fd281ca2941af39512bee8c5a861a434b6b83004eb34e6faf1375f4304afcf352ffd589b765
+  languageName: node
+  linkType: hard
+
 "@capgo/capacitor-social-login@npm:^8.7.5":
   version: 8.7.5
   resolution: "@capgo/capacitor-social-login@npm:8.7.5"
@@ -9196,6 +9205,7 @@ __metadata:
     "@capacitor/network": "npm:^8.0.1"
     "@capacitor/splash-screen": "npm:^8.0.2"
     "@capacitor/status-bar": "npm:^8.0.4"
+    "@capawesome/capacitor-file-picker": "npm:^8.1.1"
     "@capgo/capacitor-social-login": "npm:^8.7.5"
     "@cloudflare/vite-plugin": "npm:1.66.0"
     "@commitlint/cli": "npm:21.2.4"
