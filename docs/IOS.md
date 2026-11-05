@@ -16,18 +16,29 @@ the corresponding iPad screenshots.
 
 ## What is prepared
 
-- The directory uses the compact 44px app header, a 58px rounded tab dock,
+- The directory uses the compact 52px app header, a 58px rounded tab dock,
   and a 54px results row with listing and In map counts. Pin and ZIP-bubble
   selection scrolls the complete list to a highlighted, measured two-profile
   preview while the map stays fixed. Status-bar and home-indicator safe areas
   remain protected; very short landscape views show one profile when needed.
+- The header contains its 44px controls with vertical breathing room. The tab
+  dock floats over Social, Community, and Profile as well as the map, with
+  scroll space to keep final content reachable. Keyboard and conversation
+  screens do not retain an empty dock-sized footer when the dock is hidden.
+- The status-area surface and native headers share solid Pana cream (`#fff7ec`).
+  Website masthead colors do not override the native app or results-sheet headers.
+- ZIP markers use compact 24px ZIP-and-count labels with 44px tap targets.
+  Portrait and landscape listing images stay cropped inside circular photo pins.
 - The native frame respects the notch, landscape insets, home indicator, and
   visible keyboard viewport. Tabs hide while the keyboard covers the screen,
   form text avoids WebKit's focus zoom, and story captions stay above the keyboard.
 - The iOS WebView enables back/forward history gestures. Its scene delegate
   forwards cold and warm Universal Links and email-auth scheme links to Capacitor.
 - Camera, microphone, and foreground-location usage descriptions are included.
-  Camera and microphone access is requested by the existing story UI, not at launch.
+  **Your story (+)** opens the shared live camera directly, with gallery access
+  still available if permission is denied or a camera is unavailable. Camera
+  access is requested on that action, not at launch; the microphone is requested
+  only when recording video. Captures are reviewed before upload and posting.
 - The compact header centers the Pana Mia Club wordmark, with messages on the
   left and notifications/account on the right. Detail pages retain Back and
   event-save controls. Account menus offer bug and safety reporting above

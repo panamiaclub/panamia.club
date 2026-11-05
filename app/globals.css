@@ -2414,6 +2414,7 @@ button.bizprofile-update-action:hover {
    the more expensive one. */
 .stories-rail {
   --story-circle: 3.5rem;
+  --story-owner-circle: 4rem;
   margin-bottom: 0.875rem;
 }
 
@@ -2439,7 +2440,7 @@ button.bizprofile-update-action:hover {
   flex-direction: column;
   align-items: center;
   gap: 0.375rem;
-  width: 4.25rem;
+  width: 4.5rem;
 }
 
 /* StoryRing adds its ring only when a story exists; reserve that space so
@@ -2448,7 +2449,7 @@ button.bizprofile-update-action:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: calc(var(--story-circle) + 7px);
+  height: calc(var(--story-owner-circle) + 7px);
 }
 
 .stories-rail-avatar {
@@ -2467,35 +2468,23 @@ button.bizprofile-update-action:hover {
   color: rgb(17 13 13 / 0.6);
 }
 
-.stories-rail[data-empty='true'] {
-  --story-circle: 2.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  justify-content: space-between;
+.stories-rail-item[data-owner='true'] .stories-rail-avatar {
+  width: var(--story-owner-circle);
+  height: var(--story-owner-circle);
 }
 
-.stories-rail[data-empty='true'] .stories-rail-item {
-  width: auto;
-  flex-direction: row;
-  gap: 0.75rem;
-}
-
-.stories-rail[data-empty='true'] .stories-rail-label {
+.stories-rail-item[data-owner='true'] .stories-rail-label {
   font-size: 0.75rem;
   font-weight: 800;
 }
 
-.stories-rail[data-empty='true'] .stories-rail-slot {
-  flex: none;
-  padding: 0 0.25rem;
-}
-
-.stories-rail-note {
-  margin: 0;
-  font-size: 0.6875rem;
-  line-height: 1.4;
-  color: rgb(17 13 13 / 0.6);
+.stories-rail-ghost {
+  display: block;
+  width: var(--story-circle);
+  height: var(--story-circle);
+  border: 2px dashed rgb(17 13 13 / 0.14);
+  border-radius: 50%;
+  background-color: rgb(17 13 13 / 0.025);
 }
 
 /* Composer. Butter rather than white so the one box the reader is meant to
@@ -6922,35 +6911,55 @@ body {
    positions its own overlay wrapper — a pin that also positions itself would
    fight it and land in the wrong place. */
 .dirsearch-zip-bubble {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-height: 44px;
-  padding: 0.4rem 0.75rem;
-  border: 2px solid var(--color-pana-indigo);
+  display: grid;
+  place-items: center;
+  min-width: 64px;
+  height: 44px;
+  padding: 0 2px;
+  border: 0;
   border-radius: 999px;
-  background: #fff;
+  background: transparent;
   color: var(--color-pana-indigo);
-  box-shadow: 0 4px 14px rgb(17 13 13 / 0.12);
-  font-size: 0.8125rem;
-  font-weight: 800;
   cursor: pointer;
 }
 
-.dirsearch-zip-bubble strong {
-  display: grid;
-  place-items: center;
-  min-width: 1.4rem;
-  height: 1.4rem;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  font-size: 0.6875rem;
+.dirsearch-zip-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  background: var(--color-pana-cream);
+  box-shadow: 0 2px 6px rgb(17 13 13 / 0.12);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
-.dirsearch-zip-bubble[data-on='true'],
+.dirsearch-zip-label strong {
+  display: grid;
+  place-items: center;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--color-pana-indigo);
+  color: var(--color-pana-cream);
+  font-size: 9px;
+}
+
 .dirsearch-zip-bubble:focus-visible {
-  outline: 3px solid var(--color-pana-indigo);
-  outline-offset: 3px;
+  outline: none;
+}
+
+.dirsearch-zip-bubble[data-on='true'] .dirsearch-zip-label,
+.dirsearch-zip-bubble:focus-visible .dirsearch-zip-label {
+  outline: 2px solid var(--color-pana-indigo);
+  outline-offset: 2px;
 }
 
 .dirsearch-zip-focus {
@@ -12120,9 +12129,12 @@ body:has(.dirsearch) {
 
    The scoped pages are listed alongside it because they are the same page in
    a different clothing: the same cream paper meeting the same white bar on the
-   same horizontal edge. */
-body:has(.dirsearch) header,
-body:has(.dirscope) header {
+   same horizontal edge.
+
+   Only the body's own website masthead belongs to this palette. Native app
+   and results-sheet headers must keep the platform/status-area cream. */
+body:has(.dirsearch) > header,
+body:has(.dirscope) > header {
   background-color: var(--story-cream);
 }
 

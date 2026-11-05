@@ -71,7 +71,7 @@ Results sheets slide over a fixed map without resizing or recentering it.
 Drag anywhere on the results header; short deliberate swipes advance to the
 next sheet position. Scrolling the results remains independent of the sheet.
 
-The compact native layout uses a 44px app header, a 58px rounded navigation
+The compact native layout uses a 52px app header, a 58px rounded navigation
 dock, and a 54px collapsed results row showing total listings and the In map
 count. Device safe areas and 44px touch targets are preserved. In map and Online
 tabs keep unlocated listings available without a banner covering the map.
@@ -80,6 +80,19 @@ listing and opens a measured two-profile preview, not a filtered single-card
 view. The last listing is shown with the preceding profile. A list with only
 one match shows that profile; short landscape views clamp to the available
 space. Drag up to browse more, or collapse the sheet to return to the map.
+
+The header leaves vertical breathing room around its 44px controls. The dock
+floats over Directory, Social, Community, and Profile; scrolling pages include
+bottom space so their final content can be brought above it. Open conversations
+do not reserve space for the hidden dock.
+
+The status-area surface and native headers use the same solid Pana cream
+(`#fff7ec`). The website's directory masthead palette is scoped to the website,
+so it cannot tint the native app or results-sheet headers.
+
+ZIP markers use compact 24px-tall ZIP-and-count labels inside 44px tap targets.
+Photo markers crop portrait and landscape images into the same circular frame;
+event-cluster counts remain visible outside that frame.
 
 These are deployed web changes, not a new APK requirement. Apply
 `drizzle/0073_event_bookmarks.sql` before deploying the Worker, then reload the
@@ -166,7 +179,8 @@ cannot transfer that browser session to the app; request a new one instead.
 
 ## Story camera
 
-Open **Your story (+) → Open camera** to capture inside the app. Use **Photo**
+Tap **Your story (+)** to open the live camera directly, without a chooser
+dialog first. Use **Photo**
 for a still image, or **Video** to tap to start/stop a recording with sound.
 Videos stop automatically after 60 seconds. The camera-switch button changes
 between front and rear cameras when available.
@@ -178,8 +192,9 @@ story** to publish; capturing or uploading alone does not publish anything.
 Recorded MP4 and WebM clips use the same H.264/AAC MP4 conversion as gallery
 videos, so the posted story remains playable across Android, iOS, and browsers.
 
-Camera access is requested only after opening the camera; microphone access is
-requested only when starting a video. If access was denied, enable it under
+Camera access is requested only after tapping **Your story (+)** or reopening
+the camera from the editor; microphone access is requested only when starting
+a video. If access was denied, enable it under
 **Android Settings → Apps → Pana Mia → Permissions** and try again. Back returns
 to the story editor before leaving the screen. Closing the camera, reviewing a
 capture, or backgrounding the app releases the camera and microphone.

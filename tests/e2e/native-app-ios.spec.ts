@@ -1,11 +1,67 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { calls, nativeBridge } from './fixtures/native-bridge';
 import { installNativeApiFixtures } from './fixtures/native-app-api';
 import type { SearchResultsInterface } from '@/lib/query/directory';
+import type { SocialStatusDisplay } from '@/lib/interfaces';
 
 async function ios(page: Page) {
   await nativeBridge(page, { platform: 'ios', googlePlugin: false });
   return installNativeApiFixtures(page);
+}
+
+async function floatingContent(page: Page, scrollport: Locator, last: Locator) {
+  const app = (await page.locator('[data-native-app]').boundingBox())!;
+  const port = (await scrollport.boundingBox())!;
+  const dock = page.getByRole('navigation', { name: 'App navigation' });
+  const dockBox = (await dock.boundingBox())!;
+  expect(Math.round(port.y + port.height)).toBe(Math.round(app.y + app.height));
+  expect(dockBox.y + dockBox.height).toBeLessThan(port.y + port.height);
+  await expect(last).toBeAttached();
+  await expect
+    .poll(
+      () =>
+        last.evaluate((target) => {
+          let port = target.parentElement;
+          while (
+            port &&
+            !['auto', 'scroll'].includes(getComputedStyle(port).overflowY)
+          ) {
+            port = port.parentElement;
+          }
+          if (!port) throw new Error('No page scroll container');
+          const nav = document.querySelector<HTMLElement>(
+            'nav[aria-label="App navigation"]'
+          )!;
+          const dock = nav.getBoundingClientRect();
+          const before = target.getBoundingClientRect();
+          port.scrollTo({
+            top:
+              port.scrollTop +
+              before.y +
+              before.height / 2 -
+              dock.y -
+              dock.height / 2,
+            behavior: 'instant',
+          });
+          const after = target.getBoundingClientRect();
+          const previous = nav.style.pointerEvents;
+          nav.style.pointerEvents = 'none';
+          const underneath = document.elementFromPoint(
+            after.x + after.width / 2,
+            after.y + after.height / 2
+          );
+          nav.style.pointerEvents = previous;
+          return target.contains(underneath);
+        }),
+      { message: 'Real page content should paint behind the floating dock' }
+    )
+    .toBe(true);
+  await scrollport.evaluate((node) => {
+    node.scrollTo({ top: node.scrollHeight, behavior: 'instant' });
+  });
+  await expect(last).toBeInViewport({ ratio: 1 });
+  const lastBox = (await last.boundingBox())!;
+  expect(lastBox.y + lastBox.height).toBeLessThanOrEqual(dockBox.y - 7);
 }
 
 test.use({
@@ -17,6 +73,50 @@ test.use({
     );
   },
 });
+
+for (const platform of ['android', 'ios'] as const) {
+  test(`${platform} keeps native headers and the status-area surface the same cream`, async ({
+    page,
+  }) => {
+    await nativeBridge(page, {
+      platform,
+      googlePlugin: platform === 'android',
+    });
+    await installNativeApiFixtures(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/d');
+    const app = page.locator('[data-native-app]');
+    const header = app.locator(':scope > header');
+    const consistentCream = async () => {
+      await expect(page.locator('html')).toHaveClass(/native-app/);
+      await expect(page.locator('html')).toHaveCSS(
+        'background-color',
+        'rgb(255, 247, 236)'
+      );
+      await expect(app).toHaveCSS('background-color', 'rgb(255, 247, 236)');
+      await expect(header).toHaveCSS('background-color', 'rgb(255, 247, 236)');
+      await expect(header).toHaveCSS('background-image', 'none');
+      await expect(app).toHaveCSS('background-image', 'none');
+    };
+    await consistentCream();
+    const sheetHeader = page.locator(
+      '[data-map-results="Directory"] > section > header'
+    );
+    await expect(sheetHeader).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(sheetHeader.locator('..')).toHaveCSS(
+      'background-color',
+      'rgb(255, 247, 236)'
+    );
+    const nav = page.getByRole('navigation', { name: 'App navigation' });
+    for (const tab of ['Community', 'Social', 'Directory']) {
+      await nav.getByRole('link', { name: tab, exact: true }).click();
+      await expect(
+        nav.getByRole('link', { name: tab, exact: true })
+      ).toHaveAttribute('aria-current', 'page');
+      await consistentCream();
+    }
+  });
+}
 
 test.describe('iOS results sheet', () => {
   test.use({
@@ -141,6 +241,15 @@ for (const platform of ['android', 'ios'] as const) {
     await page.route('**/api/account/crm', (route) =>
       route.fulfill({ json: { contact: null } })
     );
+    await page.route('**/api/referrals/me', (route) =>
+      route.fulfill({
+        json: {
+          code: null,
+          referralUrl: null,
+          milestones: { people: 0, accounts: 0, directory: 0, connectors: 0 },
+        },
+      })
+    );
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/d');
     const header = page.locator('[data-native-app] > header');
@@ -175,6 +284,11 @@ for (const platform of ['android', 'ios'] as const) {
         .getByRole('navigation', { name: 'App navigation' })
         .getByRole('link', { name: 'Profile', exact: true })
     ).toHaveAttribute('aria-current', 'page');
+    await floatingContent(
+      page,
+      page.locator('[data-native-app] #layout-main'),
+      page.getByRole('link', { name: 'What we collect and why', exact: true })
+    );
     await page.goto('/account/privacy');
     await expect(
       page.getByRole('link', { name: 'Delete account', exact: true })
@@ -240,10 +354,14 @@ for (const viewport of [
     expect(inbox!.x + inbox!.width).toBeLessThanOrEqual(logo!.x);
     expect(bell!.x).toBeGreaterThanOrEqual(logo!.x + logo!.width);
     expect(avatar!.x).toBeGreaterThanOrEqual(bell!.x + bell!.width);
-    expect(frame!.height).toBe(44);
+    expect(frame!.height).toBe(52);
     for (const control of [inbox, bell, avatar]) {
       expect(control!.width).toBeGreaterThanOrEqual(44);
       expect(control!.height).toBeGreaterThanOrEqual(44);
+      expect(control!.y).toBeGreaterThanOrEqual(frame!.y + 3);
+      expect(control!.y + control!.height).toBeLessThanOrEqual(
+        frame!.y + frame!.height - 3
+      );
     }
     const bounds = await nav.boundingBox();
     expect(bounds).not.toBeNull();
@@ -264,12 +382,244 @@ for (const viewport of [
     ).toBeVisible();
     await nav.getByRole('link', { name: 'Social', exact: true }).click();
     await expect(
-      page.getByRole('tab', { name: 'My Panas', exact: true })
+      page.getByRole('region', { name: 'Community feed', exact: true })
     ).toBeVisible();
+    await expect(
+      page.getByRole('tablist', { name: 'Feed filters' })
+    ).toHaveCount(0);
     await nav.getByRole('link', { name: 'Directory', exact: true }).click();
     await expect(search).toBeVisible();
   });
 }
+
+for (const platform of ['android', 'ios'] as const) {
+  test(`${platform} paints Social and Community behind the floating dock without hiding their last content`, async ({
+    page,
+  }, testInfo) => {
+    await nativeBridge(page, {
+      platform,
+      googlePlugin: platform === 'android',
+    });
+    const fixtures = await installNativeApiFixtures(page);
+    for (let index = 0; index < 8; index++) {
+      fixtures.state.saved.get('personal')!.add(`event-${index}`);
+    }
+    const statuses: SocialStatusDisplay[] = Array.from(
+      { length: 8 },
+      (_, index) => ({
+        id: `dock-post-${index}`,
+        uri: `https://example.invalid/posts/dock-${index}`,
+        content: `<p>Floating dock story ${index}</p><p>${'A little room for neighborhood stories. '.repeat(12)}</p>`,
+        published: '2026-11-01T12:00:00.000Z',
+        repliesCount: 0,
+        likesCount: 0,
+        liked: false,
+        actor: {
+          id: 'dock-author',
+          username: 'neighbor',
+          name: 'Neighborhood friend',
+          domain: 'example.invalid',
+        },
+        recipientTo: ['https://www.w3.org/ns/activitystreams#Public'],
+        recipientCc: [],
+        attachments: [],
+      })
+    );
+    await page.route(/\/api\/social\/(?:timeline|statuses)(?:\?|$)/, (route) =>
+      route.fulfill({
+        json: { success: true, data: { statuses, nextCursor: null } },
+      })
+    );
+    await page.route('**/api/directory/featured?*', (route) =>
+      route.fulfill({ json: { success: true, data: [] } })
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/s');
+    const social = page.getByRole('region', { name: 'Social', exact: true });
+    await expect(
+      social.getByText('Floating dock story 7', { exact: true })
+    ).toBeVisible();
+    await floatingContent(
+      page,
+      social,
+      social.getByText("You're all caught up", { exact: true })
+    );
+    const preview = testInfo.outputPath(`floating-social-${platform}.png`);
+    await page.screenshot({ path: preview });
+    await testInfo.attach('floating-social', {
+      path: preview,
+      contentType: 'image/png',
+    });
+    await page
+      .getByRole('navigation', { name: 'App navigation' })
+      .getByRole('link', { name: 'Community', exact: true })
+      .click();
+    const community = page.getByRole('region', {
+      name: 'Community',
+      exact: true,
+    });
+    await expect(
+      community.getByText('Coffee at Bay Cafe', { exact: true })
+    ).toBeVisible();
+    await floatingContent(page, community, community.locator('article').last());
+  });
+}
+
+test.describe('native map marker sizing', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  for (const platform of ['android', 'ios'] as const) {
+    test(`${platform} keeps portrait logos circular and ZIP markers compact`, async ({
+      page,
+    }) => {
+      await nativeBridge(page, {
+        platform,
+        googlePlugin: platform === 'android',
+      });
+      const listing = (
+        id: string,
+        image: string,
+        coordinates: [number, number] | null
+      ): SearchResultsInterface => ({
+        _id: id,
+        id,
+        name: id,
+        screenname: id,
+        score: 1,
+        score_details: {},
+        details: '',
+        five_words: '',
+        images: { primaryCDN: image },
+        geo: coordinates ? { coordinates } : null,
+        primary_address: { city: 'Miami' },
+        socials: {},
+      });
+      const businesses: SearchResultsInterface[] = [
+        listing('portrait-logo', '/test/portrait-marker.svg', [-80.2, 25.79]),
+        listing('wide-logo', '/test/wide-marker.svg', [-80.1, 25.79]),
+        ...Array.from({ length: 123 }, (_, index): SearchResultsInterface => ({
+          ...listing(
+            `zip-marker-${index}`,
+            '/logos/pana_logo_long_orange.png',
+            null
+          ),
+          online_only: true,
+          online_zip: {
+            postalCode: '33166',
+            country: 'US',
+            city: 'Doral',
+            region: 'FL',
+            lat: 25.74,
+            lng: -80.15,
+          },
+          primary_address: { zipcode: '33166' },
+        })),
+      ];
+      await installNativeApiFixtures(page, { businesses });
+      await page.route('**/test/portrait-marker.svg', (route) =>
+        route.fulfill({
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="360"><rect width="120" height="360" fill="black"/><rect y="160" width="120" height="40" fill="#355b3a"/></svg>',
+        })
+      );
+      await page.route('**/test/wide-marker.svg', (route) =>
+        route.fulfill({
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" width="360" height="120"><rect width="360" height="120" fill="#303e8c"/><rect x="160" width="40" height="120" fill="#f28444"/></svg>',
+        })
+      );
+      await page.goto('/d');
+      const results = page.locator('[data-map-results="Directory"]');
+      for (const name of ['portrait-logo', 'wide-logo']) {
+        const pin = results.getByRole('button', { name, exact: true });
+        await expect
+          .poll(() =>
+            pin
+              .locator('img')
+              .evaluate(
+                (image: HTMLImageElement) =>
+                  image.complete && image.naturalWidth > 0
+              )
+          )
+          .toBe(true);
+        const size = await pin.evaluate((button) => {
+          const pin = button.getBoundingClientRect();
+          const image = button.querySelector('img')!.getBoundingClientRect();
+          return {
+            pinWidth: pin.width,
+            pinHeight: pin.height,
+            imageWidth: image.width,
+            imageHeight: image.height,
+            contained:
+              image.left >= pin.left + 2.5 &&
+              image.top >= pin.top + 2.5 &&
+              image.right <= pin.right - 2.5 &&
+              image.bottom <= pin.bottom - 2.5,
+          };
+        });
+        expect(size.pinWidth).toBe(44);
+        expect(size.pinHeight).toBe(44);
+        expect(size.imageWidth).toBe(size.imageHeight);
+        expect(size.contained).toBe(true);
+        await expect(pin.locator('img')).toHaveCSS('object-fit', 'cover');
+      }
+      const zip = results.getByRole('button', {
+        name: '123 online businesses based near ZIP 33166',
+        exact: true,
+      });
+      const face = zip.locator(':scope > span');
+      await expect(face).toBeVisible();
+      expect((await zip.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      expect((await zip.boundingBox())!.width).toBeLessThanOrEqual(84);
+      expect((await face.boundingBox())!.height).toBe(24);
+      expect((await face.boundingBox())!.width).toBeLessThanOrEqual(80);
+      await expect(zip.locator('b')).toHaveText('33166');
+      await expect(zip.locator('strong')).toHaveText('123');
+      await expect(zip).toHaveAttribute('title', /Approximate base ZIP/);
+      await zip.tap();
+      await expect(
+        results.getByRole('region', { name: 'Directory results', exact: true })
+      ).toHaveAttribute('data-preview', 'true');
+      await expect(results.locator('article[data-selected]')).toHaveAttribute(
+        'data-result-id',
+        'zip-marker-0'
+      );
+      await expect(
+        results.locator('section[aria-label="In map"] article')
+      ).toHaveCount(125);
+      await page
+        .getByRole('search', { name: 'Search Pana Mia' })
+        .getByRole('button', { name: /^Search scope/ })
+        .click();
+      await page
+        .getByRole('menu', { name: 'Search scope', exact: true })
+        .getByRole('menuitem', { name: /Events/ })
+        .click();
+      const events = page.locator('[data-map-results="Events"]');
+      const cluster = events.getByRole('button', {
+        name: /2 events results at Bay Cafe/,
+      });
+      const badge = cluster.locator(':scope > span');
+      await expect(badge).toHaveText('2');
+      await expect(cluster).toHaveCSS('overflow', 'visible');
+      expect(
+        await badge.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          return node.contains(
+            document.elementFromPoint(
+              box.x + box.width / 2,
+              box.y + box.height / 2
+            )
+          );
+        })
+      ).toBe(true);
+    });
+  }
+});
 
 test.describe('compact native directory', () => {
   test.use({ isMobile: true, hasTouch: true });
@@ -594,8 +944,50 @@ test('story captions stay inside the visible iOS viewport above the keyboard', a
       }),
     });
   });
+  await page.route('**/api/social/media', (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: {
+          type: 'image',
+          mediaType: 'image/png',
+          url: '/img/impact/zine-series.webp',
+          name: 'A story photo',
+        },
+      },
+    })
+  );
   await page.goto('/s');
+  const rail = page.getByRole('region', { name: 'Stories', exact: true });
+  await expect(rail.locator('.stories-rail-placeholder')).toHaveCount(4);
+  const ownerAvatar = await rail
+    .locator('[data-owner="true"] .stories-rail-avatar')
+    .boundingBox();
+  expect(ownerAvatar!.width).toBe(64);
+  expect(ownerAvatar!.height).toBe(64);
+  await page.screenshot({
+    path: test.info().outputPath('story-rail-ios-ghost-circles.png'),
+  });
   await page.getByRole('button', { name: 'Post a story' }).click();
+  const camera = page.getByRole('dialog', {
+    name: 'Story camera',
+    exact: true,
+  });
+  await expect(camera).toBeVisible();
+  const choosing = page.waitForEvent('filechooser');
+  await camera.getByRole('button', { name: 'Choose from gallery' }).click();
+  const chooser = await choosing;
+  await chooser.setFiles({
+    name: 'story.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
+      'base64'
+    ),
+  });
+  await expect(
+    page.getByRole('button', { name: 'Post story', exact: true })
+  ).toBeEnabled();
   const caption = page.getByRole('textbox', { name: 'Caption' });
   await caption.focus();
   await page.evaluate(() => {

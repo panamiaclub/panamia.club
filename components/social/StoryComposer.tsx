@@ -31,7 +31,7 @@ export function StoryComposer({ onClose, onPosted }: StoryComposerProps) {
   const cameraButton = useRef<HTMLButtonElement>(null);
   const [media, setMedia] = useState<UploadedMedia[]>([]);
   const [caption, setCaption] = useState('');
-  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);

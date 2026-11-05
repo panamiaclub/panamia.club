@@ -213,7 +213,6 @@ function AppFrame({
           className={cn(styles.app, rootTab === 'directory' && 'dirscope')}
           data-native-app
           data-native-conversation={conversation ? '' : undefined}
-          data-native-map={root && rootTab === 'directory' ? '' : undefined}
         >
           <header className={styles.header}>
             <div className={styles.headerLeading}>

@@ -1371,7 +1371,7 @@ test('WebGL failure preserves a useful results list and an explicit map retry', 
   await expect(map(page).getByText('Bay Cafe', { exact: true })).toBeVisible();
 });
 
-test('leaving Social stops camera and microphone without losing the audience filter or reopening capture', async ({
+test('one mixed Social feed saves the filter row while keeping posting audience and capture lifecycle intact', async ({
   page,
 }) => {
   await native(page);
@@ -1388,9 +1388,38 @@ test('leaving Social stops camera and microphone without losing the audience fil
     Object.assign(window, { nativeTestStreams: streams });
   });
   await page.goto('/s');
-  await page.getByRole('tab', { name: 'My Panas', exact: true }).click();
+  await expect(page.getByRole('tablist', { name: 'Feed filters' })).toHaveCount(
+    0
+  );
+  await expect(page.getByRole('tab', { name: /Everyone|Panas/ })).toHaveCount(
+    0
+  );
+  const header = page.locator('[data-native-app] > header');
+  const stories = page.getByRole('region', { name: 'Stories', exact: true });
+  const headerBox = await header.boundingBox();
+  const storiesBox = await stories.boundingBox();
+  expect(storiesBox!.y - headerBox!.y - headerBox!.height).toBeLessThanOrEqual(
+    16
+  );
+  const composer = page.getByRole('form', {
+    name: 'Post composer',
+    exact: true,
+  });
+  await composer.getByRole('button', { name: 'Audience: Everyone' }).click();
+  await page.getByRole('menuitemradio', { name: /^Panas/ }).click();
+  await expect(
+    composer.getByRole('button', { name: 'Audience: Panas' })
+  ).toBeVisible();
+  await page.screenshot({
+    path: test.info().outputPath('native-mixed-feed.png'),
+  });
   await page.getByRole('button', { name: 'Post a story' }).click();
-  await page.getByRole('button', { name: 'Open camera', exact: true }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Story camera', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Take photo', exact: true })
+  ).toBeEnabled();
   await expect
     .poll(() =>
       page.evaluate(
@@ -1440,8 +1469,11 @@ test('leaving Social stops camera and microphone without losing the audience fil
     .getByRole('link', { name: 'Social', exact: true })
     .click();
   await expect(
-    page.getByRole('tab', { name: 'My Panas', exact: true })
-  ).toHaveAttribute('aria-selected', 'true');
+    page.getByRole('region', { name: 'Community feed', exact: true })
+  ).toBeVisible();
+  await expect(
+    composer.getByRole('button', { name: 'Audience: Everyone' })
+  ).toBeVisible();
   await expect(
     page.getByRole('dialog', { name: /^(Story camera|Post a story)$/ })
   ).toHaveCount(0);

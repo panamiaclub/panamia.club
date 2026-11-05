@@ -1792,6 +1792,11 @@ for (const platform of ['android', 'ios'] as const) {
       await row(page, 'J. Downs').click();
       await expect(input(page)).toBeVisible();
       await expect(nav).toHaveCount(0);
+      expect(
+        await page
+          .locator('[data-native-app] #layout-main')
+          .evaluate((node) => parseFloat(getComputedStyle(node).paddingBottom))
+      ).toBe(0);
       await expect(shortcut).toHaveCount(0);
       await expect(back).toBeVisible();
       await expect(

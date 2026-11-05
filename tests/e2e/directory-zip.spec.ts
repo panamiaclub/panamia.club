@@ -207,6 +207,49 @@ async function fixtures(
   };
 }
 
+test('ZIP markers keep a compact face and readable counts inside a full-size hit target', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await fixtures(page, {
+    results: Array.from({ length: 123 }, (_, index) =>
+      listing(`zip-${index}`, miami)
+    ),
+  });
+  await page.goto('/directory/search?radius=all');
+  const zip = page.getByRole('button', {
+    name: '123 online businesses based near ZIP 33138',
+    exact: true,
+  });
+  const face = zip.locator('.dirsearch-zip-label');
+  await expect(face).toBeVisible();
+  expect((await zip.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect((await zip.boundingBox())!.width).toBeLessThanOrEqual(84);
+  expect((await face.boundingBox())!.height).toBe(24);
+  expect((await face.boundingBox())!.width).toBeLessThanOrEqual(80);
+  await expect(zip.locator('b')).toHaveText('33138');
+  await expect(zip.locator('strong')).toHaveText('123');
+  await zip.click();
+  await expect(zip).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    page.locator('#dirsearch-in-map [id^="dirsearch-result-"]')
+  ).toHaveCount(123);
+});
+
+test('website directory preserves its cream masthead', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await fixtures(page);
+  await page.goto('/directory/search?radius=all');
+  await expect(page.locator('body > header')).toHaveCSS(
+    'background-color',
+    'rgb(252, 242, 231)'
+  );
+  await expect(page.locator('.dirsearch')).toHaveCSS(
+    'background-color',
+    'rgb(252, 242, 231)'
+  );
+});
+
 test('ZIP bubbles focus In map while retaining the unlocated Online section', async ({
   page,
 }) => {

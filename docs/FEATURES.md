@@ -108,11 +108,17 @@ Multimedia microblogging platform integrated into the community. Built on [Activ
 
 - **Posting**: Markdown-formatted posts with content warnings and visibility controls (public, unlisted, followers-only)
 - **Media Attachments**: Images (jpeg, png, webp, gif) and video (H.264/AAC MP4), up to 4 per post
-- **Timeline**: Home feed (posts from followed accounts) and public feed
+- **Timeline**: One mixed community feed, gently prioritizing recent posts from mutual Panas alongside local public posts and joined groups
 - **Engagement**: Like, reply, and follow other community members
 - **Markdown Editor**: Write/Preview tabs with live markdown preview
 - **ActivityPub**: Server-side markdown-to-HTML conversion for federation compatibility
 - **Direct Messages**: Private conversations at `/messages`, with text and GIF attachments and a 30-day visibility window
+- **Stories**: Your story (+) opens the live photo/video camera directly on web and native. Gallery selection remains available; captures are reviewed before upload, captioning, and explicit posting for 24 hours.
+
+The story strip keeps a larger owner bubble and at least four other-story slots. Unfilled
+slots are subtle, noninteractive ghost circles, not fake accounts or loading
+indicators. Real stories replace them, stay in unseen-first order, and can scroll
+horizontally without adding another row.
 
 Audio notes and voice memos are retired. Recording, standalone audio uploads,
 playback, and the Voice notes feed filter are removed, including from the mocks.
@@ -122,6 +128,11 @@ attachment notice instead of an empty player. Photo/video capture, video sound,
 and mentoring calls are unchanged.
 
 See [SOCIAL-ROADMAP.md](./SOCIAL-ROADMAP.md) for implementation details.
+
+There is no Everyone/My Panas reading switch. A mutual Pana's post receives a
+six-hour recency boost, not a permanent position above the community. One-way
+follows, likes, and reply counts do not influence ranking. Publishing still offers
+Everyone or Panas; ranking never changes who is allowed to read a private post.
 
 ---
 
