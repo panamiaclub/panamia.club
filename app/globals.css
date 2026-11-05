@@ -12120,9 +12120,12 @@ body:has(.dirsearch) {
 
    The scoped pages are listed alongside it because they are the same page in
    a different clothing: the same cream paper meeting the same white bar on the
-   same horizontal edge. */
-body:has(.dirsearch) header,
-body:has(.dirscope) header {
+   same horizontal edge.
+
+   Only the body's own website masthead belongs to this palette. Native app
+   and results-sheet headers must keep the platform/status-area cream. */
+body:has(.dirsearch) > header,
+body:has(.dirscope) > header {
   background-color: var(--story-cream);
 }
 
