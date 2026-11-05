@@ -93,21 +93,34 @@ async function fitted(page: Page, label = 'Directory') {
   const results = map(page, label);
   const sheet = results.getByRole('region', { name: `${label} results` });
   await expect(sheet).toHaveAttribute('data-preview', 'true');
-  await expect(sheet.locator('article[data-result-id]')).toHaveCount(1);
+  await expect(sheet.locator('article[data-selected]')).toHaveCount(1);
   await expect
     .poll(async () =>
       sheet.evaluate((node) => {
-        const card = node.querySelector('article')!.getBoundingClientRect();
-        const head = node.querySelector('header')!.getBoundingClientRect();
-        const bounds = node.getBoundingClientRect();
+        const card = node
+          .querySelector('article[data-selected]')!
+          .getBoundingClientRect();
+        const bounds = node
+          .querySelector('[aria-label$=" listings"]')!
+          .getBoundingClientRect();
+        const complete = [...node.querySelectorAll('article')].filter(
+          (item) => {
+            const box = item.getBoundingClientRect();
+            return (
+              box.height > 0 &&
+              box.top >= bounds.top - 0.5 &&
+              box.bottom <= bounds.bottom + 0.5
+            );
+          }
+        );
         return {
-          above: Math.round(card.top - head.bottom),
-          below: Math.round(bounds.bottom - card.bottom),
-          clipped: card.bottom > bounds.bottom + 0.5,
+          selectedVisible:
+            card.top >= bounds.top - 0.5 && card.bottom <= bounds.bottom + 0.5,
+          compact: complete.length >= 1 && complete.length <= 2,
         };
       })
     )
-    .toEqual({ above: 12, below: 12, clipped: false });
+    .toEqual({ selectedVisible: true, compact: true });
 }
 
 test('Directory is the native front door, with actual identity and branded categories', async ({
@@ -125,7 +138,7 @@ test('Directory is the native front door, with actual identity and branded categ
   const navBounds = await nav.boundingBox();
   expect(navBounds).not.toBeNull();
   expect(Math.round(navBounds!.y + navBounds!.height)).toBe(
-    await page.evaluate(() => window.innerHeight)
+    await page.evaluate(() => window.innerHeight - 8)
   );
   await expect(
     nav.getByRole('link', { name: 'Directory', exact: true })
@@ -247,7 +260,9 @@ test('native results sheets expand over a stable map without moving its pins', a
     };
     const sheet = results.getByRole('region', { name: `${label} results` });
     const peekHeight = (await sheet.boundingBox())!.height;
-    await sheet.getByRole('button', { name: 'List', exact: true }).click();
+    await sheet
+      .getByRole('button', { name: 'Resize results', exact: true })
+      .click();
     await expect
       .poll(async () => (await sheet.boundingBox())!.height)
       .toBeGreaterThan(peekHeight + 100);
@@ -255,7 +270,9 @@ test('native results sheets expand over a stable map without moving its pins', a
     expect(await marker.boundingBox()).toEqual(before.marker);
     expect(await camera.getAttribute('data-map-center')).toBe(before.center);
     expect(await camera.getAttribute('data-map-zoom')).toBe(before.zoom);
-    await sheet.getByRole('button', { name: 'Map', exact: true }).click();
+    await sheet
+      .getByRole('button', { name: 'Resize results', exact: true })
+      .press('Home');
     await expect
       .poll(async () => (await sheet.boundingBox())!.height)
       .toBe(peekHeight);
@@ -383,7 +400,7 @@ test('native directory shows complete In map and Online collections with camera-
   await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(27);
   await expect(
     map(page).getByText('20 without usable map locations, in Online below')
-  ).toBeVisible();
+  ).toHaveCount(0);
   const canvas = map(page).locator('.dirsearch-mapcanvas[data-map-center]');
   await expect
     .poll(async () => {
@@ -402,12 +419,12 @@ test('native directory shows complete In map and Online collections with camera-
   };
   await expect(
     map(page)
-      .getByRole('region', { name: 'In map', exact: true })
+      .getByRole('region', { name: 'In map', exact: true, includeHidden: true })
       .locator('article[data-result-id]')
   ).toHaveCount(27);
   await expect(
     map(page)
-      .getByRole('region', { name: 'Online', exact: true })
+      .getByRole('region', { name: 'Online', exact: true, includeHidden: true })
       .locator('article[data-result-id]')
   ).toHaveCount(20);
   const pin = map(page).getByRole('button', {
@@ -420,17 +437,16 @@ test('native directory shows complete In map and Online collections with camera-
     .getByRole('button', { name: 'Business 46', exact: true })
     .click();
   await fitted(page);
-  await expect(map(page).locator('article a').first()).toHaveAttribute(
-    'href',
-    '/p/business-46'
-  );
+  await expect(
+    map(page).locator('article[data-selected] a').first()
+  ).toHaveAttribute('href', '/p/business-46');
   // The old selection ease lasted 420ms; include it in the regression check.
   await page.waitForTimeout(550);
   expect(await canvas.getAttribute('data-map-center')).toBe(before.center);
   expect(await canvas.getAttribute('data-map-zoom')).toBe(before.zoom);
   await map(page)
-    .getByRole('button', { name: 'Show all', exact: true })
-    .click();
+    .getByRole('button', { name: 'Resize results', exact: true })
+    .press('End');
   await expect(
     map(page).getByRole('button', { name: 'Next', exact: true })
   ).toHaveCount(0);
@@ -505,7 +521,11 @@ test('native location sharing ignores old radius links and can recenter after br
   expect(queries().at(-1)?.get('geolat')).toBe('25.76');
   expect(queries().at(-1)?.get('geolng')).toBe('-80.19');
   await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
-  const online = map(page).getByRole('region', { name: 'Online', exact: true });
+  const online = map(page).getByRole('region', {
+    name: 'Online',
+    exact: true,
+    includeHidden: true,
+  });
   await expect(online.locator('article')).toHaveCount(1);
   const requests = queries().length;
   const box = (await map(page).locator('canvas').boundingBox())!;
@@ -536,7 +556,7 @@ test('native location sharing ignores old radius links and can recenter after br
     .toBeGreaterThan(viewer.longitude + 0.08);
   await expect(
     map(page)
-      .getByRole('region', { name: 'In map', exact: true })
+      .getByRole('region', { name: 'In map', exact: true, includeHidden: true })
       .locator('article[data-result-id="far"]')
   ).toHaveCount(1);
   await expect(online.locator('article')).toHaveCount(1);
@@ -544,12 +564,17 @@ test('native location sharing ignores old radius links and can recenter after br
     center: await canvas.getAttribute('data-map-center'),
     zoom: await canvas.getAttribute('data-map-zoom'),
   };
+  await map(page)
+    .getByRole('button', { name: 'Resize results', exact: true })
+    .press('Home');
   await map(page).getByRole('button', { name: 'far', exact: true }).tap();
   await fitted(page);
   await page.waitForTimeout(550);
   expect(await canvas.getAttribute('data-map-center')).toBe(before.center);
   expect(await canvas.getAttribute('data-map-zoom')).toBe(before.zoom);
-  await map(page).getByRole('button', { name: 'Show all', exact: true }).tap();
+  await map(page)
+    .getByRole('button', { name: 'Resize results', exact: true })
+    .press('Home');
   await page.getByRole('button', { name: 'Use my location' }).tap();
   await expect.poll(atViewer).toBeLessThan(0.000001);
   expect(queries()).toHaveLength(requests);
@@ -671,7 +696,11 @@ for (const viewport of [
     await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
     await expect(
       map(page)
-        .getByRole('region', { name: 'Online', exact: true })
+        .getByRole('region', {
+          name: 'Online',
+          exact: true,
+          includeHidden: true,
+        })
         .locator('article')
     ).toHaveCount(1);
     expect(
@@ -743,8 +772,16 @@ test('native In map follows zoom, pan, and resizing while unlocated matches rema
       .poll(async () => Number(await canvas.getAttribute('data-map-zoom')))
       .toBeGreaterThan(zoom + 0.99);
   }
-  const inMap = map(page).getByRole('region', { name: 'In map', exact: true });
-  const online = map(page).getByRole('region', { name: 'Online', exact: true });
+  const inMap = map(page).getByRole('region', {
+    name: 'In map',
+    exact: true,
+    includeHidden: true,
+  });
+  const online = map(page).getByRole('region', {
+    name: 'Online',
+    exact: true,
+    includeHidden: true,
+  });
   await expect(inMap.locator('article')).toHaveCount(2);
   await expect(online.locator('article')).toHaveCount(2);
   await expect(online).not.toContainText('far-west');
@@ -960,18 +997,22 @@ for (const viewport of [
   { width: 390, height: 844 },
   { width: 740, height: 270 },
 ]) {
-  test(`one selected card fits with breathing room at ${viewport.width}x${viewport.height}`, async ({
+  test(`selected profiles fit with breathing room at ${viewport.width}x${viewport.height}`, async ({
     page,
   }) => {
     await native(page);
     await page.setViewportSize(viewport);
     await page.goto('/d');
+    const business = viewport.height < 300 ? 'North Studio' : 'Bay Cafe';
     await map(page)
-      .getByRole('button', { name: 'Bay Cafe', exact: true })
+      .getByRole('button', { name: business, exact: true })
       .click();
     await fitted(page);
-    const href = map(page).locator('article a').first();
-    await expect(href).toHaveAttribute('href', '/p/bay-cafe');
+    const href = map(page).locator('article[data-selected] a').first();
+    await expect(href).toHaveAttribute(
+      'href',
+      viewport.height < 300 ? '/p/north-studio' : '/p/bay-cafe'
+    );
   });
 }
 
@@ -985,10 +1026,13 @@ test('a real profile destination and Back preserve the selected card and search'
     .fill('coffee');
   await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(1);
   await map(page)
+    .getByRole('button', { name: 'Resize results', exact: true })
+    .press('Home');
+  await map(page)
     .getByRole('button', { name: 'Bay Cafe', exact: true })
     .click();
   await fitted(page);
-  await map(page).locator('article a').first().click();
+  await map(page).locator('article[data-selected] a').first().click();
   await expect(page).toHaveURL(/\/p\/bay-cafe$/);
   await expect(
     page.getByRole('heading', { name: 'Bay Cafe', exact: true })
@@ -1058,16 +1102,15 @@ test('Events retain their own map, shared-venue cluster and unpinned online resu
   });
   const before = (await marker.boundingBox())!.x;
   const canvas = (await map(page).locator('canvas').boundingBox())!;
-  await page.mouse.move(
-    canvas.x + canvas.width * 0.8,
-    canvas.y + canvas.height * 0.6
-  );
+  const sheetTop = (await map(page)
+    .getByRole('region', { name: 'Directory results', exact: true })
+    .boundingBox())!.y;
+  const panY = canvas.y + (sheetTop - canvas.y) * 0.65;
+  await page.mouse.move(canvas.x + canvas.width * 0.8, panY);
   await page.mouse.down();
-  await page.mouse.move(
-    canvas.x + canvas.width * 0.8 - 60,
-    canvas.y + canvas.height * 0.6,
-    { steps: 12 }
-  );
+  await page.mouse.move(canvas.x + canvas.width * 0.8 - 60, panY, {
+    steps: 12,
+  });
   await page.mouse.up();
   await expect
     .poll(async () => Math.abs((await marker.boundingBox())!.x - before))
@@ -1090,11 +1133,11 @@ test('Events retain their own map, shared-venue cluster and unpinned online resu
   await map(page, 'Events')
     .getByRole('button', { name: /2 events results at Bay Cafe/ })
     .click();
-  await expect(map(page, 'Events').locator('article')).toHaveCount(2);
-  await map(page, 'Events').getByRole('button', { name: 'Show all' }).click();
+  await expect(map(page, 'Events').locator('article')).toHaveCount(24);
+  await fitted(page, 'Events');
   await map(page, 'Events')
-    .getByRole('button', { name: 'List', exact: true })
-    .click();
+    .getByRole('button', { name: 'Resize results', exact: true })
+    .press('End');
   await expect(
     map(page, 'Events').getByText('Online conversation', { exact: true })
   ).toBeVisible();
@@ -1116,7 +1159,7 @@ test('event search and pagination use the server and reach beyond the first batc
   const fixtures = await native(page);
   await page.goto('/d?scope=event');
   await map(page, 'Events')
-    .getByRole('button', { name: 'List', exact: true })
+    .getByRole('button', { name: 'Resize results', exact: true })
     .click();
   await map(page, 'Events')
     .getByRole('button', { name: 'More events' })
@@ -1296,7 +1339,7 @@ test('guest event bookmarks return to the real event after signing in', async ({
   fixtures.state.signedIn = false;
   await page.goto('/d?scope=event');
   await map(page, 'Events')
-    .getByRole('button', { name: 'List', exact: true })
+    .getByRole('button', { name: 'Resize results', exact: true })
     .click();
   await expect(
     page.getByRole('link', { name: 'Sign in to save Coffee at Bay Cafe' })
@@ -1322,7 +1365,9 @@ test('WebGL failure preserves a useful results list and an explicit map retry', 
     page.getByText('Map unavailable', { exact: true })
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Retry map' })).toBeVisible();
-  await map(page).getByRole('button', { name: 'List', exact: true }).click();
+  await map(page)
+    .getByRole('button', { name: 'Resize results', exact: true })
+    .click();
   await expect(map(page).getByText('Bay Cafe', { exact: true })).toBeVisible();
 });
 

@@ -16,6 +16,11 @@ the corresponding iPad screenshots.
 
 ## What is prepared
 
+- The directory uses the compact 44px app header, a 58px rounded tab dock,
+  and a 54px results row with listing and In map counts. Pin and ZIP-bubble
+  selection scrolls the complete list to a highlighted, measured two-profile
+  preview while the map stays fixed. Status-bar and home-indicator safe areas
+  remain protected; very short landscape views show one profile when needed.
 - The native frame respects the notch, landscape insets, home indicator, and
   visible keyboard viewport. Tabs hide while the keyboard covers the screen,
   form text avoids WebKit's focus zoom, and story captions stay above the keyboard.
@@ -27,6 +32,9 @@ the corresponding iPad screenshots.
   left and notifications/account on the right. Detail pages retain Back and
   event-save controls. Account menus offer bug and safety reporting above
   About Pana, including for signed-out visitors.
+- Messages hides its own header shortcut throughout the inbox, requests and
+  conversation flow, leaving Back as the leading control. The personal Profile
+  tab and Account landing omit Back; nested settings and other profiles retain it.
 - Open conversations hide the bottom tabs and header message shortcut. The
   header Back control returns to the message list without losing its draft;
   standalone group chats retain Back to group. Native messaging omits the

@@ -92,7 +92,7 @@ test.describe('Notifications API', () => {
 });
 
 test.describe('Notifications in Navigation', () => {
-  test('Sign In button is visible for unauthenticated users', async ({
+  test('account creation and sign-in links are visible for unauthenticated users', async ({
     page,
   }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
@@ -100,12 +100,14 @@ test.describe('Notifications in Navigation', () => {
     // Wait for header to load
     await page.waitForSelector('header');
 
-    // The masthead offers one control to unauthenticated visitors: a button
-    // that opens the sign-in/sign-up menu. It is a <button>, not a link, so
-    // match it by its accessible name rather than by anchor text.
-    const signInButton = page.getByRole('button', {
-      name: 'Sign in or sign up',
+    const accountLinks = page.getByRole('navigation', {
+      name: 'Create account or sign in',
+      exact: true,
     });
-    await expect(signInButton).toBeVisible({ timeout: 10000 });
+    for (const name of ['Create account', 'Sign in']) {
+      const link = accountLinks.getByRole('link', { name, exact: true });
+      await expect(link).toBeVisible({ timeout: 10000 });
+      await expect(link).toHaveAttribute('href', '/signin');
+    }
   });
 });

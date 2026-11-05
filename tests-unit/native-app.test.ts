@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   NATIVE_TABS,
   nativeDeepLinkTarget,
+  nativeHeaderForPath,
   nativeRootForPath,
   usesNativeAppLayout,
 } from '@/lib/mobile/app-navigation';
@@ -18,6 +19,7 @@ import {
 } from '@/lib/mobile/browse';
 import {
   nativePreviewHeight,
+  nativePreviewRange,
   nativeSheetHeights,
   nativeSheetStopForDrag,
 } from '@/lib/mobile/map-sheet';
@@ -100,6 +102,74 @@ const group: GroupSearchSummary = {
 };
 
 describe('native navigation', () => {
+  it('keeps only Back in the Messages header, including nested message routes', () => {
+    for (const pathname of ['/messages', '/messages/', '/messages/thread']) {
+      assert.deepEqual(nativeHeaderForPath(pathname, '/p/viewer'), {
+        showBack: true,
+        showMessages: false,
+      });
+    }
+  });
+
+  it('treats the personal Profile destination and Account aliases as header roots without hiding their content', () => {
+    for (const pathname of [
+      '/p/viewer',
+      '/account',
+      '/account/user',
+      '/account/user/edit',
+    ]) {
+      assert.deepEqual(nativeHeaderForPath(pathname, '/p/viewer'), {
+        showBack: false,
+        showMessages: true,
+      });
+      assert.equal(nativeRootForPath(pathname), null);
+    }
+    assert.equal(
+      nativeHeaderForPath('/p/mar%C3%ADa', '/p/mar%C3%ADa').showBack,
+      false
+    );
+    assert.equal(nativeHeaderForPath('/account', '/account').showBack, false);
+  });
+
+  it('retains Back on nested settings, other profiles and real detail pages', () => {
+    for (const pathname of [
+      '/account/privacy',
+      '/account/profile/edit',
+      '/account/user/notifications',
+      '/form/delete-account',
+      '/p/someone-else',
+      '/p/viewer/post',
+      '/e/coffee',
+      '/g/garden/chat',
+    ]) {
+      assert.deepEqual(nativeHeaderForPath(pathname, '/p/viewer'), {
+        showBack: true,
+        showMessages: true,
+      });
+    }
+  });
+
+  it('does not hide controls for similarly prefixed routes or add Back to retained root tabs', () => {
+    assert.equal(
+      nativeHeaderForPath('/messages-archive', '/p/viewer').showMessages,
+      true
+    );
+    assert.equal(
+      nativeHeaderForPath('/p/viewer-other', '/p/viewer').showBack,
+      true
+    );
+    for (const pathname of ['/d', '/s', '/groups']) {
+      assert.deepEqual(nativeHeaderForPath(pathname, '/p/viewer'), {
+        showBack: false,
+        showMessages: true,
+      });
+    }
+    assert.equal(
+      nativeHeaderForPath('/', '/p/viewer', 'social').showBack,
+      false
+    );
+  });
+
   it('opens the main app in Directory with the approved tab order', () => {
     assert.deepEqual(
       NATIVE_TABS.map(({ id }) => id),
@@ -419,11 +489,21 @@ describe('shared URL parsing and measured map sheet', () => {
     assert.equal(query.get('radius'), 'all');
   });
 
-  it('fits a selected card with exactly twelve pixels above and below', () => {
+  it('fits the measured preview span with twelve pixels above and below', () => {
     assert.equal(nativePreviewHeight(600, 48, 160), 232);
     assert.equal(nativePreviewHeight(142, 30, 78), 132);
     assert.equal(nativePreviewHeight(80, 30, 78), 80);
     assert.equal(nativePreviewHeight(0, 48, 160), 0);
+  });
+
+  it('selects up to two adjacent profiles without changing listing order', () => {
+    assert.deepEqual(nativePreviewRange(9, 0), { start: 0, end: 2 });
+    assert.deepEqual(nativePreviewRange(9, 4), { start: 4, end: 6 });
+    assert.deepEqual(nativePreviewRange(9, 8), { start: 7, end: 9 });
+    assert.deepEqual(nativePreviewRange(1, 0), { start: 0, end: 1 });
+    assert.deepEqual(nativePreviewRange(0, -1), { start: 0, end: 0 });
+    assert.deepEqual(nativePreviewRange(9, -1), { start: 0, end: 2 });
+    assert.deepEqual(nativePreviewRange(9, 8, 1), { start: 8, end: 9 });
   });
 
   it('orders sheet stops and stays within available height, including landscape', () => {
@@ -435,6 +515,7 @@ describe('shared URL parsing and measured map sheet', () => {
     }
     assert.equal(nativeSheetHeights(142, 106).expanded, 142);
     assert.equal(nativeSheetHeights(600, 106).expanded, 486);
+    assert.equal(nativeSheetHeights(600, 106).peek, 54);
   });
 
   it('advances a sheet stop for short deliberate swipes in either direction', () => {

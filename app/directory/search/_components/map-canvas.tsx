@@ -50,6 +50,7 @@ interface MapCanvasProps {
   viewer: { lat: number; lng: number } | null;
   hasZipAreas?: boolean;
   showZoomControls?: boolean;
+  cameraInsets?: { top: number; bottom: number };
   onBoundsChange?: (bounds: MapBounds | null) => void;
 }
 
@@ -64,6 +65,7 @@ export default function MapCanvas({
   viewer,
   hasZipAreas = false,
   showZoomControls = false,
+  cameraInsets,
   onBoundsChange,
 }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -174,6 +176,15 @@ export default function MapCanvas({
     };
     // Recreate only on an explicit retry; later views use the effect below.
   }, [attempt]);
+
+  const insetTop = cameraInsets?.top ?? 0;
+  const insetBottom = cameraInsets?.bottom ?? 0;
+  useEffect(() => {
+    if (!map) return;
+    map.jumpTo({
+      padding: { top: insetTop, bottom: insetBottom, left: 0, right: 0 },
+    });
+  }, [map, insetTop, insetBottom]);
 
   useEffect(() => {
     if (!map || !showZoomControls) return;

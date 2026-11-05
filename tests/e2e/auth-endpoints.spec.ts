@@ -126,7 +126,7 @@ test.describe('magic-link recovery', () => {
     ).toBeVisible();
     await expect(page.getByPlaceholder('your@email.com')).toBeVisible();
     await expect(
-      page.getByRole('button', { name: 'Send sign-in link', exact: true })
+      page.getByRole('button', { name: 'Email me a link', exact: true })
     ).toBeVisible();
   });
 });

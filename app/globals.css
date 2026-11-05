@@ -748,11 +748,32 @@
     );
 }
 
-/* A standalone auth page has no masthead above it, so it owns the whole
-   viewport — the subtraction above compensates for chrome that is not there.
-   Sign-in is the only such page today; see lib/panaverse/chrome.ts. */
+/* Native auth and loading states have no masthead. Browser sign-in owns its
+   focused masthead and subtracts the measured height below. */
 .auth-surface[data-standalone='true'] {
   min-height: 100vh;
+}
+
+.auth-page-header {
+  display: contents;
+}
+
+.auth-page-header-loading {
+  height: 4.5rem;
+  background-color: var(--color-pana-cream);
+}
+
+.auth-surface[data-auth-entry='true'][data-standalone='false'] {
+  min-height: calc(100svh - var(--main-masthead-offset, 4.5rem));
+}
+
+html.native-app .auth-page-header,
+html.native-app .auth-page-header-loading {
+  display: none;
+}
+
+html.native-app .auth-surface[data-auth-entry='true'] {
+  min-height: 100svh;
 }
 
 /* Cream is a light surface, so the dark theme has to take it back over —

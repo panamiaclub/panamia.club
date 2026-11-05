@@ -11,12 +11,56 @@ import {
 } from '@/lib/server/active-profile';
 import { ensureProfile, revalidatePublicListing } from '@/lib/server/profile';
 import { syncActorFromProfile } from '@/lib/federation/wrappers/actor';
+import { canAdministerProfile } from '@/lib/server/profile-owners';
 
-const cacheRand = () => {
-  return Math.floor((Math.random() + 1) * 10000)
-    .toString()
-    .substring(1, 4);
-};
+type ProfileImages = Pick<
+  typeof profiles.$inferSelect,
+  'primaryImageCdn' | 'galleryImages'
+>;
+
+function savedImageUrls(profile: ProfileImages | undefined): Set<string> {
+  const urls = new Set<string>();
+  if (profile?.primaryImageCdn) urls.add(profile.primaryImageCdn);
+  if (profile?.galleryImages && typeof profile.galleryImages === 'object') {
+    for (const [field, url] of Object.entries(profile.galleryImages)) {
+      if (field.endsWith('CDN') && typeof url === 'string' && url)
+        urls.add(url);
+    }
+  }
+  return urls;
+}
+
+async function cleanupUnreferencedImages(profileId: string, urls: string[]) {
+  if (urls.length === 0) return;
+
+  let retained: Set<string>;
+  try {
+    const current = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: { primaryImageCdn: true, galleryImages: true },
+    });
+    retained = savedImageUrls(current);
+  } catch (error) {
+    // A failed commit can have an uncertain outcome. Keep objects if we cannot
+    // establish that the database no longer references them.
+    console.error('Could not verify profile image cleanup:', {
+      profileId,
+      error,
+    });
+    return;
+  }
+
+  for (const url of new Set(urls)) {
+    if (retained.has(url)) continue;
+    try {
+      if (!(await deleteFile(url))) {
+        console.error('Profile image cleanup failed:', { profileId, url });
+      }
+    } catch (error) {
+      console.error('Profile image cleanup failed:', { profileId, url, error });
+    }
+  }
+}
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -27,6 +71,7 @@ export async function POST(request: NextRequest) {
       { status: 401 }
     );
   }
+  const userId = session.user.id;
 
   /* Resolve the same row the rest of the account does. This looked the profile
      up by email, while /api/getProfile -- which is what the settings page and
@@ -39,9 +84,7 @@ export async function POST(request: NextRequest) {
      difference between a saved picture appearing and vanishing. */
   const listingId = request.nextUrl.searchParams.get('listingId');
   const scopedListing =
-    listingId !== null
-      ? await getEditableProfile(session.user.id, listingId)
-      : null;
+    listingId !== null ? await getEditableProfile(userId, listingId) : null;
   if (listingId !== null && !scopedListing) {
     return NextResponse.json(
       { success: false, error: 'You do not manage that business listing.' },
@@ -49,16 +92,14 @@ export async function POST(request: NextRequest) {
     );
   }
   const activeId =
-    listingId !== null
-      ? scopedListing?.id
-      : await getActiveProfileId(session.user.id);
+    listingId !== null ? scopedListing?.id : await getActiveProfileId(userId);
 
   const existingProfile = activeId
     ? await db.query.profiles.findFirst({
         where: eq(profiles.id, activeId),
         with: { user: { columns: { screenname: true } } },
       })
-    : await ensureProfile(session.user.id, session.user.email ?? undefined);
+    : await ensureProfile(userId, session.user.email ?? undefined);
 
   if (!existingProfile) {
     return NextResponse.json(
@@ -69,6 +110,7 @@ export async function POST(request: NextRequest) {
 
   // Use screenname for storage path, fall back to profile id
   const handle = existingProfile.user?.screenname || existingProfile.id;
+  const stagedUrls: string[] = [];
 
   try {
     // Use Web API formData() instead of busboy
@@ -123,7 +165,7 @@ export async function POST(request: NextRequest) {
       const arrayBuffer = await value.arrayBuffer();
       const data = Buffer.from(arrayBuffer);
 
-      const fileName = `profile/${handle}/${fieldname}${cacheRand()}.${ext}`;
+      const fileName = `profile/${handle}/${fieldname}-${crypto.randomUUID()}.${ext}`;
       console.log('fileName', fileName);
       uploadedFiles.push({
         data: data,
@@ -155,9 +197,7 @@ export async function POST(request: NextRequest) {
       primaryImageId?: string;
       primaryImageCdn?: string;
     } = {};
-    let galleryImagesUpdate: Record<string, string> = {
-      ...((existingProfile.galleryImages as object) || {}),
-    };
+    const galleryImagesUpdate: Record<string, string> = {};
 
     // Process all uploaded files
     for (const file of uploadedFiles) {
@@ -166,6 +206,7 @@ export async function POST(request: NextRequest) {
          member was told the picture had saved while nothing had been
          written. If it cannot be stored, say so. */
       if (!filePath) {
+        await cleanupUnreferencedImages(existingProfile.id, stagedUrls);
         return NextResponse.json(
           {
             success: false,
@@ -174,50 +215,84 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
+      stagedUrls.push(filePath);
       console.log('filePath', filePath);
 
       if (file.fieldname === 'primary') {
-        // Delete old primary image
-        if (
-          existingProfile.primaryImageCdn &&
-          existingProfile.primaryImageCdn !== filePath
-        ) {
-          await deleteFile(existingProfile.primaryImageCdn);
-        }
         primaryImageUpdate = {
           primaryImageId: file.filename,
           primaryImageCdn: filePath,
         };
       } else {
-        // Delete old gallery image
-        const existingGallery = existingProfile.galleryImages as Record<
-          string,
-          string
-        > | null;
-        const existingImageUrl = existingGallery?.[file.fieldname + 'CDN'];
-        if (existingImageUrl && existingImageUrl !== filePath) {
-          await deleteFile(existingImageUrl);
-        }
         galleryImagesUpdate[file.fieldname] = file.filename;
         galleryImagesUpdate[file.fieldname + 'CDN'] = filePath;
       }
     }
 
-    // Update profile with new images
-    const [updatedProfile] = await db
-      .update(profiles)
-      .set({
-        ...primaryImageUpdate,
-        galleryImages:
-          Object.keys(galleryImagesUpdate).length > 0
-            ? (galleryImagesUpdate as unknown as Record<string, string>)
-            : undefined,
-      })
-      .where(eq(profiles.id, existingProfile.id))
-      .returning();
+    // Network uploads finish before locking. Merge only the selected slots
+    // into the current row, not the snapshot taken before those uploads.
+    const saved = await db.transaction(async (tx) => {
+      const [current] = await tx
+        .select()
+        .from(profiles)
+        .where(eq(profiles.id, existingProfile.id))
+        .for('update');
+      if (
+        !current ||
+        !(listingId !== null
+          ? await getEditableProfile(userId, listingId, tx)
+          : await canAdministerProfile(userId, current.id, tx))
+      ) {
+        return null;
+      }
+
+      const currentGallery =
+        current.galleryImages && typeof current.galleryImages === 'object'
+          ? current.galleryImages
+          : {};
+      const [updatedProfile] = await tx
+        .update(profiles)
+        .set({
+          ...primaryImageUpdate,
+          ...(Object.keys(galleryImagesUpdate).length > 0
+            ? {
+                galleryImages: {
+                  ...currentGallery,
+                  ...galleryImagesUpdate,
+                },
+              }
+            : {}),
+        })
+        .where(eq(profiles.id, current.id))
+        .returning();
+      if (!updatedProfile) throw new Error('The edited profile was not saved.');
+
+      const retained = savedImageUrls(updatedProfile);
+      const cleanupUrls = [
+        ...new Set([...savedImageUrls(current), ...stagedUrls]),
+      ].filter((url) => !retained.has(url));
+      return { updatedProfile, cleanupUrls };
+    });
+
+    if (!saved) {
+      await cleanupUnreferencedImages(existingProfile.id, stagedUrls);
+      return NextResponse.json(
+        { success: false, error: 'You do not manage that profile.' },
+        { status: 403 }
+      );
+    }
+    const { updatedProfile, cleanupUrls } = saved;
+    await cleanupUnreferencedImages(updatedProfile.id, cleanupUrls);
 
     console.log('save');
-    revalidatePublicListing(existingProfile.id, existingProfile.screenname);
+    try {
+      revalidatePublicListing(updatedProfile.id, updatedProfile.screenname);
+    } catch (error) {
+      console.error(
+        'Profile image save committed but revalidation failed:',
+        error
+      );
+    }
 
     /* Pana Social draws avatars from social_actors.icon_url, a copy of the
        picture kept alongside the actor because federation serves it to other
@@ -230,7 +305,7 @@ export async function POST(request: NextRequest) {
        picture appeared. */
     if (primaryImageUpdate.primaryImageCdn) {
       try {
-        await syncActorFromProfile(existingProfile.id);
+        await syncActorFromProfile(updatedProfile.id);
       } catch (error) {
         /* The picture is already stored and the profile already updated, so
            failing the request here would be its own kind of lie. Log it and
@@ -246,6 +321,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: unknown) {
     console.error('Upload error:', error);
+    await cleanupUnreferencedImages(existingProfile.id, stagedUrls);
     return NextResponse.json(
       {
         success: false,

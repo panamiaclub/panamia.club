@@ -39,6 +39,7 @@ import { ActingAsBar } from '@/components/account/acting-as-bar';
 import { cn } from '@/lib/utils';
 import {
   NATIVE_TABS,
+  nativeHeaderForPath,
   nativeRootForPath,
   type NativeRootTab,
   type NativeTab,
@@ -150,6 +151,7 @@ function AppFrame({
       : '/account'
     : '/signin?callbackUrl=%2Faccount';
   const root = nativeRootForPath(pathname, surfaceId);
+  const header = nativeHeaderForPath(pathname, profileHref, surfaceId);
   const rootTab = root?.tab ?? null;
   const location = `${pathname}${search?.size ? `?${search}` : ''}`;
   const [lastTab, setLastTab] = useState<NativeRootTab>(rootTab ?? 'directory');
@@ -211,10 +213,11 @@ function AppFrame({
           className={cn(styles.app, rootTab === 'directory' && 'dirscope')}
           data-native-app
           data-native-conversation={conversation ? '' : undefined}
+          data-native-map={root && rootTab === 'directory' ? '' : undefined}
         >
           <header className={styles.header}>
             <div className={styles.headerLeading}>
-              {!root && (
+              {header.showBack && (
                 <button
                   type="button"
                   className={styles.iconButton}
@@ -237,7 +240,7 @@ function AppFrame({
               )}
               {eventSlug && eventSlug !== 'new' ? (
                 <NativeEventSave slug={decodeURIComponent(eventSlug)} />
-              ) : !conversation ? (
+              ) : header.showMessages && !conversation ? (
                 <MessagesLink />
               ) : null}
             </div>
@@ -362,7 +365,7 @@ function AppFrame({
                         className={styles.navAvatar}
                       />
                     ) : (
-                      <Icon size={23} aria-hidden="true" />
+                      <Icon size={21} aria-hidden="true" />
                     )}
                     <span>{tab.label}</span>
                   </Link>

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { calls, nativeBridge } from './fixtures/native-bridge';
 import { installNativeApiFixtures } from './fixtures/native-app-api';
+import type { SearchResultsInterface } from '@/lib/query/directory';
 
 async function ios(page: Page) {
   await nativeBridge(page, { platform: 'ios', googlePlugin: false });
@@ -45,7 +46,7 @@ test.describe('iOS results sheet', () => {
       (await sheet.boundingBox())!.y
     );
 
-    await sheet.getByRole('button', { name: 'List', exact: true }).click();
+    await handle.click();
     await expect
       .poll(async () => (await sheet.boundingBox())!.height)
       .toBeGreaterThan(peekHeight + 100);
@@ -70,6 +71,123 @@ test.describe('iOS results sheet', () => {
     expect(await canvas.boundingBox()).toEqual(before);
   });
 });
+
+for (const platform of ['android', 'ios'] as const) {
+  test(`${platform} keeps native header controls route-aware across Messages and Account`, async ({
+    page,
+  }) => {
+    await nativeBridge(page, {
+      platform,
+      googlePlugin: platform === 'android',
+    });
+    await installNativeApiFixtures(page);
+    await page.route('**/api/social/messages/conversations', (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            conversations: [],
+            viewerActorId: 'actor-personal',
+            localDomain: 'example.invalid',
+          },
+        },
+      })
+    );
+    await page.route('**/api/social/messages/groups', (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            groups: [],
+            viewerActorId: 'actor-personal',
+            localDomain: 'example.invalid',
+          },
+        },
+      })
+    );
+    await page.route('**/api/social/dm-requests', (route) =>
+      route.fulfill({ json: { success: true, data: { requests: [] } } })
+    );
+    await page.route('**/api/getSessionUser', (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            _id: 'native-test-user',
+            name: 'Native Viewer',
+            email: 'native@example.invalid',
+            screenname: 'native-viewer',
+          },
+        },
+      })
+    );
+    await page.route('**/api/getProfile', (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            _id: 'personal',
+            name: 'Native Viewer',
+            screenname: 'native-viewer',
+            defaultCcLicense: 'cc-by-4',
+            images: {},
+          },
+        },
+      })
+    );
+    await page.route('**/api/crm/contact', (route) =>
+      route.fulfill({ json: { success: true, data: null } })
+    );
+    await page.route('**/api/account/crm', (route) =>
+      route.fulfill({ json: { contact: null } })
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/d');
+    const header = page.locator('[data-native-app] > header');
+    const messages = header.getByRole('link', {
+      name: 'Messages',
+      exact: true,
+    });
+    const back = header.getByRole('button', { name: 'Back', exact: true });
+    await expect(messages).toBeVisible();
+    await expect(back).toHaveCount(0);
+    await messages.click();
+    await expect(page).toHaveURL(/\/messages$/);
+    await expect(
+      page.getByRole('group', { name: 'Message folders' })
+    ).toBeVisible();
+    await expect(messages).toHaveCount(0);
+    await expect(back).toBeVisible();
+    await back.click();
+    await expect(page).toHaveURL(/\/d$/);
+    await expect(messages).toBeVisible();
+    await expect(back).toHaveCount(0);
+    await header.getByRole('button', { name: /Native Viewer/ }).click();
+    await page.locator('[role="menuitem"][href="/account/user/edit"]').click();
+    await expect(page).toHaveURL(/\/account\/user\/edit$/);
+    await expect(
+      page.getByRole('heading', { name: 'Native Viewer', exact: true })
+    ).toBeVisible();
+    await expect(back).toHaveCount(0);
+    await expect(messages).toBeVisible();
+    await expect(
+      page
+        .getByRole('navigation', { name: 'App navigation' })
+        .getByRole('link', { name: 'Profile', exact: true })
+    ).toHaveAttribute('aria-current', 'page');
+    await page.goto('/account/privacy');
+    await expect(
+      page.getByRole('link', { name: 'Delete account', exact: true })
+    ).toHaveAttribute('href', '/form/delete-account');
+    await expect(back).toBeVisible();
+    await back.click();
+    await expect(page).toHaveURL(/\/account\/user\/edit$/);
+    await expect(back).toHaveCount(0);
+    await expect(
+      page.getByRole('heading', { name: 'Native Viewer', exact: true })
+    ).toBeVisible();
+  });
+}
 
 for (const viewport of [
   { width: 320, height: 568 },
@@ -122,14 +240,15 @@ for (const viewport of [
     expect(inbox!.x + inbox!.width).toBeLessThanOrEqual(logo!.x);
     expect(bell!.x).toBeGreaterThanOrEqual(logo!.x + logo!.width);
     expect(avatar!.x).toBeGreaterThanOrEqual(bell!.x + bell!.width);
-    expect(frame!.height).toBeLessThanOrEqual(60);
+    expect(frame!.height).toBe(44);
     for (const control of [inbox, bell, avatar]) {
       expect(control!.width).toBeGreaterThanOrEqual(44);
       expect(control!.height).toBeGreaterThanOrEqual(44);
     }
     const bounds = await nav.boundingBox();
     expect(bounds).not.toBeNull();
-    expect(Math.round(bounds!.y + bounds!.height)).toBe(viewport.height);
+    expect(Math.round(bounds!.y + bounds!.height)).toBe(viewport.height - 8);
+    expect(bounds!.height).toBe(58);
     const search = page.getByRole('searchbox', { name: 'Search directory' });
     expect(
       await search.evaluate((input) =>
@@ -152,6 +271,179 @@ for (const viewport of [
   });
 }
 
+test.describe('compact native directory', () => {
+  test.use({ isMobile: true, hasTouch: true });
+
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 320, height: 568 },
+  ]) {
+    test(`compact map keeps two complete profiles and the full list at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }, testInfo) => {
+      await nativeBridge(page, { platform: 'ios', googlePlugin: false });
+      await page.setViewportSize(viewport);
+      const points = [
+        [-80.25, 25.84],
+        [-80.15, 25.84],
+        [-80.25, 25.79],
+        [-80.15, 25.79],
+        [-80.25, 25.74],
+        [-80.15, 25.74],
+      ];
+      const businesses: SearchResultsInterface[] = Array.from(
+        { length: 343 },
+        (_, index) => ({
+          _id: `compact-${index}`,
+          id: `compact-${index}`,
+          name: `Compact business ${index}`,
+          screenname: `compact-${index}`,
+          score: 1,
+          score_details: {},
+          details: 'Meet your neighbors.',
+          five_words: 'Made for the neighborhood.',
+          geo: index < points.length ? { coordinates: points[index] } : null,
+          ...(index === 6
+            ? {
+                online_only: true,
+                online_zip: {
+                  postalCode: '33166',
+                  country: 'US',
+                  city: 'Doral',
+                  region: 'FL',
+                  lat: 25.79,
+                  lng: -80.2,
+                },
+                primary_address: { zipcode: '33166' },
+              }
+            : { primary_address: { city: 'Miami' } }),
+          images: { primaryCDN: '/logos/pana_logo_long_orange.png' },
+          socials: {},
+        })
+      );
+      const fixtures = await installNativeApiFixtures(page, { businesses });
+      await page.goto('/d');
+      const results = page.locator('[data-map-results="Directory"]');
+      const sheet = results.getByRole('region', {
+        name: 'Directory results',
+        exact: true,
+      });
+      const list = sheet.getByRole('region', {
+        name: 'Directory listings',
+        includeHidden: true,
+      });
+      const mapped = results.locator('section[aria-label="In map"]');
+      const handle = sheet.getByRole('button', { name: 'Resize results' });
+      await expect(results.locator('.maplibregl-marker button')).toHaveCount(7);
+      await expect(mapped.locator('article')).toHaveCount(7);
+      await expect(
+        sheet.getByRole('heading', { name: '343 listings' })
+      ).toBeVisible();
+      expect((await sheet.boundingBox())!.height).toBe(54);
+      const nav = page.getByRole('navigation', { name: 'App navigation' });
+      expect((await nav.boundingBox())!.height).toBe(58);
+      expect(
+        Math.round(
+          (await nav.boundingBox())!.y - ((await sheet.boundingBox())!.y + 54)
+        )
+      ).toBe(8);
+      const camera = results.locator('.dirsearch-mapcanvas[data-map-center]');
+      const canvas = results.locator('canvas');
+      await expect(camera).toHaveCount(1);
+      // Include the initial framing ease, not just the first bounds report.
+      await page.waitForTimeout(500);
+      const before = {
+        canvas: await canvas.boundingBox(),
+        center: await camera.getAttribute('data-map-center'),
+        zoom: await camera.getAttribute('data-map-zoom'),
+      };
+      const order = await mapped
+        .locator('article')
+        .evaluateAll((nodes) =>
+          nodes.map((node) => node.getAttribute('data-result-id'))
+        );
+      for (const [label, selected] of [
+        ['Compact business 0', 'compact-0'],
+        ['Compact business 3', 'compact-3'],
+        ['1 online business based near ZIP 33166', 'compact-6'],
+      ]) {
+        await results.getByRole('button', { name: label, exact: true }).tap();
+        await expect(sheet).toHaveAttribute('data-preview', 'true');
+        await expect
+          .poll(() =>
+            list.evaluate((node) => {
+              const box = node.getBoundingClientRect();
+              const cards = [
+                ...node.querySelectorAll('section:not([hidden]) article'),
+              ].map((card) => card.getBoundingClientRect());
+              return {
+                complete: cards.filter(
+                  (card) =>
+                    card.top >= box.top - 0.5 && card.bottom <= box.bottom + 0.5
+                ).length,
+                intersecting: cards.filter(
+                  (card) =>
+                    card.bottom > box.top + 0.5 && card.top < box.bottom - 0.5
+                ).length,
+              };
+            })
+          )
+          .toEqual({ complete: 2, intersecting: 2 });
+        await expect(mapped.locator('article[data-selected]')).toHaveAttribute(
+          'data-result-id',
+          selected
+        );
+        expect(
+          await mapped
+            .locator('article')
+            .evaluateAll((nodes) =>
+              nodes.map((node) => node.getAttribute('data-result-id'))
+            )
+        ).toEqual(order);
+        expect(await canvas.boundingBox()).toEqual(before.canvas);
+        expect(await camera.getAttribute('data-map-center')).toBe(
+          before.center
+        );
+        expect(await camera.getAttribute('data-map-zoom')).toBe(before.zoom);
+        if (selected === 'compact-3') {
+          const screenshot = testInfo.outputPath(
+            'compact-two-profile-preview.png'
+          );
+          await page.screenshot({ path: screenshot });
+          await testInfo.attach('compact-two-profile-preview', {
+            path: screenshot,
+            contentType: 'image/png',
+          });
+          await list.evaluate((node) => {
+            node.scrollTop = 0;
+          });
+          await expect(mapped.locator('article').first()).toBeInViewport();
+          await results
+            .getByRole('button', { name: label, exact: true })
+            .evaluate((button: HTMLButtonElement) => button.click());
+          await expect(
+            mapped.locator('article[data-selected]')
+          ).toBeInViewport();
+        }
+        await handle.press('Home');
+        await expect(sheet).toHaveAttribute('data-collapsed', 'true');
+      }
+      await handle.press('End');
+      await sheet.getByRole('tab', { name: 'Online 336', exact: true }).tap();
+      await expect(
+        results
+          .getByRole('region', { name: 'Online', exact: true })
+          .locator('article')
+      ).toHaveCount(336);
+      await expect(mapped).toBeHidden();
+      await sheet.getByRole('tab', { name: 'In map 7', exact: true }).tap();
+      await expect(mapped).toBeVisible();
+      await expect(mapped.locator('article')).toHaveCount(7);
+      expect(fixtures.state.unhandled).toEqual([]);
+    });
+  }
+});
+
 for (const platform of ['android', 'ios'] as const) {
   for (const signedIn of [false, true]) {
     test(`${platform} account reports stay reachable for ${signedIn ? 'members' : 'guests'} without crowding the header`, async ({
@@ -170,7 +462,7 @@ for (const platform of ['android', 'ios'] as const) {
       await page.goto('/d');
       const header = page.locator('[data-native-app] > header');
       const account = header.getByRole('button', {
-        name: signedIn ? /Native Viewer/ : 'Sign in or sign up',
+        name: signedIn ? /Native Viewer/ : 'Create account or sign in',
         includeHidden: true,
       });
       if (signedIn) {

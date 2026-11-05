@@ -9,7 +9,7 @@ import {
   type MouseEvent,
 } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { useSession } from '@/lib/auth-client';
+import { useIsHydrated, useSession } from '@/lib/auth-client';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -26,6 +26,7 @@ import { MessagesLink } from './account/messages-link';
 import { IdentityProvider } from './account/identity-provider';
 import { AuthMenu } from './account/auth-menu';
 import { ActingAsBar } from './account/acting-as-bar';
+import type { SurfaceMark } from '@/lib/panaverse/branding';
 
 // https://www.a11ymatters.com/pattern/mobile-nav/
 
@@ -176,13 +177,27 @@ function scrollToCurrentAboutSection(event: MouseEvent<HTMLAnchorElement>) {
 
 export default function MainHeader({
   isProductionSite,
+  authPage,
 }: {
   isProductionSite: boolean;
+  authPage?: { mark: SurfaceMark; rootPath: string };
 }) {
   const { t, i18n } = useTranslation('common');
   const isEs = i18n.language === 'es';
   const { data: session, status } = useSession();
+  const isHydrated = useIsHydrated();
   const pathname = usePathname();
+  const isAuthPage = authPage !== undefined;
+  // The regular masthead can survive client navigation into sign-in. Both
+  // mastheads must keep the existing callback instead of reopening bare /signin.
+  const isSignInEntry = isAuthPage || pathname === '/signin';
+  const signInHref = isSignInEntry ? '#signin-card' : '/signin';
+  const headerMark = authPage?.mark ?? {
+    src: '/logos/pana_logo_long_orange.png',
+    alt: 'Pana Mia',
+    width: 600,
+    height: 150,
+  };
   const isShopRoute = pathname === '/shop' || pathname.startsWith('/shop/');
   const showDirectoryJoin =
     pathname === '/' ||
@@ -221,31 +236,28 @@ export default function MainHeader({
 
   // The public site menu is identical for every visitor. Account destinations
   // remain in the identity menu rather than changing this list after sign-in.
-  const drawerItems = useMemo<NavDrawerItem[]>(
-    () => {
-      const translateItem = (item: NavItemDefinition): NavDrawerItem => ({
-        href: item.href,
+  const drawerItems = useMemo<NavDrawerItem[]>(() => {
+    const translateItem = (item: NavItemDefinition): NavDrawerItem => ({
+      href: item.href,
+      label: t(item.labelKey),
+      expandLabel: t('nav.expandSubmenu', {
         label: t(item.labelKey),
-        expandLabel: t('nav.expandSubmenu', {
-          label: t(item.labelKey),
-        }),
-        collapseLabel: t('nav.collapseSubmenu', {
-          label: t(item.labelKey),
-        }),
-        onSelect: item.href.startsWith('/about-us/')
-          ? scrollToCurrentAboutSection
-          : undefined,
-        children: item.children?.map(translateItem),
-      });
+      }),
+      collapseLabel: t('nav.collapseSubmenu', {
+        label: t(item.labelKey),
+      }),
+      onSelect: item.href.startsWith('/about-us/')
+        ? scrollToCurrentAboutSection
+        : undefined,
+      children: item.children?.map(translateItem),
+    });
 
-      return NAV_ITEMS.map(translateItem);
-    },
-    [t]
-  );
+    return NAV_ITEMS.map(translateItem);
+  }, [t]);
 
   // Check if authenticated user has a profile
   useEffect(() => {
-    if (session?.user) {
+    if (!isAuthPage && session?.user) {
       axios
         .get('/api/getProfile')
         .then((res) => {
@@ -259,22 +271,25 @@ export default function MainHeader({
     }
     // When session is null, hasProfile remains null (initial state)
     // The CTA bar only shows for authenticated users anyway
-  }, [session]);
+  }, [session, isAuthPage]);
 
   return (
-    <IdentityProvider enabled={status !== 'loading' && !!session}>
+    <IdentityProvider
+      enabled={!isAuthPage && status !== 'loading' && !!session}
+    >
       <header className={styles.header}>
         {/* Ambient unread cues: browser-tab count + desktop notifications */}
-        <NotificationAlerts />
+        {!isAuthPage && <NotificationAlerts />}
         {/* The shop carries its own purpose-built announcement. The generic
             profile/test-site CTA changes the first band of the approved shop
             design and makes the masthead feel like a borrowed component. */}
-        {status !== 'loading' && isShopRoute && (
+        {!isAuthPage && status !== 'loading' && isShopRoute && (
           <div className={styles.shopAnnouncement}>
             {t('nav.shopAnnouncement')}
           </div>
         )}
-        {status !== 'loading' &&
+        {!isAuthPage &&
+          status !== 'loading' &&
           !isProductionSite &&
           !isShopRoute &&
           !session && (
@@ -282,7 +297,8 @@ export default function MainHeader({
               <CallToActionBar variant="test-site" />
             </div>
           )}
-        {status !== 'loading' &&
+        {!isAuthPage &&
+          status !== 'loading' &&
           session &&
           hasProfile === false &&
           !isShopRoute &&
@@ -293,12 +309,21 @@ export default function MainHeader({
           )}
         {/* Centered masthead: menu (left) · logo (center) · actions (right) */}
         <div ref={mastheadRef} className={styles.masthead}>
-          <div className={styles.mastheadInner}>
+          <div
+            className={styles.mastheadInner}
+            data-auth-entry={
+              isAuthPage || (status !== 'loading' && !session)
+                ? 'true'
+                : undefined
+            }
+          >
             <div className={styles.mastheadLeft}>
               <button
                 type="button"
                 className={styles.menuButton}
                 onClick={() => setDrawerOpen(true)}
+                disabled={!isHydrated}
+                aria-label={t('nav.menu')}
                 aria-expanded={drawerOpen}
                 aria-haspopup="dialog"
               >
@@ -312,31 +337,21 @@ export default function MainHeader({
             </div>
 
             <Link
-              href="/"
+              href={authPage?.rootPath ?? '/'}
               className={styles.mastheadLogo}
-              aria-label="Pana Mia"
+              aria-label={headerMark.alt}
             >
               <Image
-                src="/logos/pana_logo_long_orange.png"
-                alt="Pana Mia"
-                width={600}
-                height={150}
+                src={headerMark.src}
+                alt={headerMark.alt}
+                width={headerMark.width}
+                height={headerMark.height}
                 priority
               />
             </Link>
 
             <div className={styles.mastheadRight}>
-              {/* Unauthenticated users: one control, one panel. It used to be
-                  a "Sign Up" pill beside a "Sign In" link, which asked a
-                  visitor to classify themselves before anything had explained
-                  the difference — and this site is passwordless, so there is
-                  no real difference to explain: the account is created the
-                  first time you use a magic link. The pair also cost the right
-                  column the width the `1fr auto 1fr` grid needs to keep the
-                  logo on the page axis, which is why the sign-in link was
-                  hidden below 560px and narrow phones were left with a lone
-                  "Sign Up". */}
-              {status !== 'loading' && !session && (
+              {((status !== 'loading' && !session) || isAuthPage) && (
                 <>
                   {showDirectoryJoin && (
                     <Link
@@ -346,11 +361,11 @@ export default function MainHeader({
                       Join the directory
                     </Link>
                   )}
-                  <AuthMenu triggerClassName={styles.cta} />
+                  <AuthMenu triggerClassName={styles.cta} href={signInHref} />
                 </>
               )}
 
-              {status !== 'loading' && session && (
+              {!isAuthPage && status !== 'loading' && session && (
                 <>
                   <MessagesLink />
                   <NotificationsMenu />
@@ -370,16 +385,17 @@ export default function MainHeader({
           items={drawerItems}
           title={t('nav.menu')}
           closeLabel={t('nav.closeMenu')}
+          mark={authPage?.mark}
           footer={
             <>
-              {status !== 'loading' && !session && (
+              {((status !== 'loading' && !session) || isAuthPage) && (
                 <>
                   <Link
-                    href="/welcome"
+                    href={isSignInEntry ? '#signin-card' : '/welcome'}
                     className={styles.drawerCta}
                     onClick={closeDrawer}
                   >
-                    {t('nav.becomeAPana')}
+                    {t(isSignInEntry ? 'nav.signUp' : 'nav.becomeAPana')}
                   </Link>
                   {/* Mirrors the masthead sign-in button, which stays visible at
                   every width -- this is the in-drawer path to the same page. */}
@@ -388,7 +404,7 @@ export default function MainHeader({
                       i18nKey="nav.alreadyAPana"
                       t={t}
                       components={{
-                        a: <Link href="/signin" onClick={closeDrawer} />,
+                        a: <Link href={signInHref} onClick={closeDrawer} />,
                       }}
                     />
                   </p>
