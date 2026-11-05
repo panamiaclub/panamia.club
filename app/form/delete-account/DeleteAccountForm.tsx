@@ -5,14 +5,17 @@ import { useSession, signOut } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import {
+  ArrowRight,
+  CheckCircle2,
+  Heart,
+  Loader2,
+  TriangleAlert,
+  Trash2,
+} from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Progress } from '@/components/ui/progress';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -99,9 +102,12 @@ export default function DeleteAccountForm() {
 
   if (status === 'loading') {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-lg">Loading...</p>
-      </div>
+      <main className="surface-cream flex min-h-screen items-center justify-center">
+        <p role="status" className="flex items-center gap-2 font-bold">
+          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+          Loading...
+        </p>
+      </main>
     );
   }
 
@@ -187,62 +193,99 @@ export default function DeleteAccountForm() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col py-8 md:py-16">
-      <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-3xl space-y-8">
-          {/* Logo */}
-          <div className="flex justify-center">
-            <Image
-              src="/logos/pana_logo_long_blue.png"
-              alt="Pana MIA"
-              width={400}
-              height={100}
-              className="h-auto max-w-full"
-              priority
-            />
-          </div>
+    <main className="surface-cream min-h-screen pt-8 pb-24 md:pt-12">
+      <div className="container mx-auto max-w-3xl px-4">
+        <div className="space-y-6">
+          <header>
+            <span className="section-eyebrow">Account</span>
+            <h1 className="mt-3 text-3xl font-black tracking-tight md:text-4xl">
+              Delete Your Account
+            </h1>
+            <p className="text-pana-ink/65 mt-3 max-w-xl text-sm leading-relaxed">
+              Review your account data and choices before making a permanent
+              change.
+            </p>
+          </header>
 
-          <h1 className="text-center text-3xl font-bold md:text-4xl">
-            Delete Your Account
-          </h1>
-
-          <Card>
-            <CardContent className="p-6 md:p-8">
+          <div className="profile-card overflow-hidden">
+            <div className="p-5 sm:p-8">
               {/* Progress Bar */}
               {activePage <= 5 && (
-                <div className="mb-8">
-                  <Progress value={progress} className="h-2" />
+                <div className="border-pana-ink/10 mb-8 space-y-3 border-b-2 pb-6">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-extrabold">
+                    <span className="text-pana-indigo tracking-widest uppercase">
+                      Account deletion
+                    </span>
+                    <span className="text-pana-ink/60">
+                      Step {effectivePage} of {totalPages}
+                    </span>
+                  </div>
+                  <div
+                    role="progressbar"
+                    aria-label="Account deletion progress"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={progress}
+                    aria-valuetext={`Step ${effectivePage} of ${totalPages}`}
+                    className="bg-pana-ink/10 h-2 overflow-hidden rounded-full"
+                  >
+                    <div
+                      className="bg-pana-indigo h-full rounded-full transition-[width] motion-reduce:transition-none"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
                 </div>
               )}
 
               {/* Page 1 — Warning + Data Summary */}
               {activePage === 1 && (
-                <div ref={page1Ref} className="space-y-6">
-                  <h2 className="text-2xl font-bold text-red-600">
-                    This is permanent.
-                  </h2>
+                <div ref={page1Ref} className="scroll-mt-24 space-y-6">
+                  <div className="flex items-center gap-3">
+                    <span className="bg-pana-red/10 text-pana-red-deep flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
+                      <TriangleAlert className="h-6 w-6" aria-hidden="true" />
+                    </span>
+                    <h2 className="text-pana-red-deep text-2xl font-black">
+                      This is permanent.
+                    </h2>
+                  </div>
 
-                  <p className="text-lg">
+                  <p className="leading-relaxed">
                     Deleting your account will permanently remove your profile,
                     posts, and personal data. This action cannot be undone.
                   </p>
 
                   {/* Wellness note */}
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
-                    If you&rsquo;re going through a difficult time, you&rsquo;re
-                    not alone. The{' '}
-                    <strong>988 Suicide &amp; Crisis Lifeline</strong> is
-                    available 24/7 &mdash; call or text <strong>988</strong>.
+                  <div className="bg-pana-butter-2 text-pana-ink/70 flex items-start gap-3 rounded-2xl p-4 text-sm leading-relaxed">
+                    <Heart
+                      className="text-pana-burnt mt-0.5 h-5 w-5 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <p>
+                      If you&rsquo;re going through a difficult time,
+                      you&rsquo;re not alone. The{' '}
+                      <strong>988 Suicide &amp; Crisis Lifeline</strong> is
+                      available 24/7 &mdash; call or text <strong>988</strong>.
+                    </p>
                   </div>
 
                   {/* Preflight loading / error */}
                   {preflightLoading && (
-                    <p className="text-muted-foreground">
+                    <p
+                      role="status"
+                      className="text-pana-ink/60 flex items-center gap-2 text-sm font-bold"
+                    >
+                      <Loader2
+                        className="h-4 w-4 animate-spin"
+                        aria-hidden="true"
+                      />
                       Loading your account data...
                     </p>
                   )}
                   {preflightError && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+                    <div
+                      role="alert"
+                      className="border-pana-red/35 bg-pana-red/5 text-pana-red-deep rounded-2xl border-2 p-4 text-sm font-bold"
+                    >
                       {preflightError}
                     </div>
                   )}
@@ -250,13 +293,13 @@ export default function DeleteAccountForm() {
                   {/* Blockers */}
                   {preflight && !preflight.canDelete && (
                     <div className="space-y-2">
-                      <h3 className="font-semibold text-red-600">
+                      <h3 className="text-pana-red-deep font-extrabold">
                         You cannot delete your account yet:
                       </h3>
                       {preflight.blockers.map((b, i) => (
                         <div
                           key={i}
-                          className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700"
+                          className="border-pana-red/35 bg-pana-red/5 text-pana-red-deep rounded-2xl border-2 p-4 text-sm font-bold"
                         >
                           {b}
                         </div>
@@ -267,12 +310,12 @@ export default function DeleteAccountForm() {
                   {/* Data summary */}
                   {preflight && (
                     <div className="space-y-3">
-                      <h3 className="font-semibold">Your account data:</h3>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
+                      <h3 className="font-extrabold">Your account data:</h3>
+                      <div className="grid gap-3 text-sm sm:grid-cols-2">
                         {preflight.summary.articles.total > 0 && (
-                          <div className="rounded border p-3">
-                            <div className="font-medium">Articles</div>
-                            <div className="text-muted-foreground">
+                          <div className="border-pana-ink/10 bg-pana-cream/60 rounded-2xl border-2 p-4">
+                            <div className="font-extrabold">Articles</div>
+                            <div className="text-pana-ink/65 mt-1">
                               {preflight.summary.articles.total} total
                               {preflight.summary.articles.archived > 0 &&
                                 ` (${preflight.summary.articles.archived} archived)`}
@@ -280,18 +323,18 @@ export default function DeleteAccountForm() {
                           </div>
                         )}
                         {preflight.summary.socialPosts.total > 0 && (
-                          <div className="rounded border p-3">
-                            <div className="font-medium">Social Posts</div>
-                            <div className="text-muted-foreground">
+                          <div className="border-pana-ink/10 bg-pana-cream/60 rounded-2xl border-2 p-4">
+                            <div className="font-extrabold">Social Posts</div>
+                            <div className="text-pana-ink/65 mt-1">
                               {preflight.summary.socialPosts.total} (all will be
                               deleted)
                             </div>
                           </div>
                         )}
                         {preflight.summary.events.hosted > 0 && (
-                          <div className="rounded border p-3">
-                            <div className="font-medium">Events Hosted</div>
-                            <div className="text-muted-foreground">
+                          <div className="border-pana-ink/10 bg-pana-cream/60 rounded-2xl border-2 p-4">
+                            <div className="font-extrabold">Events Hosted</div>
+                            <div className="text-pana-ink/65 mt-1">
                               {preflight.summary.events.hosted} total
                               {preflight.summary.events.archived > 0 &&
                                 ` (${preflight.summary.events.archived} archived)`}
@@ -300,9 +343,11 @@ export default function DeleteAccountForm() {
                         )}
                         {(preflight.summary.mentorSessions.completed > 0 ||
                           preflight.summary.mentorSessions.pending > 0) && (
-                          <div className="rounded border p-3">
-                            <div className="font-medium">Mentor Sessions</div>
-                            <div className="text-muted-foreground">
+                          <div className="border-pana-ink/10 bg-pana-cream/60 rounded-2xl border-2 p-4">
+                            <div className="font-extrabold">
+                              Mentor Sessions
+                            </div>
+                            <div className="text-pana-ink/65 mt-1">
                               {preflight.summary.mentorSessions.completed +
                                 preflight.summary.mentorSessions.pending}{' '}
                               total
@@ -310,9 +355,9 @@ export default function DeleteAccountForm() {
                           </div>
                         )}
                         {preflight.summary.mediaFiles > 0 && (
-                          <div className="rounded border p-3">
-                            <div className="font-medium">Media Files</div>
-                            <div className="text-muted-foreground">
+                          <div className="border-pana-ink/10 bg-pana-cream/60 rounded-2xl border-2 p-4">
+                            <div className="font-extrabold">Media Files</div>
+                            <div className="text-pana-ink/65 mt-1">
                               {preflight.summary.mediaFiles} file(s)
                             </div>
                           </div>
@@ -321,15 +366,18 @@ export default function DeleteAccountForm() {
                     </div>
                   )}
 
-                  <div className="flex justify-between pt-6">
-                    <Button
-                      variant="outline"
+                  <div className="border-pana-ink/10 flex flex-col-reverse gap-3 border-t-2 pt-6 sm:flex-row sm:justify-between">
+                    <button
+                      type="button"
+                      className="settings-btn min-h-11 justify-center"
+                      data-variant="quiet"
                       onClick={() => router.push('/settings')}
                     >
                       Cancel
-                    </Button>
-                    <Button
-                      className="bg-red-600 text-white hover:bg-red-700"
+                    </button>
+                    <button
+                      type="button"
+                      className="settings-btn min-h-11 justify-center disabled:pointer-events-none"
                       onClick={goNext}
                       disabled={
                         preflightLoading ||
@@ -338,15 +386,16 @@ export default function DeleteAccountForm() {
                       }
                     >
                       Continue
-                    </Button>
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </div>
                 </div>
               )}
 
               {/* Page 2 — Attribution Choice */}
               {activePage === 2 && (
-                <div ref={page2Ref} className="space-y-6">
-                  <h2 className="text-2xl font-bold">Your Archived Content</h2>
+                <div ref={page2Ref} className="scroll-mt-24 space-y-6">
+                  <h2 className="text-2xl font-black">Your Archived Content</h2>
 
                   <p>
                     Some of your content has been part of the community record
@@ -356,39 +405,51 @@ export default function DeleteAccountForm() {
                   </p>
 
                   <RadioGroup
+                    aria-label="Archived content attribution"
                     value={attributionChoice}
                     onValueChange={(v) =>
                       setAttributionChoice(v as 'keep' | 'anonymize')
                     }
-                    className="space-y-4"
+                    className="gap-3"
                   >
-                    <div className="flex items-start space-x-3 rounded-lg border p-4">
-                      <RadioGroupItem value="keep" id="keep" className="mt-1" />
+                    <div
+                      className={`flex items-start gap-3 rounded-2xl border-2 p-4 ${attributionChoice === 'keep' ? 'border-pana-indigo bg-pana-indigo/5' : 'border-pana-ink/15'}`}
+                    >
+                      <RadioGroupItem
+                        value="keep"
+                        id="keep"
+                        className="border-pana-indigo text-pana-indigo focus-visible:ring-pana-indigo mt-1 h-5 w-5 shrink-0 border-2 ring-offset-white"
+                      />
                       <div>
-                        <Label htmlFor="keep" className="text-base font-medium">
+                        <Label
+                          htmlFor="keep"
+                          className="text-base font-extrabold"
+                        >
                           Keep my name
                         </Label>
-                        <p className="text-muted-foreground text-sm">
+                        <p className="text-pana-ink/65 mt-1 text-sm leading-relaxed">
                           Your name stays on archived articles and events. Your
                           profile is cleared of personal data but kept as a
                           minimal attribution record.
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-start space-x-3 rounded-lg border p-4">
+                    <div
+                      className={`flex items-start gap-3 rounded-2xl border-2 p-4 ${attributionChoice === 'anonymize' ? 'border-pana-indigo bg-pana-indigo/5' : 'border-pana-ink/15'}`}
+                    >
                       <RadioGroupItem
                         value="anonymize"
                         id="anonymize"
-                        className="mt-1"
+                        className="border-pana-indigo text-pana-indigo focus-visible:ring-pana-indigo mt-1 h-5 w-5 shrink-0 border-2 ring-offset-white"
                       />
                       <div>
                         <Label
                           htmlFor="anonymize"
-                          className="text-base font-medium"
+                          className="text-base font-extrabold"
                         >
                           Anonymize (Former Member)
                         </Label>
-                        <p className="text-muted-foreground text-sm">
+                        <p className="text-pana-ink/65 mt-1 text-sm leading-relaxed">
                           Your name is removed from all archived content. It
                           will show as authored by &ldquo;Former Member&rdquo;.
                         </p>
@@ -396,24 +457,31 @@ export default function DeleteAccountForm() {
                     </div>
                   </RadioGroup>
 
-                  <div className="flex justify-between pt-6">
-                    <Button variant="outline" onClick={goPrev}>
+                  <div className="border-pana-ink/10 flex flex-col-reverse gap-3 border-t-2 pt-6 sm:flex-row sm:justify-between">
+                    <button
+                      type="button"
+                      className="settings-btn min-h-11 justify-center"
+                      data-variant="quiet"
+                      onClick={goPrev}
+                    >
                       Cancel
-                    </Button>
-                    <Button
-                      className="bg-red-600 text-white hover:bg-red-700"
+                    </button>
+                    <button
+                      type="button"
+                      className="settings-btn min-h-11 justify-center"
                       onClick={goNext}
                     >
                       Continue
-                    </Button>
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </div>
                 </div>
               )}
 
               {/* Page 3 — Third-Party Services */}
               {activePage === 3 && (
-                <div ref={page3Ref} className="space-y-6">
-                  <h2 className="text-2xl font-bold">Third-Party Services</h2>
+                <div ref={page3Ref} className="scroll-mt-24 space-y-6">
+                  <h2 className="text-2xl font-black">Third-Party Services</h2>
 
                   <p>
                     The following connected services will be cleaned up as part
@@ -421,40 +489,47 @@ export default function DeleteAccountForm() {
                   </p>
 
                   {thirdPartyServices.length > 0 ? (
-                    <ul className="list-inside list-disc space-y-2 text-sm">
+                    <ul className="border-pana-ink/10 bg-pana-cream/60 marker:text-pana-indigo list-inside list-disc space-y-2 rounded-2xl border-2 p-4 text-sm font-bold">
                       {thirdPartyServices.map((s) => (
                         <li key={s}>{s}</li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-muted-foreground text-sm">
+                    <p className="bg-pana-butter-2 text-pana-ink/70 rounded-2xl p-4 text-sm">
                       No third-party services are connected to your account.
                     </p>
                   )}
 
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-pana-ink/65 text-sm leading-relaxed">
                     Active subscriptions will be cancelled. OAuth connections
                     will be revoked. Marketing contacts will be removed.
                   </p>
 
-                  <div className="flex justify-between pt-6">
-                    <Button variant="outline" onClick={goPrev}>
+                  <div className="border-pana-ink/10 flex flex-col-reverse gap-3 border-t-2 pt-6 sm:flex-row sm:justify-between">
+                    <button
+                      type="button"
+                      className="settings-btn min-h-11 justify-center"
+                      data-variant="quiet"
+                      onClick={goPrev}
+                    >
                       Cancel
-                    </Button>
-                    <Button
-                      className="bg-red-600 text-white hover:bg-red-700"
+                    </button>
+                    <button
+                      type="button"
+                      className="settings-btn min-h-11 justify-center"
                       onClick={goNext}
                     >
                       Continue
-                    </Button>
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </div>
                 </div>
               )}
 
               {/* Page 4 — Confirm Email */}
               {activePage === 4 && (
-                <div ref={page4Ref} className="space-y-6">
-                  <h2 className="text-2xl font-bold">Confirm Your Email</h2>
+                <div ref={page4Ref} className="scroll-mt-24 space-y-6">
+                  <h2 className="text-2xl font-black">Confirm Your Email</h2>
 
                   <p>
                     To proceed, please type your email address to confirm you
@@ -462,11 +537,15 @@ export default function DeleteAccountForm() {
                   </p>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-email">
+                    <Label
+                      htmlFor="confirm-email"
+                      className="block text-sm font-extrabold break-words"
+                    >
                       Email: <strong>{session?.user?.email}</strong>
                     </Label>
-                    <Input
+                    <input
                       id="confirm-email"
+                      className="settings-input"
                       type="email"
                       placeholder="Type your email address"
                       value={confirmEmail}
@@ -475,12 +554,18 @@ export default function DeleteAccountForm() {
                     />
                   </div>
 
-                  <div className="flex justify-between pt-6">
-                    <Button variant="outline" onClick={goPrev}>
+                  <div className="border-pana-ink/10 flex flex-col-reverse gap-3 border-t-2 pt-6 sm:flex-row sm:justify-between">
+                    <button
+                      type="button"
+                      className="settings-btn min-h-11 justify-center"
+                      data-variant="quiet"
+                      onClick={goPrev}
+                    >
                       Cancel
-                    </Button>
-                    <Button
-                      className="bg-red-600 text-white hover:bg-red-700"
+                    </button>
+                    <button
+                      type="button"
+                      className="settings-btn min-h-11 justify-center disabled:pointer-events-none"
                       onClick={goNext}
                       disabled={
                         confirmEmail.toLowerCase() !==
@@ -488,15 +573,16 @@ export default function DeleteAccountForm() {
                       }
                     >
                       Continue
-                    </Button>
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </div>
                 </div>
               )}
 
               {/* Page 5 — Final Confirmation */}
               {activePage === 5 && (
-                <div ref={page5Ref} className="space-y-6">
-                  <h2 className="text-2xl font-bold text-red-600">
+                <div ref={page5Ref} className="scroll-mt-24 space-y-6">
+                  <h2 className="text-pana-red-deep text-2xl font-black">
                     Final Step
                   </h2>
 
@@ -505,103 +591,113 @@ export default function DeleteAccountForm() {
                     data will be removed and this cannot be reversed.
                   </p>
 
-                  <div className="flex items-center space-x-3">
+                  <div className="bg-pana-butter-2 flex items-start gap-3 rounded-2xl p-4">
                     <Checkbox
                       id="confirm-understand"
+                      className="border-pana-indigo ring-offset-pana-butter-2 focus-visible:ring-pana-indigo data-[state=checked]:bg-pana-indigo data-[state=checked]:text-pana-cream mt-0.5 h-5 w-5 border-2"
                       checked={confirmUnderstand}
                       onCheckedChange={(checked) =>
                         setConfirmUnderstand(checked as boolean)
                       }
                       disabled={isSubmitting}
                     />
-                    <Label htmlFor="confirm-understand">
+                    <Label
+                      htmlFor="confirm-understand"
+                      className="text-sm leading-relaxed font-bold"
+                    >
                       I understand this is permanent and cannot be undone.
                     </Label>
                   </div>
 
                   {deleteError && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+                    <div
+                      role="alert"
+                      className="border-pana-red/35 bg-pana-red/5 text-pana-red-deep rounded-2xl border-2 p-4 text-sm font-bold"
+                    >
                       {deleteError}
                     </div>
                   )}
 
-                  <div className="flex justify-between pt-6">
-                    <Button
-                      variant="outline"
+                  <div className="border-pana-ink/10 flex flex-col-reverse gap-3 border-t-2 pt-6 sm:flex-row sm:justify-between">
+                    <button
+                      type="button"
+                      className="settings-btn min-h-11 justify-center disabled:pointer-events-none"
+                      data-variant="quiet"
                       onClick={goPrev}
                       disabled={isSubmitting}
                     >
                       Cancel
-                    </Button>
-                    <Button
-                      variant="destructive"
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleDelete}
                       disabled={!confirmUnderstand || isSubmitting}
-                      className="min-w-[180px]"
+                      className="border-pana-red-deep bg-pana-red-deep text-pana-cream hover:border-pana-ink hover:bg-pana-ink focus-visible:outline-pana-red-deep inline-flex min-h-11 items-center justify-center gap-2 rounded-full border-2 px-5 py-2 text-sm font-extrabold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-45 motion-reduce:transition-none"
                     >
                       {isSubmitting ? (
-                        <span className="flex items-center gap-2">
-                          <svg
+                        <>
+                          <Loader2
                             className="h-4 w-4 animate-spin"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            />
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                            />
-                          </svg>
+                            aria-hidden="true"
+                          />
                           Deleting...
-                        </span>
+                        </>
                       ) : (
-                        'Delete My Account'
+                        <>
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          Delete My Account
+                        </>
                       )}
-                    </Button>
+                    </button>
                   </div>
                 </div>
               )}
 
               {/* Page 6 — Done */}
               {activePage === 6 && (
-                <div ref={page6Ref} className="space-y-6 text-center">
-                  <h2 className="text-2xl font-bold">
+                <div
+                  ref={page6Ref}
+                  className="scroll-mt-24 space-y-6 py-4 text-center"
+                >
+                  <div className="bg-pana-indigo/10 text-pana-indigo mx-auto flex h-16 w-16 items-center justify-center rounded-full">
+                    <CheckCircle2 className="h-8 w-8" aria-hidden="true" />
+                  </div>
+                  <h2 className="text-2xl font-black">
                     Your account has been deleted.
                   </h2>
 
-                  <p className="text-muted-foreground">
+                  <p className="text-pana-ink/65 text-sm leading-relaxed">
                     All your personal data has been removed. Thank you for being
                     part of the Pana MIA community.
                   </p>
 
                   <div className="pt-4">
-                    <Link href="/">
-                      <Button variant="outline">Go to Homepage</Button>
+                    <Link
+                      href="/"
+                      className="settings-btn min-h-11 justify-center"
+                    >
+                      Go to Homepage
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </Link>
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {activePage <= 5 && activePage !== 6 && (
-            <p className="text-muted-foreground text-center text-sm">
+            <p className="text-pana-ink/65 text-center text-sm">
               Changed your mind?{' '}
-              <Link href="/settings" className="text-pana-blue underline">
+              <Link
+                href="/settings"
+                className="text-pana-indigo decoration-pana-indigo/40 hover:decoration-pana-indigo font-extrabold underline underline-offset-4"
+              >
                 Return to Settings
               </Link>
             </p>
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }
