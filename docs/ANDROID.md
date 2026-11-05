@@ -71,7 +71,7 @@ Results sheets slide over a fixed map without resizing or recentering it.
 Drag anywhere on the results header; short deliberate swipes advance to the
 next sheet position. Scrolling the results remains independent of the sheet.
 
-The compact native layout uses a 44px app header, a 58px rounded navigation
+The compact native layout uses a 52px app header, a 58px rounded navigation
 dock, and a 54px collapsed results row showing total listings and the In map
 count. Device safe areas and 44px touch targets are preserved. In map and Online
 tabs keep unlocated listings available without a banner covering the map.
@@ -80,6 +80,11 @@ listing and opens a measured two-profile preview, not a filtered single-card
 view. The last listing is shown with the preceding profile. A list with only
 one match shows that profile; short landscape views clamp to the available
 space. Drag up to browse more, or collapse the sheet to return to the map.
+
+The header leaves vertical breathing room around its 44px controls. The dock
+floats over Directory, Social, Community, and Profile; scrolling pages include
+bottom space so their final content can be brought above it. Open conversations
+do not reserve space for the hidden dock.
 
 These are deployed web changes, not a new APK requirement. Apply
 `drizzle/0073_event_bookmarks.sql` before deploying the Worker, then reload the

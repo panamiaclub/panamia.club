@@ -1,11 +1,67 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { calls, nativeBridge } from './fixtures/native-bridge';
 import { installNativeApiFixtures } from './fixtures/native-app-api';
 import type { SearchResultsInterface } from '@/lib/query/directory';
+import type { SocialStatusDisplay } from '@/lib/interfaces';
 
 async function ios(page: Page) {
   await nativeBridge(page, { platform: 'ios', googlePlugin: false });
   return installNativeApiFixtures(page);
+}
+
+async function floatingContent(page: Page, scrollport: Locator, last: Locator) {
+  const app = (await page.locator('[data-native-app]').boundingBox())!;
+  const port = (await scrollport.boundingBox())!;
+  const dock = page.getByRole('navigation', { name: 'App navigation' });
+  const dockBox = (await dock.boundingBox())!;
+  expect(Math.round(port.y + port.height)).toBe(Math.round(app.y + app.height));
+  expect(dockBox.y + dockBox.height).toBeLessThan(port.y + port.height);
+  await expect(last).toBeAttached();
+  await expect
+    .poll(
+      () =>
+        last.evaluate((target) => {
+          let port = target.parentElement;
+          while (
+            port &&
+            !['auto', 'scroll'].includes(getComputedStyle(port).overflowY)
+          ) {
+            port = port.parentElement;
+          }
+          if (!port) throw new Error('No page scroll container');
+          const nav = document.querySelector<HTMLElement>(
+            'nav[aria-label="App navigation"]'
+          )!;
+          const dock = nav.getBoundingClientRect();
+          const before = target.getBoundingClientRect();
+          port.scrollTo({
+            top:
+              port.scrollTop +
+              before.y +
+              before.height / 2 -
+              dock.y -
+              dock.height / 2,
+            behavior: 'instant',
+          });
+          const after = target.getBoundingClientRect();
+          const previous = nav.style.pointerEvents;
+          nav.style.pointerEvents = 'none';
+          const underneath = document.elementFromPoint(
+            after.x + after.width / 2,
+            after.y + after.height / 2
+          );
+          nav.style.pointerEvents = previous;
+          return target.contains(underneath);
+        }),
+      { message: 'Real page content should paint behind the floating dock' }
+    )
+    .toBe(true);
+  await scrollport.evaluate((node) => {
+    node.scrollTo({ top: node.scrollHeight, behavior: 'instant' });
+  });
+  await expect(last).toBeInViewport({ ratio: 1 });
+  const lastBox = (await last.boundingBox())!;
+  expect(lastBox.y + lastBox.height).toBeLessThanOrEqual(dockBox.y - 7);
 }
 
 test.use({
@@ -141,6 +197,15 @@ for (const platform of ['android', 'ios'] as const) {
     await page.route('**/api/account/crm', (route) =>
       route.fulfill({ json: { contact: null } })
     );
+    await page.route('**/api/referrals/me', (route) =>
+      route.fulfill({
+        json: {
+          code: null,
+          referralUrl: null,
+          milestones: { people: 0, accounts: 0, directory: 0, connectors: 0 },
+        },
+      })
+    );
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/d');
     const header = page.locator('[data-native-app] > header');
@@ -175,6 +240,11 @@ for (const platform of ['android', 'ios'] as const) {
         .getByRole('navigation', { name: 'App navigation' })
         .getByRole('link', { name: 'Profile', exact: true })
     ).toHaveAttribute('aria-current', 'page');
+    await floatingContent(
+      page,
+      page.locator('[data-native-app] #layout-main'),
+      page.getByRole('link', { name: 'What we collect and why', exact: true })
+    );
     await page.goto('/account/privacy');
     await expect(
       page.getByRole('link', { name: 'Delete account', exact: true })
@@ -240,10 +310,14 @@ for (const viewport of [
     expect(inbox!.x + inbox!.width).toBeLessThanOrEqual(logo!.x);
     expect(bell!.x).toBeGreaterThanOrEqual(logo!.x + logo!.width);
     expect(avatar!.x).toBeGreaterThanOrEqual(bell!.x + bell!.width);
-    expect(frame!.height).toBe(44);
+    expect(frame!.height).toBe(52);
     for (const control of [inbox, bell, avatar]) {
       expect(control!.width).toBeGreaterThanOrEqual(44);
       expect(control!.height).toBeGreaterThanOrEqual(44);
+      expect(control!.y).toBeGreaterThanOrEqual(frame!.y + 3);
+      expect(control!.y + control!.height).toBeLessThanOrEqual(
+        frame!.y + frame!.height - 3
+      );
     }
     const bounds = await nav.boundingBox();
     expect(bounds).not.toBeNull();
@@ -268,6 +342,79 @@ for (const viewport of [
     ).toBeVisible();
     await nav.getByRole('link', { name: 'Directory', exact: true }).click();
     await expect(search).toBeVisible();
+  });
+}
+
+for (const platform of ['android', 'ios'] as const) {
+  test(`${platform} paints Social and Community behind the floating dock without hiding their last content`, async ({
+    page,
+  }, testInfo) => {
+    await nativeBridge(page, {
+      platform,
+      googlePlugin: platform === 'android',
+    });
+    const fixtures = await installNativeApiFixtures(page);
+    for (let index = 0; index < 8; index++) {
+      fixtures.state.saved.get('personal')!.add(`event-${index}`);
+    }
+    const statuses: SocialStatusDisplay[] = Array.from(
+      { length: 8 },
+      (_, index) => ({
+        id: `dock-post-${index}`,
+        uri: `https://example.invalid/posts/dock-${index}`,
+        content: `<p>Floating dock story ${index}</p><p>${'A little room for neighborhood stories. '.repeat(12)}</p>`,
+        published: '2026-11-01T12:00:00.000Z',
+        repliesCount: 0,
+        likesCount: 0,
+        liked: false,
+        actor: {
+          id: 'dock-author',
+          username: 'neighbor',
+          name: 'Neighborhood friend',
+          domain: 'example.invalid',
+        },
+        recipientTo: ['https://www.w3.org/ns/activitystreams#Public'],
+        recipientCc: [],
+        attachments: [],
+      })
+    );
+    await page.route(/\/api\/social\/(?:timeline|statuses)(?:\?|$)/, (route) =>
+      route.fulfill({
+        json: { success: true, data: { statuses, nextCursor: null } },
+      })
+    );
+    await page.route('**/api/directory/featured?*', (route) =>
+      route.fulfill({ json: { success: true, data: [] } })
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/s');
+    const social = page.getByRole('region', { name: 'Social', exact: true });
+    await expect(
+      social.getByText('Floating dock story 7', { exact: true })
+    ).toBeVisible();
+    await floatingContent(
+      page,
+      social,
+      social.getByText("You're all caught up", { exact: true })
+    );
+    const preview = testInfo.outputPath(`floating-social-${platform}.png`);
+    await page.screenshot({ path: preview });
+    await testInfo.attach('floating-social', {
+      path: preview,
+      contentType: 'image/png',
+    });
+    await page
+      .getByRole('navigation', { name: 'App navigation' })
+      .getByRole('link', { name: 'Community', exact: true })
+      .click();
+    const community = page.getByRole('region', {
+      name: 'Community',
+      exact: true,
+    });
+    await expect(
+      community.getByText('Coffee at Bay Cafe', { exact: true })
+    ).toBeVisible();
+    await floatingContent(page, community, community.locator('article').last());
   });
 }
 
