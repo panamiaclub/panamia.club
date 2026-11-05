@@ -198,12 +198,25 @@ for a still image, or **Video** to tap to start/stop a recording with sound.
 Videos stop automatically after 60 seconds. The camera-switch button changes
 between front and rear cameras when available.
 
+The live frame and camera captures are vertical (9:16). A landscape camera
+stream is center-cropped rather than stretched or letterboxed; photos and
+recorded video use the same portrait frame. Videos retain microphone sound.
+
 Review the capture, **Retake** if needed, or choose **Use photo / Use video** to
 upload it through the existing story uploader. Add a caption and tap **Post
 story** to publish; capturing or uploading alone does not publish anything.
-**Choose from gallery** remains available without camera permissions.
+**Choose from gallery** opens Android's photo/video library directly through
+the native FilePicker plugin, without camera or broad storage permissions.
+It stays in the camera view until a file is selected, then offers the same
+local review and **Use photo / Use video** action as a capture. Canceling
+resumes the camera without opening the editor or uploading anything.
 Recorded MP4 and WebM clips use the same H.264/AAC MP4 conversion as gallery
 videos, so the posted story remains playable across Android, iOS, and browsers.
+
+Install a rebuilt app after `yarn mobile:sync` to register the library plugin.
+Older builds explicitly report that an update is needed and use the system
+picker in the meantime. Browsers keep the system file picker; a web page
+cannot bypass its source menu.
 
 Camera access is requested only after tapping **Your story (+)** or reopening
 the camera from the editor; microphone access is requested only when starting

@@ -82,6 +82,7 @@ const config: CapacitorConfig = {
     backgroundColor: '#fff7ec',
     // iOS uses email links; do not ship the Android-only Google sign-in SDK.
     includePlugins: [
+      '@capawesome/capacitor-file-picker',
       '@capacitor/app',
       '@capacitor/browser',
       '@capacitor/network',

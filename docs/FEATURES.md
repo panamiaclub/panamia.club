@@ -115,6 +115,12 @@ Multimedia microblogging platform integrated into the community. Built on [Activ
 - **Direct Messages**: Private conversations at `/messages`, with text and GIF attachments and a 30-day visibility window
 - **Stories**: Your story (+) opens the live photo/video camera directly on web and native. Gallery selection remains available; captures are reviewed before upload, captioning, and explicit posting for 24 hours.
 
+Story capture uses a shared vertical 9:16 frame for preview, photos, and video
+with sound. Native apps open the photo/video library directly and review a
+selection in the camera view; browsers retain their system picker. Native
+library access requires an updated app build, with an explicit update notice
+and system-picker fallback on older builds.
+
 The story strip keeps a larger owner bubble and at least four other-story slots. Unfilled
 slots are subtle, noninteractive ghost circles, not fake accounts or loading
 indicators. Real stories replace them, stay in unseen-first order, and can scroll

@@ -168,6 +168,7 @@ test('the iOS shell includes only supported plugins and the matching native iden
   );
   assert.doesNotMatch(swift, /CapgoCapacitorSocialLogin/);
   for (const plugin of [
+    'CapawesomeCapacitorFilePicker',
     'CapacitorApp',
     'CapacitorBrowser',
     'CapacitorNetwork',

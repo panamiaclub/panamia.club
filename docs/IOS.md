@@ -47,6 +47,15 @@ the corresponding iPad screenshots.
   still available if permission is denied or a camera is unavailable. Camera
   access is requested on that action, not at launch; the microphone is requested
   only when recording video. Captures are reviewed before upload and posting.
+- Story preview, captured photos, and recorded video use the same vertical
+  9:16 center crop, even when WebKit supplies a landscape camera stream.
+  The images icon opens the native photo/video library (PHPicker), not the
+  browser's Photo Library / Take Photo / Choose Files menu. A selection is
+  reviewed before upload; canceling stays in the camera. The plugin converts
+  HEIC selections to JPEG when needed without requesting broad library access.
+  Sync and rebuild the iOS app to include the new FilePicker plugin. Older
+  app versions show an update notice and retain the system picker. Mobile
+  Safari still controls its own source menu; the site cannot suppress it.
 - The compact header centers the Pana Mia Club wordmark, with messages on the
   left and notifications/account on the right. Detail pages retain Back and
   event-save controls. Account menus offer bug and safety reporting above
