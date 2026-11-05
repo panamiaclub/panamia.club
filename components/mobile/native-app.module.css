@@ -357,28 +357,27 @@
 }
 
 .pin[data-online-zip] {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: grid;
   width: auto;
-  min-width: 112px;
-  min-height: 44px;
-  padding: 6px 10px;
-  border: 2px solid var(--color-pana-indigo);
+  min-width: 64px;
+  height: 44px;
+  padding: 0 2px;
+  border: 0;
   border-radius: 999px;
-  background: white;
+  background: transparent;
   color: var(--color-pana-indigo);
-  font-size: 12px;
+  box-shadow: none;
 }
 
-.pin[data-online-zip] strong {
-  display: grid;
-  place-items: center;
-  min-width: 22px;
-  height: 22px;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  font-size: 11px;
+.pin[data-online-zip][aria-pressed='true'],
+.pin[data-online-zip]:focus-visible {
+  outline: none;
+}
+
+.pin[data-online-zip][aria-pressed='true'] :global(.dirsearch-zip-label),
+.pin[data-online-zip]:focus-visible :global(.dirsearch-zip-label) {
+  outline: 2px solid var(--color-pana-indigo);
+  outline-offset: 2px;
 }
 
 .pin[aria-pressed='true'] {
@@ -387,13 +386,17 @@
 }
 
 .pin img {
+  /* Intrinsic image height must not enlarge the marker's grid track. */
+  position: absolute;
+  inset: 0;
+  display: block;
   width: 100%;
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
 }
 
-.pin > span {
+.pinCount {
   position: absolute;
   top: -7px;
   right: -7px;

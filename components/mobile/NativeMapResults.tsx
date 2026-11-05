@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from 'react';
 import dynamic from 'next/dynamic';
-import { ChevronDown, ChevronUp, Globe, MapPin } from 'lucide-react';
+import { ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { nativeMapPins, type NativeResult } from '@/lib/mobile/browse';
 import { mapContainsPoint, type MapBounds } from '@/lib/map/viewport';
 import {
@@ -360,11 +360,10 @@ export default function NativeMapResults({
         }}
       >
         {pin.zipArea ? (
-          <>
-            <Globe size={18} aria-hidden="true" />
+          <span className="dirsearch-zip-label">
             <b>{pin.zipArea.postalCode}</b>
             <strong>{pin.items.length}</strong>
-          </>
+          </span>
         ) : pin.items[0].image || pin.items[0].kind === 'directory' ? (
           <img src={pin.items[0].image || '/img/bg_coconut_blue.jpg'} alt="" />
         ) : (
@@ -372,7 +371,9 @@ export default function NativeMapResults({
         )}
         {!pin.zipArea &&
           pin.items.length > 1 &&
-          pin.items[0].kind !== 'directory' && <span>{pin.items.length}</span>}
+          pin.items[0].kind !== 'directory' && (
+            <span className={styles.pinCount}>{pin.items.length}</span>
+          )}
       </button>
     ),
   }));

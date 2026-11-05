@@ -90,6 +90,10 @@ The status-area surface and native headers use the same solid Pana cream
 (`#fff7ec`). The website's directory masthead palette is scoped to the website,
 so it cannot tint the native app or results-sheet headers.
 
+ZIP markers use compact 24px-tall ZIP-and-count labels inside 44px tap targets.
+Photo markers crop portrait and landscape images into the same circular frame;
+event-cluster counts remain visible outside that frame.
+
 These are deployed web changes, not a new APK requirement. Apply
 `drizzle/0073_event_bookmarks.sql` before deploying the Worker, then reload the
 app. Saving an event is a private bookmark, not an RSVP. Normal browsers keep

@@ -27,6 +27,8 @@ the corresponding iPad screenshots.
   screens do not retain an empty dock-sized footer when the dock is hidden.
 - The status-area surface and native headers share solid Pana cream (`#fff7ec`).
   Website masthead colors do not override the native app or results-sheet headers.
+- ZIP markers use compact 24px ZIP-and-count labels with 44px tap targets.
+  Portrait and landscape listing images stay cropped inside circular photo pins.
 - The native frame respects the notch, landscape insets, home indicator, and
   visible keyboard viewport. Tabs hide while the keyboard covers the screen,
   form text avoids WebKit's focus zoom, and story captions stay above the keyboard.
