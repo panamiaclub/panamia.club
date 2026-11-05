@@ -207,6 +207,20 @@ async function fixtures(
   };
 }
 
+test('website directory preserves its cream masthead', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await fixtures(page);
+  await page.goto('/directory/search?radius=all');
+  await expect(page.locator('body > header')).toHaveCSS(
+    'background-color',
+    'rgb(252, 242, 231)'
+  );
+  await expect(page.locator('.dirsearch')).toHaveCSS(
+    'background-color',
+    'rgb(252, 242, 231)'
+  );
+});
+
 test('ZIP bubbles focus In map while retaining the unlocated Online section', async ({
   page,
 }) => {
