@@ -21,6 +21,14 @@ the corresponding iPad screenshots.
   selection scrolls the complete list to a highlighted, measured two-profile
   preview while the map stays fixed. Status-bar and home-indicator safe areas
   remain protected; very short landscape views show one profile when needed.
+- Location sits inside search, above compact Category, Visit, Certified, and
+  Events dropdowns. Visit uses declared online-only status, not missing
+  coordinates: Both includes all, In person excludes online-only listings,
+  and Online includes them. Unlocated results remain under Without location.
+  Menus include Clear all and Done, remain above the dock, and preserve the
+  map camera while refining results. Clear all keeps search text and location.
+  Very short landscape views place the filters alongside search so pins remain
+  reachable without hiding the filter controls.
 - The header contains its 44px controls with vertical breathing room. The tab
   dock floats over Social, Community, and Profile as well as the map, with
   scroll space to keep final content reachable. Keyboard and conversation
