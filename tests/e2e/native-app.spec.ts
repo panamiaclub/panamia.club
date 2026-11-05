@@ -1414,7 +1414,12 @@ test('one mixed Social feed saves the filter row while keeping posting audience 
     path: test.info().outputPath('native-mixed-feed.png'),
   });
   await page.getByRole('button', { name: 'Post a story' }).click();
-  await page.getByRole('button', { name: 'Open camera', exact: true }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Story camera', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Take photo', exact: true })
+  ).toBeEnabled();
   await expect
     .poll(() =>
       page.evaluate(

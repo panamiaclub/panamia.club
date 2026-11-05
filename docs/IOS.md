@@ -35,7 +35,10 @@ the corresponding iPad screenshots.
 - The iOS WebView enables back/forward history gestures. Its scene delegate
   forwards cold and warm Universal Links and email-auth scheme links to Capacitor.
 - Camera, microphone, and foreground-location usage descriptions are included.
-  Camera and microphone access is requested by the existing story UI, not at launch.
+  **Your story (+)** opens the shared live camera directly, with gallery access
+  still available if permission is denied or a camera is unavailable. Camera
+  access is requested on that action, not at launch; the microphone is requested
+  only when recording video. Captures are reviewed before upload and posting.
 - The compact header centers the Pana Mia Club wordmark, with messages on the
   left and notifications/account on the right. Detail pages retain Back and
   event-save controls. Account menus offer bug and safety reporting above
