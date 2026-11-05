@@ -1,5 +1,6 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import type { CalendarEntry } from '@/lib/query/social';
+import type { SocialStatusDisplay } from '@/lib/interfaces';
 
 test.use({
   launchOptions: {
@@ -53,6 +54,7 @@ async function openComposer(
     upload?: (route: Route) => Promise<void>;
     post?: (route: Route) => Promise<void>;
     story?: (route: Route) => Promise<void>;
+    timeline?: (route: Route) => Promise<void>;
   } = {}
 ) {
   const posts: Record<string, unknown>[] = [];
@@ -165,6 +167,9 @@ async function openComposer(
       expect(request.headers()['content-type']).toBe('video/mp4');
       videoUploads.files.push(request.postDataBuffer()!);
       return route.fulfill({ status: 200, body: '' });
+    }
+    if (path === '/api/social/timeline' && handlers.timeline) {
+      return handlers.timeline(route);
     }
     if (path === '/api/social/timeline' || path === '/api/social/statuses') {
       return json({ success: true, data: { statuses: [], nextCursor: null } });
@@ -738,13 +743,19 @@ test.describe('story camera', () => {
   });
 });
 
-test('compact composer keeps media and Everyone/Panas visible at desktop, tablet and phone sizes', async ({
+test('one mixed feed removes the reading switch but keeps Everyone/Panas publishing at every size', async ({
   page,
 }) => {
   const { composer } = await openComposer(page);
   await expect(
-    page.getByRole('tab', { name: 'Everyone', exact: true })
-  ).toHaveAttribute('aria-selected', 'true');
+    page.getByRole('region', { name: 'Community feed', exact: true })
+  ).toBeVisible();
+  await expect(page.getByRole('tablist', { name: 'Feed filters' })).toHaveCount(
+    0
+  );
+  await expect(page.getByRole('tab', { name: /Everyone|Panas/ })).toHaveCount(
+    0
+  );
   await expect(
     composer.getByRole('button', { name: 'Audience: Everyone' })
   ).toBeVisible();
@@ -803,6 +814,83 @@ test('compact composer keeps media and Everyone/Panas visible at desktop, tablet
       .getByRole('region', { name: 'Coming up', exact: true })
       .getByRole('link', { name: /Community table/ })
   ).toHaveAttribute('href', '/e/community-table');
+});
+
+test('mixed-feed pagination preserves server order and loaded posts through retries without duplicate cards', async ({
+  page,
+}) => {
+  const status = (id: string, content: string): SocialStatusDisplay => ({
+    id,
+    uri: `https://localhost/p/fixture/${id}`,
+    content: `<p>${content}</p>`,
+    published: '2026-11-05T12:00:00Z',
+    actor: {
+      id: 'fixture-actor',
+      username: 'fixture',
+      name: 'Fixture Pana',
+      domain: 'localhost',
+    },
+    repliesCount: 0,
+    likesCount: 0,
+    liked: false,
+  });
+  const pana = status('pana-first', 'A recent Pana moment.');
+  const community = status('community', 'A fresh community moment.');
+  const older = status('older', 'An older community moment.');
+  let failNext = true;
+  const cursors: (string | null)[] = [];
+  await openComposer(page, {
+    timeline: (route) => {
+      const cursor = new URL(route.request().url()).searchParams.get('cursor');
+      cursors.push(cursor);
+      if (cursor && failNext) {
+        return route.fulfill({
+          status: 503,
+          json: { success: false, error: 'Try again later.' },
+        });
+      }
+      return route.fulfill({
+        json: {
+          success: true,
+          data: cursor
+            ? { statuses: [community, older], nextCursor: null }
+            : { statuses: [pana, community], nextCursor: 'next-page' },
+        },
+      });
+    },
+  });
+  const feed = page.getByRole('region', {
+    name: 'Community feed',
+    exact: true,
+  });
+  await expect(
+    feed.getByText('A recent Pana moment.', { exact: true })
+  ).toBeVisible();
+  await expect(feed.locator('.feed-end')).toHaveCount(0);
+  const cards = feed.locator('article');
+  await expect(cards.nth(0)).toContainText('A recent Pana moment.');
+  await expect(cards.nth(1)).toContainText('A fresh community moment.');
+  await feed.getByRole('button', { name: 'Load more posts' }).click();
+  await expect(feed.getByRole('alert')).toContainText(
+    'Could not load more posts.'
+  );
+  await expect(
+    feed.getByText('A recent Pana moment.', { exact: true })
+  ).toBeVisible();
+  failNext = false;
+  await feed.getByRole('button', { name: 'Try again', exact: true }).click();
+  await expect(
+    feed.getByText('An older community moment.', { exact: true })
+  ).toBeVisible();
+  await expect(
+    feed.getByText('A fresh community moment.', { exact: true })
+  ).toHaveCount(1);
+  await expect(feed.getByRole('alert')).toHaveCount(0);
+  await expect(
+    feed.getByRole('button', { name: 'Load more posts' })
+  ).toHaveCount(0);
+  await expect(feed.locator('.feed-end')).toBeVisible();
+  expect(cursors).toContain('next-page');
 });
 
 test('writing expands the card, Done collapses an empty draft, and labelled buttons open the real pickers', async ({

@@ -8,12 +8,12 @@
  * @see docs/SOCIAL-ROADMAP.md
  */
 
+import { Buffer } from 'node:buffer';
 import { db } from '@/lib/db';
 import {
   socialStatuses,
   socialActors,
   socialLikes,
-  socialGroupMembers,
   PUBLIC_ACTOR_COLUMNS,
   STATUS_TYPE_STORY,
 } from '@/lib/schema';
@@ -28,6 +28,8 @@ import {
   sql,
   or,
   asc,
+  desc,
+  lt,
   inArray,
   isNotNull,
   isNull,
@@ -289,6 +291,136 @@ export type TimelineResult = {
   nextCursor: string | null;
 };
 
+function homeTimelineAudience(
+  actorId: string,
+  mutualActorIds: string[],
+  memberGroupIds: string[]
+): SQL {
+  return or(
+    and(
+      inArray(socialStatuses.actorId, [...mutualActorIds, actorId]),
+      isNull(socialStatuses.groupId),
+      or(isPublicStatus(), eq(socialStatuses.type, STATUS_TYPE_PANAS)),
+      visibleTo(actorId)
+    ),
+    memberGroupIds.length > 0
+      ? inArray(socialStatuses.groupId, memberGroupIds)
+      : sql`false`
+  )!;
+}
+
+function publicTimelineAudience(viewerGroupIds: string[]): SQL {
+  return and(
+    inArray(
+      socialStatuses.actorId,
+      db
+        .select({ id: socialActors.id })
+        .from(socialActors)
+        .where(localActorFilter(socialConfig.domain))
+    ),
+    jsonbArrayContains(socialStatuses.recipientTo, PUBLIC),
+    notPanasStatus(),
+    visibleGroupStatuses(viewerGroupIds)
+  )!;
+}
+
+const PANA_FEED_BOOST_MS = 6 * 60 * 60 * 1000;
+
+export interface FeedCursor {
+  rank: number;
+  id: string;
+}
+
+export function parseFeedCursor(value: string): FeedCursor | null {
+  if (value.length > 512 || !/^[A-Za-z0-9_-]+$/.test(value)) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
+  } catch {
+    return null;
+  }
+  if (
+    !parsed ||
+    typeof parsed !== 'object' ||
+    !('version' in parsed) ||
+    parsed.version !== 1 ||
+    !('rank' in parsed) ||
+    typeof parsed.rank !== 'number' ||
+    !Number.isSafeInteger(parsed.rank) ||
+    !('id' in parsed) ||
+    typeof parsed.id !== 'string' ||
+    !/^[A-Za-z0-9_-]{1,128}$/.test(parsed.id)
+  ) {
+    return null;
+  }
+  return { rank: parsed.rank, id: parsed.id };
+}
+
+/** One community feed. A six-hour boost favors Panas without pinning old posts. */
+export async function getFeedTimeline(
+  actorId: string,
+  cursor?: FeedCursor,
+  limit: number = 20
+): Promise<TimelineResult> {
+  const mutualActorIds = await listMutualFollowIds(actorId);
+  const memberGroupIds = await getViewerGroupIds(actorId);
+  const hiddenActorIds = await getHiddenActorIds(actorId);
+  const mutuals = new Set(mutualActorIds);
+  const bonus =
+    mutualActorIds.length > 0
+      ? sql`CASE WHEN ${inArray(socialStatuses.actorId, mutualActorIds)}
+          THEN ${PANA_FEED_BOOST_MS} ELSE 0 END`
+      : sql`0`;
+  // Match JS Date precision so a cursor cannot skip rows with sub-millisecond timestamps.
+  const rank = sql`(floor(extract(epoch FROM ${socialStatuses.published}) * 1000)::bigint + ${bonus})`;
+  const rows = await db.query.socialStatuses.findMany({
+    where: and(
+      or(
+        homeTimelineAudience(actorId, mutualActorIds, memberGroupIds),
+        publicTimelineAudience(memberGroupIds)
+      ),
+      isNotNull(socialStatuses.published),
+      isNull(socialStatuses.inReplyToId),
+      notExpired(),
+      excludeStories(),
+      notHidden(hiddenActorIds),
+      cursor
+        ? or(
+            lt(rank, cursor.rank),
+            and(eq(rank, cursor.rank), lt(socialStatuses.id, cursor.id))
+          )
+        : undefined
+    ),
+    with: {
+      actor: ACTOR_WITH,
+      attachments: true,
+      group: GROUP_WITH,
+      likes: {
+        where: eq(socialLikes.actorId, actorId),
+        columns: { id: true },
+      },
+    },
+    orderBy: [desc(rank), desc(socialStatuses.id)],
+    limit: limit + 1,
+  });
+  const hasMore = rows.length > limit;
+  const items = rows.slice(0, limit);
+  const last = items.at(-1);
+  const nextCursor =
+    hasMore && last?.published
+      ? Buffer.from(
+          JSON.stringify({
+            version: 1,
+            rank:
+              last.published.getTime() +
+              (mutuals.has(last.actorId) ? PANA_FEED_BOOST_MS : 0),
+            id: last.id,
+          })
+        ).toString('base64url')
+      : null;
+  return { statuses: items.map(toStatus), nextCursor };
+}
+
 /**
  * Get home timeline: mutual Panas, own posts, and joined groups.
  *
@@ -312,20 +444,10 @@ export async function getHomeTimeline(
   limit: number = 20
 ): Promise<TimelineResult> {
   const mutualActorIds = await listMutualFollowIds(actorId);
-  const timelineActorIds = [...mutualActorIds, actorId];
 
   // Groups this person is actually in. Their posts reach the feed on
   // membership alone, with no follow and no public addressing involved.
-  const memberGroupIds = await db
-    .select({ groupId: socialGroupMembers.groupId })
-    .from(socialGroupMembers)
-    .where(
-      and(
-        eq(socialGroupMembers.actorId, actorId),
-        eq(socialGroupMembers.status, 'active')
-      )
-    )
-    .then((rows) => rows.map((r) => r.groupId));
+  const memberGroupIds = await getViewerGroupIds(actorId);
 
   const hiddenActorIds = await getHiddenActorIds(actorId);
 
@@ -344,26 +466,9 @@ export async function getHomeTimeline(
      * Group posts never use the Pana arm: being a mutual Pana of the author
      * must not substitute for joining the group.
      */
-    where: (s, { and: andOp, inArray, isNotNull, isNull }) =>
+    where: (s, { and: andOp, isNotNull, isNull }) =>
       andOp(
-        or(
-          andOp(
-            sql`${s.actorId} = ANY(ARRAY[${sql.join(
-              timelineActorIds.map((id) => sql`${id}`),
-              sql`, `
-            )}]::text[])`,
-            isNull(s.groupId),
-            or(
-              jsonbArrayContains(socialStatuses.recipientTo, PUBLIC),
-              jsonbArrayContains(socialStatuses.recipientCc, PUBLIC),
-              eq(socialStatuses.type, STATUS_TYPE_PANAS)
-            ),
-            visibleTo(actorId)
-          ),
-          memberGroupIds.length > 0
-            ? inArray(s.groupId, memberGroupIds)
-            : sql`false`
-        ),
+        homeTimelineAudience(actorId, mutualActorIds, memberGroupIds),
         isNotNull(s.published),
         isNull(s.inReplyToId),
         notExpired(),
@@ -518,22 +623,7 @@ export async function getPublicTimeline(
       and(
         isNotNull(s.published),
         isNull(s.inReplyToId),
-        // Profile ownership keeps legacy-domain members local; canonical
-        // actors may not have a profile (for example, group identities).
-        inArray(
-          s.actorId,
-          db
-            .select({ id: socialActors.id })
-            .from(socialActors)
-            .where(localActorFilter(socialConfig.domain))
-        ),
-        jsonbArrayContains(socialStatuses.recipientTo, PUBLIC),
-        notPanasStatus(),
-        // Public addressing already excludes private group posts, so this is
-        // belt and braces — but the two conditions are independent, and the
-        // day someone posts a PUBLIC-addressed note into a private group this
-        // is the line that keeps the town square from being the leak.
-        visibleGroupStatuses(viewerGroupIds),
+        publicTimelineAudience(viewerGroupIds),
         notExpired(),
         excludeStories(),
         notHidden(hiddenActorIds),
