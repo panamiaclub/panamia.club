@@ -1020,42 +1020,60 @@ for (const platform of ['android', 'ios'] as const) {
   }
 }
 
-test('the iOS frame follows the keyboard and restores tabs after dismissal', async ({
-  page,
-}) => {
-  await ios(page);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.addInitScript(() => {
-    Object.defineProperty(window, 'visualViewport', {
-      configurable: true,
-      value: Object.assign(new EventTarget(), {
-        height: 844,
-        offsetTop: 0,
-        scale: 1,
-      }),
+for (const resize of ['visual-only', 'whole-WebView'] as const) {
+  test(`the iOS frame follows ${resize} keyboard resizing and restores tabs after dismissal`, async ({
+    page,
+  }) => {
+    await ios(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.addInitScript(() => {
+      Object.defineProperty(window, 'visualViewport', {
+        configurable: true,
+        value: Object.assign(new EventTarget(), {
+          height: 844,
+          offsetTop: 0,
+          scale: 1,
+        }),
+      });
     });
+    await page.goto('/d');
+    const nav = page.getByRole('navigation', { name: 'App navigation' });
+    await expect(nav).toBeVisible();
+    await page.getByRole('searchbox', { name: 'Search directory' }).focus();
+    await expect(nav).toBeVisible();
+    const keyboardTop = resize === 'visual-only' ? 20 : 0;
+    if (resize === 'whole-WebView') {
+      await page.setViewportSize({ width: 390, height: 440 });
+    }
+    await page.evaluate((offsetTop) => {
+      Object.assign(window.visualViewport!, { height: 440, offsetTop });
+      window.visualViewport!.dispatchEvent(new Event('resize'));
+    }, keyboardTop);
+    if (resize === 'whole-WebView') {
+      expect(
+        await page.evaluate(() => ({
+          layout: window.innerHeight,
+          visual: window.visualViewport!.height,
+        }))
+      ).toEqual({ layout: 440, visual: 440 });
+    }
+    await expect(nav).toBeHidden();
+    await expect
+      .poll(async () => {
+        const frame = await page.locator('[data-native-app]').boundingBox();
+        return { top: Math.round(frame!.y), height: Math.round(frame!.height) };
+      })
+      .toEqual({ top: keyboardTop, height: 440 });
+    if (resize === 'whole-WebView') {
+      await page.setViewportSize({ width: 390, height: 844 });
+    }
+    await page.evaluate(() => {
+      Object.assign(window.visualViewport!, { height: 844, offsetTop: 0 });
+      window.visualViewport!.dispatchEvent(new Event('resize'));
+    });
+    await expect(nav).toBeVisible();
   });
-  await page.goto('/d');
-  const nav = page.getByRole('navigation', { name: 'App navigation' });
-  await expect(nav).toBeVisible();
-  await page.getByRole('searchbox', { name: 'Search directory' }).focus();
-  await page.evaluate(() => {
-    Object.assign(window.visualViewport!, { height: 440, offsetTop: 20 });
-    window.visualViewport!.dispatchEvent(new Event('resize'));
-  });
-  await expect(nav).toBeHidden();
-  await expect
-    .poll(async () => {
-      const frame = await page.locator('[data-native-app]').boundingBox();
-      return { top: Math.round(frame!.y), height: Math.round(frame!.height) };
-    })
-    .toEqual({ top: 20, height: 440 });
-  await page.evaluate(() => {
-    Object.assign(window.visualViewport!, { height: 844, offsetTop: 0 });
-    window.visualViewport!.dispatchEvent(new Event('resize'));
-  });
-  await expect(nav).toBeVisible();
-});
+}
 
 test('story captions stay inside the visible iOS viewport above the keyboard', async ({
   page,

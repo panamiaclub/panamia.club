@@ -25,13 +25,22 @@ function installViewport(t: TestContext) {
   });
   const properties = new Map<string, string>();
   const attributes = new Set<string>();
+  const browser = Object.assign(new EventTarget(), {
+    visualViewport: viewport,
+    innerWidth: 390,
+    innerHeight: 844,
+  });
+  let editing = false;
   Object.defineProperty(globalThis, 'window', {
     configurable: true,
-    value: { visualViewport: viewport, innerHeight: 844 },
+    value: browser,
   });
   Object.defineProperty(globalThis, 'document', {
     configurable: true,
-    value: {
+    value: Object.assign(new EventTarget(), {
+      activeElement: {
+        matches: (selector: string) => selector === ':read-write' && editing,
+      },
       documentElement: {
         style: {
           getPropertyValue: (name: string) => properties.get(name) ?? '',
@@ -43,9 +52,17 @@ function installViewport(t: TestContext) {
         toggleAttribute: (name: string, enabled: boolean) =>
           enabled ? attributes.add(name) : attributes.delete(name),
       },
-    },
+    }),
   });
-  return { viewport, properties, attributes };
+  return {
+    viewport,
+    properties,
+    attributes,
+    browser,
+    setEditing: (value: boolean) => {
+      editing = value;
+    },
+  };
 }
 
 test('viewport observation follows keyboard resizing and panning, but not pinch zoom', (t) => {
@@ -103,4 +120,105 @@ test('unsupported visual viewport APIs leave existing layout state alone', (t) =
   assert.equal(properties.get('--native-viewport-height'), '600px');
   stop();
   assert.ok(attributes.has('data-native-keyboard'));
+});
+
+test('native resizing detects the keyboard when the layout and visual viewport shrink together', (t) => {
+  const { browser, viewport, properties, attributes, setEditing } =
+    installViewport(t);
+  setEditing(true);
+  const stop = trackNativeViewport();
+  for (const height of [744, 743, 390, 844]) {
+    browser.innerHeight = height;
+    viewport.height = height;
+    viewport.dispatchEvent(new Event('resize'));
+    assert.equal(properties.get('--native-viewport-height'), `${height}px`);
+    assert.equal(attributes.has('data-native-keyboard'), height < 744);
+  }
+  stop();
+});
+
+test('focusing with a hardware keyboard and an ordinary unfocused resize do not hide the dock', (t) => {
+  const { browser, viewport, attributes, setEditing } = installViewport(t);
+  const stop = trackNativeViewport();
+  setEditing(true);
+  viewport.dispatchEvent(new Event('resize'));
+  assert.ok(!attributes.has('data-native-keyboard'));
+  setEditing(false);
+  browser.innerHeight = 600;
+  viewport.height = 600;
+  viewport.dispatchEvent(new Event('resize'));
+  assert.ok(!attributes.has('data-native-keyboard'));
+  setEditing(true);
+  browser.innerHeight = 390;
+  viewport.height = 390;
+  viewport.dispatchEvent(new Event('resize'));
+  assert.ok(attributes.has('data-native-keyboard'));
+  stop();
+});
+
+test('rotation resets the available layout height rather than treating landscape as a keyboard', (t) => {
+  const { browser, viewport, attributes, setEditing } = installViewport(t);
+  const stop = trackNativeViewport();
+  setEditing(true);
+  browser.innerWidth = 844;
+  browser.innerHeight = 390;
+  viewport.height = 390;
+  viewport.dispatchEvent(new Event('resize'));
+  assert.ok(!attributes.has('data-native-keyboard'));
+  browser.innerHeight = 200;
+  viewport.height = 200;
+  viewport.dispatchEvent(new Event('resize'));
+  assert.ok(attributes.has('data-native-keyboard'));
+  browser.innerHeight = 390;
+  viewport.height = 390;
+  viewport.dispatchEvent(new Event('resize'));
+  assert.ok(!attributes.has('data-native-keyboard'));
+  stop();
+});
+
+test('layout-only resize events update the native viewport and are removed on cleanup', (t) => {
+  const { browser, viewport, properties, attributes, setEditing } =
+    installViewport(t);
+  setEditing(true);
+  properties.set('--native-viewport-height', '600px');
+  attributes.add('data-native-keyboard');
+  const stop = trackNativeViewport();
+  browser.innerHeight = 390;
+  viewport.height = 390;
+  browser.dispatchEvent(new Event('resize'));
+  assert.equal(properties.get('--native-viewport-height'), '390px');
+  assert.ok(attributes.has('data-native-keyboard'));
+  stop();
+  browser.innerHeight = 844;
+  viewport.height = 844;
+  browser.dispatchEvent(new Event('resize'));
+  assert.equal(properties.get('--native-viewport-height'), '600px');
+  assert.ok(attributes.has('data-native-keyboard'));
+});
+
+test('focus restoration clears a stale native keyboard marker without another resize', (t) => {
+  const { browser, viewport, properties, attributes, setEditing } =
+    installViewport(t);
+  properties.set('--native-viewport-height', '600px');
+  setEditing(true);
+  const stop = trackNativeViewport();
+  browser.innerHeight = 390;
+  viewport.height = 390;
+  viewport.dispatchEvent(new Event('resize'));
+  assert.ok(attributes.has('data-native-keyboard'));
+  setEditing(false);
+  document.dispatchEvent(new Event('focusin'));
+  assert.ok(!attributes.has('data-native-keyboard'));
+  setEditing(true);
+  document.dispatchEvent(new Event('focusin'));
+  assert.ok(!attributes.has('data-native-keyboard'));
+  browser.innerHeight = 200;
+  viewport.height = 200;
+  viewport.dispatchEvent(new Event('resize'));
+  document.dispatchEvent(new Event('focusin'));
+  assert.ok(attributes.has('data-native-keyboard'));
+  stop();
+  document.dispatchEvent(new Event('focusin'));
+  assert.equal(properties.get('--native-viewport-height'), '600px');
+  assert.ok(!attributes.has('data-native-keyboard'));
 });
