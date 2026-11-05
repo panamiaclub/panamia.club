@@ -151,6 +151,7 @@ function SignInPageContent({
     }
   })();
   const [email, setEmail] = useState('');
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [oauthProvider, setOAuthProvider] = useState<string | null>(null);
   const [showEmailForm, setShowEmailForm] = useState(
@@ -263,6 +264,8 @@ function SignInPageContent({
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    const emailToSubmit = email;
+    setSubmittedEmail(null);
     setIsSubmitting(true);
 
     try {
@@ -294,7 +297,8 @@ function SignInPageContent({
       }
 
       resetTurnstile();
-      await signIn('email', { email, callbackUrl });
+      await signIn('email', { email: emailToSubmit, callbackUrl });
+      setSubmittedEmail(emailToSubmit);
       toast({
         title: tToast('checkEmail'),
         description: tToast('checkEmailDesc'),
@@ -467,6 +471,32 @@ function SignInPageContent({
                     )}
                   </form>
                 )}
+
+                <div
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className={
+                    submittedEmail
+                      ? 'border-pana-indigo/20 bg-pana-indigo/5 text-foreground space-y-2 rounded-lg border px-4 py-3 text-sm break-words dark:border-white/15 dark:bg-white/5'
+                      : 'sr-only'
+                  }
+                >
+                  {submittedEmail && (
+                    <>
+                      <p className="font-semibold">
+                        {t('emailLinkSent', { email: submittedEmail })}
+                      </p>
+                      <p>
+                        {t(
+                          isNativeApp
+                            ? 'emailLinkSentHelpNative'
+                            : 'emailLinkSentHelp'
+                        )}
+                      </p>
+                    </>
+                  )}
+                </div>
 
                 {/* Footer */}
                 <p className="text-muted-foreground pt-2 text-center text-xs">

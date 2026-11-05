@@ -163,9 +163,11 @@ test('every refresh stage preserves personalized proof links, deadline and compl
       'Online and mobile services need only a business base ZIP, not a street or home address.',
       'only an approximate base area, not a service or delivery boundary.',
       'Use a real ZIP; do not make one up.',
+      'New to Pana? Create an account with Google or an email you control.',
+      'Your login email does not have to match the business email on this listing.',
       'Use the Pana account that manages it.',
-      'verify access to the business inbox and choose your own Pana account.',
-      'Your personal login email can be different from the business contact.',
+      'use its private invitation to confirm that you manage it after signing in, then review its details.',
+      'A valid invitation verifies access to the business inbox; no second business verification email is needed.',
       'Private invitation links work once and expire after seven days.',
       'an authorized manager can review and confirm it to restore it.',
       'Staff decisions remain separate.',
@@ -175,6 +177,26 @@ test('every refresh stage preserves personalized proof links, deadline and compl
     ]) {
       assert.ok(mail.html.includes(escape(copy)), `HTML missing: ${copy}`);
       assert.ok(mail.text.includes(copy), `plain text missing: ${copy}`);
+    }
+    for (const body of [mail.html, mail.text]) {
+      const start = body.indexOf('New to Pana?');
+      const emailReassurance = body.indexOf(
+        'Your login email does not have to match'
+      );
+      assert.ok(start >= 0);
+      assert.ok(emailReassurance > start);
+      for (const detail of [
+        'Review and confirm my listing',
+        'A few things worth checking',
+        'Every business needs a valid five-digit US ZIP',
+        'A saved primary business photo is also required.',
+      ]) {
+        assert.ok(
+          body.indexOf(detail) > emailReassurance,
+          `account reassurance must precede ${detail}`
+        );
+      }
+      assert.equal(body.split('New to Pana?').length - 1, 1);
     }
     for (const url of [reviewUrl, stopUrl]) {
       assert.equal(mail.html.split(`href="${escape(url)}"`).length - 1, 1);
@@ -208,4 +230,9 @@ test('owned listing URLs and strict notice flags are not converted into invitati
   assert.ok(mail.html.includes(`href="${reviewUrl}"`));
   assert.ok(mail.text.includes(reviewUrl));
   assert.doesNotMatch(mail.html, /\/listings\/invite\?/);
+  for (const body of [mail.html, mail.text]) {
+    assert.ok(body.includes('New to Pana? Create an account'));
+    assert.ok(body.includes('Already manage this listing?'));
+    assert.ok(body.includes('If this listing is unclaimed,'));
+  }
 });
