@@ -1302,6 +1302,50 @@ test(
 );
 
 test(
+  'opens the system photo chooser directly and keeps the draft when no file is chosen',
+  { tag: '@native' },
+  async ({ page }) => {
+    const fixture = await openMessages(page, { native: 'ios' });
+    const photos = await installChatPhotoFixtures(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await row(page, 'J. Downs').click();
+    await input(page).fill('Keep this draft.');
+    const attach = page.getByRole('button', {
+      name: 'Attach a photo',
+      exact: true,
+    });
+    await expect(attach).toHaveAccessibleDescription(
+      /One photo, up to 10 MB.*shareable Pana media links.*not end-to-end encryption/
+    );
+    await page.getByRole('button', { name: 'Add a GIF', exact: true }).click();
+    await expect(page.getByRole('group', { name: 'GIF picker' })).toBeVisible();
+    const choosing = page.waitForEvent('filechooser');
+    await attach.click();
+    const picker = await choosing;
+    await expect(
+      page.getByRole('menuitem', { name: 'Choose photo', exact: true })
+    ).toHaveCount(0);
+    await expect(
+      page.getByText('Photo attachment', { exact: true })
+    ).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'GIF picker' })).toHaveCount(
+      0
+    );
+    await picker.setFiles([]);
+    await expect(input(page)).toHaveValue('Keep this draft.');
+    await expect(attach).toBeEnabled();
+    await expect(
+      page.getByRole('button', { name: 'Send message', exact: true })
+    ).toBeEnabled();
+    await expect(
+      page.getByRole('button', { name: 'Remove photo', exact: true })
+    ).toHaveCount(0);
+    expect(photos.uploads).toHaveLength(0);
+    expect(fixture.posts).toHaveLength(0);
+  }
+);
+
+test(
   'attaches a normalized photo through the real upload contract and sends it without a caption',
   { tag: '@native' },
   async ({ page }) => {
@@ -1309,7 +1353,22 @@ test(
     const photos = await installChatPhotoFixtures(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await row(page, 'J. Downs').click();
+    const details = page.getByRole('button', {
+      name: 'Conversation details',
+      exact: true,
+    });
+    await details.click();
+    await expect(conversation(page)).toContainText(
+      'Attach one photo per message, up to 10 MB.'
+    );
+    await expect(conversation(page)).toContainText(
+      'Someone with a copied image link can view it outside this conversation.'
+    );
+    await details.click();
     await chooseChatPhoto(page, await chatPhotoFile(page));
+    await expect(
+      page.getByRole('button', { name: 'Attach a photo', exact: true })
+    ).toBeDisabled();
     await expect(
       page.getByRole('img', { name: 'Attached photo', exact: true })
     ).toBeVisible();
@@ -1347,6 +1406,9 @@ test(
     await expect(
       page.getByRole('button', { name: 'Remove photo', exact: true })
     ).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Attach a photo', exact: true })
+    ).toBeEnabled();
   }
 );
 
@@ -1963,6 +2025,49 @@ test(
       window.visualViewport!.dispatchEvent(new Event('resize'));
     });
     await row(page, 'J. Downs').click();
+    // Desktop WebKit has no hardware home indicator. Emulate its real 34px
+    // inset, keeping the keyboard-specific production selector in control.
+    await page.addStyleTag({
+      content:
+        '[data-native-app] footer:has(> form[aria-label="Message composer"]) { padding-bottom: 34px; }',
+    });
+    const composer = page.getByRole('form', { name: 'Message composer' });
+    const geometry = () =>
+      composer.evaluate((form) => {
+        const footer = form.closest('footer')!;
+        const bounds = footer.getBoundingClientRect();
+        const row = form.getBoundingClientRect();
+        const field = form
+          .querySelector('textarea')!
+          .parentElement!.getBoundingClientRect();
+        const style = getComputedStyle(footer);
+        const controls = Array.from(
+          form.querySelectorAll<HTMLElement>(
+            'button[aria-label="Attach a photo"], button[aria-label="Send message"]'
+          )
+        ).map((button) => {
+          const box = button.getBoundingClientRect();
+          return {
+            centreY: box.y + box.height / 2,
+            bottomGap: field.bottom - box.bottom,
+          };
+        });
+        return {
+          paddingTop: parseFloat(style.paddingTop),
+          paddingBottom: parseFloat(style.paddingBottom),
+          bottom: bounds.bottom,
+          bottomGap: bounds.bottom - row.bottom,
+          centreOffset: Math.abs(
+            (row.top + row.bottom - bounds.top - bounds.bottom) / 2
+          ),
+          fieldCentreX: field.x + field.width / 2,
+          fieldCentreY: field.y + field.height / 2,
+          rowCentreX: row.x + row.width / 2,
+          fieldHeight: field.height,
+          controls,
+        };
+      });
+    await expect.poll(async () => (await geometry()).paddingBottom).toBe(34);
     await input(page).fill('An iOS keyboard draft.');
     await page.evaluate(() => {
       Object.assign(window.visualViewport!, { height: 390, offsetTop: 20 });
@@ -1977,14 +2082,66 @@ test(
         };
       })
       .toEqual({ top: 20, height: 390 });
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-native-keyboard',
+      ''
+    );
+    await expect.poll(async () => (await geometry()).paddingBottom).toBe(8);
+    const open = await geometry();
+    expect(open.paddingTop).toBe(8);
+    expect(open.bottom).toBeLessThanOrEqual(410);
+    expect(open.bottomGap).toBeCloseTo(8, 0);
+    expect(open.centreOffset).toBeLessThanOrEqual(1);
+    expect(Math.abs(open.fieldCentreX - open.rowCentreX)).toBeLessThanOrEqual(
+      0.5
+    );
+    for (const control of open.controls) {
+      expect(Math.abs(control.centreY - open.fieldCentreY)).toBeLessThanOrEqual(
+        0.5
+      );
+    }
     const send = await page
       .getByRole('button', { name: 'Send message', exact: true })
       .boundingBox();
     expect(send!.y + send!.height).toBeLessThanOrEqual(410);
+    await input(page).fill('First line\nSecond line\nThird line\nFourth line');
+    await expect
+      .poll(async () => (await geometry()).fieldHeight)
+      .toBeGreaterThan(80);
+    const multiline = await geometry();
+    expect(multiline.paddingBottom).toBe(8);
+    expect(multiline.bottom).toBeLessThanOrEqual(410);
+    for (const control of multiline.controls) {
+      expect(control.bottomGap).toBeCloseTo(1, 0);
+    }
+    await input(page).fill('');
+    await page.getByRole('button', { name: 'Add a GIF', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'GIF picker' })
+      .getByRole('button', { name: /A little celebration/ })
+      .click();
+    await expect(
+      page.getByRole('button', { name: 'Remove GIF' })
+    ).toBeVisible();
+    const attachment = await geometry();
+    expect(attachment.paddingBottom).toBe(8);
+    expect(attachment.bottom).toBeLessThanOrEqual(410);
+    expect(attachment.bottomGap).toBeCloseTo(8, 0);
+    const preview = test.info().outputPath('chat-keyboard-alignment.png');
+    await page.screenshot({ path: preview });
+    await test.info().attach('chat-keyboard-alignment', {
+      path: preview,
+      contentType: 'image/png',
+    });
     await page.evaluate(() => {
       Object.assign(window.visualViewport!, { height: 844, offsetTop: 0 });
       window.visualViewport!.dispatchEvent(new Event('resize'));
     });
+    await expect(page.locator('html')).not.toHaveAttribute(
+      'data-native-keyboard',
+      ''
+    );
+    await expect.poll(async () => (await geometry()).paddingBottom).toBe(34);
     await expect(
       page.getByRole('navigation', { name: 'App navigation' })
     ).toHaveCount(0);
