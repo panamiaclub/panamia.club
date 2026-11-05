@@ -1526,7 +1526,10 @@ for (const platform of ['android', 'ios'] as const) {
         exact: true,
       });
       await expect(nav).toBeVisible();
-      await expect(shortcut).toBeVisible();
+      await expect(shortcut).toHaveCount(0);
+      await expect(
+        header.getByRole('button', { name: 'Back', exact: true })
+      ).toBeVisible();
       await expect(
         page.getByRole('group', { name: 'Message folders' }).getByRole('button')
       ).toHaveText(['Messages', 'Requests (2)']);
@@ -1593,8 +1596,23 @@ for (const platform of ['android', 'ios'] as const) {
       await back.click();
       await expect(row(page, 'J. Downs')).toBeFocused();
       await expect(nav).toBeVisible();
-      await expect(shortcut).toBeVisible();
+      await expect(shortcut).toHaveCount(0);
       await expect(page).toHaveURL(/\/messages$/);
+      await page
+        .getByRole('group', { name: 'Message folders' })
+        .getByRole('button', { name: 'Requests (2)', exact: true })
+        .click();
+      await expect(
+        page.getByRole('list', { name: 'Message requests', exact: true })
+      ).toBeVisible();
+      await expect(shortcut).toHaveCount(0);
+      await expect(
+        header.getByRole('button', { name: 'Back', exact: true })
+      ).toBeVisible();
+      await page
+        .getByRole('group', { name: 'Message folders' })
+        .getByRole('button', { name: 'Messages', exact: true })
+        .click();
       await row(page, 'J. Downs').click();
       await expect(input(page)).toHaveValue(
         'Keep this focused conversation draft.'
