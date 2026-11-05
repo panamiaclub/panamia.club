@@ -213,6 +213,7 @@ function AppFrame({
           className={cn(styles.app, rootTab === 'directory' && 'dirscope')}
           data-native-app
           data-native-conversation={conversation ? '' : undefined}
+          data-native-map={root && rootTab === 'directory' ? '' : undefined}
         >
           <header className={styles.header}>
             <div className={styles.headerLeading}>
@@ -364,7 +365,7 @@ function AppFrame({
                         className={styles.navAvatar}
                       />
                     ) : (
-                      <Icon size={23} aria-hidden="true" />
+                      <Icon size={21} aria-hidden="true" />
                     )}
                     <span>{tab.label}</span>
                   </Link>

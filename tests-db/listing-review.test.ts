@@ -34,6 +34,12 @@ let session: {
 let activeId: string | null = null;
 let mailFails = false;
 let zipUnavailable = false;
+let uploadFailureAt = 0;
+let uploadThrows = false;
+let uploadBarrier: ((attempt: number) => Promise<void>) | null = null;
+let deleteFailure: 'false' | 'throw' | null = null;
+let beforeDelete: (() => Promise<void>) | null = null;
+let revalidationFails = false;
 const emails: Array<{
   template: string;
   variables: Record<string, unknown>;
@@ -42,6 +48,7 @@ const emails: Array<{
 const uploaded: string[] = [];
 const deleted: string[] = [];
 const preparedActors: string[] = [];
+const syncedActors: string[] = [];
 const invalidated: string[] = [];
 const zipLookups: string[] = [];
 const zipAreas = {
@@ -77,7 +84,10 @@ mock.module(import.meta.resolve('next/headers'), {
 mock.module(import.meta.resolve('next/cache'), {
   namedExports: {
     unstable_cache: (fn: unknown) => fn,
-    revalidatePath: (path: string) => invalidated.push(path),
+    revalidatePath: (path: string) => {
+      if (revalidationFails) throw new Error('Test revalidation unavailable');
+      invalidated.push(path);
+    },
   },
 });
 mock.module(import.meta.resolve('../lib/email.ts'), {
@@ -103,16 +113,30 @@ mock.module(import.meta.resolve('../lib/federation/index.ts'), {
 mock.module(import.meta.resolve('../lib/federation/wrappers/actor.ts'), {
   namedExports: {
     ensureActorForProfile: async () => {},
-    syncActorFromProfile: async () => {},
+    syncActorFromProfile: async (id: string) => {
+      syncedActors.push(id);
+    },
   },
 });
 mock.module(import.meta.resolve('../lib/blob/api.ts'), {
   namedExports: {
     uploadFile: async (filename: string) => {
-      uploaded.push(filename);
+      const attempt = uploaded.push(filename);
+      if (uploadBarrier) await uploadBarrier(attempt);
+      if (attempt === uploadFailureAt) {
+        if (uploadThrows) throw new Error('Test storage provider unavailable');
+        return null;
+      }
       return `https://files.test.invalid/${filename}`;
     },
-    deleteFile: async (url: string) => deleted.push(url),
+    deleteFile: async (url: string) => {
+      if (beforeDelete) await beforeDelete();
+      deleted.push(url);
+      if (deleteFailure === 'throw')
+        throw new Error('Test storage cleanup unavailable');
+      if (deleteFailure === 'false') return false;
+      return true;
+    },
   },
 });
 mock.method(globalThis, 'fetch', async (input: RequestInfo | URL) => {
@@ -279,10 +303,17 @@ beforeEach(async () => {
   activeId = personalId;
   mailFails = false;
   zipUnavailable = false;
+  uploadFailureAt = 0;
+  uploadThrows = false;
+  uploadBarrier = null;
+  deleteFailure = null;
+  beforeDelete = null;
+  revalidationFails = false;
   emails.length =
     uploaded.length =
     deleted.length =
     preparedActors.length =
+    syncedActors.length =
     invalidated.length =
     zipLookups.length =
       0;
@@ -321,6 +352,24 @@ async function ownListing() {
     .values({ profileId: listingId, userId, role: 'owner' });
 }
 
+function uploadPhotos(fields: string[], path = editPath('upload')) {
+  const form = new FormData();
+  for (const field of fields) {
+    form.append(
+      field,
+      new File([`isolated ${field} photo`], `${field}.png`, {
+        type: 'image/png',
+      })
+    );
+  }
+  return photos.POST(
+    new NextRequest(`https://directory.test.invalid${path}`, {
+      method: 'POST',
+      body: form,
+    })
+  );
+}
+
 function confirmBusiness(overrides: Record<string, unknown> = {}) {
   return reviewApi.POST(
     invitationRequest('/api/listings/review', {
@@ -334,6 +383,392 @@ function confirmBusiness(overrides: Record<string, unknown> = {}) {
     })
   );
 }
+
+test('failed multi-photo replacement preserves all previously saved photos', async () => {
+  await ownListing();
+  const before = await getRow(listingId);
+  assert.ok(before?.primaryImageCdn);
+  uploadFailureAt = 2;
+
+  const response = await uploadPhotos(['primary', 'gallery1']);
+
+  assert.equal(response.status, 500);
+  assert.deepEqual(await getRow(listingId), before);
+  assert.ok(
+    !deleted.includes(before.primaryImageCdn),
+    'A rejected save must not delete the current saved primary photo'
+  );
+  assert.deepEqual(deleted, [`https://files.test.invalid/${uploaded[0]}`]);
+  assert.deepEqual(syncedActors, []);
+  assert.deepEqual(invalidated, []);
+});
+
+test(
+  'concurrent uploads to different gallery slots preserve both changes',
+  { timeout: 10000 },
+  async () => {
+    await ownListing();
+    const personal = await getRow(personalId);
+    const second = await getRow(secondId);
+    const original = await getRow(listingId);
+    const untouchedGallery = {
+      gallery3: 'existing-third.png',
+      gallery3CDN: 'https://files.test.invalid/existing-third.png',
+      preservedMetadata: { label: 'Keep this gallery metadata' },
+    };
+    await db
+      .update(schema.profiles)
+      .set({
+        galleryImages: {
+          gallery1CDN: 'https://files.test.invalid/gallery.jpg',
+          ...untouchedGallery,
+        },
+      })
+      .where(eq(schema.profiles.id, listingId));
+    let release: () => void = () => {
+      throw new Error('Upload barrier was not initialized');
+    };
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    uploadBarrier = async () => {
+      if (uploaded.length === 2) release();
+      await gate;
+    };
+
+    const responses = await Promise.all([
+      uploadPhotos(['gallery1']),
+      uploadPhotos(['gallery2']),
+    ]);
+
+    assert.deepEqual(
+      responses.map((response) => response.status),
+      [200, 200]
+    );
+    const current = await getRow(listingId);
+    const firstFile = uploaded.find((filename) =>
+      filename.includes('/gallery1')
+    );
+    const secondFile = uploaded.find((filename) =>
+      filename.includes('/gallery2')
+    );
+    assert.ok(firstFile && secondFile);
+    assert.deepEqual(current?.galleryImages, {
+      ...untouchedGallery,
+      gallery1: firstFile,
+      gallery1CDN: `https://files.test.invalid/${firstFile}`,
+      gallery2: secondFile,
+      gallery2CDN: `https://files.test.invalid/${secondFile}`,
+    });
+    assert.equal(current?.primaryImageCdn, original?.primaryImageCdn);
+    assert.deepEqual(await getRow(personalId), personal);
+    assert.deepEqual(await getRow(secondId), second);
+    assert.deepEqual(deleted, ['https://files.test.invalid/gallery.jpg']);
+  }
+);
+
+test('a database save failure rolls back every image slot and cleans up only newly staged objects', async (t) => {
+  await ownListing();
+  const before = await getRow(listingId);
+  const personal = await getRow(personalId);
+  const second = await getRow(secondId);
+  const errors = t.mock.method(console, 'error', () => {});
+  await pg.exec(`
+    ALTER TABLE profiles ADD CONSTRAINT reject_photo_save
+      CHECK (id <> 'review-business' OR
+        primary_image_cdn = 'https://files.test.invalid/old-logo.jpg');
+  `);
+  t.after(() =>
+    pg.exec('ALTER TABLE profiles DROP CONSTRAINT reject_photo_save')
+  );
+
+  const response = await uploadPhotos(['primary', 'gallery1']);
+
+  assert.equal(response.status, 500);
+  assert.equal((await response.json()).success, false);
+  assert.deepEqual(await getRow(listingId), before);
+  assert.deepEqual(await getRow(personalId), personal);
+  assert.deepEqual(await getRow(secondId), second);
+  assert.deepEqual(
+    deleted,
+    uploaded.map((filename) => `https://files.test.invalid/${filename}`)
+  );
+  assert.deepEqual(syncedActors, []);
+  assert.deepEqual(invalidated, []);
+  assert.ok(
+    errors.mock.calls.some((call) => call.arguments[0] === 'Upload error:')
+  );
+});
+
+test('a thrown partial storage failure preserves saved media and reclaims earlier staged uploads', async (t) => {
+  await ownListing();
+  const before = await getRow(listingId);
+  const errors = t.mock.method(console, 'error', () => {});
+  uploadFailureAt = 2;
+  uploadThrows = true;
+
+  const response = await uploadPhotos(['gallery1', 'gallery2']);
+
+  assert.equal(response.status, 500);
+  assert.deepEqual(await getRow(listingId), before);
+  assert.deepEqual(deleted, [`https://files.test.invalid/${uploaded[0]}`]);
+  assert.ok(
+    errors.mock.calls.some((call) => call.arguments[0] === 'Upload error:')
+  );
+});
+
+test('retry keys cannot overwrite a saved legacy object or reuse a failed request key', async (t) => {
+  await ownListing();
+  t.mock.method(Math, 'random', () => 0);
+  const legacyKey = `profile/${listingId}/primary000.png`;
+  await db
+    .update(schema.profiles)
+    .set({
+      primaryImageId: legacyKey,
+      primaryImageCdn: `https://files.test.invalid/${legacyKey}`,
+    })
+    .where(eq(schema.profiles.id, listingId));
+  const before = await getRow(listingId);
+  uploadFailureAt = 2;
+
+  assert.equal((await uploadPhotos(['primary', 'gallery1'])).status, 500);
+  assert.deepEqual(await getRow(listingId), before);
+  assert.ok(!deleted.includes(`https://files.test.invalid/${legacyKey}`));
+  assert.equal((await uploadPhotos(['primary', 'gallery1'])).status, 200);
+  assert.equal(new Set(uploaded).size, 4);
+  assert.ok(!uploaded.includes(legacyKey));
+  for (const filename of uploaded) {
+    assert.match(
+      filename,
+      /\/(?:primary|gallery1)-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.png$/
+    );
+  }
+  assert.equal((await getRow(listingId))?.primaryImageId, uploaded[2]);
+  assert.ok(deleted.includes(`https://files.test.invalid/${legacyKey}`));
+  assert.ok(!deleted.includes(`https://files.test.invalid/${uploaded[2]}`));
+  assert.ok(!deleted.includes(`https://files.test.invalid/${uploaded[3]}`));
+});
+
+for (const field of ['primary', 'gallery1']) {
+  test(`replacing ${field} preserves shared media retained by another current image slot`, async () => {
+    await ownListing();
+    const sharedUrl = 'https://files.test.invalid/shared.png';
+    const gallery = {
+      gallery1: 'shared.png',
+      gallery1CDN: sharedUrl,
+      gallery2: 'shared.png',
+      gallery2CDN: sharedUrl,
+      gallery3CDN: 'https://files.test.invalid/untouched-third.png',
+      preservedMetadata: { label: 'Keep this gallery metadata' },
+    };
+    await db
+      .update(schema.profiles)
+      .set({ primaryImageCdn: sharedUrl, galleryImages: gallery })
+      .where(eq(schema.profiles.id, listingId));
+    const before = await getRow(listingId);
+    const personal = await getRow(personalId);
+    const second = await getRow(secondId);
+
+    const response = await uploadPhotos([field]);
+
+    assert.equal(response.status, 200);
+    const current = await getRow(listingId);
+    assert.ok(current);
+    const url = `https://files.test.invalid/${uploaded[0]}`;
+    assert.deepEqual(current, {
+      ...before,
+      updatedAt: current.updatedAt,
+      ...(field === 'primary'
+        ? { primaryImageId: uploaded[0], primaryImageCdn: url }
+        : {
+            galleryImages: {
+              ...gallery,
+              gallery1: uploaded[0],
+              gallery1CDN: url,
+            },
+          }),
+    });
+    assert.deepEqual(deleted, []);
+    assert.deepEqual(await getRow(personalId), personal);
+    assert.deepEqual(await getRow(secondId), second);
+  });
+}
+
+test('a primary-only save leaves an untouched null gallery column null', async () => {
+  await ownListing();
+  await db
+    .update(schema.profiles)
+    .set({ galleryImages: null })
+    .where(eq(schema.profiles.id, listingId));
+
+  const response = await uploadPhotos(['primary']);
+
+  assert.equal(response.status, 200);
+  assert.equal((await getRow(listingId))?.galleryImages, null);
+});
+
+for (const failure of ['false', 'throw'] as const) {
+  test(`cleanup returning ${failure} after commit is logged without failing the saved-photo response`, async (t) => {
+    await ownListing();
+    const before = await getRow(listingId);
+    const errors = t.mock.method(console, 'error', () => {});
+    let atCleanup: Awaited<ReturnType<typeof getRow>>;
+    beforeDelete = async () => {
+      atCleanup = await getRow(listingId);
+    };
+    deleteFailure = failure;
+
+    const response = await uploadPhotos(['primary']);
+
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.success, true);
+    assert.equal(body.data.id, listingId);
+    assert.equal(
+      body.data.primaryImageCdn,
+      `https://files.test.invalid/${uploaded[0]}`
+    );
+    assert.equal(atCleanup?.primaryImageCdn, body.data.primaryImageCdn);
+    assert.equal(
+      (await getRow(listingId))?.primaryImageCdn,
+      body.data.primaryImageCdn
+    );
+    assert.deepEqual(deleted, [before?.primaryImageCdn]);
+    assert.deepEqual(syncedActors, [listingId]);
+    assert.ok(invalidated.includes(`/listings/${listingId}`));
+    assert.ok(
+      errors.mock.calls.some(
+        (call) => call.arguments[0] === 'Profile image cleanup failed:'
+      )
+    );
+  });
+}
+
+test('a revalidation failure after commit does not report a saved photo as failed', async (t) => {
+  await ownListing();
+  const errors = t.mock.method(console, 'error', () => {});
+  revalidationFails = true;
+
+  const response = await uploadPhotos(['primary']);
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.success, true);
+  assert.equal(
+    (await getRow(listingId))?.primaryImageCdn,
+    body.data.primaryImageCdn
+  );
+  assert.ok(!deleted.includes(body.data.primaryImageCdn));
+  assert.deepEqual(syncedActors, [listingId]);
+  assert.ok(
+    errors.mock.calls.some(
+      (call) =>
+        call.arguments[0] ===
+        'Profile image save committed but revalidation failed:'
+    )
+  );
+});
+
+test(
+  'a later same-slot save replaces and cleans up the current object, not a stale request snapshot',
+  { timeout: 10000 },
+  async () => {
+    await ownListing();
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    uploadBarrier = async (attempt) => {
+      if (attempt !== 1) return;
+      entered.resolve();
+      await release.promise;
+    };
+
+    const slow = uploadPhotos(['gallery1']);
+    await entered.promise;
+    const fast = await uploadPhotos(['gallery1']);
+    assert.equal(fast.status, 200);
+    release.resolve();
+    assert.equal((await slow).status, 200);
+
+    const current = await getRow(listingId);
+    assert.deepEqual(current?.galleryImages, {
+      gallery1: uploaded[0],
+      gallery1CDN: `https://files.test.invalid/${uploaded[0]}`,
+    });
+    assert.deepEqual(deleted, [
+      'https://files.test.invalid/gallery.jpg',
+      `https://files.test.invalid/${uploaded[1]}`,
+    ]);
+    assert.ok(!deleted.includes(`https://files.test.invalid/${uploaded[0]}`));
+  }
+);
+
+test('duplicate selected slots retain only the last new object and reclaim unused staged objects after commit', async () => {
+  await ownListing();
+
+  const response = await uploadPhotos(['gallery1', 'gallery1']);
+
+  assert.equal(response.status, 200);
+  assert.deepEqual((await getRow(listingId))?.galleryImages, {
+    gallery1: uploaded[1],
+    gallery1CDN: `https://files.test.invalid/${uploaded[1]}`,
+  });
+  assert.deepEqual(deleted, [
+    'https://files.test.invalid/gallery.jpg',
+    `https://files.test.invalid/${uploaded[0]}`,
+  ]);
+});
+
+for (const scoped of [true, false]) {
+  test(`${scoped ? 'scoped' : 'active-business'} photo saves recheck revoked access after staging without falling back to another profile`, async () => {
+    await ownListing();
+    activeId = scoped ? secondId : listingId;
+    const before = await getRow(listingId);
+    const personal = await getRow(personalId);
+    const second = await getRow(secondId);
+    uploadBarrier = async () => {
+      await db
+        .delete(schema.profileOwners)
+        .where(eq(schema.profileOwners.profileId, listingId));
+    };
+
+    const response = await uploadPhotos(
+      ['primary'],
+      scoped ? editPath('upload') : '/api/profile/upload'
+    );
+
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).success, false);
+    assert.deepEqual(await getRow(listingId), before);
+    assert.deepEqual(await getRow(personalId), personal);
+    assert.deepEqual(await getRow(secondId), second);
+    assert.deepEqual(deleted, [`https://files.test.invalid/${uploaded[0]}`]);
+    assert.deepEqual(syncedActors, []);
+    assert.deepEqual(invalidated, []);
+  });
+}
+
+test('an uncertain commit outcome never deletes newly referenced images', async (t) => {
+  await ownListing();
+  t.mock.method(console, 'error', () => {});
+  const transaction = db.transaction.bind(db);
+  t.mock.method(
+    db,
+    'transaction',
+    async (...args: Parameters<typeof db.transaction>) => {
+      await transaction(...args);
+      throw new Error('Test lost commit acknowledgement');
+    }
+  );
+
+  const response = await uploadPhotos(['primary']);
+
+  assert.equal(response.status, 500);
+  assert.equal(
+    (await getRow(listingId))?.primaryImageCdn,
+    `https://files.test.invalid/${uploaded[0]}`
+  );
+  assert.deepEqual(deleted, []);
+});
 
 test('the listing-specific public entry is read-only and excludes all private contact and pending-owner fields', async () => {
   session = null;

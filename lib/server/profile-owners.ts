@@ -45,9 +45,10 @@ export type ProfileOwnerRole = 'owner' | 'admin' | 'editor';
  */
 export async function canAdministerProfile(
   userId: string,
-  profileId: string
+  profileId: string,
+  database: Pick<typeof db, 'select'> = db
 ): Promise<boolean> {
-  const [row] = await db
+  const [row] = await database
     .select({ id: profiles.id })
     .from(profiles)
     .leftJoin(

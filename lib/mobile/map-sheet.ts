@@ -10,7 +10,7 @@ export function nativeSheetHeights(height: number, controlsInset: number) {
   const available = Math.max(0, height);
   const expanded =
     available < 250 ? available : Math.max(0, available - controlsInset - 8);
-  const peek = Math.min(expanded, Math.max(52, Math.min(118, available * 0.3)));
+  const peek = Math.min(expanded, 54);
   return {
     peek,
     half: Math.min(expanded, Math.max(peek, available * 0.52)),
@@ -24,6 +24,15 @@ export function nativePreviewHeight(
   card: number
 ) {
   return Math.min(Math.max(0, available), heading + card + 24);
+}
+
+export function nativePreviewRange(
+  count: number,
+  selectedIndex: number,
+  limit = 2
+) {
+  const start = Math.max(0, Math.min(selectedIndex, count - limit));
+  return { start, end: Math.min(count, start + limit) };
 }
 
 export function nativeSheetStopForDrag(

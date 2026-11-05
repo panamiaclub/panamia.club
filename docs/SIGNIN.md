@@ -9,7 +9,10 @@ The shared page explains account creation and returning-member access rather
 than assuming every visitor already has an account.
 
 The browser page owns a focused, surface-branded masthead. Its two account
-links target the same form without replacing the current callback URL.
+links, and those in a regular masthead retained after client navigation,
+target the same form without replacing the current callback URL. The same
+applies to their desktop/mobile drawer entries, preserving exact business
+and invitation returns without copying query parameters or proof fragments.
 Native screens keep their existing compact account menu, reporting actions,
 and reviewer access instead of adding a second masthead.
 

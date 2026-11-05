@@ -146,6 +146,16 @@ placeholder meets the requirement. Photos checks the scoped upload response and
 refetches this business before continuing. Saving, skipping and switching steps
 never confirm the review, and optional steps need not be visited.
 
+Photo saves stage new, uniquely keyed objects before changing the profile.
+Only selected slots are merged into the locked current row after access is
+rechecked, so concurrent saves to different slots keep both changes. Failed
+uploads or database writes leave saved photos intact; unreferenced staged
+objects are cleaned up where possible. Superseded objects are removed only
+after persistence, never while another current slot retains their URL.
+Cleanup failures are logged without reporting a committed save as failed.
+Storage cleanup is best-effort: provider failures or an unavailable database
+can leave unreferenced objects, and foreign/imported media is not deleted.
+
 After Photos, `/listings/review?id={profileId}&complete=1` opens the final check
 inside the same wizard frame, with a read-only summary and Back to photos. It
 does not mark anything complete on arrival. Only the authenticated **Confirm
