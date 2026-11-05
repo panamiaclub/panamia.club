@@ -31,6 +31,10 @@ the corresponding iPad screenshots.
   header Back control returns to the message list without losing its draft;
   standalone group chats retain Back to group. Native messaging omits the
   composer helper text and legal footer while preserving composer safe areas.
+- The main Messages inbox combines individual and group conversations without
+  extra heading, search or compose controls. Requests stays separate; new text
+  chats start from Message on another pana's profile, with the target preserved
+  through sign-in. The same compact inbox is used on the website.
 - iOS offers email-link sign-in. Android's Google SDK is deliberately excluded
   from the iOS native package. Do not enable Google on iOS without implementing
   the corresponding Apple-compliant login options and configuring their credentials.
