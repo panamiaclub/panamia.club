@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { MessageCircle } from 'lucide-react';
+import { MessagesSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { directMessageHref } from '@/app/messages/_lib/inbox';
@@ -20,7 +20,7 @@ export function SendMessageButton({
         href={directMessageHref(actorId)}
         aria-label={t('messaging.open', { name })}
       >
-        <MessageCircle className="h-4 w-4" aria-hidden="true" />
+        <MessagesSquare className="h-4 w-4" aria-hidden="true" />
         {t('messaging.button')}
       </Link>
     </Button>

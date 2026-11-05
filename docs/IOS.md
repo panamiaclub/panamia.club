@@ -51,6 +51,8 @@ the corresponding iPad screenshots.
   left and notifications/account on the right. Detail pages retain Back and
   event-save controls. Account menus offer bug and safety reporting above
   About Pana, including for signed-out visitors.
+- Social uses a newspaper icon, while Messages uses overlapping chat bubbles.
+  Their navigation icons match the website without changing control sizes.
 - Messages hides its own header shortcut throughout the inbox, requests and
   conversation flow, leaving Back as the leading control. The personal Profile
   tab and Account landing omit Back; nested settings and other profiles retain it.

@@ -63,6 +63,9 @@ Events use real venue locations on the map. Community separates **Yours**
 (joined groups, pending requests, plans, saved events) from **Discover**.
 Profile opens your existing personal profile page.
 
+Social uses a newspaper icon; Messages uses overlapping chat bubbles. These
+navigation icons are consistent across the native app and website entry points.
+
 Directory and Events maps support two-finger pinch-to-zoom without on-map
 zoom buttons. Rotation and tilt stay disabled. The website's directory map
 also supports pinch-to-zoom and keeps zoom buttons for mouse and trackpad users.

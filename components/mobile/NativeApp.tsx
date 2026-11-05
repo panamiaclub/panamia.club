@@ -18,13 +18,7 @@ import {
   useRouter,
   useSearchParams,
 } from 'next/navigation';
-import {
-  ArrowLeft,
-  MessageCircle,
-  Store,
-  UserRound,
-  Users,
-} from 'lucide-react';
+import { ArrowLeft, Newspaper, Store, UserRound, Users } from 'lucide-react';
 import { useSession } from '@/lib/auth-client';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -337,7 +331,7 @@ function AppFrame({
                   tab.id === 'directory'
                     ? Store
                     : tab.id === 'social'
-                      ? MessageCircle
+                      ? Newspaper
                       : tab.id === 'community'
                         ? Users
                         : UserRound;

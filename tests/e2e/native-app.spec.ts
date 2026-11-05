@@ -148,6 +148,35 @@ test('Directory is the native front door, with actual identity and branded categ
     '/p/native-viewer'
   );
   await expect(
+    nav
+      .getByRole('link', { name: 'Social', exact: true })
+      .locator('svg.lucide-newspaper')
+  ).toBeVisible();
+  await expect(
+    nav
+      .getByRole('link', { name: 'Social', exact: true })
+      .locator('svg.lucide-newspaper')
+  ).toHaveCSS('width', '21px');
+  const messages = page.getByRole('link', { name: 'Messages', exact: true });
+  await expect(messages.locator('svg.lucide-messages-square')).toBeVisible();
+  await expect(messages.locator('svg')).toHaveCSS('width', '18px');
+  await page.getByRole('button', { name: /^Switch account/ }).click();
+  await expect(
+    page
+      .getByRole('menuitem', { name: 'Pana Social', exact: true })
+      .locator('svg.lucide-newspaper')
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page
+    .getByRole('button', { name: 'Notifications', exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole('menuitem', { name: 'Messages', exact: true })
+      .locator('svg.lucide-messages-square')
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(
     page.getByRole('searchbox', { name: 'Search directory' })
   ).toBeVisible();
   await expect(page.locator('.maplibregl-canvas')).toHaveCount(1);
