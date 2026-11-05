@@ -12,6 +12,11 @@ import type {
   GroupChatRoom,
 } from '@/lib/chat';
 import { nativeBridge } from './fixtures/native-bridge';
+import {
+  chatPhotoFile,
+  chooseChatPhoto,
+  installChatPhotoFixtures,
+} from './fixtures/chat-photo';
 
 const log = (page: Page) => page.getByRole('log');
 const compose = (page: Page, name = 'Garden Crew') =>
@@ -600,6 +605,30 @@ test('keeps separate group and direct-message scopes and per-group text/GIF draf
   expect(fixture.mailboxes).toHaveLength(1);
 });
 
+test('sends an uploaded photo only to its selected group without changing the DM delivery path', async ({
+  page,
+}) => {
+  const fixture = await openGroupChat(page);
+  const photos = await installChatPhotoFixtures(page);
+  await chooseChatPhoto(page, await chatPhotoFile(page));
+  await expect(
+    page.getByRole('button', { name: 'Send message', exact: true })
+  ).toBeEnabled();
+  await page.getByRole('button', { name: 'Send message', exact: true }).click();
+  await expect.poll(() => fixture.posts.length).toBe(1);
+  expect(fixture.posts[0].handle).toBe('garden');
+  expect(fixture.posts[0].input.content).toBe('');
+  expect(fixture.posts[0].input.attachments?.[0]).toMatchObject({
+    type: 'image',
+    mediaType: 'image/jpeg',
+    url: photos.uploads[0].url,
+  });
+  expect(fixture.posts[0].input).not.toHaveProperty('recipientActorIds');
+  await expect(
+    log(page).locator(`img[src="${photos.uploads[0].url}"]`)
+  ).toBeVisible();
+});
+
 test('retains failed group sends and retries the same nonce without duplicate messages', async ({
   page,
 }) => {
@@ -828,6 +857,7 @@ test('loads older messages without counting them as incoming or moving the readi
   page,
 }) => {
   const fixture = await openGroupChat(page, { pageSize: 8 });
+  await page.setViewportSize({ width: 1440, height: 720 });
   fixture.messages.garden.splice(
     0,
     fixture.messages.garden.length,
@@ -844,6 +874,13 @@ test('loads older messages without counting them as incoming or moving the readi
   await expect(
     log(page).getByText('Garden history 23.', { exact: false })
   ).toBeVisible();
+  await expect
+    .poll(() =>
+      log(page).evaluate(
+        (element) => element.scrollHeight - element.clientHeight
+      )
+    )
+    .toBeGreaterThan(0);
   await log(page).evaluate((element) => {
     element.scrollTop = 0;
   });

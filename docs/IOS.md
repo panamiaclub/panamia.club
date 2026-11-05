@@ -54,6 +54,11 @@ the corresponding iPad screenshots.
   extra heading, search or compose controls. Requests stays separate; new text
   chats start from Message on another pana's profile, with the target preserved
   through sign-in. The same compact inbox is used on the website.
+- Chat keeps Pana colours with a compact one-row composer that grows as you type.
+  Phone Return adds a newline; Send submits. The photo control uses the standard
+  file picker, not a new native plugin, and discloses the existing shareable-media
+  link model. Photos are re-encoded without camera metadata before uploading;
+  photo/GIF drafts, failed uploads and retry remain scoped to their conversation.
 - iOS offers email-link sign-in. Android's Google SDK is deliberately excluded
   from the iOS native package. Do not enable Google on iOS without implementing
   the corresponding Apple-compliant login options and configuring their credentials.

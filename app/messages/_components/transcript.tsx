@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ReactNode,
 } from 'react';
 import {
   ArrowDown,
@@ -184,7 +185,8 @@ export function Transcript<T extends PendingChatMessage>({
       latestOutgoing.id !== lastOutgoingRef.current;
     const opening = detailOpen && !detailWasOpenRef.current;
 
-    if (!known || opening || nearBottomRef.current || sending) {
+    const fits = history.scrollHeight <= history.clientHeight + 1;
+    if (!known || opening || fits || nearBottomRef.current || sending) {
       history.scrollTop = history.scrollHeight;
       nearBottomRef.current = true;
       setAtBottom(true);
@@ -213,6 +215,11 @@ export function Transcript<T extends PendingChatMessage>({
     const content = contentRef.current;
     if (!history || !content) return;
     const observer = new ResizeObserver(() => {
+      if (history.scrollHeight <= history.clientHeight + 1) {
+        nearBottomRef.current = true;
+        setAtBottom(true);
+        setNewMessages(0);
+      }
       if (nearBottomRef.current) history.scrollTop = history.scrollHeight;
       else restorePosition();
     });
@@ -291,6 +298,11 @@ export function Transcript<T extends PendingChatMessage>({
             means Pana accepted the message, not that it was read. There are no
             read receipts or online indicators.
           </p>
+          <p className="text-pana-ink/65">
+            Photos use hosted Pana media links, not end-to-end encryption.
+            Someone with a copied image link can view it outside this
+            conversation.
+          </p>
           {group && (
             <p className="text-pana-ink/65">
               Only active group members can read and post here. Admins and
@@ -358,6 +370,8 @@ export function Transcript<T extends PendingChatMessage>({
                   disabled={isLoadingOlder}
                   className="text-pana-indigo border-pana-indigo/15 min-h-11 rounded-full border bg-white px-4 text-xs font-extrabold disabled:opacity-50"
                   onClick={() => {
+                    nearBottomRef.current = false;
+                    setAtBottom(false);
                     rememberPosition();
                     onLoadOlder();
                   }}
@@ -405,30 +419,29 @@ export function Transcript<T extends PendingChatMessage>({
               const prior = groups[groupIndex - 1];
               const day = dayLabel(batch[0].published);
               const showDay = !prior || dayLabel(prior[0].published) !== day;
-              const last = batch[batch.length - 1];
               return (
-                <div key={batch[0].id} className="mb-5">
+                <div key={batch[0].id} className="mb-2">
                   {showDay && (
-                    <div className="pt-2 pb-6 text-center">
+                    <div className="pt-2 pb-3 text-center">
                       <span className={styles.dayChip}>{day}</span>
                     </div>
                   )}
                   <div
-                    className={`flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}
+                    className={`flex items-start gap-2 ${mine ? 'justify-end' : 'justify-start'}`}
                   >
-                    {!mine && (
+                    {group && !mine && (
                       <ChatAvatar
                         actor={group ? batch[0].actor : counterparty}
                         size={28}
                       />
                     )}
                     <div
-                      className={`flex max-w-[82%] flex-col gap-1.5 md:max-w-[76%] ${mine ? 'items-end' : 'items-start'}`}
+                      className={`flex max-w-[92%] flex-col gap-1 md:max-w-[80%] ${mine ? 'items-end' : 'items-start'}`}
                     >
                       {group && !mine && (
                         <Link
                           href={`/p/${encodeURIComponent(batch[0].actor.username)}`}
-                          className="text-pana-indigo px-1 text-[11px] font-extrabold"
+                          className="text-pana-indigo px-1 text-[11px] leading-4 font-extrabold"
                         >
                           {batch[0].actor.name || batch[0].actor.username}
                         </Link>
@@ -441,54 +454,28 @@ export function Transcript<T extends PendingChatMessage>({
                           onRemove={onRemoveMessage}
                         />
                       ))}
-                      <span className="mt-0.5 flex items-center gap-2 px-1">
-                        <span className={styles.messageTime}>
-                          {timeLabel(last.published)}
-                        </span>
-                        {mine && <DeliveryMark state="sent" />}
-                      </span>
                     </div>
                   </div>
                 </div>
               );
             })}
             {outgoing.map((message) => (
-              <div
-                key={message.id}
-                data-chat-message-id={message.id}
-                className="mb-5 flex justify-end"
-              >
-                <div className="flex max-w-[82%] flex-col items-end gap-1.5 md:max-w-[76%]">
-                  {message.content && (
-                    <div
-                      className={styles.bubble}
-                      data-mine="true"
-                      data-failed={message.delivery === 'failed'}
-                    >
-                      {message.content}
-                    </div>
-                  )}
-                  {!!message.attachments?.length && (
-                    <div
-                      className={styles.attachmentBubble}
-                      data-mine="true"
-                      data-failed={message.delivery === 'failed'}
-                    >
-                      <AttachmentGrid
-                        attachments={message.attachments.map(
-                          (attachment, index) => ({
-                            ...attachment,
-                            id: `${message.id}-${index}`,
-                          })
-                        )}
-                      />
-                    </div>
-                  )}
+              <div key={message.id} className="mb-2 flex justify-end">
+                <div className="flex max-w-[92%] flex-col items-end gap-1 md:max-w-[80%]">
+                  <MessageFrame
+                    id={message.id}
+                    mine
+                    content={message.content}
+                    attachments={message.attachments?.map(
+                      (attachment, index) => ({
+                        ...attachment,
+                        id: `${message.id}-${index}`,
+                      })
+                    )}
+                    published={message.published}
+                    delivery={message.delivery}
+                  />
                   <span className="mt-0.5 flex flex-wrap items-center gap-2 px-1">
-                    <span className={styles.messageTime}>
-                      {timeLabel(message.published)}
-                    </span>
-                    <DeliveryMark state={message.delivery} />
                     {message.delivery === 'failed' &&
                       canRetry &&
                       message.error !== DIRECT_THREAD_REFUSED && (
@@ -546,50 +533,94 @@ function Bubble({
 }) {
   const expiresIn = expiresInLabel(message.expiresAt);
   return (
-    <div
-      id={`message-${message.id}`}
-      data-chat-message-id={message.id}
-      className={`flex max-w-full flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}
-    >
-      {!!message.content?.trim() && (
-        <div className={styles.bubble} data-mine={mine}>
+    <MessageFrame
+      id={message.id}
+      mine={mine}
+      content={
+        message.content?.trim() ? (
           <SafeHtml html={message.content} className="chat-bubble-body" />
-        </div>
-      )}
-      {!!message.attachments?.length && (
-        <div className={styles.attachmentBubble} data-mine={mine}>
-          <AttachmentGrid attachments={message.attachments} />
-        </div>
-      )}
-      <div className="flex max-w-full items-center gap-2">
-        {expiresIn && <ExpiryChip expiresIn={expiresIn} />}
-        {!mine && (
-          <button
-            type="button"
-            className={styles.iconButton}
-            aria-label="Report message"
-            onClick={() =>
-              openSafetyReport({
-                type: 'content',
-                url: `${window.location.href.split('#')[0]}#message-${encodeURIComponent(message.id)}`,
-              })
-            }
-          >
-            <Flag className="h-4 w-4" aria-hidden="true" />
-          </button>
+        ) : null
+      }
+      attachments={message.attachments}
+      published={message.published}
+      expiresIn={expiresIn}
+      actions={
+        <>
+          {!mine && (
+            <button
+              type="button"
+              className={styles.iconButton}
+              aria-label="Report message"
+              onClick={() =>
+                openSafetyReport({
+                  type: 'content',
+                  url: `${window.location.href.split('#')[0]}#message-${encodeURIComponent(message.id)}`,
+                })
+              }
+            >
+              <Flag className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
+          {message.canDelete && onRemove && (
+            <button
+              type="button"
+              className={styles.iconButton}
+              aria-label="Delete message"
+              title="Delete for everyone"
+              onClick={() => onRemove(message)}
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
+        </>
+      }
+    />
+  );
+}
+
+function MessageFrame({
+  id,
+  mine,
+  content,
+  attachments,
+  published,
+  expiresIn,
+  delivery = 'sent',
+  actions,
+}: {
+  id: string;
+  mine: boolean;
+  content: ReactNode;
+  attachments?: ChatMessage['attachments'];
+  published: ChatMessage['published'];
+  expiresIn?: string | null;
+  delivery?: 'sent' | 'sending' | 'failed';
+  actions?: ReactNode;
+}) {
+  return (
+    <div
+      id={`message-${id}`}
+      data-chat-message-id={id}
+      className={styles.messageLine}
+    >
+      <div
+        className={`${styles.bubble} ${styles.compactBubble}`}
+        data-mine={mine}
+        data-failed={delivery === 'failed'}
+      >
+        {content && <div className={styles.compactBody}>{content}</div>}
+        {!!attachments?.length && (
+          <div className={styles.compactMedia}>
+            <AttachmentGrid attachments={attachments} />
+          </div>
         )}
-        {message.canDelete && onRemove && (
-          <button
-            type="button"
-            className={styles.iconButton}
-            aria-label="Delete message"
-            title="Delete for everyone"
-            onClick={() => onRemove(message)}
-          >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
-          </button>
-        )}
+        <div className={styles.messageMeta}>
+          <span className={styles.messageTime}>{timeLabel(published)}</span>
+          {expiresIn && <ExpiryChip expiresIn={expiresIn} compact />}
+          {mine && <DeliveryMark state={delivery} compact />}
+        </div>
       </div>
+      {actions && <div className={styles.messageTools}>{actions}</div>}
     </div>
   );
 }

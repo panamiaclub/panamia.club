@@ -37,6 +37,8 @@ import {
   conversationUnavailable,
   EMPTY_MESSAGE_DRAFT,
   messageError,
+  messageDraftAttachments,
+  messageDraftCanSend,
   unconfirmedMessages,
   type MessageDraft,
   type OutgoingMessage,
@@ -392,16 +394,16 @@ function MessagesWorkspace({
     if (
       !activeActorId ||
       !canReply ||
-      draft.isMirroring ||
       sending.current.has(activeActorId) ||
-      (!draft.text.trim() && !draft.gif)
+      !messageDraftCanSend(draft)
     )
       return;
+    const attachments = messageDraftAttachments(draft);
     const message: OutgoingMessage = {
       id: crypto.randomUUID(),
       recipientActorId: activeActorId,
       content: draft.text.trim(),
-      ...(draft.gif ? { attachments: [draft.gif] } : {}),
+      ...(attachments.length ? { attachments } : {}),
       published: new Date().toISOString(),
       delivery: 'sending',
     };
