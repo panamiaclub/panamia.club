@@ -520,6 +520,50 @@ async function expectUnobscuredMenu(menu: Locator) {
     .toEqual([]);
 }
 
+test('desktop web keeps zoom buttons for mouse users, including narrow windows', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await fixtures(page, { results: [storefront, otherStorefront] });
+  await page.goto('/directory/search?radius=all&view=map');
+  await waitForFrame(page, [25.779, -80.2355]);
+
+  const zoomIn = page.getByRole('button', { name: 'Zoom in', exact: true });
+  const zoomOut = page.getByRole('button', { name: 'Zoom out', exact: true });
+  for (const width of [1440, 900]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expect(zoomIn).toBeVisible();
+    await expect(zoomOut).toBeVisible();
+    const before = await camera(page);
+    await zoomIn.click();
+    await expect
+      .poll(async () => (await camera(page)).zoom)
+      .toBeGreaterThan(before.zoom + 0.99);
+    const zoomedIn = await camera(page);
+    await zoomOut.click();
+    await expect
+      .poll(async () => (await camera(page)).zoom)
+      .toBeLessThan(zoomedIn.zoom - 0.99);
+  }
+});
+
+test.describe('mobile web map controls', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  test('mobile web keeps the map free of zoom buttons', async ({ page }) => {
+    await fixtures(page);
+    await page.goto('/directory/search?radius=all&view=map');
+    await expect(page.locator('.dirsearch-mappane canvas')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /^Zoom (in|out)$/ })
+    ).toHaveCount(0);
+  });
+});
+
 test('In map follows actual zoom, pan, and resized bounds without moving known locations into Online', async ({
   page,
 }) => {
@@ -695,7 +739,7 @@ test('complete collections keep saved and ownership state beyond 60 listings wit
   await waitForFrame(page, [25.779, -80.2355]);
   for (let step = 0; step < 3; step++) {
     const previous = await camera(page);
-    await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+    await page.locator('.dirsearch-mappane canvas').press('Equal');
     await expect
       .poll(async () => (await camera(page)).zoom)
       .toBeGreaterThan(previous.zoom + 0.99);

@@ -49,6 +49,7 @@ interface MapCanvasProps {
   pins: MapCanvasPin[];
   viewer: { lat: number; lng: number } | null;
   hasZipAreas?: boolean;
+  showZoomControls?: boolean;
   onBoundsChange?: (bounds: MapBounds | null) => void;
 }
 
@@ -62,6 +63,7 @@ export default function MapCanvas({
   pins,
   viewer,
   hasZipAreas = false,
+  showZoomControls = false,
   onBoundsChange,
 }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -105,8 +107,10 @@ export default function MapCanvas({
         // only makes that harder to read, and makes the pins' maths harder too.
         pitchWithRotate: false,
         dragRotate: false,
-        touchZoomRotate: false,
+        touchZoomRotate: true,
+        touchPitch: false,
       });
+      instance.touchZoomRotate.disableRotation();
     } catch (error) {
       console.error('Could not create the directory map:', error);
       containerRef.current.replaceChildren();
@@ -147,11 +151,6 @@ export default function MapCanvas({
       if (!reportedFailure) onBoundsChangeRef.current?.(measured);
     };
 
-    instance.addControl(
-      new NavigationControl({ showCompass: false }),
-      'top-left'
-    );
-
     instance.on('moveend', (event) => {
       if (event.originalEvent) {
         const centre = instance.getCenter();
@@ -175,6 +174,16 @@ export default function MapCanvas({
     };
     // Recreate only on an explicit retry; later views use the effect below.
   }, [attempt]);
+
+  useEffect(() => {
+    if (!map || !showZoomControls) return;
+
+    const control = new NavigationControl({ showCompass: false });
+    map.addControl(control, 'top-left');
+    return () => {
+      if (map.hasControl(control)) map.removeControl(control);
+    };
+  }, [map, showZoomControls]);
 
   // Follow the parent's frame when it changes for a reason other than the user
   // having just moved the map themselves.
