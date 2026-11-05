@@ -78,6 +78,19 @@ function check(screenname: string) {
   return checkRoute.GET(new NextRequest(url));
 }
 
+async function seedUnrelatedMemberHistory() {
+  await db.insert(schema.users).values({
+    id: 'history-holder',
+    email: 'history-holder@test.invalid',
+    screenname: 'current-holder',
+  });
+  await db.insert(schema.screennameHistory).values({
+    userId: 'history-holder',
+    screenname: 'former-holder',
+    redirectTo: 'current-holder',
+  });
+}
+
 async function assertSetupUnchanged() {
   const user = await db.query.users.findFirst({
     where: eq(schema.users.id, userId),
@@ -277,6 +290,7 @@ test('a member can check and claim a handle already held by their imported perso
 });
 
 test('a member can check their own current and retired handles', async () => {
+  await seedUnrelatedMemberHistory();
   await db
     .update(schema.users)
     .set({ screenname: 'ana-current' })
@@ -361,6 +375,10 @@ test('signed-in checks still reserve other identities, shared-inbox businesses, 
     screenname: 'retired-member',
     userId: 'deleted-member',
   });
+  await db.insert(schema.screennameHistory).values({
+    screenname: 'other-retired',
+    userId: 'another-member',
+  });
   await pg.exec(`
     INSERT INTO social_actors (id, username) VALUES ('group-actor', 'garden-club');
     INSERT INTO social_groups (id, actor_id) VALUES ('group', 'group-actor');
@@ -371,6 +389,7 @@ test('signed-in checks still reserve other identities, shared-inbox businesses, 
     'shared-inbox-shop',
     'garden-club',
     'retired-member',
+    'other-retired',
   ]) {
     const response = await check(`  ${screenname.toUpperCase()}  `);
     assert.deepEqual(await response.json(), {
@@ -378,4 +397,47 @@ test('signed-in checks still reserve other identities, shared-inbox businesses, 
       error: 'This screenname is already taken',
     });
   }
+  assert.deepEqual(await (await check('untouched-choice')).json(), {
+    available: true,
+  });
+});
+
+test('unrelated live-member history cannot make an unused handle taken only for signed-in signups', async () => {
+  await seedUnrelatedMemberHistory();
+  const signedInSession = session;
+  session = null;
+  assert.deepEqual(await (await check('MyTestAccount123')).json(), {
+    available: true,
+  });
+
+  session = signedInSession;
+  assert.deepEqual(await (await check('MyTestAccount123')).json(), {
+    available: true,
+  });
+  assert.deepEqual(
+    await handles.validateScreennameFull('MyTestAccount123', email),
+    { valid: true }
+  );
+  assert.deepEqual(await (await check('former-holder')).json(), {
+    available: false,
+    error: 'This screenname is already taken',
+  });
+});
+
+test('a first handle claim succeeds when another live member has renamed an unrelated handle', async () => {
+  await seedUnrelatedMemberHistory();
+  const response = await claim({
+    screenname: 'MyTestAccount123',
+    name: 'Test Account',
+  });
+
+  assert.equal(response.status, 200);
+  const saved = await db.query.users.findFirst({
+    where: eq(schema.users.id, userId),
+    with: { profile: true },
+  });
+  assert.equal(saved?.screenname, 'MyTestAccount123');
+  assert.equal(saved?.profile?.screenname, 'MyTestAccount123');
+  assert.equal(saved?.profile?.name, 'Test Account');
+  assert.equal(saved?.lastScreennameChange, null);
 });

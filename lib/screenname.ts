@@ -245,7 +245,10 @@ export async function isScreennameAvailable(
       .where(
         and(
           sql`lower(${screennameHistory.screenname}) = lower(${trimmedName})`,
-          sql`${users.email} is null or lower(${users.email}) != lower(${excludeEmail})`
+          or(
+            isNull(users.email),
+            sql`lower(${users.email}) != lower(${excludeEmail})`
+          )
         )
       )
       .limit(1);
