@@ -26,7 +26,7 @@ export function trackNativeViewport(): () => void {
   const hadKeyboard = root.hasAttribute('data-native-keyboard');
   let layoutWidth = window.innerWidth;
   let availableHeight = window.innerHeight;
-  const stop = observeVisualViewport(({ height, offsetTop }) => {
+  const update = ({ height, offsetTop }: VisualViewport) => {
     const editing = document.activeElement?.matches(':read-write');
     if (!editing || window.innerWidth !== layoutWidth) {
       layoutWidth = window.innerWidth;
@@ -41,10 +41,17 @@ export function trackNativeViewport(): () => void {
       'data-native-keyboard',
       availableHeight - height - offsetTop > 100
     );
-  });
+  };
+  const stop = observeVisualViewport(update);
+  const onFocus = () => {
+    const viewport = window.visualViewport;
+    if (viewport?.scale === 1) update(viewport);
+  };
+  document.addEventListener('focusin', onFocus);
 
   return () => {
     stop();
+    document.removeEventListener('focusin', onFocus);
     properties.forEach((name, index) => {
       if (previous[index]) root.style.setProperty(name, previous[index]);
       else root.style.removeProperty(name);

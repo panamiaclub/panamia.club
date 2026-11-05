@@ -76,6 +76,8 @@ the corresponding iPad screenshots.
   by retaining the available height while a text field is editable and focused.
   Hardware-keyboard focus without a height reduction keeps the normal safe area,
   and unfocused resizes or width/orientation changes refresh that height.
+  Focus transfers also refresh keyboard state so returning to an inbox restores
+  app navigation without needing a further viewport resize.
 - iOS offers email-link sign-in. Android's Google SDK is deliberately excluded
   from the iOS native package. Do not enable Google on iOS without implementing
   the corresponding Apple-compliant login options and configuring their credentials.

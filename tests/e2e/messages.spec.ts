@@ -2132,6 +2132,13 @@ for (const resize of ['visual-only', 'whole-WebView'] as const) {
         expect(control.bottomGap).toBeCloseTo(1, 0);
       }
       await input(page).fill('');
+      if (resize === 'whole-WebView') {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.evaluate(() => {
+          Object.assign(window.visualViewport!, { height: 844, offsetTop: 0 });
+          window.visualViewport!.dispatchEvent(new Event('resize'));
+        });
+      }
       await page
         .getByRole('button', { name: 'Add a GIF', exact: true })
         .click();
@@ -2142,6 +2149,14 @@ for (const resize of ['visual-only', 'whole-WebView'] as const) {
       await expect(
         page.getByRole('button', { name: 'Remove GIF' })
       ).toBeVisible();
+      if (resize === 'whole-WebView') {
+        await expect(input(page)).toBeFocused();
+        await page.setViewportSize({ width: 390, height: 390 });
+        await page.evaluate(() => {
+          Object.assign(window.visualViewport!, { height: 390, offsetTop: 0 });
+          window.visualViewport!.dispatchEvent(new Event('resize'));
+        });
+      }
       const attachment = await geometry();
       expect(attachment.paddingBottom).toBe(8);
       expect(attachment.bottom).toBeLessThanOrEqual(keyboardBottom);

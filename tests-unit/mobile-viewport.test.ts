@@ -37,7 +37,7 @@ function installViewport(t: TestContext) {
   });
   Object.defineProperty(globalThis, 'document', {
     configurable: true,
-    value: {
+    value: Object.assign(new EventTarget(), {
       activeElement: {
         matches: (selector: string) => selector === ':read-write' && editing,
       },
@@ -52,7 +52,7 @@ function installViewport(t: TestContext) {
         toggleAttribute: (name: string, enabled: boolean) =>
           enabled ? attributes.add(name) : attributes.delete(name),
       },
-    },
+    }),
   });
   return {
     viewport,
@@ -194,4 +194,31 @@ test('layout-only resize events update the native viewport and are removed on cl
   browser.dispatchEvent(new Event('resize'));
   assert.equal(properties.get('--native-viewport-height'), '600px');
   assert.ok(attributes.has('data-native-keyboard'));
+});
+
+test('focus restoration clears a stale native keyboard marker without another resize', (t) => {
+  const { browser, viewport, properties, attributes, setEditing } =
+    installViewport(t);
+  properties.set('--native-viewport-height', '600px');
+  setEditing(true);
+  const stop = trackNativeViewport();
+  browser.innerHeight = 390;
+  viewport.height = 390;
+  viewport.dispatchEvent(new Event('resize'));
+  assert.ok(attributes.has('data-native-keyboard'));
+  setEditing(false);
+  document.dispatchEvent(new Event('focusin'));
+  assert.ok(!attributes.has('data-native-keyboard'));
+  setEditing(true);
+  document.dispatchEvent(new Event('focusin'));
+  assert.ok(!attributes.has('data-native-keyboard'));
+  browser.innerHeight = 200;
+  viewport.height = 200;
+  viewport.dispatchEvent(new Event('resize'));
+  document.dispatchEvent(new Event('focusin'));
+  assert.ok(attributes.has('data-native-keyboard'));
+  stop();
+  document.dispatchEvent(new Event('focusin'));
+  assert.equal(properties.get('--native-viewport-height'), '600px');
+  assert.ok(!attributes.has('data-native-keyboard'));
 });
