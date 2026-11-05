@@ -22,6 +22,20 @@ and adapts when Google or all OAuth options are unavailable. Provider gating,
 verification, terms, callback destinations, and first-signup onboarding are
 unchanged.
 
+After a successful email-link request, an in-page status names the submitted
+inbox and stays visible after the popup notification closes, including while
+the address is edited or the email form is closed. It explains using the same
+browser and checking Spam or Junk; native shells instead say to open the link
+in the Pana Mia app. A new request clears the old status while pending, and a
+failed request never reports a new link as sent. This acknowledges the request,
+not inbox delivery, account creation, listing ownership, or a completed review.
+
+Listing invitations explicitly offer **Sign in or create an account** and
+explain that the login email can differ from the listing's business contact.
+After signing in, an unclaimed invitation still requires confirmation of the
+chosen account and exact business before review. No personal public profile
+or screenname is required to manage a business.
+
 ## Seamless Provider Switching
 
 ### Can users freely change between sign-in methods?
