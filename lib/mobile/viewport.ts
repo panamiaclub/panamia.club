@@ -11,9 +11,11 @@ export function observeVisualViewport(
   update();
   viewport.addEventListener('resize', update);
   viewport.addEventListener('scroll', update);
+  window.addEventListener('resize', update);
   return () => {
     viewport.removeEventListener('resize', update);
     viewport.removeEventListener('scroll', update);
+    window.removeEventListener('resize', update);
   };
 }
 
@@ -22,12 +24,22 @@ export function trackNativeViewport(): () => void {
   const properties = ['--native-viewport-height', '--native-viewport-top'];
   const previous = properties.map((name) => root.style.getPropertyValue(name));
   const hadKeyboard = root.hasAttribute('data-native-keyboard');
+  let layoutWidth = window.innerWidth;
+  let availableHeight = window.innerHeight;
   const stop = observeVisualViewport(({ height, offsetTop }) => {
+    const editing = document.activeElement?.matches(':read-write');
+    if (!editing || window.innerWidth !== layoutWidth) {
+      layoutWidth = window.innerWidth;
+      availableHeight = window.innerHeight;
+    } else {
+      // WKWebView can shrink innerHeight along with the visual viewport.
+      availableHeight = Math.max(availableHeight, window.innerHeight);
+    }
     root.style.setProperty(properties[0], `${height}px`);
     root.style.setProperty(properties[1], `${offsetTop}px`);
     root.toggleAttribute(
       'data-native-keyboard',
-      window.innerHeight - height - offsetTop > 100
+      availableHeight - height - offsetTop > 100
     );
   });
 
