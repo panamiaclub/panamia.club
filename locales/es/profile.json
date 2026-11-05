@@ -91,6 +91,10 @@
     "claimBody": "Reclama esta ficha para publicar novedades, agregar fotos y responder a las panas que te guardan.",
     "claimCta": "Reclamar esta ficha"
   },
+  "messaging": {
+    "button": "Mensaje",
+    "open": "Enviar un mensaje a {{name}}"
+  },
   "locationForm": {
     "addressNote": "Una dirección pública permite indicar cómo llegar. Los negocios en línea necesitan un código postal de base, sin publicar una dirección.",
     "onlineLabel": "Negocio en línea, sin un local público",

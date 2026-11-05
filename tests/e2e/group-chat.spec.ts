@@ -18,8 +18,9 @@ const compose = (page: Page, name = 'Garden Crew') =>
   page.getByRole('textbox', { name: `Message ${name}`, exact: true });
 const groupRow = (page: Page, name: string) =>
   page
-    .getByRole('list', { name: 'Group chats', exact: true })
-    .getByRole('button', { name: new RegExp(name) });
+    .getByRole('list', { name: 'Conversations', exact: true })
+    .getByRole('button', { name: new RegExp(name) })
+    .and(page.locator('[data-conversation-kind="group"]'));
 
 interface FixtureOptions {
   url?: string;
@@ -56,6 +57,17 @@ async function openGroupChat(page: Page, options: FixtureOptions = {}) {
   const business = person('business', 'Neighborhood Studio');
   const bee = person('bee', 'Bee Maria');
   const mart = person('mart', 'Mart Ruiz');
+  const directMessage = {
+    id: 'direct-bee',
+    uri: 'https://localhost/statuses/direct-bee',
+    actor: bee,
+    content: '<p>A direct hello from Bee.</p>',
+    published: new Date(Date.now() - 3_600_000).toISOString(),
+    expiresAt: new Date(Date.now() + 29 * 86_400_000).toISOString(),
+    repliesCount: 0,
+    likesCount: 0,
+    liked: false,
+  };
   const rooms: Record<string, GroupChatRoom> = {
     garden: {
       id: 'group-garden',
@@ -301,9 +313,23 @@ async function openGroupChat(page: Page, options: FixtureOptions = {}) {
       return json(route, {
         success: true,
         data: {
-          conversations: [],
+          conversations:
+            state.activeProfile === 'business'
+              ? []
+              : [{ counterparty: bee, lastMessage: directMessage }],
           viewerActorId: currentViewer().id,
           localDomain: 'localhost',
+        },
+      });
+    if (path === '/api/social/messages/conversations/bee')
+      return json(route, {
+        success: true,
+        data: {
+          counterparty: bee,
+          messages: state.activeProfile === 'business' ? [] : [directMessage],
+          viewerActorId: currentViewer().id,
+          localDomain: 'localhost',
+          canSend: 'allow',
         },
       });
     if (path === '/api/social/dm-requests')
@@ -507,8 +533,11 @@ test('opens a members-only group chat from Messages with real sender names and o
 }) => {
   const fixture = await openGroupChat(page);
   await expect(
-    page.getByRole('button', { name: 'Groups', exact: true, pressed: true })
+    page.getByRole('button', { name: 'Messages', exact: true, pressed: true })
   ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Groups', exact: true })
+  ).toHaveCount(0);
   await expect(
     log(page).getByRole('link', { name: 'Bee Maria', exact: true })
   ).toBeVisible();
@@ -552,15 +581,21 @@ test('keeps separate group and direct-message scopes and per-group text/GIF draf
   await compose(page, 'Print Workshop').fill(
     'Workshop gets a different draft.'
   );
-  await page.getByRole('button', { name: 'Messages', exact: true }).click();
-  await expect(page.getByRole('list', { name: 'Group chats' })).toBeHidden();
-  await page.getByRole('button', { name: 'Groups', exact: true }).click();
+  const individual = page
+    .getByRole('list', { name: 'Conversations', exact: true })
+    .getByRole('button', { name: /Bee Maria/ })
+    .and(page.locator('[data-conversation-kind="direct"]'));
+  await individual.click();
+  await compose(page, 'Bee Maria').fill('An individual draft.');
+  await groupRow(page, 'Print Workshop').click();
   await expect(compose(page, 'Print Workshop')).toHaveValue(
     'Workshop gets a different draft.'
   );
   await groupRow(page, 'Garden Crew').click();
   await expect(compose(page)).toHaveValue('Garden gets this caption.');
   await expect(page.getByRole('button', { name: 'Remove GIF' })).toBeVisible();
+  await individual.click();
+  await expect(compose(page, 'Bee Maria')).toHaveValue('An individual draft.');
   expect(fixture.posts).toHaveLength(0);
   expect(fixture.mailboxes).toHaveLength(1);
 });
@@ -619,6 +654,41 @@ test('reconciles mailbox delivery before a delayed HTTP acknowledgement', async 
       (message) => message.clientId === fixture.posts[0].input.clientId
     )
   ).toHaveLength(1);
+});
+
+test('reconciles an accepted background group message in the unified inbox before its HTTP response', async ({
+  page,
+}) => {
+  let delayed: Route | null = null;
+  const fixture = await openGroupChat(page, {
+    send: async (route, _input, commit) => {
+      delayed = route;
+      commit();
+    },
+  });
+  await compose(page).fill('Delivered while another conversation is open.');
+  await compose(page).press('Enter');
+  await expect.poll(() => fixture.posts.length).toBe(1);
+  await groupRow(page, 'Print Workshop').click();
+  fixture.notify('garden');
+  await expect(groupRow(page, 'Garden Crew')).toContainText(
+    'You: Delivered while another conversation is open.'
+  );
+  await expect(groupRow(page, 'Garden Crew')).not.toContainText('Sending:');
+  await delayed!.fulfill({
+    status: 503,
+    json: { success: false, error: 'The HTTP acknowledgement was lost.' },
+  });
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Message to @garden sent.' })
+  ).toHaveText('Message to @garden sent.');
+  await expect(groupRow(page, 'Garden Crew')).not.toContainText('Not sent:');
+  await groupRow(page, 'Garden Crew').click();
+  await expect(
+    log(page).getByText('Delivered while another conversation is open.', {
+      exact: true,
+    })
+  ).toHaveCount(1);
 });
 
 test('keeps a late failure in its original group while another group sends successfully', async ({

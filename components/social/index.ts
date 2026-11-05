@@ -9,6 +9,7 @@ export { RelationshipBadge } from './RelationshipBadge';
 export { SocialEligibilityGate } from './SocialEligibilityGate';
 export { VoiceMemoComposer } from './VoiceMemoComposer';
 export { SendVoiceMemoButton } from './SendVoiceMemoButton';
+export { SendMessageButton } from './SendMessageButton';
 export { StoryRing } from './StoryRing';
 export { StoryViewer } from './StoryViewer';
 export { StoryComposer } from './StoryComposer';
