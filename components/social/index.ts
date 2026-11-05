@@ -7,6 +7,7 @@ export { ActorCard } from './ActorCard';
 export { FollowButton } from './FollowButton';
 export { RelationshipBadge } from './RelationshipBadge';
 export { SocialEligibilityGate } from './SocialEligibilityGate';
+export { SendMessageButton } from './SendMessageButton';
 export { StoryRing } from './StoryRing';
 export { StoryViewer } from './StoryViewer';
 export { StoryComposer } from './StoryComposer';

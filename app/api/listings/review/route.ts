@@ -5,6 +5,7 @@ import {
   confirmListingReview,
   stopOwnedListingReminders,
   allowListingReminders,
+  type RefreshFailure,
 } from '@/lib/server/listing-refresh';
 import {
   invitationHeaders,
@@ -14,10 +15,10 @@ import {
 const failure = (
   error: string,
   status: number,
-  location?: { field?: 'zipcode'; step?: 'address' }
+  requirement?: Pick<RefreshFailure, 'field' | 'step'>
 ) =>
   NextResponse.json(
-    { success: false, error, ...location },
+    { success: false, error, ...requirement },
     { status, headers: invitationHeaders }
   );
 

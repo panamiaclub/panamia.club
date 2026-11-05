@@ -52,6 +52,7 @@ function valid(value: unknown, id: string): value is AdminState {
         profileId: id,
         lastReviewedAt: profile.lastReviewedAt,
         zipVerified: false,
+        primaryPhotoSaved: false,
         remindersOptedOut: false,
         cycle: state.cycle,
       },
@@ -169,7 +170,8 @@ export default function ListingRefreshAdminPage() {
             <p className="text-muted-foreground text-sm">
               The initial notice goes to the business inbox when unclaimed, or
               to its current managing accounts. Review confirmation stops the
-              cycle. Missing ZIPs never cause a pause by themselves.
+              cycle. Missing ZIPs or primary photos never cause a pause by
+              themselves.
             </p>
             {data.cycle && (
               <>

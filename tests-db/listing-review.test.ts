@@ -1519,6 +1519,218 @@ test('personal address editors and unscoped business drafts may still omit a ZIP
   assert.equal(zipLookups.length, 0);
 });
 
+test('final confirmation requires this business primary photo, never a gallery, personal avatar, ID or submitted photo flag', async () => {
+  await ownListing();
+  await db.insert(schema.users).values({
+    id: 'direct-photo-owner',
+    name: 'Direct Owner',
+    email: 'direct-photo@personal.test.invalid',
+    accountType: 'directory',
+  });
+  await db
+    .update(schema.profiles)
+    .set({
+      primaryImageCdn: 'https://files.test.invalid/other-business.png',
+    })
+    .where(eq(schema.profiles.id, secondId));
+  const personal = await getRow(personalId);
+  const other = await getRow(secondId);
+  const accounts = await db.select().from(schema.users);
+  for (const access of ['owner-link', 'direct-owner', 'admin-manager']) {
+    session = {
+      user: {
+        id: access === 'direct-owner' ? 'direct-photo-owner' : userId,
+        email:
+          access === 'direct-owner'
+            ? 'direct-photo@personal.test.invalid'
+            : accountEmail,
+        name: 'Ana Person',
+        isAdmin: access === 'admin-manager',
+      },
+    };
+    for (const primaryImageCdn of [
+      null,
+      '',
+      ' \t ',
+      'data:image/png;base64,c2VlZC1wbGFjZWhvbGRlcg==',
+      'blob:https://directory.test.invalid/unsaved',
+      '/logos/logo.png',
+      'https://directory.test.invalid/meta_image.jpg',
+      '/images/placeholder.png',
+    ]) {
+      await db
+        .update(schema.profiles)
+        .set({
+          userId: access === 'direct-owner' ? 'direct-photo-owner' : null,
+          addressPostalCode: '33138',
+          addressCountry: 'US',
+          geo: { zipArea: zipAreas['33138'] },
+          primaryImageCdn,
+          primaryImageId: 'stale-primary-id',
+          lastReviewedAt: new Date('2025-01-01T00:00:00Z'),
+        })
+        .where(eq(schema.profiles.id, listingId));
+      const before = await getRow(listingId);
+      const state = await (
+        await reviewApi.GET(
+          request(
+            `/api/listings/review?profileId=${listingId}&complete=1&confirmed=1&primaryPhotoSaved=true`
+          )
+        )
+      ).json();
+      assert.equal(state.primaryPhotoSaved, false);
+      assert.equal(state.zipVerified, true);
+      assert.ok(state.lastReviewedAt);
+      const response = await confirmBusiness({
+        primaryImageCdn: personal?.primaryImageCdn,
+        images: { primaryCDN: other?.primaryImageCdn },
+        primaryPhotoSaved: true,
+        complete: true,
+      });
+      assert.equal(response.status, 400, `${access}/${primaryImageCdn}`);
+      const error = await response.json();
+      assert.equal(error.success, false);
+      assert.equal(error.field, 'primary');
+      assert.equal(error.step, 'images');
+      assert.match(error.error, /save a primary business photo/);
+      assert.deepEqual(await getRow(listingId), before);
+      assert.equal(
+        (await publicProfiles.getPublicListing(listingId))?.id,
+        listingId,
+        'An already-published photo-less listing is not unpublished'
+      );
+    }
+  }
+  assert.deepEqual(await getRow(personalId), personal);
+  assert.deepEqual(await getRow(secondId), other);
+  assert.deepEqual(await db.select().from(schema.users), accounts);
+  assert.equal((await db.select().from(schema.listingRefreshCycles)).length, 0);
+  assert.equal(
+    (await db.select().from(schema.listingRefreshDeliveries)).length,
+    0
+  );
+  assert.equal(invalidated.length, 0);
+  assert.equal(zipLookups.length, 0);
+  assert.equal(emails.length, 0);
+  assert.equal(activeId, personalId);
+});
+
+test('a gallery-only draft upload cannot complete the review, while a saved primary upload and an existing primary can', async () => {
+  await ownListing();
+  await db
+    .update(schema.profiles)
+    .set({
+      primaryImageCdn: null,
+      addressPostalCode: '33138',
+      addressCountry: 'US',
+      geo: { zipArea: zipAreas['33138'] },
+    })
+    .where(eq(schema.profiles.id, listingId));
+  const personal = await getRow(personalId);
+  const other = await getRow(secondId);
+  const upload = (field: string, scoped = true) => {
+    const form = new FormData();
+    form.set(
+      field,
+      new File(['isolated photo fixture'], 'photo.webp', { type: 'image/webp' })
+    );
+    return photos.POST(
+      new NextRequest(
+        `https://directory.test.invalid${scoped ? editPath('upload') : '/api/profile/upload'}`,
+        { method: 'POST', body: form }
+      )
+    );
+  };
+  assert.equal((await upload('gallery2')).status, 200);
+  assert.equal((await getRow(listingId))?.primaryImageCdn, null);
+  assert.equal((await confirmBusiness()).status, 400);
+  assert.equal((await getRow(listingId))?.lastReviewedAt, null);
+  const response = await upload('primary');
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.data.id, listingId);
+  const refetched = await (
+    await reader.GET(request(`/api/getProfile?listingId=${listingId}`))
+  ).json();
+  assert.equal(refetched.data.images.primaryCDN, result.data.primaryImageCdn);
+  assert.equal(
+    (
+      await (
+        await reviewApi.GET(
+          request(`/api/listings/review?profileId=${listingId}`)
+        )
+      ).json()
+    ).primaryPhotoSaved,
+    true
+  );
+  assert.equal((await confirmBusiness()).status, 200);
+  const before = await getRow(listingId);
+  const uploads = [...uploaded];
+  assert.equal((await confirmBusiness()).status, 200);
+  assert.equal(
+    (await getRow(listingId))?.primaryImageCdn,
+    before?.primaryImageCdn
+  );
+  assert.deepEqual(uploaded, uploads, 'Existing primary needs no new upload');
+  assert.deepEqual(await getRow(personalId), personal);
+  assert.deepEqual(await getRow(secondId), other);
+  assert.equal(zipLookups.length, 0);
+  assert.equal(emails.length, 0);
+
+  // The unscoped personal/draft uploader does not acquire a review requirement.
+  await db
+    .update(schema.profiles)
+    .set({ primaryImageCdn: null })
+    .where(eq(schema.profiles.id, personalId));
+  assert.equal((await upload('gallery3', false)).status, 200);
+  assert.equal((await getRow(personalId))?.primaryImageCdn, null);
+  activeId = listingId;
+  await db
+    .update(schema.profiles)
+    .set({ primaryImageCdn: null })
+    .where(eq(schema.profiles.id, listingId));
+  assert.equal((await upload('gallery3', false)).status, 200);
+  assert.equal((await getRow(listingId))?.primaryImageCdn, null);
+});
+
+test('removing a saved primary after an earlier review blocks reconfirmation without erasing history or changing publication', async () => {
+  await ownListing();
+  await db
+    .update(schema.profiles)
+    .set({
+      addressPostalCode: '33138',
+      addressCountry: 'US',
+      geo: { zipArea: zipAreas['33138'] },
+    })
+    .where(eq(schema.profiles.id, listingId));
+  assert.equal((await confirmBusiness()).status, 200);
+  const reviewedAt = (await getRow(listingId))?.lastReviewedAt;
+  await db
+    .update(schema.profiles)
+    .set({ primaryImageCdn: null })
+    .where(eq(schema.profiles.id, listingId));
+  const before = await getRow(listingId);
+  invalidated.length = 0;
+  const state = await (
+    await reviewApi.GET(
+      request(
+        `/api/listings/review?profileId=${listingId}&complete=1&confirmed=1`
+      )
+    )
+  ).json();
+  assert.equal(state.primaryPhotoSaved, false);
+  assert.ok(state.lastReviewedAt);
+  assert.equal(
+    (await confirmBusiness({ primaryPhotoSaved: true })).status,
+    400
+  );
+  assert.deepEqual(await getRow(listingId), before);
+  assert.deepEqual((await getRow(listingId))?.lastReviewedAt, reviewedAt);
+  assert.equal((await getRow(listingId))?.active, true);
+  assert.equal(invalidated.length, 0);
+  assert.equal(zipLookups.length, 0);
+});
+
 function invitationRequest(
   path: string,
   body?: Record<string, unknown>,

@@ -11,6 +11,37 @@ export const LISTING_REVIEW_STEPS = [
 
 export type ListingReviewStep = (typeof LISTING_REVIEW_STEPS)[number]['key'];
 
+export const LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE =
+  'Add and save a primary business photo in Photos before confirming this review. An existing primary photo counts; gallery photos are optional.';
+
+export function hasListingPrimaryPhoto(value: unknown): value is string {
+  if (typeof value !== 'string' || !value.trim()) return false;
+  const source = value.trim();
+  if (
+    !/^https?:\/\//i.test(source) &&
+    !(source.startsWith('/') && !source.startsWith('//'))
+  )
+    return false;
+  try {
+    const url = new URL(source, 'https://listing-photo.invalid');
+    const path = decodeURIComponent(url.pathname);
+    // Saved media URLs count, not inline seed art, file previews or site fallbacks.
+    return (
+      !url.username &&
+      !url.password &&
+      path !== '/' &&
+      !/^\/(?:logos\/(?:logo(?:_new(?:_3)?|_pink_boxed)?\.png|pana_logo_long_[a-z]+\.png|2023_logo_[a-z]+\.svg)|favicon\.(?:png|ico)|meta_image\.jpg|social-preview-flower\.jpg)$/i.test(
+        path
+      ) &&
+      !/(?:^|\/)(?:placeholder|default[-_](?:avatar|profile|image)|no[-_]image)(?:[./_-]|$)/i.test(
+        path
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
 export type ListingLocationMode = 'storefront' | 'online' | 'mobile';
 
 export function isListingLocationMode(

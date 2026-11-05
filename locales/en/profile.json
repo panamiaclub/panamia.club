@@ -91,6 +91,10 @@
     "claimBody": "Claim this listing to post updates, add photos, and reply to the panas who save you.",
     "claimCta": "Claim this listing"
   },
+  "messaging": {
+    "button": "Message",
+    "open": "Message {{name}}"
+  },
   "locationForm": {
     "addressNote": "A public street address provides directions for visitors. Online businesses instead need a base ZIP, without publishing a street address.",
     "onlineLabel": "Online business, without a public storefront",

@@ -7,6 +7,7 @@ import {
 } from '@playwright/test';
 import type { SocialActorDisplay, SocialStatusDisplay } from '@/lib/interfaces';
 import type { DraftAttachment } from '@/lib/query/social';
+import type { GroupChatMessage, GroupChatRoom } from '@/lib/chat';
 import { DIRECT_THREAD_REFUSED } from '@/lib/dm-refusal';
 import { calls as nativeCalls, nativeBridge } from './fixtures/native-bridge';
 
@@ -18,7 +19,8 @@ const input = (page: Page, name = 'J. Downs') =>
 const row = (page: Page, name: string) =>
   page
     .getByRole('list', { name: 'Conversations', exact: true })
-    .getByRole('button', { name: new RegExp(name) });
+    .getByRole('button', { name: new RegExp(name) })
+    .and(page.locator('[data-conversation-kind="direct"]'));
 
 interface DirectMessagePost {
   content: string;
@@ -153,6 +155,28 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
   messages.stella = [];
   messages.sofia = [];
 
+  const group: GroupChatRoom = {
+    id: 'group-garden',
+    actorId: 'garden-actor',
+    handle: 'garden',
+    name: 'Garden Crew',
+    iconUrl: null,
+    memberCount: 3,
+    visibility: 'private',
+    role: 'member',
+  };
+  const groupMessages: GroupChatMessage[] = [
+    {
+      id: 'garden-first',
+      groupId: group.id,
+      clientId: null,
+      actor: people.bee,
+      content: '<p>Bring your favorite plants on Saturday.</p>',
+      published: new Date(now - 600_000).toISOString(),
+      expiresAt: new Date(now + 29 * 86_400_000).toISOString(),
+      canDelete: false,
+    },
+  ];
   const posts: DirectMessagePost[] = [];
   const searchTerms: string[] = [];
   const calls: string[] = [];
@@ -165,6 +189,7 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
     failDeletes: options.failDeletes ?? 0,
     failRequests: false,
     failSearch: false,
+    failGroups: false,
     deferAcknowledgements: false,
     hiddenStatusIds: new Set<string>(),
     unavailableActors: new Set<string>(),
@@ -189,6 +214,18 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
           type: 'dm',
           conversationActorId: actorId,
           statusId: messages[actorId]?.at(-1)?.id ?? 'fixture-status',
+          at: Date.now(),
+        })
+      );
+    }
+  };
+  const notifyGroup = () => {
+    for (const mailbox of mailboxes) {
+      mailbox.send(
+        JSON.stringify({
+          type: 'group',
+          groupId: group.id,
+          kind: 'message',
           at: Date.now(),
         })
       );
@@ -286,6 +323,39 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
       return json(route, {
         success: true,
         data: { actor: currentViewer(), eligible: true },
+      });
+    }
+    if (path === '/api/social/messages/groups') {
+      if (state.failGroups)
+        return json(
+          route,
+          { success: false, error: 'Group chats are unavailable.' },
+          503
+        );
+      return json(route, {
+        success: true,
+        data: {
+          viewerActorId: currentViewer().id,
+          localDomain: 'localhost',
+          groups:
+            state.activeProfile === 'business'
+              ? []
+              : [{ ...group, lastMessage: groupMessages.at(-1) ?? null }],
+        },
+      });
+    }
+    if (path === '/api/social/groups/garden/chat') {
+      if (state.activeProfile !== 'personal')
+        return json(route, { success: false, error: 'Not found' }, 404);
+      return json(route, {
+        success: true,
+        data: {
+          group,
+          messages: groupMessages,
+          viewerActorId: currentViewer().id,
+          localDomain: 'localhost',
+          nextCursor: null,
+        },
       });
     }
     if (path === '/api/social/messages/conversations') {
@@ -513,6 +583,9 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
     attachment,
     notify,
     makeMessage,
+    group,
+    groupMessages,
+    notifyGroup,
   };
 }
 
@@ -520,7 +593,26 @@ test('uses the real masthead with a bounded desktop workspace and no mock contro
   page,
 }) => {
   const fixture = await openMessages(page);
-  await expect(page.getByRole('heading', { name: 'Messages.' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Messages', exact: true })
+  ).toHaveClass('sr-only');
+  await expect(page.getByText('A little closer', { exact: true })).toHaveCount(
+    0
+  );
+  await expect(
+    page.getByText('Good conversations start here.', { exact: true })
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('searchbox', {
+      name: 'Find a conversation by name or handle',
+    })
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'New message', exact: true })
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('group', { name: 'Message folders' }).getByRole('button')
+  ).toHaveText(['Messages', 'Requests (2)']);
   await expect(
     page.getByRole('link', { name: 'Pana Social home' })
   ).toBeVisible();
@@ -554,6 +646,74 @@ test('uses the real masthead with a bounded desktop workspace and no mock contro
   await page.screenshot({
     path: test.info().outputPath('messages-desktop.png'),
   });
+});
+
+test('keeps individual and group conversations in one live inbox without mixing their drafts or delivery', async ({
+  page,
+}) => {
+  const fixture = await openMessages(page);
+  const inbox = page.getByRole('list', {
+    name: 'Conversations',
+    exact: true,
+  });
+  const room = inbox
+    .getByRole('button', { name: /Garden Crew/ })
+    .and(page.locator('[data-conversation-kind="group"]'));
+  await expect(inbox.getByRole('button').first()).toContainText('J. Downs');
+  await expect(inbox.getByRole('button').nth(1)).toContainText('Garden Crew');
+  await input(page).fill('Only this person gets my draft.');
+  await room.click();
+  const groupInput = input(page, 'Garden Crew');
+  await expect(groupInput).toHaveValue('');
+  await groupInput.fill('Only this group gets its draft.');
+  await row(page, 'J. Downs').click();
+  await expect(input(page)).toHaveValue('Only this person gets my draft.');
+  await expect(room).toContainText('Draft: Only this group gets its draft.');
+  fixture.groupMessages.push({
+    ...fixture.groupMessages[0],
+    id: 'garden-latest',
+    content: '<p>A live group update.</p>',
+    published: new Date().toISOString(),
+  });
+  fixture.notifyGroup();
+  await expect(inbox.getByRole('button').first()).toContainText('Garden Crew');
+  await expect(input(page)).toHaveValue('Only this person gets my draft.');
+  await input(page).press('Enter');
+  await expect.poll(() => fixture.posts.length).toBe(1);
+  expect(fixture.posts[0]).toMatchObject({
+    recipientActorIds: ['jdowns'],
+    visibility: 'direct',
+    content: 'Only this person gets my draft.',
+  });
+  await room.click();
+  await expect(groupInput).toHaveValue('Only this group gets its draft.');
+  await expect(history(page).getByText('A live group update.')).toBeVisible();
+  expect(fixture.mailboxes).toHaveLength(1);
+});
+
+test('keeps individual conversations usable when the group list fails and can recover it', async ({
+  page,
+}) => {
+  const fixture = await openMessages(page);
+  await input(page).fill('Keep this draft through a group outage.');
+  fixture.state.failGroups = true;
+  fixture.notifyGroup();
+  const error = page.getByRole('alert').filter({
+    hasText: 'Could not load group chats.',
+  });
+  await expect(error).toBeVisible();
+  await expect(input(page)).toHaveValue(
+    'Keep this draft through a group outage.'
+  );
+  await expect(row(page, 'J. Downs')).toBeVisible();
+  fixture.state.failGroups = false;
+  await error.getByRole('button', { name: 'Try again', exact: true }).click();
+  await expect(error).toHaveCount(0);
+  await expect(
+    page
+      .getByRole('list', { name: 'Conversations', exact: true })
+      .getByRole('button', { name: /Garden Crew/ })
+  ).toBeVisible();
 });
 
 test('retains per-person text and mirrored GIF drafts without reconnecting the socket', async ({
@@ -778,26 +938,16 @@ test('preserves reading position on socket delivery and offers an accurate jump 
     .toBeLessThan(3);
 });
 
-test('separates conversation filtering from the authenticated new-person picker', async ({
+test('opens a new text conversation from the profile target without inbox search or compose controls', async ({
   page,
 }) => {
   const fixture = await openMessages(page);
-  await page
-    .getByRole('searchbox', { name: 'Find a conversation by name or handle' })
-    .fill('No such conversation');
-  await expect(page.getByText('No matching conversations.')).toBeVisible();
-  expect(fixture.searchTerms).toEqual([]);
-  await page.getByRole('button', { name: 'New message', exact: true }).click();
-  const dialog = page.getByRole('dialog');
-  await expect(
-    dialog.getByRole('searchbox', { name: 'Find a pana', exact: true })
-  ).toBeFocused();
-  await dialog
-    .getByRole('searchbox', { name: 'Find a pana', exact: true })
-    .fill('@sofia');
-  await expect(dialog.getByRole('button', { name: /Claribel/ })).toHaveCount(0);
-  await dialog.getByRole('button', { name: /Sofia Morales/ }).click();
+  await page.goto('/messages?to=sofia');
   await expect(input(page, 'Sofia Morales')).toBeFocused();
+  expect(fixture.searchTerms).toEqual([]);
+  await expect(
+    page.getByRole('button', { name: 'New message', exact: true })
+  ).toHaveCount(0);
   await expect(
     conversation(page).getByText('Say a little hello.', { exact: true })
   ).toBeVisible();
@@ -809,7 +959,30 @@ test('separates conversation filtering from the authenticated new-person picker'
   ).toHaveCount(1);
   await expect.poll(() => fixture.posts.length).toBe(1);
   expect(fixture.posts[0].recipientActorIds).toEqual(['sofia']);
-  expect(fixture.searchTerms).toContain('sofia');
+  expect(fixture.searchTerms).toEqual([]);
+});
+
+test('opens a held profile-target conversation in Requests without accepting it or allowing a reply', async ({
+  page,
+}) => {
+  const fixture = await openMessages(page);
+  await page.goto('/messages?to=anette');
+  await expect(
+    page.getByRole('button', { name: 'Requests (2)', exact: true })
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(input(page, 'Anette Mago')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Accept request', exact: true })
+  ).toBeVisible();
+  expect(fixture.posts).toHaveLength(0);
+  expect(fixture.calls.filter((call) => call.startsWith('PATCH '))).toEqual([]);
+  await page
+    .getByRole('button', { name: 'Accept request', exact: true })
+    .click();
+  await expect(input(page, 'Anette Mago')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Messages', exact: true })
+  ).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('reports an incoming message in-app without exposing an attachment picker', async ({
@@ -1066,6 +1239,20 @@ test('leaves private content and messaging requests unmounted when signed out', 
   expect(fixture.mailboxes).toHaveLength(0);
 });
 
+test('preserves the selected profile target through the signed-out sign-in link', async ({
+  page,
+}) => {
+  const fixture = await openMessages(page, { signedIn: false });
+  await page.goto('/messages?to=sofia');
+  await expect(
+    page.getByRole('main').getByRole('link', { name: 'Sign in', exact: true })
+  ).toHaveAttribute('href', '/signin?callbackUrl=%2Fmessages%3Fto%3Dsofia');
+  expect(
+    fixture.calls.some((call) => call.includes('/api/social/messages/'))
+  ).toBe(false);
+  expect(fixture.mailboxes).toHaveLength(0);
+});
+
 test('releases the viewport layout when leaving Messages', async ({ page }) => {
   await openMessages(page);
   await page.getByRole('link', { name: 'Pana Social home' }).click();
@@ -1126,27 +1313,21 @@ test('retains a GIF mirror failure in the original draft and lets the person try
   await expect(conversation(page).getByRole('alert')).toHaveCount(0);
 });
 
-test('makes people-search failures explicit and retryable', async ({
+test('keeps an unavailable profile target explicit and retryable', async ({
   page,
 }) => {
   const fixture = await openMessages(page);
-  fixture.state.failSearch = true;
-  await page.getByRole('button', { name: 'New message', exact: true }).click();
-  const dialog = page.getByRole('dialog');
-  await dialog
-    .getByRole('searchbox', { name: 'Find a pana', exact: true })
-    .fill('sofia');
-  await expect(dialog.getByRole('alert')).toContainText(
-    'People search is unavailable.'
+  fixture.state.unavailableActors.add('sofia');
+  await page.goto('/messages?to=sofia');
+  await expect(conversation(page).getByRole('alert')).toHaveText(
+    'This conversation is not available.'
   );
-  await expect(
-    dialog.getByText('No panas match that. Try another name.')
-  ).toHaveCount(0);
-  fixture.state.failSearch = false;
-  await dialog.getByRole('button', { name: 'Try again', exact: true }).click();
-  await expect(
-    dialog.getByRole('button', { name: /Sofia Morales/ })
-  ).toBeVisible();
+  await expect(input(page, 'Sofia Morales')).toHaveCount(0);
+  fixture.state.unavailableActors.delete('sofia');
+  await conversation(page)
+    .getByRole('button', { name: 'Try again', exact: true })
+    .click();
+  await expect(input(page, 'Sofia Morales')).toBeVisible();
 });
 
 test('checks Requests before permitting a reply and preserves the draft through a refresh failure', async ({
@@ -1346,6 +1527,28 @@ for (const platform of ['android', 'ios'] as const) {
       });
       await expect(nav).toBeVisible();
       await expect(shortcut).toBeVisible();
+      await expect(
+        page.getByRole('group', { name: 'Message folders' }).getByRole('button')
+      ).toHaveText(['Messages', 'Requests (2)']);
+      await expect(
+        page.getByRole('searchbox', {
+          name: 'Find a conversation by name or handle',
+        })
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole('button', { name: 'New message', exact: true })
+      ).toHaveCount(0);
+      const inboxTop = (await row(page, 'J. Downs').boundingBox())!.y;
+      const headerBox = (await header.boundingBox())!;
+      expect(inboxTop - headerBox.y - headerBox.height).toBeLessThan(100);
+      const inboxPreview = test
+        .info()
+        .outputPath(`native-inbox-preview-${platform}.png`);
+      await page.screenshot({ path: inboxPreview });
+      await test.info().attach('native-inbox-preview', {
+        path: inboxPreview,
+        contentType: 'image/png',
+      });
       await row(page, 'J. Downs').click();
       await expect(input(page)).toBeVisible();
       await expect(nav).toHaveCount(0);
@@ -1438,6 +1641,43 @@ for (const platform of ['android', 'ios'] as const) {
       await expect(back).toHaveCount(0);
       expect(fixture.posts).toHaveLength(0);
       expect(fixture.pageErrors).toEqual([]);
+    }
+  );
+}
+
+for (const platform of ['android', 'ios'] as const) {
+  test(
+    `${platform} opens a profile-target chat directly and keeps its unsent draft in the unified inbox`,
+    { tag: '@native' },
+    async ({ page }) => {
+      await openMessages(page, { native: platform });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto('/messages?to=sofia');
+      const composer = input(page, 'Sofia Morales');
+      await expect(composer).toBeFocused();
+      await expect(
+        page.getByRole('navigation', { name: 'App navigation' })
+      ).toHaveCount(0);
+      await composer.fill('A new profile conversation draft.');
+      await page
+        .locator('[data-native-app] > header')
+        .getByRole('button', { name: 'Back to conversations', exact: true })
+        .click();
+      await expect(row(page, 'Sofia Morales')).toBeFocused();
+      await expect(
+        page
+          .getByRole('list', { name: 'Conversations', exact: true })
+          .getByRole('button')
+          .first()
+      ).toContainText('Sofia Morales');
+      await expect(row(page, 'Sofia Morales')).toContainText(
+        'Draft: A new profile conversation draft.'
+      );
+      await expect(
+        page.getByRole('navigation', { name: 'App navigation' })
+      ).toBeVisible();
+      await row(page, 'Sofia Morales').click();
+      await expect(composer).toHaveValue('A new profile conversation draft.');
     }
   );
 }

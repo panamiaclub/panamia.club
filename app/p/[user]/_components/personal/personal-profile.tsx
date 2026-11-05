@@ -24,6 +24,7 @@ import {
   PostList,
   FollowButton,
   RelationshipBadge,
+  SendMessageButton,
   BlockMenu,
 } from '@/components/social';
 import { Button } from '@/components/ui/button';
@@ -325,6 +326,10 @@ function renderActions({
 
   return (
     <>
+      <SendMessageButton
+        actorId={actor.id}
+        name={actor.name || actor.username}
+      />
       <FollowButton
         username={actor.username}
         isFollowing={isFollowing}
