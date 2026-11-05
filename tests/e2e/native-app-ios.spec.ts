@@ -462,6 +462,162 @@ for (const platform of ['android', 'ios'] as const) {
   });
 }
 
+test.describe('native map marker sizing', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  for (const platform of ['android', 'ios'] as const) {
+    test(`${platform} keeps portrait logos circular and ZIP markers compact`, async ({
+      page,
+    }) => {
+      await nativeBridge(page, {
+        platform,
+        googlePlugin: platform === 'android',
+      });
+      const listing = (
+        id: string,
+        image: string,
+        coordinates: [number, number] | null
+      ): SearchResultsInterface => ({
+        _id: id,
+        id,
+        name: id,
+        screenname: id,
+        score: 1,
+        score_details: {},
+        details: '',
+        five_words: '',
+        images: { primaryCDN: image },
+        geo: coordinates ? { coordinates } : null,
+        primary_address: { city: 'Miami' },
+        socials: {},
+      });
+      const businesses: SearchResultsInterface[] = [
+        listing('portrait-logo', '/test/portrait-marker.svg', [-80.2, 25.79]),
+        listing('wide-logo', '/test/wide-marker.svg', [-80.1, 25.79]),
+        ...Array.from({ length: 123 }, (_, index): SearchResultsInterface => ({
+          ...listing(
+            `zip-marker-${index}`,
+            '/logos/pana_logo_long_orange.png',
+            null
+          ),
+          online_only: true,
+          online_zip: {
+            postalCode: '33166',
+            country: 'US',
+            city: 'Doral',
+            region: 'FL',
+            lat: 25.74,
+            lng: -80.15,
+          },
+          primary_address: { zipcode: '33166' },
+        })),
+      ];
+      await installNativeApiFixtures(page, { businesses });
+      await page.route('**/test/portrait-marker.svg', (route) =>
+        route.fulfill({
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="360"><rect width="120" height="360" fill="black"/><rect y="160" width="120" height="40" fill="#355b3a"/></svg>',
+        })
+      );
+      await page.route('**/test/wide-marker.svg', (route) =>
+        route.fulfill({
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" width="360" height="120"><rect width="360" height="120" fill="#303e8c"/><rect x="160" width="40" height="120" fill="#f28444"/></svg>',
+        })
+      );
+      await page.goto('/d');
+      const results = page.locator('[data-map-results="Directory"]');
+      for (const name of ['portrait-logo', 'wide-logo']) {
+        const pin = results.getByRole('button', { name, exact: true });
+        await expect
+          .poll(() =>
+            pin
+              .locator('img')
+              .evaluate(
+                (image: HTMLImageElement) =>
+                  image.complete && image.naturalWidth > 0
+              )
+          )
+          .toBe(true);
+        const size = await pin.evaluate((button) => {
+          const pin = button.getBoundingClientRect();
+          const image = button.querySelector('img')!.getBoundingClientRect();
+          return {
+            pinWidth: pin.width,
+            pinHeight: pin.height,
+            imageWidth: image.width,
+            imageHeight: image.height,
+            contained:
+              image.left >= pin.left + 2.5 &&
+              image.top >= pin.top + 2.5 &&
+              image.right <= pin.right - 2.5 &&
+              image.bottom <= pin.bottom - 2.5,
+          };
+        });
+        expect(size.pinWidth).toBe(44);
+        expect(size.pinHeight).toBe(44);
+        expect(size.imageWidth).toBe(size.imageHeight);
+        expect(size.contained).toBe(true);
+        await expect(pin.locator('img')).toHaveCSS('object-fit', 'cover');
+      }
+      const zip = results.getByRole('button', {
+        name: '123 online businesses based near ZIP 33166',
+        exact: true,
+      });
+      const face = zip.locator(':scope > span');
+      await expect(face).toBeVisible();
+      expect((await zip.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      expect((await zip.boundingBox())!.width).toBeLessThanOrEqual(84);
+      expect((await face.boundingBox())!.height).toBe(24);
+      expect((await face.boundingBox())!.width).toBeLessThanOrEqual(80);
+      await expect(zip.locator('b')).toHaveText('33166');
+      await expect(zip.locator('strong')).toHaveText('123');
+      await expect(zip).toHaveAttribute('title', /Approximate base ZIP/);
+      await zip.tap();
+      await expect(
+        results.getByRole('region', { name: 'Directory results', exact: true })
+      ).toHaveAttribute('data-preview', 'true');
+      await expect(results.locator('article[data-selected]')).toHaveAttribute(
+        'data-result-id',
+        'zip-marker-0'
+      );
+      await expect(
+        results.locator('section[aria-label="In map"] article')
+      ).toHaveCount(125);
+      await page
+        .getByRole('search', { name: 'Search Pana Mia' })
+        .getByRole('button', { name: /^Search scope/ })
+        .click();
+      await page
+        .getByRole('menu', { name: 'Search scope', exact: true })
+        .getByRole('menuitem', { name: /Events/ })
+        .click();
+      const events = page.locator('[data-map-results="Events"]');
+      const cluster = events.getByRole('button', {
+        name: /2 events results at Bay Cafe/,
+      });
+      const badge = cluster.locator(':scope > span');
+      await expect(badge).toHaveText('2');
+      await expect(cluster).toHaveCSS('overflow', 'visible');
+      expect(
+        await badge.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          return node.contains(
+            document.elementFromPoint(
+              box.x + box.width / 2,
+              box.y + box.height / 2
+            )
+          );
+        })
+      ).toBe(true);
+    });
+  }
+});
+
 test.describe('compact native directory', () => {
   test.use({ isMobile: true, hasTouch: true });
 

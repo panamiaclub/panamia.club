@@ -281,9 +281,10 @@ export function MapPanel({
               onZipSelect?.(group.area.postalCode);
             }}
           >
-            <Globe size={18} aria-hidden="true" />
-            <span>{group.area.postalCode}</span>
-            <strong>{group.items.length}</strong>
+            <span className="dirsearch-zip-label">
+              <b>{group.area.postalCode}</b>
+              <strong>{group.items.length}</strong>
+            </span>
           </button>
         ),
       })),
