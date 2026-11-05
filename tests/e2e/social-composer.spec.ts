@@ -55,6 +55,8 @@ async function openComposer(
     post?: (route: Route) => Promise<void>;
     story?: (route: Route) => Promise<void>;
     timeline?: (route: Route) => Promise<void>;
+    follows?: (route: Route) => Promise<void>;
+    storySummary?: (route: Route) => Promise<void>;
   } = {}
 ) {
   const posts: Record<string, unknown>[] = [];
@@ -118,9 +120,12 @@ async function openComposer(
       });
     }
     if (path === '/api/social/follows') {
-      return json({ success: true, data: { actors: [], nextCursor: null } });
+      return handlers.follows
+        ? handlers.follows(route)
+        : json({ success: true, data: { actors: [], nextCursor: null } });
     }
     if (path === '/api/social/stories/summary') {
+      if (handlers.storySummary) return handlers.storySummary(route);
       return json({
         success: true,
         data: {
@@ -244,10 +249,19 @@ async function observeCamera(page: Page) {
 
 async function openStory(
   page: Page,
-  handlers: Parameters<typeof openComposer>[1] = {}
+  handlers: Parameters<typeof openComposer>[1] = {},
+  cameraSetup: Partial<Pick<CameraProbe, 'cameraError' | 'holdCamera'>> = {}
 ) {
   await observeCamera(page);
   const fixture = await openComposer(page, handlers);
+  expect(
+    await page.evaluate(
+      () => (window as CameraTestWindow).storyCameraTest.constraints.length
+    )
+  ).toBe(0);
+  await page.evaluate((setup) => {
+    Object.assign((window as CameraTestWindow).storyCameraTest, setup);
+  }, cameraSetup);
   await page
     .getByRole('region', { name: 'Stories', exact: true })
     .getByRole('button', { name: 'Post a story' })
@@ -256,12 +270,13 @@ async function openStory(
     name: 'Post a story',
     exact: true,
   });
-  await expect(dialog).toBeVisible();
+  await expect(
+    page.getByRole('dialog', { name: 'Story camera', exact: true })
+  ).toBeVisible();
   return { ...fixture, dialog };
 }
 
 async function openStoryCamera(page: Page) {
-  await page.getByRole('button', { name: 'Open camera', exact: true }).click();
   const camera = page.getByRole('dialog', {
     name: 'Story camera',
     exact: true,
@@ -289,7 +304,7 @@ test.describe('story camera', () => {
     viewport: { width: 390, height: 844 },
   });
 
-  test('photos are reviewed before upload, then captioned and explicitly posted', async ({
+  test('Your story opens the camera directly, then photos are reviewed, captioned and explicitly posted', async ({
     page,
   }) => {
     let imageRequest = '';
@@ -300,12 +315,23 @@ test.describe('story camera', () => {
         await route.fulfill({ json: { success: true, data: uploadedPhoto } });
       },
     });
+    const camera = await openStoryCamera(page);
     expect(
       await page.evaluate(
-        () => (window as CameraTestWindow).storyCameraTest.constraints.length
+        () => (window as CameraTestWindow).storyCameraTest.constraints
       )
-    ).toBe(0);
-    const camera = await openStoryCamera(page);
+    ).toEqual([
+      expect.objectContaining({ audio: false, video: expect.any(Object) }),
+    ]);
+    await expect(dialog).toHaveCount(0);
+    await expect(
+      camera.getByLabel('Live camera preview', { exact: true })
+    ).toBeVisible();
+    expect(uploads()).toBe(0);
+    expect(stories).toHaveLength(0);
+    await page.screenshot({
+      path: test.info().outputPath('story-camera-direct-entry.png'),
+    });
     for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 844 });
       const bounds = await camera.boundingBox();
@@ -582,12 +608,13 @@ test.describe('story camera', () => {
   test('denied camera access explains recovery and keeps the gallery working', async ({
     page,
   }) => {
-    const { dialog } = await openStory(page);
-    await page.evaluate(() => {
-      (window as CameraTestWindow).storyCameraTest.cameraError =
-        'NotAllowedError';
-    });
-    await dialog.getByRole('button', { name: 'Open camera' }).click();
+    const { dialog } = await openStory(
+      page,
+      {},
+      {
+        cameraError: 'NotAllowedError',
+      }
+    );
     const camera = page.getByRole('dialog', {
       name: 'Story camera',
       exact: true,
@@ -634,11 +661,7 @@ test.describe('story camera', () => {
   test('closing during a pending camera request stops a late stream', async ({
     page,
   }) => {
-    const { dialog } = await openStory(page);
-    await page.evaluate(() => {
-      (window as CameraTestWindow).storyCameraTest.holdCamera = true;
-    });
-    await dialog.getByRole('button', { name: 'Open camera' }).click();
+    const { dialog } = await openStory(page, {}, { holdCamera: true });
     await expect
       .poll(() =>
         page.evaluate(() =>
@@ -743,6 +766,115 @@ test.describe('story camera', () => {
   });
 });
 
+test('story rail gives Your story a larger bubble and shows decorative empty circles at every size', async ({
+  page,
+}) => {
+  await openComposer(page);
+  const rail = page.getByRole('region', { name: 'Stories', exact: true });
+  const owner = rail.locator('[data-owner="true"]');
+  const ghosts = rail.locator('.stories-rail-placeholder');
+  await expect(ghosts).toHaveCount(4);
+  await expect(rail.getByRole('listitem')).toHaveCount(1);
+  await expect(
+    rail.getByRole('button', { name: 'Post a story' })
+  ).toBeVisible();
+  await expect(ghosts.locator('button, a, input, [tabindex]')).toHaveCount(0);
+  for (const ghost of await ghosts.all()) {
+    await expect(ghost).toHaveAttribute('aria-hidden', 'true');
+  }
+  for (const width of [320, 390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    const avatar = await owner.locator('.stories-rail-avatar').boundingBox();
+    expect(avatar!.width).toBe(64);
+    expect(avatar!.height).toBe(64);
+    const ghost = await ghosts
+      .first()
+      .locator('.stories-rail-ghost')
+      .boundingBox();
+    expect(ghost!.width).toBe(56);
+    expect(ghost!.height).toBe(56);
+    expect((await rail.boundingBox())!.height).toBeLessThanOrEqual(96);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(width);
+    const track = rail.locator('.stories-rail-track');
+    expect(
+      await track.evaluate((node) => node.scrollWidth > node.clientWidth)
+    ).toBe(width < 768);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: test.info().outputPath('story-rail-ghost-circles.png'),
+  });
+});
+
+for (const liveCount of [2, 5]) {
+  test(`${liveCount} real stories replace ghost slots without hiding people or changing unseen-first order`, async ({
+    page,
+  }) => {
+    const people = Array.from({ length: 5 }, (_, index) => ({
+      id: `pana-${index + 1}`,
+      username: `pana${index + 1}`,
+      name: `Pana ${index + 1}`,
+      domain: 'localhost',
+    }));
+    await openComposer(page, {
+      follows: (route) =>
+        route.fulfill({
+          json: { success: true, data: { actors: people, nextCursor: null } },
+        }),
+      storySummary: (route) => {
+        const usernames = new URL(route.request().url()).searchParams
+          .get('usernames')!
+          .split(',');
+        return route.fulfill({
+          json: {
+            success: true,
+            data: Object.fromEntries(
+              usernames.map((username) => {
+                const index = people.findIndex(
+                  (person) => person.username === username
+                );
+                return [
+                  username,
+                  {
+                    hasStories: index >= 0 && index < liveCount,
+                    hasUnseen: index >= 0 && index % 2 === 0,
+                    isOwner: username === 'fixture',
+                  },
+                ];
+              })
+            ),
+          },
+        });
+      },
+    });
+    const rail = page.getByRole('region', { name: 'Stories', exact: true });
+    const watch = rail.getByRole('button', { name: /^Watch stories from/ });
+    await expect(watch).toHaveCount(liveCount);
+    await expect(rail.getByRole('listitem')).toHaveCount(liveCount + 1);
+    await expect(rail.locator('.stories-rail-placeholder')).toHaveCount(
+      Math.max(0, 4 - liveCount)
+    );
+    const expected = people
+      .slice(0, liveCount)
+      .filter((_, index) => index % 2 === 0)
+      .concat(people.slice(0, liveCount).filter((_, index) => index % 2 !== 0))
+      .map((person) => `Watch stories from ${person.username}`);
+    expect(
+      await watch.evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute('aria-label'))
+      )
+    ).toEqual(expected);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await watch.last().scrollIntoViewIfNeeded();
+    await expect(watch.last()).toBeInViewport();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(320);
+  });
+}
+
 test('one mixed feed removes the reading switch but keeps Everyone/Panas publishing at every size', async ({
   page,
 }) => {
@@ -802,7 +934,7 @@ test('one mixed feed removes the reading switch but keeps Everyone/Panas publish
   await expect(
     stories.getByRole('button', { name: 'Post a story' })
   ).toBeVisible();
-  expect((await stories.boundingBox())!.height).toBeLessThanOrEqual(64);
+  expect((await stories.boundingBox())!.height).toBeLessThanOrEqual(96);
   const upcoming = page.getByRole('region', { name: 'Good things ahead.' });
   await expect(upcoming).toBeVisible();
   await expect(upcoming).toContainText('Saved posts');

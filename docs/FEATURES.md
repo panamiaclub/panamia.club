@@ -113,6 +113,12 @@ Multimedia microblogging platform integrated into the community. Built on [Activ
 - **Markdown Editor**: Write/Preview tabs with live markdown preview
 - **ActivityPub**: Server-side markdown-to-HTML conversion for federation compatibility
 - **Direct Messages**: Private conversations at `/messages`, with text and GIF attachments and a 30-day visibility window
+- **Stories**: Your story (+) opens the live photo/video camera directly on web and native. Gallery selection remains available; captures are reviewed before upload, captioning, and explicit posting for 24 hours.
+
+The story strip keeps a larger owner bubble and at least four other-story slots. Unfilled
+slots are subtle, noninteractive ghost circles, not fake accounts or loading
+indicators. Real stories replace them, stay in unseen-first order, and can scroll
+horizontally without adding another row.
 
 Audio notes and voice memos are retired. Recording, standalone audio uploads,
 playback, and the Voice notes feed filter are removed, including from the mocks.
