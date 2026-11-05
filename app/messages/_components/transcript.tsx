@@ -226,7 +226,7 @@ export function Transcript<T extends PendingChatMessage>({
       <header className={styles.conversationHeader}>
         <button
           type="button"
-          className={`${styles.iconButton} ${showBack ? '' : styles.backButton}`}
+          className={`${styles.iconButton} ${styles.backButton} ${showBack ? styles.standaloneBackButton : ''}`}
           aria-label={backLabel}
           onClick={onBack}
         >

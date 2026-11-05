@@ -27,6 +27,10 @@ the corresponding iPad screenshots.
   left and notifications/account on the right. Detail pages retain Back and
   event-save controls. Account menus offer bug and safety reporting above
   About Pana, including for signed-out visitors.
+- Open conversations hide the bottom tabs and header message shortcut. The
+  header Back control returns to the message list without losing its draft;
+  standalone group chats retain Back to group. Native messaging omits the
+  composer helper text and legal footer while preserving composer safe areas.
 - iOS offers email-link sign-in. Android's Google SDK is deliberately excluded
   from the iOS native package. Do not enable Google on iOS without implementing
   the corresponding Apple-compliant login options and configuring their credentials.
