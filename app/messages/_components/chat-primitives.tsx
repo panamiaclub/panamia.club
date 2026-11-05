@@ -97,8 +97,10 @@ export function ChatName({
    delivery, and delivery is something the server actually knows. */
 export function DeliveryMark({
   state,
+  compact = false,
 }: {
   state: 'sent' | 'sending' | 'failed';
+  compact?: boolean;
 }) {
   if (state === 'failed') {
     return (
@@ -123,7 +125,7 @@ export function DeliveryMark({
   return (
     <span className={styles.deliveryMark} data-state="sent">
       <Check className="h-3 w-3" aria-hidden="true" />
-      Sent
+      <span className={compact ? 'sr-only' : undefined}>Sent</span>
     </span>
   );
 }
@@ -139,16 +141,30 @@ export function DeliveryMark({
    The window is thirty days. The chip does not retire at thirty: the stamp is
    per row, so a conversation erodes from its oldest message forward at any
    window, which is why this renders per message rather than per thread. */
-export function ExpiryChip({ expiresIn }: { expiresIn: string }) {
+export function ExpiryChip({
+  expiresIn,
+  compact = false,
+}: {
+  expiresIn: string;
+  compact?: boolean;
+}) {
   const urgent = expiresIn.includes('hour');
+  const short = expiresIn.replace(/ days?/, 'd').replace(/ hours?/, 'h');
   return (
     <span
       className={styles.expiryChip}
       data-urgent={urgent}
-      title="Messages are hidden 30 days after they are sent"
+      title={`Disappears in ${expiresIn}. Messages are hidden 30 days after they are sent.`}
     >
       <Clock3 className="h-2.5 w-2.5" aria-hidden="true" />
-      Disappears in {expiresIn}
+      {compact ? (
+        <>
+          <span aria-hidden="true">{short}</span>
+          <span className="sr-only">Disappears in {expiresIn}</span>
+        </>
+      ) : (
+        <>Disappears in {expiresIn}</>
+      )}
     </span>
   );
 }

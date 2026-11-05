@@ -39,6 +39,8 @@ import {
   conversationUnavailable,
   EMPTY_MESSAGE_DRAFT,
   messageError,
+  messageDraftAttachments,
+  messageDraftCanSend,
   unconfirmedMessages,
   type MessageDraft,
 } from '../_lib/workspace';
@@ -154,11 +156,11 @@ export function useGroupChatState(
     if (
       !viewerActorId ||
       locks.current.has(room.handle) ||
-      draft.isMirroring ||
-      (!draft.text.trim() && !draft.gif)
+      !messageDraftCanSend(draft)
     )
       return;
     const clientId = crypto.randomUUID();
+    const attachments = messageDraftAttachments(draft);
     const message: GroupChatOutgoing = {
       id: clientId,
       clientId,
@@ -167,7 +169,7 @@ export function useGroupChatState(
       content: draft.text.trim(),
       published: new Date().toISOString(),
       delivery: 'sending',
-      ...(draft.gif ? { attachments: [draft.gif] } : {}),
+      ...(attachments.length ? { attachments } : {}),
     };
     setOutgoing((current) => [...current, message]);
     setDrafts((current) => ({

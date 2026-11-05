@@ -102,6 +102,23 @@ mobile workspace avoid a redundant outer scrollbar; only their content panes scr
 The GIF picker stays inside the visible conversation, including when a multiline draft and
 an existing attachment leave too little room above the composer.
 
+- The compact composer starts as one row and grows to 128px before scrolling.
+  Return inserts a newline on phones; desktop Enter sends, Shift+Enter inserts
+  a newline, and IME composition is never submitted as a message.
+- **Attach a photo** opens a picker menu with a media-link disclosure. One photo
+  and the existing GIF may accompany a message, including without a caption.
+  Photos reuse the authenticated `/api/social/media` upload and the existing
+  Pana media-link delivery model; they are not end-to-end encrypted and copied
+  media links can be viewed outside the conversation. The menu and conversation
+  details disclose this before use; no new privacy or encryption promise is made.
+  Camera pixels are resized to a 2048px longest edge and re-encoded as JPEG so
+  source metadata such as GPS is not uploaded. The original-file limit is 10 MB.
+  JPEG, PNG and WebP are supported; HEIC files can be converted when the browser
+  can decode them, with an explicit JPEG/PNG/WebP recovery message otherwise.
+- Message timestamps, compact per-message expiry and actual server acceptance
+  live inside tighter Pana-coloured bubbles. Direct messages omit redundant
+  sender avatars; groups retain sender identity. Report and authorized delete
+  controls stay accessible. There are still no calls, voice, presence or read receipts.
 - Desktop conversation and transcript panes scroll independently; the composer stays in view.
   Mobile uses a list/detail flow with Back navigation, including during loading and errors.
 - Individual and group conversations share one inbox ordered by recent activity;
@@ -117,7 +134,7 @@ an existing attachment leave too little room above the composer.
   views. Profile filtering happens before pagination and also excludes direct replies when
   requested. Public, followers-only, Panas, and readable group posts retain their audiences;
   Messages and authorized DM permalinks remain unchanged.
-- Text and mirrored-GIF drafts are held per conversation in component memory. Reloading, unmounting
+- Text, photo and mirrored-GIF drafts are held per conversation in component memory. Reloading, unmounting
   the workspace, signing out, or switching the active profile clears them; browser storage is not used.
 - Each submitted message retains its recipient, text, and attachments while sending or failed.
   **Retry** reuses that local bubble. A server acknowledgement is matched to its refetched row by

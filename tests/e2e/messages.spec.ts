@@ -10,6 +10,11 @@ import type { DraftAttachment } from '@/lib/query/social';
 import type { GroupChatMessage, GroupChatRoom } from '@/lib/chat';
 import { DIRECT_THREAD_REFUSED } from '@/lib/dm-refusal';
 import { calls as nativeCalls, nativeBridge } from './fixtures/native-bridge';
+import {
+  chatPhotoFile,
+  chooseChatPhoto,
+  installChatPhotoFixtures,
+} from './fixtures/chat-photo';
 
 const conversation = (page: Page) =>
   page.getByRole('region', { name: 'Open conversation' });
@@ -1198,8 +1203,240 @@ test('uses mobile list/detail navigation and keeps a multiline GIF composer visi
   });
   expect(fixture.posts).toHaveLength(0);
   await input(page).press('Enter');
+  expect(fixture.posts).toHaveLength(0);
+  await page.getByRole('button', { name: 'Send message', exact: true }).click();
   await expect.poll(() => fixture.posts.length).toBe(1);
   expect(fixture.posts[0].content).toContain('\n');
+});
+
+test(
+  'compact native composer grows from one row and phone Return adds a line without sending',
+  { tag: '@native' },
+  async ({ page }) => {
+    const fixture = await openMessages(page, { native: 'ios' });
+    await page.setViewportSize({ width: 320, height: 568 });
+    await row(page, 'J. Downs').click();
+    const composer = page.getByRole('form', { name: 'Message composer' });
+    await expect
+      .poll(async () => (await composer.boundingBox())!.height)
+      .toBeLessThanOrEqual(52);
+    expect((await input(page).boundingBox())!.height).toBeLessThanOrEqual(48);
+    const short = history(page).locator(
+      '[data-chat-message-id="last-existing"]'
+    );
+    expect((await short.boundingBox())!.height).toBeLessThanOrEqual(64);
+    for (const name of ['Attach a photo', 'Add a GIF', 'Send message']) {
+      const box = (await page
+        .getByRole('button', { name, exact: true })
+        .boundingBox())!;
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+    await input(page).fill('A phone draft');
+    await input(page).press('Enter');
+    await expect(input(page)).toHaveValue('A phone draft\n');
+    expect(fixture.posts).toHaveLength(0);
+    await input(page).fill('A growing message.\n'.repeat(16));
+    await expect
+      .poll(async () => (await input(page).boundingBox())!.height)
+      .toBeGreaterThan(80);
+    expect((await input(page).boundingBox())!.height).toBeLessThanOrEqual(128);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(320);
+    await input(page).fill('');
+    await expect
+      .poll(async () => (await composer.boundingBox())!.height)
+      .toBeLessThanOrEqual(52);
+    await input(page).blur();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(async () =>
+        Math.round(
+          (await page.locator('[data-native-app]').boundingBox())!.height
+        )
+      )
+      .toBe(844);
+    fixture.messages.jdowns.splice(
+      0,
+      fixture.messages.jdowns.length,
+      fixture.makeMessage(
+        'compact-one',
+        fixture.people.jdowns,
+        '<p>Are we meeting on Saturday?</p>',
+        6
+      ),
+      fixture.makeMessage(
+        'compact-two',
+        fixture.viewer,
+        '<p>Yes! I will bring coffee.</p>',
+        5
+      ),
+      fixture.makeMessage(
+        'compact-three',
+        fixture.people.jdowns,
+        '<p>Perfect. See you there!</p>',
+        4
+      )
+    );
+    fixture.notify('jdowns');
+    await expect(
+      history(page).getByText('Perfect. See you there!')
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /new messages?$/ })
+    ).toHaveCount(0);
+    await expect
+      .poll(async () => {
+        const box = (await composer.boundingBox())!;
+        return box.y + box.height;
+      })
+      .toBeGreaterThan(800);
+    const preview = test.info().outputPath('compact-chat-preview.png');
+    await page.screenshot({ path: preview });
+    await test.info().attach('compact-chat-preview', {
+      path: preview,
+      contentType: 'image/png',
+    });
+  }
+);
+
+test(
+  'attaches a normalized photo through the real upload contract and sends it without a caption',
+  { tag: '@native' },
+  async ({ page }) => {
+    const fixture = await openMessages(page, { native: 'ios' });
+    const photos = await installChatPhotoFixtures(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await row(page, 'J. Downs').click();
+    await chooseChatPhoto(page, await chatPhotoFile(page));
+    await expect(
+      page.getByRole('img', { name: 'Attached photo', exact: true })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Send message', exact: true })
+    ).toBeEnabled();
+    expect(photos.uploads).toHaveLength(1);
+    expect(fixture.posts).toHaveLength(0);
+    const preview = test.info().outputPath('compact-chat-photo-preview.png');
+    await page.screenshot({ path: preview });
+    await test.info().attach('compact-chat-photo-preview', {
+      path: preview,
+      contentType: 'image/png',
+    });
+    await page
+      .getByRole('button', { name: 'Send message', exact: true })
+      .click();
+    await expect.poll(() => fixture.posts.length).toBe(1);
+    expect(fixture.posts[0]).toMatchObject({
+      content: '',
+      visibility: 'direct',
+      recipientActorIds: ['jdowns'],
+      attachments: [
+        {
+          type: 'image',
+          mediaType: 'image/jpeg',
+          url: photos.uploads[0].url,
+          name: 'camera.jpg',
+        },
+      ],
+    });
+    await expect(
+      history(page).locator(`img[src="${photos.uploads[0].url}"]`)
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Remove photo', exact: true })
+    ).toHaveCount(0);
+  }
+);
+
+test('keeps failed photo uploads and captions with their originating person and retries without a text-only send', async ({
+  page,
+}) => {
+  const fixture = await openMessages(page);
+  const photos = await installChatPhotoFixtures(page, { failUploads: 1 });
+  await input(page).fill('Keep this photo caption.');
+  await chooseChatPhoto(page, await chatPhotoFile(page));
+  await expect(conversation(page).getByRole('alert')).toContainText(
+    'Photo upload is unavailable.'
+  );
+  await expect(
+    page.getByRole('button', { name: 'Send message', exact: true })
+  ).toBeDisabled();
+  await row(page, 'Bee Maria').click();
+  await input(page, 'Bee Maria').fill('Different conversation draft.');
+  await expect(
+    page.getByRole('button', { name: 'Remove photo', exact: true })
+  ).toHaveCount(0);
+  await row(page, 'J. Downs').click();
+  await expect(input(page)).toHaveValue('Keep this photo caption.');
+  await page
+    .getByRole('button', { name: 'Retry photo upload', exact: true })
+    .click();
+  await expect(
+    page.getByRole('button', { name: 'Send message', exact: true })
+  ).toBeEnabled();
+  expect(photos.uploads).toHaveLength(2);
+  await page.getByRole('button', { name: 'Send message', exact: true }).click();
+  await expect.poll(() => fixture.posts.length).toBe(1);
+  expect(fixture.posts[0].recipientActorIds).toEqual(['jdowns']);
+  expect(fixture.posts[0].content).toBe('Keep this photo caption.');
+  await row(page, 'Bee Maria').click();
+  await expect(input(page, 'Bee Maria')).toHaveValue(
+    'Different conversation draft.'
+  );
+});
+
+test('finishes an asynchronous photo upload in the original draft without attaching it to another person', async ({
+  page,
+}) => {
+  await openMessages(page);
+  let release: (() => void) | undefined;
+  const waiting = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const photos = await installChatPhotoFixtures(page, {
+    hold: async () => waiting,
+  });
+  await input(page).fill('Original photo caption.');
+  await chooseChatPhoto(page, await chatPhotoFile(page));
+  await expect.poll(() => photos.uploads.length).toBe(1);
+  await row(page, 'Bee Maria').click();
+  release!();
+  await expect(
+    page.getByRole('button', { name: 'Remove photo', exact: true })
+  ).toHaveCount(0);
+  await row(page, 'J. Downs').click();
+  await expect(
+    page.getByRole('button', { name: 'Remove photo', exact: true })
+  ).toBeEnabled();
+  await expect(input(page)).toHaveValue('Original photo caption.');
+});
+
+test('rejects unsupported photo files without uploading or silently sending the caption alone', async ({
+  page,
+}) => {
+  const fixture = await openMessages(page);
+  const photos = await installChatPhotoFixtures(page);
+  await input(page).fill('Do not lose this caption.');
+  await page.getByLabel('Choose a photo', { exact: true }).setInputFiles({
+    name: 'not-a-photo.svg',
+    mimeType: 'image/svg+xml',
+    buffer: Buffer.from('<svg></svg>'),
+  });
+  await expect(conversation(page).getByRole('alert')).toContainText(
+    'Choose a JPEG'
+  );
+  await expect(
+    page.getByRole('button', { name: 'Send message', exact: true })
+  ).toBeDisabled();
+  expect(photos.uploads).toHaveLength(0);
+  expect(fixture.posts).toHaveLength(0);
+  await page.getByRole('button', { name: 'Remove photo', exact: true }).click();
+  await expect(input(page)).toHaveValue('Do not lose this caption.');
+  await expect(
+    page.getByRole('button', { name: 'Send message', exact: true })
+  ).toBeEnabled();
 });
 
 test('does not require a live socket to send an HTTP message', async ({
