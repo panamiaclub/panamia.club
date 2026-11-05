@@ -118,6 +118,128 @@ for (const platform of ['android', 'ios'] as const) {
   });
 }
 
+test.describe('iOS directory dropdowns', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 844, height: 390 },
+    { width: 740, height: 270 },
+  ]) {
+    test(`iOS filter bubbles stay above the dock and keep the map fixed at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }, testInfo) => {
+      await ios(page);
+      await page.setViewportSize(viewport);
+      await page.addInitScript(() => {
+        const state = Object.assign(window, { filterLocationRequests: 0 });
+        Object.defineProperty(navigator.geolocation, 'getCurrentPosition', {
+          value: (_success: PositionCallback, error: PositionErrorCallback) => {
+            state.filterLocationRequests += 1;
+            error({
+              code: 1,
+              message: 'Test permission denied',
+              PERMISSION_DENIED: 1,
+              POSITION_UNAVAILABLE: 2,
+              TIMEOUT: 3,
+            });
+          },
+        });
+      });
+      await page.goto('/d');
+      const filters = page.getByRole('group', { name: 'Directory filters' });
+      const results = page.locator('[data-map-results="Directory"]');
+      const canvas = results.locator('.maplibregl-canvas');
+      const camera = results.locator('.dirsearch-mapcanvas[data-map-center]');
+      const locationRequests = () =>
+        page.evaluate(() => {
+          if (
+            !('filterLocationRequests' in window) ||
+            typeof window.filterLocationRequests !== 'number'
+          )
+            throw new Error('Location spy was not installed');
+          return window.filterLocationRequests;
+        });
+      await expect(results.locator('.maplibregl-marker button')).toHaveCount(2);
+      const before = {
+        bounds: await canvas.boundingBox(),
+        center: await camera.getAttribute('data-map-center'),
+        zoom: await camera.getAttribute('data-map-zoom'),
+      };
+      for (const label of ['Category', 'Visit', 'Certified', 'Events']) {
+        const trigger = filters.getByRole('button', {
+          name: new RegExp(`^${label}`),
+        });
+        await expect(trigger).toBeVisible();
+        await trigger.press('ArrowUp');
+        const dialog = page.getByRole('dialog', { name: label, exact: true });
+        await expect(dialog).toBeInViewport({ ratio: 1 });
+        await expect(
+          dialog
+            .getByRole('menuitemcheckbox')
+            .or(dialog.getByRole('menuitemradio'))
+            .last()
+        ).toBeInViewport({ ratio: 1 });
+        const box = (await dialog.boundingBox())!;
+        const dock = (await page
+          .getByRole('navigation', { name: 'App navigation' })
+          .boundingBox())!;
+        const header = (await page
+          .locator('[data-native-app] > header')
+          .boundingBox())!;
+        expect(box.y).toBeGreaterThanOrEqual(header.y + header.height);
+        expect(box.y + box.height).toBeLessThanOrEqual(dock.y - 7);
+        await expect(
+          dialog.getByRole('button', { name: 'Clear all', exact: true })
+        ).toBeInViewport({ ratio: 1 });
+        await expect(
+          dialog.getByRole('button', { name: 'Done', exact: true })
+        ).toBeInViewport({ ratio: 1 });
+        await page.screenshot({
+          path: testInfo.outputPath(`ios-${label.toLowerCase()}-dropdown.png`),
+        });
+        await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+        await expect(trigger).toBeFocused();
+      }
+      await filters.getByRole('button', { name: /^Visit/ }).click();
+      const visit = page.getByRole('dialog', { name: 'Visit', exact: true });
+      await visit.getByRole('menuitemradio', { name: /^Online / }).click();
+      await expect(visit).toBeVisible();
+      await visit.getByRole('button', { name: 'Done', exact: true }).click();
+      await expect(
+        results.getByRole('heading', { name: '1 listing', exact: true })
+      ).toBeVisible();
+      expect(await canvas.boundingBox()).toEqual(before.bounds);
+      expect(await camera.getAttribute('data-map-center')).toBe(before.center);
+      expect(await camera.getAttribute('data-map-zoom')).toBe(before.zoom);
+      expect(await locationRequests()).toBe(0);
+      await page
+        .getByRole('search')
+        .getByRole('button', { name: 'Use my location' })
+        .click();
+      await expect(
+        page.getByText('Location is unavailable', { exact: true })
+      ).toBeVisible();
+      expect(await locationRequests()).toBe(1);
+      await filters.getByRole('button', { name: /^Visit/ }).click();
+      await expect(visit.getByRole('status')).toContainText(
+        'Showing all areas'
+      );
+      await visit
+        .getByRole('button', { name: 'Clear all', exact: true })
+        .click();
+      await visit.getByRole('button', { name: 'Done', exact: true }).click();
+      await expect(
+        results.getByRole('heading', { name: '3 listings', exact: true })
+      ).toBeVisible();
+    });
+  }
+});
+
 test.describe('iOS results sheet', () => {
   test.use({
     viewport: { width: 390, height: 844 },
@@ -779,10 +901,12 @@ test.describe('compact native directory', () => {
         await expect(sheet).toHaveAttribute('data-collapsed', 'true');
       }
       await handle.press('End');
-      await sheet.getByRole('tab', { name: 'Online 336', exact: true }).tap();
+      await sheet
+        .getByRole('tab', { name: 'Without location 336', exact: true })
+        .tap();
       await expect(
         results
-          .getByRole('region', { name: 'Online', exact: true })
+          .getByRole('region', { name: 'Without location', exact: true })
           .locator('article')
       ).toHaveCount(336);
       await expect(mapped).toBeHidden();

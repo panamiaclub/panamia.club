@@ -25,6 +25,17 @@ export interface NativeEvent extends UpcomingEvent {
   mode: 'online' | 'offline' | 'hybrid';
 }
 
+export type NativeDirectoryVisit = 'both' | 'in-person' | 'online';
+
+export function matchesNativeVisit(
+  result: SearchResultsInterface,
+  visit: NativeDirectoryVisit
+): boolean {
+  return (
+    visit === 'both' || (result.online_only === true) === (visit === 'online')
+  );
+}
+
 export interface NativeResult {
   id: string;
   kind: 'directory' | 'event' | 'group';

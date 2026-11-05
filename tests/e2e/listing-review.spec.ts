@@ -1113,7 +1113,7 @@ for (const viewport of [
       {
         label: 'invitation',
         path: invitationPath,
-        signInLabel: 'Choose my Pana account and sign in',
+        signInLabel: 'Sign in or create an account',
         callback: invitationReturn,
       },
     ]) {
@@ -3006,6 +3006,74 @@ for (const viewport of [
   });
 }
 
+for (const viewport of [
+  { width: 1440, height: 900, label: 'desktop' },
+  { width: 390, height: 844, label: 'mobile' },
+  { width: 320, height: 740, label: 'narrow' },
+]) {
+  test(`invitation signup guidance names the exact business safely before the CTA at ${viewport.label} size`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    const fixture = await fixtures(page, { newAccount: true });
+    const name = 'Art & Makers <studio> "South"';
+    fixture.profile.name = name;
+    await page.goto(invitationPath);
+    const guidance = page.getByText(
+      'New to Pana? Create an account with Google or an email you control. Your login email does not have to match the business email on this listing.',
+      { exact: true }
+    );
+    const nextStep = page.getByText(
+      `After signing in, you will return here to confirm that you manage ${name} and review its details.`,
+      { exact: true }
+    );
+    const choose = page.getByRole('link', {
+      name: 'Sign in or create an account',
+      exact: true,
+    });
+    await expect(guidance).toBeVisible();
+    await expect(
+      page.getByText('Already a member? Sign in to your Pana account.', {
+        exact: true,
+      })
+    ).toBeVisible();
+    await expect(nextStep.locator('strong')).toHaveText(name);
+    await expect(
+      page.getByRole('heading', { name, exact: true })
+    ).toBeVisible();
+    await expect(page.locator('studio')).toHaveCount(0);
+    await expect(choose).toHaveAttribute(
+      'href',
+      `/signin?callbackUrl=${encodeURIComponent(invitationReturn)}`
+    );
+    for (const paragraph of [guidance, nextStep]) {
+      expect(
+        await paragraph.evaluate((element) => {
+          const link = document.querySelector('a[href^="/signin?"]');
+          return (
+            link !== null &&
+            Boolean(
+              element.compareDocumentPosition(link) &
+              Node.DOCUMENT_POSITION_FOLLOWING
+            )
+          );
+        })
+      ).toBe(true);
+    }
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(viewport.width);
+    await page.screenshot({
+      path: test.info().outputPath(`invitation-signup-${viewport.label}.png`),
+      fullPage: true,
+    });
+    expect(fixture.signIns).toHaveLength(0);
+    expect(fixture.invitationAcceptances).toHaveLength(0);
+    expect(fixture.verifications).toHaveLength(0);
+    expect(fixture.writes).toHaveLength(0);
+  });
+}
+
 test('invitation opening and scanner inspection never sign in, claim, email or expose private contacts and proof in network URLs', async ({
   page,
 }) => {
@@ -3024,7 +3092,7 @@ test('invitation opening and scanner inspection never sign in, claim, email or e
   ).toBeVisible();
   await expect(
     page.getByRole('link', {
-      name: 'Choose my Pana account and sign in',
+      name: 'Sign in or create an account',
       exact: true,
     })
   ).toBeVisible();
@@ -3062,7 +3130,7 @@ test('invitation opening and scanner inspection never sign in, claim, email or e
   await page.reload();
   await expect(
     page.getByRole('link', {
-      name: 'Choose my Pana account and sign in',
+      name: 'Sign in or create an account',
       exact: true,
     })
   ).toBeVisible();
@@ -3076,7 +3144,7 @@ test('an invitation returns through chosen-account passwordless sign-in to expli
   const fixture = await fixtures(page, { newAccount: true });
   await page.goto(invitationPath);
   const choose = page.getByRole('link', {
-    name: 'Choose my Pana account and sign in',
+    name: 'Sign in or create an account',
     exact: true,
   });
   await expect(choose).toBeVisible();
@@ -3107,6 +3175,15 @@ test('an invitation returns through chosen-account passwordless sign-in to expli
   expect(fixture.signIns[0].callbackURL).not.toContain(invitationToken);
   const callback = new URL(String(fixture.signIns[0].callbackURL));
   expect(`${callback.pathname}${callback.search}`).toBe(invitationReturn);
+  const signInStatus = page.locator('#signin-card').getByRole('status');
+  await expect(signInStatus).toContainText(
+    `Check ${accountEmail} for your Pana sign-in link.`
+  );
+  await expect(signInStatus).toContainText(
+    "Open it in this browser to continue. If it's missing, check Spam or Junk."
+  );
+  expect(fixture.invitationAcceptances).toHaveLength(0);
+  expect(fixture.reviewConfirmations).toHaveLength(0);
   fixture.signIn();
   await page.goto(invitationReturn);
   await expect(page.getByTestId('invitation-account')).toHaveText(accountEmail);

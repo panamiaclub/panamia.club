@@ -289,17 +289,6 @@ function InvitationContent() {
                 </>
               ) : invitation?.state === 'available' ? (
                 <>
-                  <p>
-                    This invitation verifies access to the business inbox. It
-                    does not sign you in or make you the owner just by opening
-                    it.
-                  </p>
-                  <p className="text-muted-foreground text-sm">
-                    Invitations last {LISTING_INVITATION_DAYS} days. This one
-                    expires{' '}
-                    {new Date(invitation.expiresAt ?? '').toLocaleDateString()}.
-                    Your Pana sign-in link has its own shorter expiry.
-                  </p>
                   {session?.user?.id ? (
                     <>
                       <p>
@@ -329,16 +318,23 @@ function InvitationContent() {
                   ) : (
                     <>
                       <p>
-                        Choose your Pana account and sign in with its email. It
-                        can be different from the business contact. You will
-                        return here to explicitly confirm the claim.
+                        New to Pana? Create an account with Google or an email
+                        you control. Your login email does not have to match the
+                        business email on this listing.
+                      </p>
+                      <p>Already a member? Sign in to your Pana account.</p>
+                      <p>
+                        After signing in, you will return here to confirm that
+                        you manage{' '}
+                        <strong>{listing?.name || 'this business'}</strong> and
+                        review its details.
                       </p>
                       <Button
                         asChild
                         className="w-full rounded-full font-extrabold"
                       >
                         <Link href={signInPath}>
-                          Choose my Pana account and sign in
+                          Sign in or create an account
                         </Link>
                       </Button>
                       <p className="text-muted-foreground text-sm">
@@ -348,6 +344,17 @@ function InvitationContent() {
                       </p>
                     </>
                   )}
+                  <p className="text-muted-foreground text-sm">
+                    This invitation verifies access to the business inbox. It
+                    does not sign you in or make you the owner just by opening
+                    it.
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    Invitations last {LISTING_INVITATION_DAYS} days. This one
+                    expires{' '}
+                    {new Date(invitation.expiresAt ?? '').toLocaleDateString()}.
+                    Your Pana sign-in link has its own shorter expiry.
+                  </p>
                 </>
               ) : (
                 <>
