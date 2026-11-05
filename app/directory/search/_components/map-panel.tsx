@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { ArrowRight, Globe, MapPin, X } from 'lucide-react';
+import { useMediaQuery } from '@/components/home/rail';
 import type { SearchResultsInterface } from '@/lib/query/directory';
 import { groupOnlineZipListings } from '@/lib/online-zip';
 import type { OnlineZipArea } from '@/lib/online-zip';
@@ -92,6 +93,7 @@ export function MapPanel({
   failed = false,
   onRetry,
 }: MapPanelProps) {
+  const showZoomControls = useMediaQuery('(any-pointer: fine)');
   const pins = useMemo<Pin[]>(
     () =>
       results.flatMap((result) => {
@@ -299,6 +301,7 @@ export function MapPanel({
         hasZipAreas={
           zipGroups.length > 0 || pins.some((pin) => pin.zipArea !== null)
         }
+        showZoomControls={showZoomControls}
         onBoundsChange={onBoundsChange}
       />
 
