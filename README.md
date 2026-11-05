@@ -34,7 +34,7 @@ Find local shows, markets, gallery openings, and community gatherings. Stay conn
 
 ### Social Timeline
 
-A multimedia microblogging platform built into the community. Share posts with markdown formatting, images, and voice memos. Follow other community members, like and reply to posts. Built on [ActivityPub](https://www.w3.org/TR/activitypub/) for future federation with Mastodon, Pixelfed, and other fediverse servers.
+A multimedia microblogging platform built into the community. Share posts with markdown formatting, images, GIFs, and video. Follow other community members, like and reply to posts. Built on [ActivityPub](https://www.w3.org/TR/activitypub/) for future federation with Mastodon, Pixelfed, and other fediverse servers.
 
 _Features: Markdown editor, media attachments, post visibility controls, content-sensitivity labels_
 

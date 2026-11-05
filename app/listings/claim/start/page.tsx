@@ -267,7 +267,9 @@ function ClaimStartContent() {
                   <p>
                     We&apos;ve refreshed the directory. Check your business
                     description, categories, links, photos and where people can
-                    find you.
+                    find you. Completing the review requires a valid US ZIP and
+                    a saved primary business photo. An existing primary photo
+                    counts; gallery photos are optional.
                   </p>
                   {listing.missingLocation && (
                     <p className="bg-pana-flame/10 rounded-xl p-3 text-sm font-semibold">

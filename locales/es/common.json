@@ -1,7 +1,7 @@
 {
   "authMenu": {
     "heading": "Únete al club",
-    "open": "Iniciar sesión o registrarse",
+    "open": "Crear cuenta o iniciar sesión",
     "signInHint": "Bienvenido de nuevo, Pana",
     "signUpHint": "¿Eres nuevo? Crea tu cuenta"
   },
@@ -92,8 +92,8 @@
     "adminPanel": "Panel de Admin",
     "signOut": "Cerrar Sesión",
     "becomeAPana": "Únete como Pana",
-    "signUp": "Registrarse",
-    "signIn": "Iniciar Sesión",
+    "signUp": "Crear cuenta",
+    "signIn": "Iniciar sesión",
     "menu": "Menú",
     "closeMenu": "Cerrar menú",
     "shopAnnouncement": "Cada compra apoya los programas comunitarios de Pana MIA en el sur de Florida.",

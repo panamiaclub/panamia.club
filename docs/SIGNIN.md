@@ -1,5 +1,24 @@
 # Sign-In System Documentation
 
+## Creating an account or signing in
+
+Both entry points use the same passwordless flow at `/signin`. The public
+masthead makes **Create account** the primary action and keeps **Sign in**
+visible beside it; on narrow screens they stack without hiding either option.
+The shared page explains account creation and returning-member access rather
+than assuming every visitor already has an account.
+
+The browser page owns a focused, surface-branded masthead. Its two account
+links target the same form without replacing the current callback URL.
+Native screens keep their existing compact account menu, reporting actions,
+and reviewer access instead of adding a second masthead.
+
+Email uses **Continue with email** and **Email me a link**, with a visible email
+label and a no-password explanation. Copy is available in English and Spanish
+and adapts when Google or all OAuth options are unavailable. Provider gating,
+verification, terms, callback destinations, and first-signup onboarding are
+unchanged.
+
 ## Seamless Provider Switching
 
 ### Can users freely change between sign-in methods?

@@ -23,7 +23,7 @@ This document cross-references every platform module by its URL namespace, matur
 | `/signin`   | **Auth**          | Passwordless sign-in: magic link, Google, Apple, Mastodon OAuth   |    2     | [SIGNIN.md](SIGNIN.md)                                                                                            |
 | `/links`    | **Link Hub**      | Centralised link page for social sharing                          |    2     | —                                                                                                                 |
 | `/podcasts` | **PanaVizión**    | YouTube podcast episode gallery                                   |    4     | —                                                                                                                 |
-| `/updates`  | **Notifications** | Voice memos, @-mentions, Pana Updates notification feed           |    3     | [NOTIFICATIONS-ROADMAP.md](NOTIFICATIONS-ROADMAP.md)                                                              |
+| `/updates`  | **Notifications** | Messages, @-mentions, Pana Updates notification feed              |    3     | [NOTIFICATIONS-ROADMAP.md](NOTIFICATIONS-ROADMAP.md)                                                              |
 
 ---
 

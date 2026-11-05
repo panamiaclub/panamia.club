@@ -17,10 +17,8 @@
  *    dimensions as *strings* ("480", not 480), which a reasonable-looking
  *    `typeof === 'number'` guard would silently discard in full.
  *
- * 3. `attachmentLabel` was the hardcoded string 'Sent a voice memo' for every
- *    attachment type. A GIF appearing in the sidebar as a voice memo is the
- *    sort of small wrongness that makes people stop believing the rest of the
- *    interface.
+ * 3. `attachmentLabel` must describe the visible attachment, not a retired
+ *    recording hidden earlier in the attachment array.
  */
 
 import { describe, it } from 'node:test';
@@ -285,25 +283,38 @@ describe('normalizeGifResults', () => {
 });
 
 describe('attachmentLabel', () => {
-  const att = (type: string, mediaType: string) =>
-    [
-      { type, mediaType, url: 'https://example.test/x' },
-    ] as unknown as SocialStatusDisplay['attachments'];
+  const att = (
+    type: string,
+    mediaType: string
+  ): NonNullable<SocialStatusDisplay['attachments']> => [
+    { id: 'fixture', type, mediaType, url: 'https://example.test/x' },
+  ];
 
   it('calls a GIF a GIF', () => {
-    // The regression this file exists for: before the fix this returned
-    // 'Sent a voice memo' for every attachment, GIFs included.
     assert.equal(attachmentLabel(att('image', 'image/gif')), 'GIF');
   });
 
-  it('still calls a voice memo a voice memo', () => {
+  it('does not advertise retired recordings in conversation previews', () => {
+    for (const [type, mediaType] of [
+      ['audio', 'audio/webm'],
+      ['Audio', 'audio/ogg'],
+      ['video', 'AUDIO/MP4'],
+    ]) {
+      assert.equal(
+        attachmentLabel(att(type, mediaType)),
+        'Attachment unavailable'
+      );
+    }
     assert.equal(
-      attachmentLabel(att('audio', 'audio/webm')),
-      'Sent a voice memo'
+      attachmentLabel([
+        ...att('audio', 'audio/ogg'),
+        ...att('image', 'image/gif'),
+      ]),
+      'GIF'
     );
   });
 
-  it('distinguishes photos and video from both', () => {
+  it('distinguishes photos and video', () => {
     assert.equal(attachmentLabel(att('image', 'image/png')), 'Photo');
     assert.equal(attachmentLabel(att('video', 'video/mp4')), 'Video');
   });

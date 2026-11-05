@@ -271,11 +271,20 @@
   inset: 0;
 }
 
+/* Keep the map framed for the peek state; only clip it as the sheet rises. */
 .mapViewport {
+  --native-sheet-overlap: max(
+    0px,
+    calc(
+      var(--native-sheet-height, 118px) - var(--native-map-peek-height, 118px)
+    )
+  );
   position: absolute;
   inset: 0;
+  bottom: var(--native-map-peek-height, 118px);
   overflow: hidden;
   background: #e8eee1;
+  clip-path: inset(0 0 var(--native-sheet-overlap));
 }
 
 .mapViewport :global(.dirsearch-mapcanvas) {
@@ -285,23 +294,19 @@
   height: 100%;
 }
 
-.mapResults :global(.maplibregl-ctrl-top-left) {
-  top: 72px;
+.mapViewport :global(.maplibregl-ctrl-bottom-left),
+.mapViewport :global(.maplibregl-ctrl-bottom-right) {
+  bottom: var(--native-sheet-overlap);
 }
 
-.mapResults[data-map-results='Directory'] :global(.maplibregl-ctrl-top-left) {
-  top: 112px;
-}
-
-.mapResults :global(.maplibregl-ctrl-group button) {
-  width: 36px;
-  height: 36px;
+.mapViewport :global(.dirsearch-zip-attribution) {
+  bottom: calc(var(--native-sheet-overlap) + 0.3rem);
 }
 
 .offMap {
   position: absolute;
   right: 8px;
-  bottom: 28px;
+  bottom: calc(var(--native-sheet-overlap) + 28px);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -311,6 +316,7 @@
   background: rgb(255 247 236 / 0.96);
   font-size: 10px;
   font-weight: 800;
+  pointer-events: none;
 }
 
 .pin {
@@ -393,6 +399,7 @@
   inset: auto 0 0;
   display: flex;
   flex-direction: column;
+  height: var(--native-sheet-height, 118px);
   overflow: hidden;
   border: 1px solid rgb(17 13 13 / 0.13);
   border-bottom: 0;
@@ -404,13 +411,16 @@
 .sheetHeader {
   flex: none;
   padding: 0 13px;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
 }
 
 .sheetHandle {
   display: grid;
   place-items: center;
   width: 100%;
-  height: 20px;
+  height: 44px;
   cursor: ns-resize;
   touch-action: none;
 }

@@ -14,7 +14,6 @@ export interface ChatAttachment {
   name?: string | null;
   width?: number;
   height?: number;
-  peaks?: number[];
 }
 
 export type ChatMessage = Pick<

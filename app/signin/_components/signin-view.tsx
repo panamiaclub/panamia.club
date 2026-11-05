@@ -14,7 +14,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useIsNativeApp } from '@/lib/mobile/use-native-app';
 import { hasNativeGoogleSignIn } from '@/lib/mobile/native';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
+import MainHeader from '@/components/MainHeader';
+import { Label } from '@/components/ui/label';
 
 function GoogleIcon() {
   return (
@@ -102,6 +104,7 @@ export interface SignInViewProps {
   enabledOAuthProviders: readonly string[];
   /** Public Web OAuth client ID, also used as the native Google token audience. */
   googleClientId: string | null;
+  isProductionSite: boolean;
 }
 
 function SignInPageContent({
@@ -113,6 +116,7 @@ function SignInPageContent({
   mainSiteName,
   enabledOAuthProviders,
   googleClientId,
+  isProductionSite,
 }: SignInViewProps) {
   const searchParams = useSearchParams();
   const isHydrated = useIsHydrated();
@@ -231,6 +235,11 @@ function SignInPageContent({
   );
 
   const hasOAuth = oauthProviders.length > 0;
+  const descriptionKey = oauthProviders.some(({ id }) => id === 'google')
+    ? 'welcomeDesc'
+    : hasOAuth
+      ? 'welcomeDescOptions'
+      : 'welcomeDescEmail';
   // With no OAuth to choose between, the toggle is a pointless extra click.
   const emailFormOpen = showEmailForm || !hasOAuth;
 
@@ -302,196 +311,224 @@ function SignInPageContent({
   };
 
   return (
-    <div
-      className="auth-surface flex flex-col items-center px-4 py-12 sm:py-16"
-      data-standalone="true"
-    >
-      <div className="flex w-full flex-1 flex-col items-center justify-center">
-        <div className="w-full max-w-md space-y-6">
-          {/* The surface's own mark. This is the page's only chrome: there is no
-            masthead above it, so the wordmark is what tells a member which
-            door they are standing at. */}
-          <div className="flex flex-col items-center space-y-4">
-            <Image
-              src={mark.src}
-              alt={mark.alt}
-              width={mark.width}
-              height={mark.height}
-              className="h-auto w-64 max-w-full"
-              priority
+    <>
+      {/* Keep masthead initialization from delaying the server-rendered form. */}
+      {!isNativeApp && (
+        <Suspense
+          fallback={
+            <div className="auth-page-header-loading" aria-hidden="true" />
+          }
+        >
+          <div className="auth-page-header">
+            <MainHeader
+              isProductionSite={isProductionSite}
+              authPage={{ mark, rootPath }}
             />
-            {/* Getting listed no longer starts here — /form/get-listed
-              is public — so there is one audience left on this page: someone
-              returning to an account. */}
-            <p className="text-pana-ink/75 dark:text-muted-foreground max-w-md text-center text-sm leading-relaxed">
-              {ts('adCopyDefault')}
+          </div>
+        </Suspense>
+      )}
+      <div
+        className="auth-surface flex flex-col items-center px-4 pt-12 pb-20 sm:pt-16"
+        data-standalone={isNativeApp ? 'true' : 'false'}
+        data-auth-entry="true"
+      >
+        <div className="flex w-full flex-1 flex-col items-center justify-center">
+          <div className="w-full max-w-[30rem] space-y-6">
+            <div className="flex flex-col items-center space-y-4">
+              <Image
+                src={mark.src}
+                alt={mark.alt}
+                width={mark.width}
+                height={mark.height}
+                className="h-auto w-64 max-w-full"
+                priority
+              />
+            </div>
+
+            {/* The dark theme sets --card and --background to the same value, so a
+            dark border would leave the card with no visible edge. */}
+            <Card
+              id="signin-card"
+              tabIndex={-1}
+              className="border-pana-ink/10 focus-visible:outline-pana-indigo rounded-3xl shadow-xl focus-visible:outline-2 focus-visible:outline-offset-4 dark:border-white/10"
+            >
+              <CardContent className="space-y-6 p-6 sm:p-8">
+                {/* Welcome Message / Ad Copy Space */}
+                <div className="flex flex-col items-center space-y-3 text-center">
+                  <span className="section-eyebrow">{t('eyebrow')}</span>
+                  <h1 className="text-foreground text-3xl leading-[1.15] font-black tracking-tight whitespace-pre-line sm:text-[2.125rem]">
+                    {ts('welcomeTitle')}
+                  </h1>
+                  <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
+                    <Trans
+                      t={t}
+                      ns="signin"
+                      i18nKey={`${descriptionKey}_${surfaceId}`}
+                      defaults={t(descriptionKey)}
+                      components={{
+                        strong: (
+                          <strong className="text-pana-ink/80 dark:text-foreground font-extrabold" />
+                        ),
+                      }}
+                    />
+                  </p>
+                </div>
+
+                {errorMessage ? (
+                  <div
+                    role="alert"
+                    className="border-destructive/40 bg-destructive/10 text-foreground rounded-lg border-2 px-4 py-3 text-sm font-semibold"
+                  >
+                    {errorMessage}
+                  </div>
+                ) : null}
+
+                {/* OAuth sign-in — configured providers only */}
+                {hasOAuth && (
+                  <div className="space-y-3">
+                    {oauthProviders.map((provider) => (
+                      <Button
+                        key={provider.id}
+                        onClick={() => handleOAuthSignIn(provider.id)}
+                        className={provider.className}
+                        size="lg"
+                        disabled={!isHydrated || oauthProvider !== null}
+                      >
+                        {provider.icon}
+                        {oauthProvider === provider.id
+                          ? t('signingIn')
+                          : provider.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Divider only separates two things that are both on screen. */}
+                {hasOAuth && (
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="border-pana-ink/15 w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="bg-card text-muted-foreground px-2">
+                        {t('or')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {!emailFormOpen ? (
+                  <button
+                    onClick={() => setShowEmailForm(true)}
+                    disabled={!isHydrated}
+                    className="text-pana-indigo dark:text-pana-flame min-h-11 w-full text-center text-sm font-semibold hover:underline"
+                  >
+                    {t('continueEmail')}
+                  </button>
+                ) : (
+                  <form onSubmit={handleEmailSignIn} className="space-y-3">
+                    <Label htmlFor="signin-email">{t('emailLabel')}</Label>
+                    <Input
+                      id="signin-email"
+                      type="email"
+                      placeholder={t('emailPlaceholder')}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      disabled={!isHydrated || isSubmitting}
+                    />
+                    <p className="text-muted-foreground text-xs">
+                      {t('emailHint')}
+                    </p>
+                    {TurnstileWidget}
+                    {turnstileError && (
+                      <p className="text-destructive text-center text-sm">
+                        {t('turnstileBlocked')}
+                      </p>
+                    )}
+                    {/* Flame carries ink, never cream — see the contrast rule in
+                    globals.css. */}
+                    <Button
+                      type="submit"
+                      className="bg-pana-flame text-pana-ink hover:bg-pana-burnt w-full font-extrabold"
+                      disabled={!isHydrated || isSubmitting || !turnstileToken}
+                    >
+                      {isSubmitting ? t('sendingLink') : t('sendLink')}
+                    </Button>
+                    {hasOAuth && (
+                      <button
+                        type="button"
+                        onClick={() => setShowEmailForm(false)}
+                        disabled={!isHydrated}
+                        className="text-muted-foreground hover:text-foreground w-full text-center text-sm"
+                      >
+                        {t('backToOptions')}
+                      </button>
+                    )}
+                  </form>
+                )}
+
+                {/* Footer */}
+                <p className="text-muted-foreground pt-2 text-center text-xs">
+                  {t('termsAgreement')}{' '}
+                  <Link
+                    href="/legal/terms"
+                    className="text-pana-indigo dark:text-pana-flame font-semibold hover:underline"
+                  >
+                    {t('termsLink')}
+                  </Link>
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Additional Info */}
+            <p className="text-pana-ink/70 dark:text-muted-foreground text-center text-sm">
+              {t('needHelp')}{' '}
+              <Link
+                href="/form/contact-us"
+                className="text-pana-indigo dark:text-pana-flame font-semibold hover:underline"
+              >
+                {t('contactUs')}
+              </Link>
             </p>
           </div>
-
-          {/* The dark theme sets --card and --background to the same value, so a
-            dark border would leave the card with no visible edge. */}
-          <Card className="border-pana-ink/10 rounded-2xl shadow-xl dark:border-white/10">
-            <CardContent className="space-y-6 p-8">
-              {/* Welcome Message / Ad Copy Space */}
-              <div className="flex flex-col items-center space-y-3 text-center">
-                <span className="section-eyebrow">{t('eyebrow')}</span>
-                <h1 className="text-foreground text-2xl font-black tracking-tight">
-                  {ts('welcomeTitle')}
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                  {ts('welcomeDesc')}
-                </p>
-              </div>
-
-              {errorMessage ? (
-                <div
-                  role="alert"
-                  className="border-destructive/40 bg-destructive/10 text-foreground rounded-lg border-2 px-4 py-3 text-sm font-semibold"
-                >
-                  {errorMessage}
-                </div>
-              ) : null}
-
-              {/* OAuth sign-in — configured providers only */}
-              {hasOAuth && (
-                <div className="space-y-3">
-                  {oauthProviders.map((provider) => (
-                    <Button
-                      key={provider.id}
-                      onClick={() => handleOAuthSignIn(provider.id)}
-                      className={provider.className}
-                      size="lg"
-                      disabled={!isHydrated || oauthProvider !== null}
-                    >
-                      {provider.icon}
-                      {oauthProvider === provider.id
-                        ? t('signingIn')
-                        : provider.label}
-                    </Button>
-                  ))}
-                </div>
-              )}
-
-              {/* Divider only separates two things that are both on screen. */}
-              {hasOAuth && (
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="border-pana-ink/15 w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="bg-card text-muted-foreground px-2">
-                      {t('or')}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {!emailFormOpen ? (
-                <button
-                  onClick={() => setShowEmailForm(true)}
-                  disabled={!isHydrated}
-                  className="text-pana-indigo dark:text-pana-flame w-full text-center text-sm font-semibold hover:underline"
-                >
-                  {t('signInWithEmail')}
-                </button>
-              ) : (
-                <form onSubmit={handleEmailSignIn} className="space-y-3">
-                  <Input
-                    type="email"
-                    placeholder={t('emailPlaceholder')}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={!isHydrated || isSubmitting}
-                  />
-                  {TurnstileWidget}
-                  {turnstileError && (
-                    <p className="text-destructive text-center text-sm">
-                      {t('turnstileBlocked')}
-                    </p>
-                  )}
-                  {/* Flame carries ink, never cream — see the contrast rule in
-                    globals.css. */}
-                  <Button
-                    type="submit"
-                    className="bg-pana-flame text-pana-ink hover:bg-pana-burnt w-full font-extrabold"
-                    disabled={!isHydrated || isSubmitting || !turnstileToken}
-                  >
-                    {isSubmitting ? t('sendingLink') : t('sendLink')}
-                  </Button>
-                  {hasOAuth && (
-                    <button
-                      type="button"
-                      onClick={() => setShowEmailForm(false)}
-                      disabled={!isHydrated}
-                      className="text-muted-foreground hover:text-foreground w-full text-center text-sm"
-                    >
-                      {t('backToOptions')}
-                    </button>
-                  )}
-                </form>
-              )}
-
-              {/* Footer */}
-              <p className="text-muted-foreground pt-2 text-center text-xs">
-                {t('termsAgreement')}{' '}
-                <Link
-                  href="/legal/terms"
-                  className="text-pana-indigo dark:text-pana-flame font-semibold hover:underline"
-                >
-                  {t('termsLink')}
-                </Link>
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Additional Info */}
-          <p className="text-pana-ink/70 dark:text-muted-foreground text-center text-sm">
-            {t('needHelp')}{' '}
-            <Link
-              href="/form/contact-us"
-              className="text-pana-indigo dark:text-pana-flame font-semibold hover:underline"
-            >
-              {t('contactUs')}
-            </Link>
-          </p>
         </div>
-      </div>
 
-      {/* Standing in for the site footer this page no longer has. It carries
+        {/* Standing in for the site footer this page no longer has. It carries
           only what a signed-out visitor needs: the legal links, and — from a
           surface — the way back to the main site, with the reassurance that
           nobody is being asked for a second account. */}
-      <footer className="mt-12 flex w-full max-w-md flex-col items-center gap-3 text-center">
-        {mainSiteUrl && (
-          <p className="text-pana-ink/70 dark:text-muted-foreground text-xs">
-            {t('partOfPanaverse', {
-              surface: surfaceName,
-              main: mainSiteName,
-            })}
-          </p>
-        )}
-        <nav
-          aria-label={t('footerNavLabel')}
-          className="text-pana-ink/70 dark:text-muted-foreground flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs"
-        >
+        <footer className="mt-12 flex w-full max-w-md flex-col items-center gap-3 text-center">
           {mainSiteUrl && (
-            <a href={mainSiteUrl} className="font-semibold hover:underline">
-              {t('goToMain', { main: mainSiteName })}
-            </a>
+            <p className="text-pana-ink/70 dark:text-muted-foreground text-xs">
+              {t('partOfPanaverse', {
+                surface: surfaceName,
+                main: mainSiteName,
+              })}
+            </p>
           )}
-          <Link href="/legal/terms" className="hover:underline">
-            {t('termsLink')}
-          </Link>
-          <Link href="/legal/privacy" className="hover:underline">
-            {t('privacyLink')}
-          </Link>
-          <Link href="/signin/reviewer" className="hover:underline">
-            {t('reviewerSignIn')}
-          </Link>
-        </nav>
-      </footer>
-    </div>
+          <nav
+            aria-label={t('footerNavLabel')}
+            className="text-pana-ink/70 dark:text-muted-foreground flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs"
+          >
+            {mainSiteUrl && (
+              <a href={mainSiteUrl} className="font-semibold hover:underline">
+                {t('goToMain', { main: mainSiteName })}
+              </a>
+            )}
+            <Link href="/legal/terms" className="hover:underline">
+              {t('termsLink')}
+            </Link>
+            <Link href="/legal/privacy" className="hover:underline">
+              {t('privacyLink')}
+            </Link>
+            <Link href="/signin/reviewer" className="hover:underline">
+              {t('reviewerSignIn')}
+            </Link>
+          </nav>
+        </footer>
+      </div>
+    </>
   );
 }
 

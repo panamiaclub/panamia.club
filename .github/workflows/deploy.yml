@@ -77,3 +77,27 @@ jobs:
           done
           echo "Production storefront did not become healthy in time."
           exit 1
+
+      - name: Verify signup handle availability
+        shell: bash
+        run: |
+          yarn node --import tsx --input-type=module <<'JS'
+          import { randomUUID } from 'node:crypto';
+          import { db } from './lib/db.ts';
+          import { isScreennameAvailable } from './lib/screenname.ts';
+
+          const name = `signup_${randomUUID().replaceAll('-', '').slice(0, 16)}`;
+          try {
+            const anonymous = await isScreennameAvailable(name);
+            const signup = await isScreennameAvailable(
+              name,
+              'signup-smoke-check@example.invalid'
+            );
+            if (!anonymous || !signup) {
+              throw new Error('An unused handle must be available to both anonymous visitors and signed-in signups.');
+            }
+            console.log('Read-only signup handle availability check passed.');
+          } finally {
+            await db.$client.end({ timeout: 5 });
+          }
+          JS

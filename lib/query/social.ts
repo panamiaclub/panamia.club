@@ -1688,8 +1688,8 @@ export interface MessageableActor {
  * empty state had to send members to someone's profile to begin, which is a
  * different page, reachable from a different search.
  *
- * Reuses the actor-search endpoint the voice-memo composer already calls
- * rather than adding a messages-specific one. It answers exactly the question
+ * Uses the shared actor-search endpoint rather than a messages-specific one.
+ * It answers exactly the question
  * being asked -- local actors with a profile, signed-in only -- and a second
  * endpoint would be a second place for the membership-enumeration gate to be
  * got wrong.

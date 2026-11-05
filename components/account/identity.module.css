@@ -136,6 +136,77 @@
 
 /* ---------- desktop dropdown ---------- */
 
+.authEntries {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.authSignIn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  color: var(--color-pana-ink);
+  font-size: 0.9375rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.authSignIn:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.authCreate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.625rem 1.25rem;
+  border-radius: 999px;
+  background-color: var(--color-pana-flame);
+  color: var(--color-pana-ink);
+  font-size: 0.9375rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.authCreate:hover {
+  background-color: var(--color-pana-burnt);
+}
+
+.authSignIn:focus-visible,
+.authCreate:focus-visible {
+  outline: 2px solid var(--color-pana-indigo);
+  outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+  .authEntries {
+    flex-direction: column-reverse;
+    gap: 1px;
+  }
+
+  .authEntries .authSignIn {
+    padding-inline: 8px;
+    font-size: 0.75rem;
+  }
+
+  .authEntries .authCreate {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .authEntries .authSignIn,
+  .authEntries .authCreate {
+    padding-inline: 8px;
+    font-size: 0.6875rem;
+  }
+}
+
 .anchor {
   position: relative;
 }

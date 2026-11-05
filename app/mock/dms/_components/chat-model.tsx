@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowUp, Mic, Plus, ShieldQuestion, Search } from 'lucide-react';
+import { ArrowUp, Plus, ShieldQuestion, Search } from 'lucide-react';
 import {
   MOCK_DM_THREADS,
   MOCK_DM_REQUESTS,
@@ -9,7 +9,7 @@ import {
   threadSnippet,
   type MockDmThread,
 } from '../_data/mock-dms';
-import { DmAvatar, DmName, DmWaveform, UnreadBadge } from './dm-primitives';
+import { DmAvatar, DmName, UnreadBadge } from './dm-primitives';
 
 /* The CHAT model.
  *
@@ -162,35 +162,18 @@ export function ChatModel() {
                         <div
                           className={`flex max-w-[78%] flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}
                         >
-                          {group.map((message) =>
-                            message.voice ? (
-                              <div
-                                key={message.id}
-                                className={`w-64 rounded-2xl px-3 py-2.5 ${
-                                  mine
-                                    ? 'bg-pana-indigo'
-                                    : 'border-pana-ink/14 border-2 bg-white'
-                                }`}
-                              >
-                                <DmWaveform
-                                  peaks={message.voice.peaks}
-                                  duration={message.voice.duration}
-                                  tone={mine ? 'dark' : 'light'}
-                                />
-                              </div>
-                            ) : (
-                              <div
-                                key={message.id}
-                                className={`rounded-2xl px-3.5 py-2 text-[15px] leading-relaxed font-medium whitespace-pre-line ${
-                                  mine
-                                    ? 'bg-pana-indigo text-pana-cream'
-                                    : 'border-pana-ink/14 text-pana-ink border-2 bg-white'
-                                }`}
-                              >
-                                {message.body}
-                              </div>
-                            )
-                          )}
+                          {group.map((message) => (
+                            <div
+                              key={message.id}
+                              className={`rounded-2xl px-3.5 py-2 text-[15px] leading-relaxed font-medium whitespace-pre-line ${
+                                mine
+                                  ? 'bg-pana-indigo text-pana-cream'
+                                  : 'border-pana-ink/14 text-pana-ink border-2 bg-white'
+                              }`}
+                            >
+                              {message.body}
+                            </div>
+                          ))}
                           {/* One time per group, not per message. */}
                           <span className="text-pana-ink/45 px-1 text-[11px] font-bold">
                             {group[group.length - 1].time}
@@ -231,13 +214,6 @@ export function ChatModel() {
                         Message
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      className="text-pana-ink/50 hover:bg-pana-butter-2 flex h-9 w-9 flex-none items-center justify-center rounded-full"
-                      aria-label="Record voice memo"
-                    >
-                      <Mic className="h-5 w-5" />
-                    </button>
                     <button
                       type="button"
                       className="bg-pana-indigo text-pana-cream flex h-9 w-9 flex-none items-center justify-center rounded-full"

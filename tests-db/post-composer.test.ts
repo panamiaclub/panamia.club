@@ -39,6 +39,7 @@ mock.module(import.meta.resolve('react-i18next'), {
 
 const { PostComposer } = await import('../components/social/PostComposer');
 const { MediaAttachments } = await import('../components/MultiMediaUpload');
+const { AttachmentGrid } = await import('../components/social/AttachmentGrid');
 after(() => mock.restoreAll());
 
 it('starts compact with identity, visible media actions, and a public audience', () => {
@@ -46,7 +47,7 @@ it('starts compact with identity, visible media actions, and a public audience',
   assert.match(html, /Fixture Pana/);
   assert.match(html, /aria-label="Audience: Everyone"/);
   assert.match(html, /aria-label="Add photos or video"/);
-  assert.match(html, /aria-label="Add audio"/);
+  assert.doesNotMatch(html, /Add audio|Choose audio|audio\/\*|<audio/);
   assert.match(html, /data-expanded="false"/);
   assert.match(html, /rows="1"/);
   assert.doesNotMatch(html, /aria-label="More post options"/);
@@ -92,7 +93,7 @@ it('does not claim public reach while a pinned group is still loading', () => {
   }
 });
 
-it('renders native inline video/audio controls and named, always-visible removal actions', () => {
+it('keeps inline video and removal controls while hiding retired audio from drafts', () => {
   const html = renderToStaticMarkup(
     createElement(MediaAttachments, {
       value: [
@@ -113,10 +114,68 @@ it('renders native inline video/audio controls and named, always-visible removal
     })
   );
   assert.match(html, /<video[^>]*controls=""/);
-  assert.match(html, /<audio[^>]*controls=""/);
+  assert.doesNotMatch(html, /<audio|voice\.ogg|A voice note/);
   assert.match(html, /aria-label="Remove A video"/);
-  assert.match(html, /aria-label="Remove A voice note"/);
   assert.doesNotMatch(html, /opacity-0|group-hover/);
+});
+
+it('hides stored recordings and waveforms without removing photos or video', () => {
+  const attachments = [
+    {
+      id: 'legacy-audio',
+      type: 'audio',
+      mediaType: 'audio/ogg',
+      url: '/legacy-voice.ogg',
+      name: 'Old recording',
+      peaks: [0.2, 0.8],
+    },
+    {
+      id: 'misclassified-audio',
+      type: 'video',
+      mediaType: 'AUDIO/WEBM',
+      url: '/legacy-voice.webm',
+    },
+    {
+      id: 'photo',
+      type: 'image',
+      mediaType: 'image/png',
+      url: '/photo.png',
+      name: 'A photo',
+    },
+    {
+      id: 'video',
+      type: 'video',
+      mediaType: 'video/mp4',
+      url: '/movie.mp4',
+      name: 'A video',
+    },
+  ];
+  const saved = structuredClone(attachments);
+  const html = renderToStaticMarkup(
+    createElement(AttachmentGrid, { attachments })
+  );
+  assert.match(html, /alt="A photo"/);
+  assert.match(html, /<video[^>]*controls=""/);
+  assert.match(html, /type="video\/mp4"/);
+  assert.doesNotMatch(html, /<audio|legacy-voice|Old recording|<svg/);
+  assert.deepEqual(attachments, saved);
+});
+
+it('leaves a neutral notice for audio-only history without exposing a recording URL', () => {
+  const html = renderToStaticMarkup(
+    createElement(AttachmentGrid, {
+      attachments: [
+        {
+          id: 'old-recording',
+          type: 'audio',
+          url: '/legacy-voice.ogg',
+          peaks: [0.2, 0.8],
+        },
+      ],
+    })
+  );
+  assert.match(html, /Attachment unavailable/);
+  assert.doesNotMatch(html, /<audio|<video|<svg|legacy-voice/);
 });
 
 it('formatting previews cannot remove attachments', () => {

@@ -48,6 +48,7 @@ import {
   type PostVisibility,
 } from '@/lib/utils/getVisibility';
 import type { JsonValue } from '@/lib/types';
+import { isAudioAttachment } from '@/lib/media/attachments';
 
 // Markdown rendering, including the hooks that stop raw HTML and
 // `javascript:` links being written into new posts, lives in
@@ -126,7 +127,6 @@ export async function createStatus(
     mediaType: string;
     url: string;
     name?: string;
-    peaks?: number[];
   }>,
   recipientActorIds?: string[],
   location?: StatusLocation,
@@ -291,6 +291,13 @@ export async function createStatus(
 
   if (content.length > 5000) {
     return { success: false, error: 'Content exceeds maximum length' };
+  }
+
+  if (attachments?.some(isAudioAttachment)) {
+    return {
+      success: false,
+      error: 'Audio attachments are no longer supported.',
+    };
   }
 
   // Convert markdown to HTML
@@ -539,7 +546,6 @@ export async function createStatus(
         mediaType: att.mediaType,
         url: att.url,
         name: att.name || null,
-        peaks: att.peaks ? (att.peaks as JsonValue) : null,
       }))
     );
   }

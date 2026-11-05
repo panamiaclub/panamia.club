@@ -43,16 +43,6 @@ export interface MockDmMessage {
   from: 'me' | 'them';
   /** socialStatuses.content. Plain text here; the real column holds HTML. */
   body?: string;
-  /**
-   * socialAttachments with mediaType audio/*. Voice memos are the ONLY kind of
-   * DM Pana Social can actually send today (SOCIAL-ROADMAP Phase 4C), so a
-   * mock that omitted them would be mocking a feature set we do not have.
-   */
-  voice?: {
-    duration: string;
-    /** Peak heights 0-1. Sixteen samples reads as a waveform at this width. */
-    peaks: number[];
-  };
   /** Clock time. The chat model puts this under each bubble group. */
   time: string;
   /** Day label. Drives chat's day separators and mail's letter headers. */
@@ -73,11 +63,6 @@ export interface MockDmThread {
    */
   isRequest?: boolean;
 }
-
-const WAVEFORM = [
-  0.2, 0.5, 0.8, 0.4, 0.9, 0.6, 0.3, 0.7, 1, 0.5, 0.2, 0.6, 0.85, 0.4, 0.3,
-  0.15,
-];
 
 /** The signed-in reader. Same person as the feed and profile mocks. */
 export const MOCK_DM_VIEWER: MockDmPerson = {
@@ -205,7 +190,6 @@ const THREAD_JDOWNS: MockDmThread = {
   ],
 };
 
-/* The only DM type that actually exists in production today. */
 const THREAD_GBARRIOS: MockDmThread = {
   id: 'gbarrios',
   person: GBARRIOS,
@@ -213,18 +197,11 @@ const THREAD_GBARRIOS: MockDmThread = {
   unreadCount: 0,
   messages: [
     {
-      id: 'gb-1',
-      from: 'them',
-      day: 'Yesterday',
-      time: '4:48 PM',
-      voice: { duration: '0:42', peaks: WAVEFORM },
-    },
-    {
       id: 'gb-2',
       from: 'me',
       day: 'Yesterday',
       time: '7:30 PM',
-      body: 'Listened twice. The part about the Allapattah landlords is the piece - that is the one to lead with.',
+      body: 'The part about the Allapattah landlords is the piece - that is the one to lead with.',
     },
   ],
 };
@@ -284,12 +261,11 @@ export const MOCK_DM_THREADS: MockDmThread[] = [
 
 export const MOCK_DM_REQUESTS: MockDmThread[] = [THREAD_ANETTE];
 
-/** Snippet for the conversation list. Voice memos have no text to show. */
+/** Snippet for the conversation list. */
 export function threadSnippet(thread: MockDmThread): string {
   const last = thread.messages[thread.messages.length - 1];
   if (!last) return '';
   const prefix = last.from === 'me' ? 'You: ' : '';
-  if (last.voice) return `${prefix}Voice memo (${last.voice.duration})`;
   return prefix + (last.body ?? '');
 }
 

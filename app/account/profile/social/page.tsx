@@ -89,6 +89,12 @@ export default function AccountProfileSocial() {
     );
   }
 
+  const actions = (
+    <ProfileEditorActions
+      review={review}
+      pending={isLoading || mutation.isPending}
+    />
+  );
   return (
     <ProfileEditorFrame
       listingId={review.listingId}
@@ -102,10 +108,7 @@ export default function AccountProfileSocial() {
         onSubmit={submitForm}
         className="space-y-6"
       >
-        <ProfileEditorActions
-          review={review}
-          pending={isLoading || mutation.isPending}
-        />
+        {!review.active && actions}
         {review.active && (
           <p className={reviewStyles.note}>
             These links are public. Use the private contact section for an email
@@ -199,6 +202,7 @@ export default function AccountProfileSocial() {
             Profile updated successfully!
           </div>
         )}
+        {review.active && actions}
       </form>
     </ProfileEditorFrame>
   );

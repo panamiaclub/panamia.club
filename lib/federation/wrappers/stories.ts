@@ -43,6 +43,7 @@ import { canPost, GateResult } from '../gates';
 import { getFollowersUrl } from '../index';
 import { generateStatusUri } from './status';
 import { isBlockedEitherWay } from './block-filter';
+import { isVisualAttachment } from '@/lib/media/attachments';
 
 /** How long a story stays watchable. */
 const STORY_LIFETIME_HOURS = 24;
@@ -52,17 +53,6 @@ const MAX_ACTIVE_STORIES = 20;
 
 /** Caption length. Far shorter than a post -- this overlays the image. */
 const MAX_CAPTION_LENGTH = 280;
-
-/**
- * Media types a story accepts.
- *
- * Lowercase, not the ActivityPub 'Image'/'Video' casing, because that is what
- * this codebase actually stores: /api/social/media returns a lowercase
- * category and AttachmentGrid filters on it. Matching ActivityPub here would
- * be more correct on paper and would make story media invisible to every
- * existing renderer.
- */
-const STORY_MEDIA_TYPES = ['image', 'video'] as const;
 
 export interface StoryMediaInput {
   type: string;
@@ -177,7 +167,7 @@ export async function createStory(
     return { success: false, error: 'A story needs a photo or video' };
   }
 
-  if (!STORY_MEDIA_TYPES.includes(media.type as 'image' | 'video')) {
+  if (!isVisualAttachment(media)) {
     return { success: false, error: 'Stories support photos and videos only' };
   }
 

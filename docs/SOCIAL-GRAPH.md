@@ -232,8 +232,7 @@ Remaining strings to change:
 
 **Everyone is the default view; Panas remains an optional mutual-follow view.** Everyone shows
 public posts from local accounts without requiring a connection. Members can switch to Panas for
-mutual connections, their own posts, and joined-group posts. Voice notes filters that same Panas
-timeline to audio posts. The public default avoids making a new member's first impression depend
+mutual connections, their own posts, and joined-group posts. The public default avoids making a new member's first impression depend
 on having mutual connections already.
 
 Local profile-linked accounts remain included even when their saved federation identity uses an
@@ -264,13 +263,13 @@ New personal composers start with **Everyone (public)**. Members can choose **Pa
 audience control; no local-only or group destinations are offered there. Group posting starts on the group's
 page, and replies keep their parent's audience instead of offering another destination.
 
-The media-forward card supports photos, video and audio, file drop, and image paste, with up to four
+The media-forward card supports photos and video, file drop, and image paste, with up to four
 attachments and a 500-character caption. Media-only posts are valid. Posting and removal are disabled
 during uploads, and upload/publishing failures remain visible without discarding the draft. Content
 warnings and the optional Markdown formatting preview live under **More**; the preview hides text and
 media together when a warning is set. The account's saved Creative Commons license is applied on the
 server, without a per-post CC button. Explicit API license overrides remain supported. The idle card stays
-compact, with labelled photo/video, audio, audience and Post controls. Writing or adding media expands it;
+compact, with labelled photo/video, audience and Post controls. Writing or adding media expands it;
 an empty draft can be collapsed with Done. Large drop targets appear only while dragging files.
 
 **Panas posting is not a rename of followers-only visibility.** New posts carry the internal `Panas`
@@ -642,7 +641,7 @@ folder at all, and `nobody` for those who want no new threads.
 only, on the reasoning that a name is the minimum needed to triage. It is also less than the minimum:
 if you cannot see what was said, **accepting becomes the only way to find out** — and accepting is
 exactly the consent the gate exists to ask for. For a local network the content is also the whole
-signal that separates a neighbour from a bot. So `/updates` renders the held body and its voice memo,
+signal that separates a neighbour from a bot. So `/updates` renders the held body and its supported attachments,
 with no like or reply affordance, and the composer stays shut until the thread is accepted.
 
 The body is rendered as **plain text, not HTML**. Status content is `marked.parse()` output and

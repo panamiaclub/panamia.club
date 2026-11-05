@@ -72,18 +72,6 @@
   "socialEnabledDesc": "Ya puedes publicar y seguir a otros!",
   "socialEnableFailed": "Error al activar funciones sociales. Por favor intenta de nuevo.",
 
-  "browserNotSupported": "Navegador no compatible",
-  "browserNotSupportedDesc": "Las notas de voz requieren Chrome o Firefox. Por favor usa Chrome o Firefox",
-  "microphoneDenied": "Acceso al microfono denegado",
-  "microphoneDeniedDesc": "Por favor permite el acceso al microfono para grabar notas de voz.",
-  "noRecipients": "Sin destinatarios",
-  "noRecipientsDesc": "Por favor agrega al menos un destinatario.",
-  "emptyMessage": "Mensaje vacio",
-  "emptyMessageDesc": "Por favor graba una nota de voz o escribe un mensaje.",
-  "voiceMessageSent": "Mensaje enviado",
-  "voiceMemoSentDesc": "Tu nota de voz ha sido enviada.",
-  "textMessageSentDesc": "Tu mensaje ha sido enviado.",
-
   "geolocationNotSupported": "Geolocalizacion no compatible",
   "geolocationNotSupportedDesc": "Tu navegador no admite geolocalizacion.",
   "locationAdded": "Ubicacion agregada",

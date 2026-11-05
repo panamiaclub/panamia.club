@@ -26,6 +26,10 @@ import { revalidatePublicListing } from './profile';
 import { revalidatePath } from 'next/cache';
 import { readOnlineZipArea, withOnlineZipArea } from '@/lib/online-zip';
 import { validateBusinessZip } from './online-zip';
+import {
+  hasListingPrimaryPhoto,
+  LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE,
+} from '@/lib/listing-review';
 
 export type RefreshTransaction = Parameters<
   Parameters<typeof db.transaction>[0]
@@ -35,8 +39,8 @@ export interface RefreshFailure {
   success: false;
   error: string;
   status: 400 | 403 | 404 | 409 | 503;
-  field?: 'zipcode';
-  step?: 'address';
+  field?: 'zipcode' | 'primary';
+  step?: 'address' | 'images';
 }
 const fail = (
   error: string,
@@ -288,6 +292,7 @@ export async function listingReviewState(
         profile.addressCountry
       )
     ),
+    primaryPhotoSaved: hasListingPrimaryPhoto(profile.primaryImageCdn),
     remindersOptedOut: Boolean(
       listingStatus(profile.status).listingRefreshOptOutAt
     ),
@@ -337,6 +342,13 @@ export async function confirmListingReview(
     // Validate the locked, current business, never submitted or stepper state.
     const zip = await validateBusinessZip(profile);
     if (!zip.success) return zip;
+    if (!hasListingPrimaryPhoto(profile.primaryImageCdn)) {
+      return {
+        ...fail(LISTING_PRIMARY_PHOTO_REQUIRED_MESSAGE, 400),
+        field: 'primary' as const,
+        step: 'images' as const,
+      };
+    }
     const restored =
       cycle?.state === 'paused' && (await isReviewPausedListing(profile, tx));
     const status = listingStatus(profile.status);

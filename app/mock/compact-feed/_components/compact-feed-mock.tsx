@@ -16,7 +16,6 @@ import {
   Share2,
   Sparkles,
   Users,
-  Volume2,
 } from 'lucide-react';
 import { ComposerMock } from '../../composer/_components/composer-mock';
 import { CompactSearchMock } from './compact-search-mock';
@@ -109,11 +108,6 @@ const FILTERS = [
     label: 'Panas',
     hint: 'Your mutual Panas and your own posts. A little closer to home.',
   },
-  {
-    id: 'voice',
-    label: 'Voice notes',
-    hint: 'A little less typing, a little more you.',
-  },
 ] as const;
 
 type Filter = (typeof FILTERS)[number]['id'];
@@ -122,7 +116,6 @@ export function CompactFeedMock() {
   const [filter, setFilter] = useState<Filter>('everyone');
   const active = FILTERS.find((entry) => entry.id === filter)!;
   const posts = SAMPLE_POSTS.filter((post) => {
-    if (filter === 'voice') return false;
     if (filter === 'panas' && !post.fromPana) return false;
     return true;
   });
@@ -250,9 +243,6 @@ export function CompactFeedMock() {
                 {entry.id === 'panas' && (
                   <Users className="h-3.5 w-3.5" aria-hidden="true" />
                 )}
-                {entry.id === 'voice' && (
-                  <Volume2 className="h-3.5 w-3.5" aria-hidden="true" />
-                )}
                 {entry.label}
               </button>
             ))}
@@ -273,14 +263,10 @@ export function CompactFeedMock() {
             {!posts.length && (
               <div className="border-pana-ink/10 rounded-3xl border bg-white/70 p-6 text-sm">
                 <p className="font-extrabold">
-                  {filter === 'voice'
-                    ? 'No voice notes in this sample.'
-                    : 'No example posts in this feed yet.'}
+                  No example posts in this feed yet.
                 </p>
                 <p className="text-pana-ink/65 mt-1 leading-relaxed">
-                  {filter === 'voice'
-                    ? 'Try the Audio button above to preview a file from your device.'
-                    : 'Switch to Everyone to see the sample community posts.'}
+                  Switch to Everyone to see the sample community posts.
                 </p>
               </div>
             )}

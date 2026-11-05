@@ -8,8 +8,8 @@ import type { MockSurface } from '../_data/panaverse';
  *
    Pana Social has no DM feature today, but it is not starting from zero: a DM
    is already expressible as a `socialStatuses` row with `visibility: 'direct'`
-   and the recipient in `recipientTo`, there are two API routes, and voice
-   memos send this way in production. What does not exist is any conversation
+   and the recipient in `recipientTo`, and there are two API routes.
+   What does not exist is any conversation
    UI, any threading, and any gating.
 
    So the open question is which shape that substrate grows into - async mail
