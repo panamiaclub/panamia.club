@@ -1030,16 +1030,19 @@ test('anonymous entry, Pana sign-in, explicit verification and all prefilled rev
   expect(fixture.claims).toHaveLength(0);
   await signIn.click();
   const emailOption = page.getByRole('button', {
-    name: 'Sign in with email',
+    name: 'Continue with email',
     exact: true,
   });
   await expect(
-    page.getByRole('heading', { name: 'Welcome to Pana MIA', exact: true })
+    page.getByRole('heading', {
+      name: 'Create an account or sign in',
+      exact: true,
+    })
   ).toBeVisible();
   if (await emailOption.isVisible()) await emailOption.click();
   await page.getByPlaceholder('your@email.com').fill(accountEmail);
   await page
-    .getByRole('button', { name: 'Send sign-in link', exact: true })
+    .getByRole('button', { name: 'Email me a link', exact: true })
     .click();
   await expect.poll(() => fixture.signIns.length).toBe(1);
   expect(fixture.signIns[0].email).toBe(accountEmail);
@@ -2382,16 +2385,19 @@ test('an invitation returns through chosen-account passwordless sign-in to expli
   expect(signInUrl.href).not.toContain(invitationToken);
   await choose.click();
   await expect(
-    page.getByRole('heading', { name: 'Welcome to Pana MIA', exact: true })
+    page.getByRole('heading', {
+      name: 'Create an account or sign in',
+      exact: true,
+    })
   ).toBeVisible();
   const emailOption = page.getByRole('button', {
-    name: 'Sign in with email',
+    name: 'Continue with email',
     exact: true,
   });
   if (await emailOption.isVisible()) await emailOption.click();
   await page.getByPlaceholder('your@email.com').fill(accountEmail);
   await page
-    .getByRole('button', { name: 'Send sign-in link', exact: true })
+    .getByRole('button', { name: 'Email me a link', exact: true })
     .click();
   await expect.poll(() => fixture.signIns.length).toBe(1);
   expect(fixture.signIns[0].email).toBe(accountEmail);

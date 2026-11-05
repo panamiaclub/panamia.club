@@ -16,7 +16,9 @@ async function expectSignInPage(page: Page) {
   await expect(page).toHaveURL(/^https?:\/\/[^/]+\/signin(\?|$)/, {
     timeout: 15000,
   });
-  await expect(page.locator('h1').first()).toContainText('Welcome to Pana MIA');
+  await expect(page.locator('h1').first()).toContainText(
+    'Create an account or sign in'
+  );
 }
 
 test.describe('Authenticated User Navigation', () => {
