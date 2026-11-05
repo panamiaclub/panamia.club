@@ -77,11 +77,12 @@ it('opens Everyone first and keeps Panas available as an unselected tab', () => 
     (match) => match[0]
   );
 
-  assert.equal(tabs.length, 3);
+  assert.equal(tabs.length, 2);
   assert.match(tabs[0], /id="feed-tab-everyone"/);
   assert.match(tabs[0], /aria-selected="true"/);
   assert.match(tabs[1], /id="feed-tab-panas"/);
   assert.match(tabs[1], /aria-selected="false"/);
+  assert.doesNotMatch(html, /feed-tab-voice|Voice notes/);
   assert.match(html, /aria-labelledby="feed-tab-everyone"/);
   assert.match(html, /data-post-id="public-post"/);
   assert.doesNotMatch(html, /data-post-id="panas-post"/);
