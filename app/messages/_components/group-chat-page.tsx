@@ -1,12 +1,13 @@
 'use client';
 
-import { useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Users } from 'lucide-react';
 import { useSession } from '@/lib/auth-client';
 import { useMyActor } from '@/lib/query/social';
 import { WorkspacePage } from '@/components/messages/workspace-page';
+import { useNativeConversation } from '@/components/mobile/native-app-context';
 import styles from '@/components/messages/workspace.module.css';
 import {
   GroupConversation,
@@ -79,7 +80,11 @@ function GroupChatOwner({
   const state = useGroupChatState(viewerActorId);
   const thread = useGroupChatThread(handle, !!viewerActorId);
   useDmSocket(!!viewerActorId);
-  const back = () => router.push(`/g/${encodeURIComponent(handle)}`);
+  const back = useCallback(
+    () => router.push(`/g/${encodeURIComponent(handle)}`),
+    [router, handle]
+  );
+  useNativeConversation(back, 'Back to group');
   return (
     <>
       <h1 className="sr-only">

@@ -293,6 +293,14 @@
   opacity: 0.85;
 }
 
+.supportRow {
+  min-height: 44px;
+}
+
+.supportLabel {
+  white-space: normal;
+}
+
 .rowAdmin {
   background-color: color-mix(in srgb, var(--surface-tone) 12%, transparent);
 }

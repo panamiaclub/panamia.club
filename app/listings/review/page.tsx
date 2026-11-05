@@ -71,7 +71,7 @@ function OwnedListingReview({
         ? `Public visiting map point${zip ? ` near ZIP ${zip}` : ''} (unchanged)`
         : zip
           ? `Based near ZIP ${zip} (base area, not a visiting address or service boundary)`
-          : 'Add a valid US ZIP in Location before confirming. A street or home address is not required.';
+          : 'Choose a location type and add a valid US ZIP in Location before confirming. Online and mobile services need only a base ZIP, not a street or home address.';
   const description = profile.descriptions?.details ?? profile.details;
   const shortDescription =
     profile.descriptions?.fiveWords ?? profile.five_words;

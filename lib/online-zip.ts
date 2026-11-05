@@ -7,8 +7,7 @@ export interface OnlineZipArea {
   lng: number;
 }
 
-export const US_ZIP_REQUIRED_MESSAGE =
-  'Enter a valid five-digit US ZIP code. A street or home address is not required.';
+export const US_ZIP_REQUIRED_MESSAGE = 'Enter a valid five-digit US ZIP code.';
 
 export function normalizeUsZip(value: unknown): string | null {
   if (typeof value !== 'string') return null;

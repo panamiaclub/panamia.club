@@ -20,8 +20,6 @@ import {
 } from 'next/navigation';
 import {
   ArrowLeft,
-  Bug,
-  Flag,
   MessageCircle,
   Store,
   UserRound,
@@ -34,10 +32,10 @@ import {
   useIdentity,
 } from '@/components/account/identity-provider';
 import { IdentityMenu } from '@/components/account/identity-menu';
+import { AuthMenu } from '@/components/account/auth-menu';
+import { MessagesLink } from '@/components/account/messages-link';
 import { NotificationsMenu } from '@/components/account/notifications-menu';
 import { ActingAsBar } from '@/components/account/acting-as-bar';
-import { OPEN_BUG_REPORT_EVENT } from '@/lib/mobile/native';
-import { openSafetyReport } from '@/lib/safety-report';
 import { cn } from '@/lib/utils';
 import {
   NATIVE_TABS,
@@ -45,7 +43,15 @@ import {
   type NativeRootTab,
   type NativeTab,
 } from '@/lib/mobile/app-navigation';
-import { NativeViewerContext } from './native-app-context';
+import {
+  hasOpenNativeOverlay,
+  NATIVE_BACK_BUTTON_EVENT,
+} from '@/lib/mobile/native';
+import {
+  NativeConversationContext,
+  NativeViewerContext,
+  type NativeConversation,
+} from './native-app-context';
 import { NativeEventSave, NativeNotice } from './NativeResultCard';
 import styles from './native-app.module.css';
 
@@ -150,6 +156,9 @@ function AppFrame({
   const [visited, setVisited] = useState<NativeRootTab[]>(
     rootTab ? [rootTab] : []
   );
+  const [conversation, setConversation] = useState<NativeConversation | null>(
+    null
+  );
   const lastDirectoryHref = useRef('/d');
   const rootFocus = useRef<HTMLElement | null>(null);
   const previousRoot = useRef(rootTab);
@@ -181,193 +190,189 @@ function AppFrame({
     previousRoot.current = rootTab;
   }, [rootTab, location]);
 
+  useEffect(() => {
+    if (!conversation) return;
+    const back = (event: Event) => {
+      if (event.defaultPrevented || hasOpenNativeOverlay()) return;
+      event.preventDefault();
+      conversation.onBack();
+    };
+    window.addEventListener(NATIVE_BACK_BUTTON_EVENT, back);
+    return () => window.removeEventListener(NATIVE_BACK_BUTTON_EVENT, back);
+  }, [conversation]);
+
   const shown = (tab: NativeRootTab) =>
     visited.includes(tab) || rootTab === tab;
 
   return (
-    <NativeViewerContext.Provider value={{ signedIn, viewerKey }}>
-      <div
-        className={cn(styles.app, rootTab === 'directory' && 'dirscope')}
-        data-native-app
-      >
-        <header className={styles.header}>
-          {!root && (
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-label="Back"
-              onClick={() => {
-                if (window.history.length > 1) router.back();
-                else
-                  router.push(
-                    lastTab === 'directory'
-                      ? '/d'
-                      : lastTab === 'social'
-                        ? '/s'
-                        : '/groups'
-                  );
+    <NativeConversationContext.Provider value={setConversation}>
+      <NativeViewerContext.Provider value={{ signedIn, viewerKey }}>
+        <div
+          className={cn(styles.app, rootTab === 'directory' && 'dirscope')}
+          data-native-app
+          data-native-conversation={conversation ? '' : undefined}
+        >
+          <header className={styles.header}>
+            <div className={styles.headerLeading}>
+              {!root && (
+                <button
+                  type="button"
+                  className={styles.iconButton}
+                  aria-label={conversation?.backLabel ?? 'Back'}
+                  onClick={() => {
+                    if (conversation) conversation.onBack();
+                    else if (window.history.length > 1) router.back();
+                    else
+                      router.push(
+                        lastTab === 'directory'
+                          ? '/d'
+                          : lastTab === 'social'
+                            ? '/s'
+                            : '/groups'
+                      );
+                  }}
+                >
+                  <ArrowLeft size={22} aria-hidden="true" />
+                </button>
+              )}
+              {eventSlug && eventSlug !== 'new' ? (
+                <NativeEventSave slug={decodeURIComponent(eventSlug)} />
+              ) : !conversation ? (
+                <MessagesLink />
+              ) : null}
+            </div>
+            <Link
+              href="/d"
+              className={styles.brand}
+              aria-label="Pana Mia directory"
+            >
+              <Image
+                src="/logos/pana_logo_long_orange.png"
+                width={160}
+                height={40}
+                alt="Pana Mia Club"
+                priority
+              />
+            </Link>
+            <div className={styles.headerActions}>
+              <NotificationsMenu />
+              {signedIn ? (
+                <IdentityMenu compact includeReportActions />
+              ) : (
+                <AuthMenu compact includeReportActions />
+              )}
+            </div>
+          </header>
+          <ActingAsBar />
+
+          <div className={styles.body}>
+            <div
+              id={root ? 'layout-main' : undefined}
+              className={styles.hub}
+              hidden={!root}
+              onFocusCapture={(event) => {
+                if (root && event.target instanceof HTMLElement) {
+                  rootFocus.current = event.target;
+                }
               }}
             >
-              <ArrowLeft size={22} aria-hidden="true" />
-            </button>
-          )}
-          <Link
-            href="/d"
-            className={styles.brand}
-            aria-label="Pana Mia directory"
-          >
-            <Image
-              src="/logos/pana_logo_long_orange.png"
-              width={128}
-              height={32}
-              alt="Pana Mia"
-              priority
-            />
-          </Link>
-          <div className={styles.headerActions}>
-            {eventSlug && eventSlug !== 'new' && (
-              <NativeEventSave slug={decodeURIComponent(eventSlug)} />
-            )}
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-label="Report a safety concern"
-              onClick={() =>
-                openSafetyReport({
-                  type: 'other',
-                  url: window.location.origin + window.location.pathname,
-                })
-              }
-            >
-              <Flag size={19} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-label="Report a bug"
-              onClick={() =>
-                window.dispatchEvent(new Event(OPEN_BUG_REPORT_EVENT))
-              }
-            >
-              <Bug size={19} aria-hidden="true" />
-            </button>
-            <NotificationsMenu />
-            {signedIn ? (
-              <IdentityMenu compact />
-            ) : (
-              <Link
-                href="/signin?callbackUrl=%2Fd"
-                className={styles.iconButton}
-                aria-label="Sign in"
-              >
-                <UserRound size={20} aria-hidden="true" />
-              </Link>
-            )}
-          </div>
-        </header>
-        <ActingAsBar />
-
-        <div className={styles.body}>
-          <div
-            id={root ? 'layout-main' : undefined}
-            className={styles.hub}
-            hidden={!root}
-            onFocusCapture={(event) => {
-              if (root && event.target instanceof HTMLElement) {
-                rootFocus.current = event.target;
-              }
-            }}
-          >
-            {shown('directory') && (
-              <section
-                className={styles.pane}
-                hidden={rootTab !== 'directory'}
-                aria-label="Directory"
-              >
-                <PaneBoundary>
-                  <NativeDirectory
-                    active={rootTab === 'directory'}
-                    request={rootTab === 'directory' ? location : null}
-                  />
-                </PaneBoundary>
-              </section>
-            )}
-            {shown('social') && (
-              <section
-                className={`${styles.pane} ${styles.scrollPane}`}
-                hidden={rootTab !== 'social'}
-                aria-label="Social"
-              >
-                <PaneBoundary>
-                  <NativeSocial key={viewerKey} active={rootTab === 'social'} />
-                </PaneBoundary>
-              </section>
-            )}
-            {shown('community') && (
-              <section
-                className={`${styles.pane} ${styles.scrollPane}`}
-                hidden={rootTab !== 'community'}
-                aria-label="Community"
-              >
-                <PaneBoundary>
-                  <NativeCommunity
-                    active={rootTab === 'community'}
-                    request={rootTab === 'community' ? location : null}
-                    requestedView={root?.view}
-                    requestedSection={root?.section}
-                  />
-                </PaneBoundary>
-              </section>
-            )}
-          </div>
-          {!root && (
-            <div id="layout-main" className={styles.detail} ref={detail}>
-              {children}
+              {shown('directory') && (
+                <section
+                  className={styles.pane}
+                  hidden={rootTab !== 'directory'}
+                  aria-label="Directory"
+                >
+                  <PaneBoundary>
+                    <NativeDirectory
+                      active={rootTab === 'directory'}
+                      request={rootTab === 'directory' ? location : null}
+                    />
+                  </PaneBoundary>
+                </section>
+              )}
+              {shown('social') && (
+                <section
+                  className={`${styles.pane} ${styles.scrollPane}`}
+                  hidden={rootTab !== 'social'}
+                  aria-label="Social"
+                >
+                  <PaneBoundary>
+                    <NativeSocial
+                      key={viewerKey}
+                      active={rootTab === 'social'}
+                    />
+                  </PaneBoundary>
+                </section>
+              )}
+              {shown('community') && (
+                <section
+                  className={`${styles.pane} ${styles.scrollPane}`}
+                  hidden={rootTab !== 'community'}
+                  aria-label="Community"
+                >
+                  <PaneBoundary>
+                    <NativeCommunity
+                      active={rootTab === 'community'}
+                      request={rootTab === 'community' ? location : null}
+                      requestedView={root?.view}
+                      requestedSection={root?.section}
+                    />
+                  </PaneBoundary>
+                </section>
+              )}
             </div>
+            {!root && (
+              <div id="layout-main" className={styles.detail} ref={detail}>
+                {children}
+              </div>
+            )}
+          </div>
+
+          {!conversation && (
+            <nav className={styles.bottomNav} aria-label="App navigation">
+              {NATIVE_TABS.map((tab) => {
+                const Icon =
+                  tab.id === 'directory'
+                    ? Store
+                    : tab.id === 'social'
+                      ? MessageCircle
+                      : tab.id === 'community'
+                        ? Users
+                        : UserRound;
+                const href =
+                  tab.id === 'profile'
+                    ? profileHref
+                    : tab.id === 'directory'
+                      ? lastDirectoryHref.current
+                      : tab.href;
+                return (
+                  <Link
+                    key={tab.id}
+                    href={href}
+                    aria-current={activeTab === tab.id ? 'page' : undefined}
+                    className={styles.navItem}
+                  >
+                    {tab.id === 'profile' &&
+                    identity?.personal?.primaryImageCdn ? (
+                      <img
+                        src={identity.personal.primaryImageCdn}
+                        alt=""
+                        width={24}
+                        height={24}
+                        className={styles.navAvatar}
+                      />
+                    ) : (
+                      <Icon size={23} aria-hidden="true" />
+                    )}
+                    <span>{tab.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
           )}
         </div>
-
-        <nav className={styles.bottomNav} aria-label="App navigation">
-          {NATIVE_TABS.map((tab) => {
-            const Icon =
-              tab.id === 'directory'
-                ? Store
-                : tab.id === 'social'
-                  ? MessageCircle
-                  : tab.id === 'community'
-                    ? Users
-                    : UserRound;
-            const href =
-              tab.id === 'profile'
-                ? profileHref
-                : tab.id === 'directory'
-                  ? lastDirectoryHref.current
-                  : tab.href;
-            return (
-              <Link
-                key={tab.id}
-                href={href}
-                aria-current={activeTab === tab.id ? 'page' : undefined}
-                className={styles.navItem}
-              >
-                {tab.id === 'profile' && identity?.personal?.primaryImageCdn ? (
-                  <img
-                    src={identity.personal.primaryImageCdn}
-                    alt=""
-                    width={24}
-                    height={24}
-                    className={styles.navAvatar}
-                  />
-                ) : (
-                  <Icon size={23} aria-hidden="true" />
-                )}
-                <span>{tab.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-    </NativeViewerContext.Provider>
+      </NativeViewerContext.Provider>
+    </NativeConversationContext.Provider>
   );
 }
 

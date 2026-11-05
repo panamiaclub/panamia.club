@@ -7,7 +7,7 @@ export function listingSetup(params: Record<string, unknown>) {
   const instructions =
     'Your listing has been submitted for staff review. Use this secure link to sign in or create your account, then confirm that you want to manage this business.';
   const ownership =
-    'Opening the link does not assign ownership. You will confirm on the setup page. Staff approval is separate, and you can finish setup later. To complete a listing review, every business needs a valid five-digit US ZIP, including online and mobile services. A street or home address is not required.';
+    'Opening the link does not assign ownership. You will confirm on the setup page. Staff approval is separate, and you can finish setup later. To complete a listing review, every business needs a valid five-digit US ZIP, including online and mobile services. In Location, choose how people can find your business. A public visiting location needs a street address, city, state and ZIP. Online and mobile services need only a business base ZIP, not a street or home address.';
   const safety =
     'If you did not request this listing, ignore this email. The sign-in link expires shortly; you can sign in again to finish setup.';
   return {

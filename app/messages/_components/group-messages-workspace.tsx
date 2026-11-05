@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Clock3, Search, SquarePen, Users } from 'lucide-react';
 import { DialogTrigger } from '@/components/ui/dialog';
 import { MessageAvatar } from '@/components/messages/message-avatar';
 import styles from '@/components/messages/workspace.module.css';
+import { useNativeConversation } from '@/components/mobile/native-app-context';
 import type { GroupChatConversation } from '@/lib/chat';
 import { MessageFolders, type MessageFolder } from './message-folders';
 import {
@@ -69,12 +70,13 @@ export function GroupMessagesWorkspace({
       conversationRef.current?.focus({ preventScroll: true })
     );
   };
-  const back = () => {
+  const back = useCallback(() => {
     setDetailOpen(false);
     requestAnimationFrame(() =>
       (rowRef.current ?? searchRef.current)?.focus({ preventScroll: true })
     );
-  };
+  }, []);
+  useNativeConversation(active && detailOpen ? back : null);
   const preview = (group: GroupChatConversation) => {
     const draft = state.drafts[group.handle] ?? EMPTY_MESSAGE_DRAFT;
     if (draft.text.trim() || draft.gif || draft.isMirroring || draft.gifError) {

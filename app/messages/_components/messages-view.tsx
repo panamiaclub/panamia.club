@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, MessageCircle, ShieldCheck } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import styles from '@/components/messages/workspace.module.css';
+import { useNativeConversation } from '@/components/mobile/native-app-context';
 import {
   useAcceptDmRequest,
   useConversation,
@@ -197,12 +198,14 @@ function MessagesWorkspace({
     setDetailOpen(false);
   };
 
-  const backToList = () => {
+  const backToList = useCallback(() => {
     setDetailOpen(false);
     requestAnimationFrame(() =>
       activeRowRef.current?.focus({ preventScroll: true })
     );
-  };
+  }, []);
+
+  useNativeConversation(view !== 'groups' && detailOpen ? backToList : null);
 
   const rememberActor = (actor: ChatActor) => {
     setNewActors((current) => [

@@ -5,6 +5,10 @@
     "signInHint": "Bienvenido de nuevo, Pana",
     "signUpHint": "¿Eres nuevo? Crea tu cuenta"
   },
+  "reporting": {
+    "bug": "Reportar un error",
+    "safety": "Reportar un problema de seguridad"
+  },
   "notifications": {
     "open": "Notificaciones",
     "openUnread": "Notificaciones, {{count}} sin leer",

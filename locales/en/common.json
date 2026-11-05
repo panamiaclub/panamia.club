@@ -5,6 +5,10 @@
     "signInHint": "Welcome back, Pana",
     "signUpHint": "New here? Create your account"
   },
+  "reporting": {
+    "bug": "Report a bug",
+    "safety": "Report a safety concern"
+  },
   "notifications": {
     "open": "Notifications",
     "openUnread": "Notifications, {{count}} unread",
