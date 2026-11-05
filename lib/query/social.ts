@@ -268,10 +268,13 @@ export const useMyActor = () => {
   });
 };
 
-export const useTimeline = (cursor?: string, limit: number = 20) => {
-  return useQuery<TimelineResponse | null, Error>({
-    queryKey: [socialQueryKey, 'timeline', 'home', cursor, limit],
-    queryFn: () => fetchTimeline(cursor, limit),
+export const useTimeline = (actorId?: string, limit: number = 20) => {
+  return useInfiniteQuery({
+    queryKey: [socialQueryKey, 'timeline', 'mixed', actorId, limit],
+    initialPageParam: '',
+    queryFn: ({ pageParam }) => fetchTimeline(pageParam, limit),
+    getNextPageParam: (page) => page?.nextCursor ?? undefined,
+    enabled: Boolean(actorId),
   });
 };
 

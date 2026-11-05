@@ -264,8 +264,11 @@ for (const viewport of [
     ).toBeVisible();
     await nav.getByRole('link', { name: 'Social', exact: true }).click();
     await expect(
-      page.getByRole('tab', { name: 'My Panas', exact: true })
+      page.getByRole('region', { name: 'Community feed', exact: true })
     ).toBeVisible();
+    await expect(
+      page.getByRole('tablist', { name: 'Feed filters' })
+    ).toHaveCount(0);
     await nav.getByRole('link', { name: 'Directory', exact: true }).click();
     await expect(search).toBeVisible();
   });
