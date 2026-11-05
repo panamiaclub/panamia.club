@@ -1302,6 +1302,50 @@ test(
 );
 
 test(
+  'opens the system photo chooser directly and keeps the draft when no file is chosen',
+  { tag: '@native' },
+  async ({ page }) => {
+    const fixture = await openMessages(page, { native: 'ios' });
+    const photos = await installChatPhotoFixtures(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await row(page, 'J. Downs').click();
+    await input(page).fill('Keep this draft.');
+    const attach = page.getByRole('button', {
+      name: 'Attach a photo',
+      exact: true,
+    });
+    await expect(attach).toHaveAccessibleDescription(
+      /One photo, up to 10 MB.*shareable Pana media links.*not end-to-end encryption/
+    );
+    await page.getByRole('button', { name: 'Add a GIF', exact: true }).click();
+    await expect(page.getByRole('group', { name: 'GIF picker' })).toBeVisible();
+    const choosing = page.waitForEvent('filechooser');
+    await attach.click();
+    const picker = await choosing;
+    await expect(
+      page.getByRole('menuitem', { name: 'Choose photo', exact: true })
+    ).toHaveCount(0);
+    await expect(
+      page.getByText('Photo attachment', { exact: true })
+    ).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'GIF picker' })).toHaveCount(
+      0
+    );
+    await picker.setFiles([]);
+    await expect(input(page)).toHaveValue('Keep this draft.');
+    await expect(attach).toBeEnabled();
+    await expect(
+      page.getByRole('button', { name: 'Send message', exact: true })
+    ).toBeEnabled();
+    await expect(
+      page.getByRole('button', { name: 'Remove photo', exact: true })
+    ).toHaveCount(0);
+    expect(photos.uploads).toHaveLength(0);
+    expect(fixture.posts).toHaveLength(0);
+  }
+);
+
+test(
   'attaches a normalized photo through the real upload contract and sends it without a caption',
   { tag: '@native' },
   async ({ page }) => {
@@ -1309,7 +1353,22 @@ test(
     const photos = await installChatPhotoFixtures(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await row(page, 'J. Downs').click();
+    const details = page.getByRole('button', {
+      name: 'Conversation details',
+      exact: true,
+    });
+    await details.click();
+    await expect(conversation(page)).toContainText(
+      'Attach one photo per message, up to 10 MB.'
+    );
+    await expect(conversation(page)).toContainText(
+      'Someone with a copied image link can view it outside this conversation.'
+    );
+    await details.click();
     await chooseChatPhoto(page, await chatPhotoFile(page));
+    await expect(
+      page.getByRole('button', { name: 'Attach a photo', exact: true })
+    ).toBeDisabled();
     await expect(
       page.getByRole('img', { name: 'Attached photo', exact: true })
     ).toBeVisible();
@@ -1347,6 +1406,9 @@ test(
     await expect(
       page.getByRole('button', { name: 'Remove photo', exact: true })
     ).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Attach a photo', exact: true })
+    ).toBeEnabled();
   }
 );
 
@@ -2067,12 +2129,10 @@ test(
     expect(attachment.bottomGap).toBeCloseTo(8, 0);
     const preview = test.info().outputPath('chat-keyboard-alignment.png');
     await page.screenshot({ path: preview });
-    await test
-      .info()
-      .attach('chat-keyboard-alignment', {
-        path: preview,
-        contentType: 'image/png',
-      });
+    await test.info().attach('chat-keyboard-alignment', {
+      path: preview,
+      contentType: 'image/png',
+    });
     await page.evaluate(() => {
       Object.assign(window.visualViewport!, { height: 844, offsetTop: 0 });
       window.visualViewport!.dispatchEvent(new Event('resize'));

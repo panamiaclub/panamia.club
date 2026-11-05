@@ -137,15 +137,16 @@ export async function chooseChatPhoto(
   page: Page,
   file: Awaited<ReturnType<typeof chatPhotoFile>>
 ) {
+  const choosing = page.waitForEvent('filechooser');
   await page
     .getByRole('button', { name: 'Attach a photo', exact: true })
     .click();
-  await expect(page.locator('[role="menu"][data-state="open"]')).toContainText(
-    'not end-to-end encrypted'
+  const picker = await choosing;
+  await expect(
+    page.getByRole('menuitem', { name: 'Choose photo', exact: true })
+  ).toHaveCount(0);
+  await expect(page.getByText('Photo attachment', { exact: true })).toHaveCount(
+    0
   );
-  const choosing = page.waitForEvent('filechooser');
-  await page
-    .getByRole('menuitem', { name: 'Choose photo', exact: true })
-    .click();
-  await (await choosing).setFiles(file);
+  await picker.setFiles(file);
 }

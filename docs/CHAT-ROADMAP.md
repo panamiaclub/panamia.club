@@ -105,12 +105,13 @@ an existing attachment leave too little room above the composer.
 - The compact composer starts as one row and grows to 128px before scrolling.
   Return inserts a newline on phones; desktop Enter sends, Shift+Enter inserts
   a newline, and IME composition is never submitted as a message.
-- **Attach a photo** opens a picker menu with a media-link disclosure. One photo
-  and the existing GIF may accompany a message, including without a caption.
+- **Attach a photo** opens the system image chooser directly in one gesture.
+  One photo and the existing GIF may accompany a message, including without a caption.
   Photos reuse the authenticated `/api/social/media` upload and the existing
   Pana media-link delivery model; they are not end-to-end encrypted and copied
-  media links can be viewed outside the conversation. The menu and conversation
-  details disclose this before use; no new privacy or encryption promise is made.
+  media links can be viewed outside the conversation. Conversation details and
+  the photo control's accessible description explain this without an intermediary
+  attachment menu; no new privacy or encryption promise is made.
   Camera pixels are resized to a 2048px longest edge and re-encoded as JPEG so
   source metadata such as GPS is not uploaded. The original-file limit is 10 MB.
   JPEG, PNG and WebP are supported; HEIC files can be converted when the browser
