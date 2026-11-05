@@ -1098,6 +1098,96 @@ async function expectReviewFooter(page: Page) {
   ).toBe(true);
 }
 
+for (const viewport of [
+  { label: 'desktop', width: 1440, height: 900 },
+  { label: 'mobile', width: 390, height: 844 },
+]) {
+  for (const headerKind of ['regular', 'focused']) {
+    for (const flow of [
+      {
+        label: 'listing',
+        path: entryPath,
+        signInLabel: 'Sign in to review and claim',
+        callback: entryPath,
+      },
+      {
+        label: 'invitation',
+        path: invitationPath,
+        signInLabel: 'Choose my Pana account and sign in',
+        callback: invitationReturn,
+      },
+    ]) {
+      test(`the ${headerKind} ${viewport.label} header keeps the exact ${flow.label} callback through both account-entry links and its menu`, async ({
+        page,
+      }) => {
+        await page.setViewportSize(viewport);
+        const fixture = await fixtures(page);
+        await page.goto(flow.path);
+        await page
+          .getByRole('link', { name: flow.signInLabel, exact: true })
+          .click();
+        await expect(
+          page.getByRole('heading', {
+            name: 'Create an account or sign in',
+            exact: true,
+          })
+        ).toBeVisible();
+        const header =
+          headerKind === 'regular'
+            ? page.locator('header').first()
+            : page.locator('.auth-page-header header');
+        await expect(header).toBeVisible();
+        const entries = header.getByRole('navigation', {
+          name: 'Create account or sign in',
+          exact: true,
+        });
+        const expectReturn = async () => {
+          await expect
+            .poll(() => new URL(page.url()).searchParams.get('callbackUrl'), {
+              timeout: 5000,
+            })
+            .toBe(flow.callback);
+          const url = new URL(page.url());
+          expect(url.pathname).toBe('/signin');
+          expect(url.hash).toBe('#signin-card');
+          expect([...url.searchParams.keys()]).toEqual(['callbackUrl']);
+          expect(url.href).not.toContain(invitationToken);
+        };
+
+        for (const name of ['Create account', 'Sign in']) {
+          await page.evaluate(() => window.scrollTo(0, 0));
+          const link = entries.getByRole('link', { name, exact: true });
+          await expect(link).toBeVisible();
+          await Promise.all([
+            page.waitForURL(
+              (url) =>
+                url.hash === '#signin-card' ||
+                !url.searchParams.has('callbackUrl')
+            ),
+            link.click(),
+          ]);
+          await expectReturn();
+        }
+
+        for (const name of ['Create account', 'Log in']) {
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await header
+            .getByRole('button', { name: 'Menu', exact: true })
+            .click();
+          const menu = page.getByRole('dialog', { name: 'Menu', exact: true });
+          await menu.getByRole('link', { name, exact: true }).click();
+          await expect(menu).not.toBeVisible();
+          await expectReturn();
+        }
+        expect(fixture.signIns).toHaveLength(0);
+        expect(fixture.claims).toHaveLength(0);
+        expect(fixture.verifications).toHaveLength(0);
+        expect(fixture.invitationAcceptances).toHaveLength(0);
+      });
+    }
+  }
+}
+
 test('anonymous entry, Pana sign-in, explicit verification and all prefilled review steps stay on the exact business', async ({
   page,
 }) => {

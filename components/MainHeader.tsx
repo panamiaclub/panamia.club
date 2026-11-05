@@ -188,6 +188,10 @@ export default function MainHeader({
   const isHydrated = useIsHydrated();
   const pathname = usePathname();
   const isAuthPage = authPage !== undefined;
+  // The regular masthead can survive client navigation into sign-in. Both
+  // mastheads must keep the existing callback instead of reopening bare /signin.
+  const isSignInEntry = isAuthPage || pathname === '/signin';
+  const signInHref = isSignInEntry ? '#signin-card' : '/signin';
   const headerMark = authPage?.mark ?? {
     src: '/logos/pana_logo_long_orange.png',
     alt: 'Pana Mia',
@@ -357,10 +361,7 @@ export default function MainHeader({
                       Join the directory
                     </Link>
                   )}
-                  <AuthMenu
-                    triggerClassName={styles.cta}
-                    href={isAuthPage ? '#signin-card' : '/signin'}
-                  />
+                  <AuthMenu triggerClassName={styles.cta} href={signInHref} />
                 </>
               )}
 
@@ -390,11 +391,11 @@ export default function MainHeader({
               {((status !== 'loading' && !session) || isAuthPage) && (
                 <>
                   <Link
-                    href={isAuthPage ? '#signin-card' : '/welcome'}
+                    href={isSignInEntry ? '#signin-card' : '/welcome'}
                     className={styles.drawerCta}
                     onClick={closeDrawer}
                   >
-                    {t(isAuthPage ? 'nav.signUp' : 'nav.becomeAPana')}
+                    {t(isSignInEntry ? 'nav.signUp' : 'nav.becomeAPana')}
                   </Link>
                   {/* Mirrors the masthead sign-in button, which stays visible at
                   every width -- this is the in-drawer path to the same page. */}
@@ -403,12 +404,7 @@ export default function MainHeader({
                       i18nKey="nav.alreadyAPana"
                       t={t}
                       components={{
-                        a: (
-                          <Link
-                            href={isAuthPage ? '#signin-card' : '/signin'}
-                            onClick={closeDrawer}
-                          />
-                        ),
+                        a: <Link href={signInHref} onClick={closeDrawer} />,
                       }}
                     />
                   </p>
