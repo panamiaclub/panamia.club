@@ -1,12 +1,36 @@
 'use client';
 
-import { useId, useLayoutEffect, useState, type RefObject } from 'react';
-import { ArrowUp, LoaderCircle } from 'lucide-react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
+import { ArrowUp, ImagePlus, LoaderCircle, X } from 'lucide-react';
 import styles from '@/components/messages/workspace.module.css';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { RefusedComposer } from './chat-primitives';
 import { GifPicker, GifPreview } from './gif-picker';
 import { useGifSearch, useMirrorGif, type GifResult } from '@/lib/query/social';
-import { messageError, type MessageDraft } from '../_lib/workspace';
+import {
+  messageDraftCanSend,
+  composerEnterSends,
+  messageError,
+  type MessageDraft,
+} from '../_lib/workspace';
+import {
+  CHAT_PHOTO_ACCEPT,
+  chatPhotoError,
+  uploadChatPhoto,
+} from '../_lib/photos';
 import { useIsNativeApp } from '@/lib/mobile/use-native-app';
 
 export function Composer({
@@ -28,13 +52,18 @@ export function Composer({
 }) {
   const native = useIsNativeApp();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
+  const [localPhoto, setLocalPhoto] = useState<string | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const photoBusy = useRef(false);
   const hintId = useId();
   const mirror = useMirrorGif();
   const gifAvailability = useGifSearch('', canSend === 'allow');
   const gifsEnabled = gifAvailability.data?.enabled ?? false;
   const savingGif = draft.isMirroring || mirror.isPending;
-  const canSubmit =
-    !!(draft.text.trim() || draft.gif) && !isSending && !savingGif;
+  const savingPhoto = draft.isUploadingPhoto;
+  const canSubmit = messageDraftCanSend(draft) && !isSending && !savingGif;
 
   useLayoutEffect(() => {
     const input = inputRef.current;
@@ -43,26 +72,34 @@ export function Composer({
     input.style.height = `${Math.min(input.scrollHeight, 128)}px`;
   }, [draft.text, inputRef]);
 
+  useEffect(() => {
+    setPreviewFailed(false);
+    if (!draft.photoFile || chatPhotoError(draft.photoFile)) {
+      setLocalPhoto(null);
+      return;
+    }
+    const url = URL.createObjectURL(draft.photoFile);
+    setLocalPhoto(url);
+    return () => URL.revokeObjectURL(url);
+  }, [draft.photoFile, draft.photo?.url]);
+
   if (canSend === 'refuse') return <RefusedComposer />;
 
   const closePicker = () => {
     setPickerOpen(false);
     inputRef.current?.focus();
   };
-
   const submit = () => {
     if (!canSubmit) return;
     setPickerOpen(false);
     onSend();
   };
-
   const pick = async (chosen: GifResult) => {
-    if (savingGif) return;
+    if (savingGif || savingPhoto) return;
     const input = inputRef.current;
     onChange({ isMirroring: true, gifError: null });
     try {
       const attachment = await mirror.mutateAsync(chosen);
-      // Only patch the GIF: text may have changed while the mirror was saving.
       onChange({ gif: attachment, isMirroring: false });
       setPickerOpen(false);
       if (input?.isConnected && inputRef.current === input) input.focus();
@@ -73,9 +110,36 @@ export function Composer({
       });
     }
   };
+  const attachPhoto = async (file: File) => {
+    if (photoBusy.current || savingGif) return;
+    photoBusy.current = true;
+    const input = inputRef.current;
+    onChange({ photoFile: file, isUploadingPhoto: true, photoError: null });
+    try {
+      const photo = await uploadChatPhoto(file);
+      onChange({
+        photo,
+        photoFile: null,
+        photoError: null,
+        isUploadingPhoto: false,
+      });
+      if (input?.isConnected && inputRef.current === input) input.focus();
+    } catch (error) {
+      onChange({
+        isUploadingPhoto: false,
+        photoError: messageError(
+          error,
+          'Could not upload this photo. Try again.'
+        ),
+      });
+    } finally {
+      photoBusy.current = false;
+    }
+  };
+  const photoPreview = draft.photoFile ? localPhoto : draft.photo?.url;
 
   return (
-    <footer className={styles.composer}>
+    <footer className={`${styles.composer} ${styles.compactComposer}`}>
       {pickerOpen && (
         <GifPicker
           onPick={pick}
@@ -84,12 +148,43 @@ export function Composer({
           error={draft.gifError}
         />
       )}
-      {draft.gif && (
-        <div className="mb-3">
-          <GifPreview
-            url={draft.gif.url}
-            onRemove={() => onChange({ gif: null, gifError: null })}
-          />
+      {(draft.gif || draft.photo || draft.photoFile) && (
+        <div className={styles.compactAttachments}>
+          {(draft.photo || draft.photoFile) && (
+            <figure className={styles.photoPreview}>
+              {photoPreview && !previewFailed ? (
+                <img
+                  src={photoPreview}
+                  alt="Attached photo"
+                  onError={() => setPreviewFailed(true)}
+                />
+              ) : (
+                <span aria-label="Photo preview">
+                  <ImagePlus size={24} aria-hidden="true" />
+                </span>
+              )}
+              <button
+                type="button"
+                aria-label="Remove photo"
+                disabled={savingPhoto}
+                onClick={() =>
+                  onChange({
+                    photo: null,
+                    photoFile: null,
+                    photoError: null,
+                  })
+                }
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            </figure>
+          )}
+          {draft.gif && (
+            <GifPreview
+              url={draft.gif.url}
+              onRemove={() => onChange({ gif: null, gifError: null })}
+            />
+          )}
         </div>
       )}
       {gifAvailability.isError && (
@@ -104,6 +199,33 @@ export function Composer({
           </button>
         </p>
       )}
+      {savingPhoto && (
+        <p className="text-pana-ink/65 mb-2 text-xs" role="status">
+          Uploading photo...
+        </p>
+      )}
+      {previewFailed && !draft.photoError && (
+        <p className="text-pana-ink/65 mb-2 text-xs" role="status">
+          The photo preview is unavailable. You can remove it and choose the
+          photo again.
+        </p>
+      )}
+      {draft.photoError && (
+        <p className="text-pana-red-deep mb-2 text-xs" role="alert">
+          {draft.photoError}{' '}
+          {draft.photoFile && !chatPhotoError(draft.photoFile) && (
+            <button
+              type="button"
+              className="font-bold underline"
+              onClick={() => {
+                if (draft.photoFile) void attachPhoto(draft.photoFile);
+              }}
+            >
+              Retry photo upload
+            </button>
+          )}
+        </p>
+      )}
       {!pickerOpen && savingGif && (
         <p className="text-pana-ink/65 mb-2 text-xs" role="status">
           Saving your GIF...
@@ -116,77 +238,118 @@ export function Composer({
       )}
       <form
         aria-label="Message composer"
-        className={styles.composeBox}
+        className={styles.composeRow}
         onSubmit={(event) => {
           event.preventDefault();
           submit();
         }}
       >
-        <textarea
-          ref={inputRef}
-          value={draft.text}
-          onChange={(event) => onChange({ text: event.target.value })}
-          onKeyDown={(event) => {
-            if (
-              event.key === 'Enter' &&
-              !event.shiftKey &&
-              !event.nativeEvent.isComposing
-            ) {
-              event.preventDefault();
-              submit();
-            }
+        <input
+          ref={fileInput}
+          type="file"
+          accept={CHAT_PHOTO_ACCEPT}
+          aria-label="Choose a photo"
+          hidden
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            event.currentTarget.value = '';
+            if (file) void attachPhoto(file);
           }}
-          rows={1}
-          placeholder="Write a little hello..."
-          aria-label={`Message ${counterpartyName}`}
-          aria-describedby={native ? undefined : hintId}
-          className={styles.messageInput}
         />
-        <div className="flex items-center justify-between gap-3 px-2 pb-2">
-          {gifsEnabled ? (
+        <DropdownMenu
+          open={photoMenuOpen}
+          onOpenChange={(open) => {
+            setPhotoMenuOpen(open);
+            if (open) setPickerOpen(false);
+          }}
+        >
+          <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className={styles.gifButton}
+              className={styles.attachButton}
+              aria-label="Attach a photo"
+              disabled={
+                savingGif || savingPhoto || !!draft.photo || !!draft.photoFile
+              }
+            >
+              <ImagePlus size={23} aria-hidden="true" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="max-w-64">
+            <DropdownMenuLabel>Photo attachment</DropdownMenuLabel>
+            <DropdownMenuItem onSelect={() => fileInput.current?.click()}>
+              <ImagePlus className="mr-2 h-4 w-4" aria-hidden="true" />
+              Choose photo
+            </DropdownMenuItem>
+            <p className="text-pana-ink/65 px-2 py-2 text-xs leading-relaxed">
+              One photo, up to 10 MB. Photos use Pana media links: anyone with a
+              copied link can view the image. They are not end-to-end encrypted.
+            </p>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <div className={styles.composeField}>
+          <textarea
+            ref={inputRef}
+            value={draft.text}
+            onChange={(event) => onChange({ text: event.target.value })}
+            onKeyDown={(event) => {
+              const phone =
+                native ||
+                window.matchMedia('(max-width: 767px), (pointer: coarse)')
+                  .matches;
+              if (
+                event.key === 'Enter' &&
+                composerEnterSends(
+                  phone,
+                  event.shiftKey,
+                  event.nativeEvent.isComposing ||
+                    event.nativeEvent.keyCode === 229
+                )
+              ) {
+                event.preventDefault();
+                submit();
+              }
+            }}
+            rows={1}
+            enterKeyHint="enter"
+            placeholder="Message..."
+            aria-label={`Message ${counterpartyName}`}
+            aria-describedby={native ? undefined : hintId}
+            className={styles.compactInput}
+          />
+          {gifsEnabled && (
+            <button
+              type="button"
+              className={styles.compactGifButton}
               onClick={() => setPickerOpen((open) => !open)}
               aria-label="Add a GIF"
               aria-expanded={pickerOpen}
+              disabled={savingPhoto}
             >
               GIF
             </button>
-          ) : (
-            <span />
           )}
-          <button
-            type="submit"
-            className={styles.sendButton}
-            disabled={!canSubmit}
-            aria-label="Send message"
-          >
-            {isSending || savingGif ? (
-              <LoaderCircle
-                className="h-4 w-4 motion-safe:animate-spin"
-                aria-hidden="true"
-              />
-            ) : (
-              <ArrowUp className="h-5 w-5" aria-hidden="true" />
-            )}
-          </button>
         </div>
+        <button
+          type="submit"
+          className={`${styles.sendButton} ${styles.compactSendButton}`}
+          disabled={!canSubmit}
+          aria-label="Send message"
+        >
+          {isSending || savingGif || savingPhoto ? (
+            <LoaderCircle
+              className="h-5 w-5 motion-safe:animate-spin"
+              aria-hidden="true"
+            />
+          ) : (
+            <ArrowUp className="h-5 w-5" aria-hidden="true" />
+          )}
+        </button>
       </form>
       {!native && (
-        <div
-          id={hintId}
-          className="text-pana-ink/60 mt-2 flex min-h-4 items-center justify-between gap-2 text-[10px] leading-relaxed"
-        >
-          <span>
-            {draft.text || draft.gif
-              ? 'Your draft stays with this conversation.'
-              : 'Make yourself at home. Say hello.'}
-          </span>
-          <span className="hidden flex-none lg:inline">
-            Enter to send · Shift + Enter for a new line
-          </span>
-        </div>
+        <p id={hintId} className={styles.keyboardHint}>
+          Enter to send · Shift + Enter for a new line
+        </p>
       )}
     </footer>
   );
