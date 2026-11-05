@@ -470,9 +470,12 @@ test.describe('Custom Sign-In Page', () => {
 
     // Wait for hydration via something unconditional before counting, so an
     // empty result means "none rendered" rather than "not rendered yet".
-    await expect(page.getByText('Create an account or sign in')).toBeVisible({
-      timeout: 15000,
-    });
+    await expect(
+      page.getByRole('heading', {
+        name: 'Create an account or sign in',
+        exact: true,
+      })
+    ).toBeVisible({ timeout: 15000 });
 
     const deadProviderButtons = page.getByRole('button', {
       name: /^Continue with /,
@@ -488,9 +491,12 @@ test.describe('Custom Sign-In Page', () => {
     // first. Without this the toggle check can resolve false purely because
     // React has not hydrated, silently skipping the click and leaving the
     // assertion below to fail 15s later for the wrong reason.
-    await expect(page.getByText('Create an account or sign in')).toBeVisible({
-      timeout: 15000,
-    });
+    await expect(
+      page.getByRole('heading', {
+        name: 'Create an account or sign in',
+        exact: true,
+      })
+    ).toBeVisible({ timeout: 15000 });
 
     const emailInput = page.getByPlaceholder('your@email.com');
     const emailToggle = page.getByRole('button', {
