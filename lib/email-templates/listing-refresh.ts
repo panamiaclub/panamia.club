@@ -28,9 +28,9 @@ export function listingRefresh(params: Record<string, unknown>) {
   const reviewGuidance =
     'Check your description, category, photos and links. Every business needs a valid five-digit US ZIP to complete its listing review, including online and mobile services. A saved primary business photo is also required. An existing primary photo counts; you do not need to upload it again. Gallery photos are optional. In Location, choose how people can find your business. A public visiting location needs a street address, city, state and ZIP. Online and mobile services need only a business base ZIP, not a street or home address. This ZIP is only an approximate base area, not a service or delivery boundary. Use a real ZIP; do not make one up.';
   const accountGuidance =
-    'Already manage this listing? Use the Pana account that manages it. If it is unclaimed, verify access to the business inbox and choose your own Pana account. Your personal login email can be different from the business contact.';
+    'New to Pana? Create an account with Google or an email you control. Your login email does not have to match the business email on this listing. Already manage this listing? Use the Pana account that manages it.';
   const invitationGuidance =
-    'Private invitation links work once and expire after seven days. If a link expires or you cannot access the business inbox, reply for help.';
+    'If this listing is unclaimed, use its private invitation to confirm that you manage it after signing in, then review its details. A valid invitation verifies access to the business inbox; no second business verification email is needed. Private invitation links work once and expire after seven days. If a link expires or you cannot access the business inbox, reply for help.';
   const recovery =
     'If your listing is paused because we have not heard from you, an authorized manager can review and confirm it to restore it. Staff decisions remain separate.';
   const stopGuidance =
@@ -50,6 +50,7 @@ export function listingRefresh(params: Record<string, unknown>) {
         <p style="${listingEmailStyles.paragraph}">Hola ${escape(name)} team,</p>
         <p style="${listingEmailStyles.paragraph}">${escape(intro)}</p>
         <p style="${listingEmailStyles.note}">${escape(reason)}</p>
+        <p style="${listingEmailStyles.paragraph}">${escape(accountGuidance)}</p>
         <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" bgcolor="#fbf7d2" style="width:100%;margin:8px 0 16px;background-color:#fbf7d2;border:1px solid #e7dfaa;border-radius:16px;">
           <tr>
             <td style="padding:18px 20px;">
@@ -64,7 +65,6 @@ export function listingRefresh(params: Record<string, unknown>) {
         <h2 style="margin:24px 0 12px;color:#110d0d;font-size:20px;line-height:1.4;">A few things worth checking</h2>
         <p style="${listingEmailStyles.paragraph}">${escape(reviewGuidance)}</p>
         <h2 style="margin:24px 0 12px;color:#110d0d;font-size:20px;line-height:1.4;">Using your review link</h2>
-        <p style="${listingEmailStyles.note}">${escape(accountGuidance)}</p>
         <p style="${listingEmailStyles.note}">${escape(invitationGuidance)}</p>
         <p style="${listingEmailStyles.paragraph}">${escape(copy)}</p>
         <p style="${listingEmailStyles.note}">${escape(recovery)}</p>
@@ -80,6 +80,8 @@ export function listingRefresh(params: Record<string, unknown>) {
       intro,
       reason,
       '',
+      accountGuidance,
+      '',
       'Your directory listing:',
       name,
       `Please confirm by ${deadline}.`,
@@ -92,7 +94,6 @@ export function listingRefresh(params: Record<string, unknown>) {
       reviewGuidance,
       '',
       'Using your review link',
-      accountGuidance,
       invitationGuidance,
       '',
       copy,

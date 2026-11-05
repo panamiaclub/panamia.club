@@ -16,6 +16,36 @@ async function revealEmail(page: Page) {
   await expect(page.getByLabel('Email address', { exact: true })).toBeVisible();
 }
 
+async function emailRequests(page: Page) {
+  const submissions: Record<string, unknown>[] = [];
+  await page.route('**/api/config/turnstile', (route) =>
+    route.fulfill({ json: { siteKey: 'account-entry-test-key' } })
+  );
+  await page.route(
+    'https://challenges.cloudflare.com/turnstile/v0/api.js?*',
+    (route) =>
+      route.fulfill({
+        contentType: 'application/javascript',
+        body: `window.turnstile = {
+          render: function (element, options) {
+            queueMicrotask(function () { options.callback('account-entry-test-token'); });
+            return 'account-entry-test-widget';
+          },
+          reset: function () {},
+          remove: function () {}
+        };`,
+      })
+  );
+  await page.route('**/api/auth/verify-turnstile', (route) =>
+    route.fulfill({ json: { success: true } })
+  );
+  await page.route('**/api/auth/sign-in/magic-link', async (route) => {
+    submissions.push(route.request().postDataJSON());
+    await route.fulfill({ json: { status: true } });
+  });
+  return submissions;
+}
+
 test.describe('account entry', () => {
   test.beforeEach(async ({ page }) => {
     await signedOut(page);
@@ -135,6 +165,7 @@ test.describe('account entry', () => {
   test('Spanish copy makes creation and access explicit without changing the route', async ({
     page,
   }) => {
+    const submissions = await emailRequests(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/signin?callbackUrl=%2Fm%2Fdiscover');
     await page.getByRole('button', { name: 'Menu', exact: true }).click();
@@ -168,6 +199,23 @@ test.describe('account entry', () => {
     await expect(
       page.getByRole('button', { name: 'Enviarme un enlace', exact: true })
     ).toBeVisible();
+    await page
+      .getByLabel('Correo electrónico', { exact: true })
+      .fill('cuenta@example.invalid');
+    await page
+      .getByRole('button', { name: 'Enviarme un enlace', exact: true })
+      .click();
+    const status = page.locator('#signin-card').getByRole('status');
+    await expect(status).toContainText(
+      'Revisa cuenta@example.invalid para encontrar tu enlace de acceso a Pana.'
+    );
+    await expect(status).toContainText(
+      'Ábrelo en este navegador para continuar. Si no lo encuentras, revisa Spam o Correo no deseado.'
+    );
+    expect(submissions).toHaveLength(1);
+    expect(new URL(String(submissions[0].callbackURL)).pathname).toBe(
+      '/m/discover'
+    );
     expect(new URL(page.url()).searchParams.get('callbackUrl')).toBe(
       '/m/discover'
     );
@@ -177,6 +225,7 @@ test.describe('account entry', () => {
     page,
   }) => {
     await nativeBridge(page, { platform: 'ios' });
+    const submissions = await emailRequests(page);
     await page.goto('/signin');
     await expect(page.locator('.auth-page-header')).toHaveCount(0);
     await expect(
@@ -193,5 +242,237 @@ test.describe('account entry', () => {
     await expect(
       page.getByRole('link', { name: 'App reviewer sign-in', exact: true })
     ).toBeVisible();
+    await page
+      .getByLabel('Email address', { exact: true })
+      .fill('native-inbox@example.invalid');
+    await page
+      .getByRole('button', { name: 'Email me a link', exact: true })
+      .click();
+    const status = page.locator('#signin-card').getByRole('status');
+    await expect(status).toContainText(
+      'Check native-inbox@example.invalid for your Pana sign-in link.'
+    );
+    await expect(status).toContainText(
+      "Open it in the Pana Mia app to continue. If it's missing, check Spam or Junk."
+    );
+    await expect(status).not.toContainText('this browser');
+    expect(submissions).toHaveLength(1);
+    expect(submissions[0].metadata).toEqual({ nativeApp: true });
+  });
+
+  for (const viewport of [
+    { width: 1440, height: 900, label: 'desktop' },
+    { width: 390, height: 844, label: 'mobile' },
+    { width: 320, height: 740, label: 'narrow' },
+  ]) {
+    test(`email-link feedback keeps the submitted inbox through edits, options and pending resends at ${viewport.label} size`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      const submissions = await emailRequests(page);
+      const callback = '/listings/invite?id=public-business-id';
+      await page.goto(
+        `/signin?${new URLSearchParams({ callbackUrl: callback })}`
+      );
+      await revealEmail(page);
+      const card = page.locator('#signin-card');
+      const status = card.getByRole('status');
+      const input = card.getByLabel('Email address', { exact: true });
+      const send = card.getByRole('button', {
+        name: 'Email me a link',
+        exact: true,
+      });
+      const chosenEmail = `${'chosen'.repeat(10)}@${'inbox'.repeat(8)}.example.invalid`;
+      await expect(status).toBeEmpty();
+      await input.fill(chosenEmail);
+      await send.click();
+      await expect(status).toContainText(
+        `Check ${chosenEmail} for your Pana sign-in link.`
+      );
+      await expect(status).toContainText(
+        "Open it in this browser to continue. If it's missing, check Spam or Junk."
+      );
+      await expect(status).toHaveAttribute('aria-live', 'polite');
+      await expect(status).toHaveAttribute('aria-atomic', 'true');
+      await page.locator('[toast-close]').click();
+      await expect(
+        page.getByText('Check Your Email', { exact: true })
+      ).toHaveCount(0);
+      await input.fill('not-submitted@example.invalid');
+      await expect(status).toContainText(chosenEmail);
+      await expect(status).not.toContainText('not-submitted@example.invalid');
+      expect(submissions).toHaveLength(1);
+      const back = card.getByRole('button', {
+        name: 'Back to other options',
+        exact: true,
+      });
+      if (await back.isVisible()) {
+        await back.click();
+        await expect(input).not.toBeVisible();
+        await expect(status).toBeVisible();
+        await revealEmail(page);
+      }
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth)
+      ).toBeLessThanOrEqual(viewport.width);
+      await page.screenshot({
+        path: test
+          .info()
+          .outputPath(`email-link-feedback-${viewport.label}.png`),
+        fullPage: true,
+      });
+
+      const held = Promise.withResolvers<void>();
+      await page.route('**/api/auth/sign-in/magic-link', async (route) => {
+        submissions.push(route.request().postDataJSON());
+        await held.promise;
+        await route.fulfill({ json: { status: true } });
+      });
+      try {
+        await send.click();
+        await expect.poll(() => submissions.length).toBe(2);
+        await expect(input).toBeDisabled();
+        await expect(
+          card.getByRole('button', {
+            name: 'Sending your link...',
+            exact: true,
+          })
+        ).toBeDisabled();
+        await expect(status).toBeEmpty();
+      } finally {
+        held.resolve();
+      }
+      await expect(status).toContainText(
+        'Check not-submitted@example.invalid for your Pana sign-in link.'
+      );
+      await expect(status).not.toContainText(chosenEmail);
+      await expect(input).toBeEnabled();
+      expect(submissions.map((request) => request.email)).toEqual([
+        chosenEmail,
+        'not-submitted@example.invalid',
+      ]);
+      for (const request of submissions) {
+        const destination = new URL(String(request.callbackURL));
+        expect(`${destination.pathname}${destination.search}`).toBe(callback);
+        expect(destination.hash).toBe('');
+      }
+      expect(new URL(page.url()).searchParams.get('callbackUrl')).toBe(
+        callback
+      );
+    });
+  }
+
+  test('failed verification never requests email or shows sent feedback', async ({
+    page,
+  }) => {
+    const submissions = await emailRequests(page);
+    await page.route('**/api/auth/verify-turnstile', (route) =>
+      route.fulfill({
+        status: 403,
+        json: { error: 'Test verification failed' },
+      })
+    );
+    await page.goto('/signin');
+    await revealEmail(page);
+    await page
+      .getByLabel('Email address', { exact: true })
+      .fill('test@example.invalid');
+    await page
+      .getByRole('button', { name: 'Email me a link', exact: true })
+      .click();
+    await expect(
+      page.getByText('Verification Failed', { exact: true })
+    ).toBeVisible();
+    await expect(page.locator('#signin-card').getByRole('status')).toBeEmpty();
+    await expect(
+      page.getByLabel('Email address', { exact: true })
+    ).toBeEnabled();
+    expect(submissions).toHaveLength(0);
+  });
+
+  for (const failure of ['http', 'network']) {
+    test(`a ${failure} failure clears old email feedback and only a successful retry names the new inbox`, async ({
+      page,
+    }) => {
+      const submissions = await emailRequests(page);
+      await page.goto('/signin?callbackUrl=%2Fm%2Fdiscover');
+      await revealEmail(page);
+      const input = page.getByLabel('Email address', { exact: true });
+      const send = page.getByRole('button', {
+        name: 'Email me a link',
+        exact: true,
+      });
+      const status = page.locator('#signin-card').getByRole('status');
+      await input.fill('first@example.invalid');
+      await send.click();
+      await expect(status).toContainText('Check first@example.invalid');
+      await page.route('**/api/auth/sign-in/magic-link', async (route) => {
+        submissions.push(route.request().postDataJSON());
+        if (submissions.length === 2) {
+          if (failure === 'network') await route.abort('failed');
+          else
+            await route.fulfill({
+              status: 503,
+              json: { message: 'Test mail provider unavailable' },
+            });
+        } else await route.fulfill({ json: { status: true } });
+      });
+      await input.fill('retry@example.invalid');
+      await send.click();
+      await expect(
+        page.getByText('Failed to send sign-in link. Please try again.', {
+          exact: true,
+        })
+      ).toBeVisible();
+      await expect(status).toBeEmpty();
+      await expect(input).toBeEnabled();
+      await send.click();
+      await expect(status).toContainText('Check retry@example.invalid');
+      await expect(status).not.toContainText('first@example.invalid');
+      expect(submissions.map((request) => request.email)).toEqual([
+        'first@example.invalid',
+        'retry@example.invalid',
+        'retry@example.invalid',
+      ]);
+      expect(new URL(page.url()).searchParams.get('callbackUrl')).toBe(
+        '/m/discover'
+      );
+    });
+  }
+
+  test('OAuth failure preserves the exact callback without claiming an email link was requested', async ({
+    page,
+  }) => {
+    const submissions = await emailRequests(page);
+    const oauth: Record<string, unknown>[] = [];
+    await page.route('**/api/auth/sign-in/social', async (route) => {
+      oauth.push(route.request().postDataJSON());
+      await route.fulfill({
+        status: 503,
+        json: { message: 'Test OAuth provider unavailable' },
+      });
+    });
+    const callback = '/m/schedule/book?mentor=taylor&mode=video';
+    await page.goto(
+      `/signin?${new URLSearchParams({ callbackUrl: callback })}`
+    );
+    const google = page.getByRole('button', {
+      name: 'Continue with Google',
+      exact: true,
+    });
+    await google.click();
+    await expect(
+      page.getByText('Google sign-in could not start. Please try again.', {
+        exact: true,
+      })
+    ).toBeVisible();
+    await expect(google).toBeEnabled();
+    await expect(page.locator('#signin-card').getByRole('status')).toBeEmpty();
+    expect(submissions).toHaveLength(0);
+    expect(oauth).toHaveLength(1);
+    expect(oauth[0].provider).toBe('google');
+    const destination = new URL(String(oauth[0].callbackURL));
+    expect(`${destination.pathname}${destination.search}`).toBe(callback);
+    expect(new URL(page.url()).searchParams.get('callbackUrl')).toBe(callback);
   });
 });
