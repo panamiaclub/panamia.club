@@ -113,8 +113,7 @@ describe('newConversationCandidates', () => {
     /* The conversation endpoint compares viewerActorId to the counterparty
        and answers 404 before it looks anything up, so a row offering to
        message yourself opens nothing and reports nothing. The search
-       endpoint returns you on purpose -- voice memos may be sent to
-       yourself -- so this exclusion is the caller's to make. */
+       endpoint includes the viewer, so this exclusion is the caller's to make. */
     const found = newConversationCandidates([viewer, maria], {
       existing: [],
       viewerActorId: 'me',

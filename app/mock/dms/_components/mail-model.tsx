@@ -8,7 +8,7 @@ import {
   threadSnippet,
   type MockDmThread,
 } from '../_data/mock-dms';
-import { DmAvatar, DmName, DmWaveform, UnreadBadge } from './dm-primitives';
+import { DmAvatar, DmName, UnreadBadge } from './dm-primitives';
 
 /* The MAIL model.
  *
@@ -139,24 +139,9 @@ export function MailModel() {
                     </span>
                   </header>
 
-                  {message.voice ? (
-                    <div className="border-pana-ink/14 bg-pana-butter-2/60 max-w-md rounded-xl border-2 p-3">
-                      <DmWaveform
-                        peaks={message.voice.peaks}
-                        duration={message.voice.duration}
-                      />
-                      <p className="text-pana-ink/55 mt-2 text-xs font-bold">
-                        Voice memo · only you two can hear this
-                      </p>
-                    </div>
-                  ) : (
-                    /* whitespace-pre-line so the paragraph break in a
-                       long-form message survives. The fixture has one, and a
-                       model that flattens it is arguing against itself. */
-                    <p className="text-pana-ink/85 text-[15px] leading-relaxed font-medium whitespace-pre-line">
-                      {message.body}
-                    </p>
-                  )}
+                  <p className="text-pana-ink/85 text-[15px] leading-relaxed font-medium whitespace-pre-line">
+                    {message.body}
+                  </p>
                 </article>
               ))}
             </div>

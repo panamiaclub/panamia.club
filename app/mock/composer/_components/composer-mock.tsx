@@ -23,7 +23,6 @@ import {
   Lock,
   Sparkles,
   Users,
-  Volume2,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -59,7 +58,7 @@ const AUDIENCES = [
 ] as const;
 
 type Audience = (typeof AUDIENCES)[number]['id'];
-type MediaKind = 'image' | 'video' | 'audio';
+type MediaKind = 'image' | 'video';
 
 interface MockAttachment {
   id: string;
@@ -87,7 +86,6 @@ const SAMPLE_PHOTO: MockAttachment = {
 function mediaKind(file: File): MediaKind | null {
   if (IMAGE_TYPES.has(file.type)) return 'image';
   if (file.type.startsWith('video/')) return 'video';
-  if (file.type.startsWith('audio/')) return 'audio';
   return null;
 }
 
@@ -103,7 +101,6 @@ export function ComposerMock({ compact = false }: { compact?: boolean } = {}) {
   const [warning, setWarning] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const photoInput = useRef<HTMLInputElement>(null);
-  const audioInput = useRef<HTMLInputElement>(null);
   const objectUrls = useRef(new Set<string>());
 
   useEffect(() => {
@@ -141,7 +138,7 @@ export function ComposerMock({ compact = false }: { compact?: boolean } = {}) {
       const kind = mediaKind(file);
       if (!kind) {
         setMediaError(
-          `${file.name} is not supported. Choose a JPG, PNG, WebP, GIF, video or audio file.`
+          `${file.name} is not supported. Choose a JPG, PNG, WebP, GIF or video file.`
         );
         return;
       }
@@ -178,7 +175,7 @@ export function ComposerMock({ compact = false }: { compact?: boolean } = {}) {
       {attachments.map((attachment) => (
         <div
           key={attachment.id}
-          className={`border-pana-ink/10 relative min-w-0 overflow-hidden rounded-2xl border bg-white ${attachment.kind === 'audio' ? 'col-span-full p-3' : ''}`}
+          className="border-pana-ink/10 relative min-w-0 overflow-hidden rounded-2xl border bg-white"
         >
           {attachment.kind === 'image' ? (
             <Image
@@ -194,7 +191,7 @@ export function ComposerMock({ compact = false }: { compact?: boolean } = {}) {
                 )
               }
             />
-          ) : attachment.kind === 'video' ? (
+          ) : (
             <video
               src={attachment.url}
               aria-label={`Video preview: ${attachment.name}`}
@@ -208,30 +205,6 @@ export function ComposerMock({ compact = false }: { compact?: boolean } = {}) {
                 )
               }
             />
-          ) : (
-            <>
-              <div className="mb-3 flex min-w-0 items-center gap-2 pr-9">
-                <Volume2
-                  className="text-pana-indigo h-4 w-4 flex-none"
-                  aria-hidden="true"
-                />
-                <span className="truncate text-xs font-bold">
-                  {attachment.name}
-                </span>
-              </div>
-              <audio
-                src={attachment.url}
-                aria-label={`Audio preview: ${attachment.name}`}
-                controls
-                preload="metadata"
-                className="h-10 w-full min-w-0"
-                onError={() =>
-                  setMediaError(
-                    `This browser could not play ${attachment.name}. No file was uploaded.`
-                  )
-                }
-              />
-            </>
           )}
           {!preview && (
             <button
@@ -418,18 +391,6 @@ export function ComposerMock({ compact = false }: { compact?: boolean } = {}) {
           event.currentTarget.value = '';
         }}
       />
-      <input
-        ref={audioInput}
-        type="file"
-        multiple
-        accept="audio/*"
-        aria-label="Choose audio"
-        className="hidden"
-        onChange={(event) => {
-          addFiles(Array.from(event.currentTarget.files ?? []));
-          event.currentTarget.value = '';
-        }}
-      />
     </>
   );
 
@@ -567,7 +528,7 @@ export function ComposerMock({ compact = false }: { compact?: boolean } = {}) {
                 role="status"
                 className="border-pana-indigo/40 bg-pana-indigo/5 text-pana-indigo rounded-2xl border-2 border-dashed p-5 text-center text-sm font-extrabold"
               >
-                Drop your photos, video or audio here
+                Drop your photos or video here
               </div>
             )}
             {mediaErrorAlert}
@@ -584,16 +545,6 @@ export function ComposerMock({ compact = false }: { compact?: boolean } = {}) {
               >
                 <ImagePlus className="h-4 w-4" aria-hidden="true" />
                 Photo / video
-              </button>
-              <button
-                type="button"
-                aria-label="Add audio"
-                onClick={() => audioInput.current?.click()}
-                disabled={atMediaLimit}
-                className="text-pana-indigo hover:bg-pana-indigo/6 focus-visible:ring-pana-indigo inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2.5 text-xs font-extrabold focus-visible:ring-2 disabled:opacity-45"
-              >
-                <Volume2 className="h-4 w-4" aria-hidden="true" />
-                Audio
               </button>
             </div>
             <div className="justify-self-start sm:ml-auto">
@@ -769,16 +720,6 @@ export function ComposerMock({ compact = false }: { compact?: boolean } = {}) {
                     </span>
                   </span>
                 </button>
-                <button
-                  type="button"
-                  aria-label="Add audio"
-                  onClick={() => audioInput.current?.click()}
-                  disabled={atMediaLimit}
-                  className="border-pana-ink/10 bg-pana-cream/70 text-pana-ink/70 hover:border-pana-indigo/40 hover:text-pana-indigo focus-visible:ring-pana-indigo flex w-17 flex-none flex-col items-center justify-center gap-1 rounded-2xl border px-3 py-3 text-xs font-extrabold focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-45 sm:w-20"
-                >
-                  <Volume2 className="h-5 w-5" aria-hidden="true" />
-                  Audio
-                </button>
               </div>
               <p
                 id="mock-media-hint"
@@ -849,8 +790,7 @@ export function ComposerMock({ compact = false }: { compact?: boolean } = {}) {
               Media, front and center
             </p>
             <p>
-              Pick photos or video in one tap. Add audio, drop files, or paste
-              an image.
+              Pick photos or video in one tap, drop files, or paste an image.
             </p>
           </div>
           <div>

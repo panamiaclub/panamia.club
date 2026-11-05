@@ -24,6 +24,7 @@ import { getHiddenActorIds } from '@/lib/federation/wrappers/block-filter';
 import { renderStatusMarkdown } from '@/lib/federation/markdown';
 import { bucketKeysFor } from '@/lib/blob/api';
 import { notifyGroupChat } from '@/lib/group-chat-notify';
+import { isAudioAttachment } from '@/lib/media/attachments';
 import {
   GROUP_CHAT_EXPIRY_DAYS,
   GROUP_CHAT_MAX_ATTACHMENTS,
@@ -220,6 +221,9 @@ function parseInput(value: unknown): GroupChatInput | Failure {
   }
   const attachments: ChatAttachment[] = [];
   for (const attachment of supplied) {
+    if (isAudioAttachment(attachment)) {
+      return fail('Audio attachments are no longer supported.', 400);
+    }
     if (
       !isRecord(attachment) ||
       typeof attachment.type !== 'string' ||
@@ -227,7 +231,7 @@ function parseInput(value: unknown): GroupChatInput | Failure {
       typeof attachment.url !== 'string' ||
       attachment.mediaType.length > 128 ||
       attachment.url.length > 2048 ||
-      !['image', 'audio', 'video'].includes(attachment.type) ||
+      !['image', 'video'].includes(attachment.type) ||
       !attachment.mediaType.startsWith(`${attachment.type}/`) ||
       ![
         'image/jpeg',
@@ -235,10 +239,6 @@ function parseInput(value: unknown): GroupChatInput | Failure {
         'image/webp',
         'image/avif',
         'image/gif',
-        'audio/ogg',
-        'audio/webm',
-        'audio/mp4',
-        'audio/wav',
         'video/mp4',
         'video/webm',
       ].includes(attachment.mediaType.split(';')[0]) ||
@@ -281,22 +281,6 @@ function parseInput(value: unknown): GroupChatInput | Failure {
         }
         normalized[key] = dimension;
       }
-    }
-    if (attachment.peaks != null) {
-      if (
-        !Array.isArray(attachment.peaks) ||
-        attachment.peaks.length > 256 ||
-        !attachment.peaks.every(
-          (peak: unknown) =>
-            typeof peak === 'number' &&
-            Number.isFinite(peak) &&
-            peak >= 0 &&
-            peak <= 1
-        )
-      ) {
-        return fail('Invalid audio waveform.', 400);
-      }
-      normalized.peaks = attachment.peaks;
     }
     attachments.push(normalized);
   }

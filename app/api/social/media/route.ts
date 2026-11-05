@@ -6,7 +6,6 @@
  *
  * Supported types:
  *   - Images: image/jpeg, image/png, image/webp, image/gif
- *   - Audio:  audio/ogg (Opus, transcoded client-side from webm)
  *   - Video:  video/mp4 (H.264/AAC, transcoded client-side)
  *
  * Max file size: 10 MB
@@ -26,23 +25,14 @@ const ACCEPTED_IMAGE_TYPES = [
   'image/gif',
 ];
 
-const ACCEPTED_AUDIO_TYPES = ['audio/ogg'];
-
 // video/webm is legacy — posts made before the H.264 switch. New uploads are
 // all video/mp4, which is the only format Apple hardware-decodes.
 const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/webm'];
 
-const ACCEPTED_TYPES = [
-  ...ACCEPTED_IMAGE_TYPES,
-  ...ACCEPTED_AUDIO_TYPES,
-  ...ACCEPTED_VIDEO_TYPES,
-];
+const ACCEPTED_TYPES = [...ACCEPTED_IMAGE_TYPES, ...ACCEPTED_VIDEO_TYPES];
 
-function getMediaCategory(
-  mimeType: string
-): 'image' | 'audio' | 'video' | null {
+function getMediaCategory(mimeType: string): 'image' | 'video' | null {
   if (ACCEPTED_IMAGE_TYPES.includes(mimeType)) return 'image';
-  if (ACCEPTED_AUDIO_TYPES.includes(mimeType)) return 'audio';
   if (ACCEPTED_VIDEO_TYPES.includes(mimeType)) return 'video';
   return null;
 }
@@ -53,7 +43,6 @@ function getExtension(mimeType: string): string {
     'image/png': 'png',
     'image/webp': 'webp',
     'image/gif': 'gif',
-    'audio/ogg': 'ogg',
     'video/mp4': 'mp4',
     'video/webm': 'webm',
   };
@@ -98,20 +87,6 @@ export async function POST(request: NextRequest) {
       { success: false, error: 'No file provided' },
       { status: 400 }
     );
-  }
-
-  // Get optional peaks data for audio waveforms
-  const peaksJson = formData.get('peaks');
-  let peaks: number[] | undefined;
-  if (typeof peaksJson === 'string') {
-    try {
-      const parsed = JSON.parse(peaksJson);
-      if (Array.isArray(parsed) && parsed.every((v) => typeof v === 'number')) {
-        peaks = parsed;
-      }
-    } catch {
-      // Invalid peaks data, ignore
-    }
   }
 
   // Validate MIME type
@@ -166,8 +141,6 @@ export async function POST(request: NextRequest) {
         mediaType: file.type,
         url,
         name: file.name,
-        // Include peaks for audio files
-        ...(category === 'audio' && peaks ? { peaks } : {}),
       },
     });
   } catch (error) {

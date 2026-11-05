@@ -21,7 +21,6 @@ import {
 import {
   ChatAvatar,
   ChatName,
-  ChatWaveform,
   DeliveryMark,
   ExpiryChip,
   GifArt,
@@ -263,36 +262,19 @@ function Bubble({
     <div
       className={`flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}
     >
-      {message.voice ? (
-        <div className={`${styles.bubble} w-64 max-w-full`} data-mine={mine}>
-          <ChatWaveform
-            peaks={message.voice.peaks}
-            duration={message.voice.duration}
-            tone={mine ? 'dark' : 'light'}
-          />
-          <p
-            className={`mt-2 text-[10px] ${mine ? 'text-pana-cream/70' : 'text-pana-ink/55'}`}
-          >
-            Voice memo sample · No audio in this preview
-          </p>
+      {message.body && (
+        <div
+          className={styles.bubble}
+          data-mine={mine}
+          data-failed={message.delivery === 'failed'}
+        >
+          {message.body}
         </div>
-      ) : (
-        <>
-          {message.body && (
-            <div
-              className={styles.bubble}
-              data-mine={mine}
-              data-failed={message.delivery === 'failed'}
-            >
-              {message.body}
-            </div>
-          )}
-          {message.gif && (
-            <span className="block w-48 max-w-full overflow-hidden rounded-2xl">
-              <GifArt gif={message.gif} />
-            </span>
-          )}
-        </>
+      )}
+      {message.gif && (
+        <span className="block w-48 max-w-full overflow-hidden rounded-2xl">
+          <GifArt gif={message.gif} />
+        </span>
       )}
 
       {message.expiresIn && <ExpiryChip expiresIn={message.expiresIn} />}

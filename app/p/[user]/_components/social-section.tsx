@@ -5,12 +5,7 @@ import { useSession } from '@/lib/auth-client';
 import { useSearchParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  PostList,
-  FollowButton,
-  ActorCard,
-  SendVoiceMemoButton,
-} from '@/components/social';
+import { PostList, FollowButton, ActorCard } from '@/components/social';
 import { useActor, useActorPosts, useFollows } from '@/lib/query/social';
 import { Loader2, FileText, Users, UserPlus } from 'lucide-react';
 
@@ -131,16 +126,6 @@ export function SocialSection({ handle }: { handle: string }) {
 
             {!actorData.isSelf && isAuthenticated && actor.uri && (
               <div className="flex items-center gap-2">
-                <SendVoiceMemoButton
-                  recipient={{
-                    id: actor.id,
-                    username: actor.username,
-                    displayName: actor.name || actor.username,
-                    avatarUrl: actor.iconUrl || undefined,
-                    uri: actor.uri,
-                  }}
-                  size="sm"
-                />
                 <FollowButton
                   username={actor.username}
                   isFollowing={actorData.isFollowing}

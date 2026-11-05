@@ -1,8 +1,7 @@
 /**
  * GET /api/social/actors/search - Search for actors by name or username
  *
- * Two callers: @-mention autocomplete in the voice memo composer, and the
- * Messages search box, which uses it to start a conversation with someone the
+ * The Messages search box uses this to start a conversation with someone the
  * viewer has never messaged (those people appear in no list that page loads).
  *
  * Returns local actors matching the query string.
@@ -41,9 +40,7 @@ export async function GET(request: NextRequest) {
 
   // Search local actors by name or username (case-insensitive)
   // Only return actors linked to local profiles.
-  // Includes current user (allows sending voice memos to yourself) -- callers
-  // that cannot act on that row, like the Messages search box, exclude it
-  // themselves rather than this endpoint guessing which kind of caller it has.
+  // The Messages search box excludes the current user from its results.
   //
   // Display name is matched as well as handle because members look for each
   // other by name, and a handle often contains no part of one: searching

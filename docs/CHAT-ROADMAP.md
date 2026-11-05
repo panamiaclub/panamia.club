@@ -202,7 +202,6 @@ A DM today is a `socialStatuses` row with `visibility: 'direct'`. Retiring that 
 | What breaks                | Where                                         | Why it matters                                                         |
 | -------------------------- | --------------------------------------------- | ---------------------------------------------------------------------- |
 | **Federation**             | ActivityPub direct addressing                 | A DM to a Mastodon account works today. Chat does not federate at all. |
-| **Voice memos**            | `components/social/VoiceMemoComposer.tsx:331` | Shipped feature; sends `visibility: 'direct'`                          |
 | **The DM consent gate**    | `lib/federation/wrappers/dm-gate.ts`          | `allow`/`hold`/`refuse`, the Requests folder, the no-notify property   |
 | **Block / mute semantics** | `isBlockedEitherWay`, `filterHiddenActorIds`  | Already audited against the status read path                           |
 | **Moderation**             | A DM is a status, so status tooling applies   | A chat transcript is not a status; nothing we built would apply        |
@@ -265,7 +264,7 @@ of that backfill are deliberate and worth keeping if it is ever revisited:
 
 - **It extends, it does not revive.** The predicate is `expires_at > NOW()`. Dropping it would
   un-hide every DM sent in the last thirty days, because the rows were never deleted. Disappearing
-  was documented — `docs/FEATURES.md` told panas voice memos auto-expire — and somebody may have
+  was documented for legacy voice memos, and somebody may have
   sent something they would not have sent otherwise. Honouring that costs old history nobody
   currently sees; breaking it costs somebody a reasonable expectation of privacy, and cannot be
   undone once they have seen it.
@@ -462,15 +461,15 @@ one. It was priced as though buying it meant buying the chat model, and it does 
 own list:
 
 - _"Does not federate."_
-- _"Two parallel DM systems unless the direct-status path is retired, and voice memos live on that
-  path."_
+- _"Two parallel DM systems unless the direct-status path is retired."_
 - _"Block, mute, and report all need re-implementing against a second store."_
 - _"Moderation gets harder: a transcript is not a status, so nothing we built applies."_
 
 Every one of those is caused by `chat_messages` being a new table, not by the socket. Adding a
 socket in front of `socialStatuses` pays none of them: federation still works because the message is
 still a status, block filtering still applies because it is the same read path, moderation still
-applies because it is the same row, and voice memos keep working because nothing moved.
+applies because it is the same row. Audio notes and voice memos have since been retired without
+changing this direct-message substrate.
 
 **Conclusion: buy column one, decline column two.** That deletes the only cost recorded against the
 mail substrate while costing nothing the mock warned about — which is why the substrate survives the

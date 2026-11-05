@@ -194,13 +194,15 @@ an ActivityPub-style actor/status model so posts can federate (see
 
 | Endpoint                     | Method | Description                        |
 | ---------------------------- | ------ | ---------------------------------- |
-| `/api/social/media`          | POST   | Register a media attachment        |
-| `/api/social/media/upload`   | POST   | Upload media (images, voice memos) |
+| `/api/social/media`          | POST   | Upload images or video (multipart) |
+| `/api/social/media/upload`   | POST   | Issue a direct video upload URL    |
 | `/api/social/messages/inbox` | GET    | Received direct messages           |
 | `/api/social/messages/sent`  | GET    | Sent direct messages               |
 
-> Voice memos (recorded via `components/social/VoiceMemoComposer`) post through
-> the media + status endpoints and surface on the `/updates` page.
+Audio uploads and audio attachment metadata are rejected by the upload, status,
+and group-chat write paths. Existing recordings are retained in storage but hidden
+from playback in posts, messages, profiles, and updates. Ordinary direct messages
+remain available at `/messages`.
 
 ## Federation (`/api/federation/*`)
 

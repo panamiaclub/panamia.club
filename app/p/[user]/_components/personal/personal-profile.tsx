@@ -24,7 +24,6 @@ import {
   PostList,
   FollowButton,
   RelationshipBadge,
-  SendVoiceMemoButton,
   BlockMenu,
 } from '@/components/social';
 import { Button } from '@/components/ui/button';
@@ -326,16 +325,6 @@ function renderActions({
 
   return (
     <>
-      <SendVoiceMemoButton
-        recipient={{
-          id: actor.id,
-          username: actor.username,
-          displayName: actor.name || actor.username,
-          avatarUrl: actor.iconUrl || undefined,
-          uri: actor.uri,
-        }}
-        size="sm"
-      />
       <FollowButton
         username={actor.username}
         isFollowing={isFollowing}

@@ -210,32 +210,11 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
     'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
     'base64'
   );
-  // One second of original PCM silence for the real voice player's metadata.
-  const sampleRate = 8_000;
-  const voiceSample = Buffer.alloc(44 + sampleRate, 128);
-  voiceSample.write('RIFF', 0);
-  voiceSample.writeUInt32LE(voiceSample.length - 8, 4);
-  voiceSample.write('WAVEfmt ', 8);
-  voiceSample.writeUInt32LE(16, 16);
-  voiceSample.writeUInt16LE(1, 20);
-  voiceSample.writeUInt16LE(1, 22);
-  voiceSample.writeUInt32LE(sampleRate, 24);
-  voiceSample.writeUInt32LE(sampleRate, 28);
-  voiceSample.writeUInt16LE(1, 32);
-  voiceSample.writeUInt16LE(8, 34);
-  voiceSample.write('data', 36);
-  voiceSample.writeUInt32LE(sampleRate, 40);
   await page.route('https://media.giphy.com/**', (route) =>
     route.fulfill({ contentType: 'image/gif', body: gifPixel })
   );
   await page.route('**/fixture/mirrored.gif', (route) =>
     route.fulfill({ contentType: 'image/gif', body: gifPixel })
-  );
-  await page.route('**/fixture/voice.wav', (route) =>
-    route.fulfill({
-      contentType: 'audio/wav',
-      body: voiceSample,
-    })
   );
   await page.route('**/api/**', async (route) => {
     const request = route.request();
@@ -944,7 +923,7 @@ test('requires request acceptance, exposes triage failures, and handles aged-out
   ).toBeVisible();
 });
 
-test('keeps federation, voice attachments, and the shared refusal states intact', async ({
+test('hides legacy audio while keeping federation, message text, and refusal states intact', async ({
   page,
 }) => {
   const fixture = await openMessages(page);
@@ -953,23 +932,23 @@ test('keeps federation, voice attachments, and the shared refusal states intact'
     conversation(page).getByText('On indieweb.social.')
   ).toBeVisible();
   await row(page, 'Bee Maria').click();
-  await expect(conversation(page).locator('audio')).toHaveCount(1);
-  await expect
-    .poll(() =>
-      conversation(page)
-        .locator('audio')
-        .evaluate((element) => {
-          if (!(element instanceof HTMLAudioElement))
-            throw new Error('Expected the voice player.');
-          return element.duration;
-        })
-    )
-    .toBe(1);
+  await expect(conversation(page).locator('audio')).toHaveCount(0);
+  await expect(
+    conversation(page).getByText('I recorded a few thoughts.')
+  ).toBeVisible();
+  await expect(
+    conversation(page).getByText('Attachment unavailable.', { exact: true })
+  ).toBeVisible();
+  await expect(
+    conversation(page).locator('[src="/fixture/voice.wav"]')
+  ).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
-  const voice = await conversation(page).locator('audio').boundingBox();
-  expect(voice!.x + voice!.width).toBeLessThanOrEqual(390);
+  const notice = await conversation(page)
+    .getByText('Attachment unavailable.', { exact: true })
+    .boundingBox();
+  expect(notice!.x + notice!.width).toBeLessThanOrEqual(390);
   await page.screenshot({
-    path: test.info().outputPath('messages-mobile-voice.png'),
+    path: test.info().outputPath('messages-mobile-retired-audio.png'),
   });
   await page.setViewportSize({ width: 1440, height: 960 });
   await row(page, 'R. Nieves').click();

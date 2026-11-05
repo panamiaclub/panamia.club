@@ -12,8 +12,6 @@ import {
   MapPin,
   MessageCircle,
   MoreHorizontal,
-  Pause,
-  Play,
   Repeat2,
   Share2,
   Users,
@@ -30,9 +28,8 @@ import {
  * the feed is many authors and one reader, so attribution has to travel with
  * the status rather than with the page.
  *
- * Client component because three things here are genuinely interactive at mock
- * fidelity: the content-warning disclosure, the like state, and the voice memo
- * transport. Everything else is static markup. */
+ * Client component for the content-warning disclosure and reactions.
+ * Everything else is static markup. */
 export function FeedPostCard({
   post,
   showGroupContext = true,
@@ -200,8 +197,6 @@ export function FeedPostCard({
                 {post.body}
               </p>
 
-              {post.voice && <VoiceMemo memo={post.voice} />}
-
               {post.attachments && post.attachments.length > 0 && (
                 <AttachmentGrid attachments={post.attachments} />
               )}
@@ -350,53 +345,6 @@ function AttachmentGrid({ attachments }: { attachments: MockAttachment[] }) {
           />
         </div>
       ))}
-    </div>
-  );
-}
-
-/* Voice memo transport. The progress position is fixed rather than animated:
-   this is a design mock, and a bar that actually travelled would need real
-   audio behind it to not look broken when it reached the end. */
-const PLAYED_FRACTION = 0.4;
-
-function VoiceMemo({ memo }: { memo: NonNullable<MockPost['voice']> }) {
-  const [playing, setPlaying] = useState(false);
-  const playedThrough = Math.round(memo.peaks.length * PLAYED_FRACTION);
-
-  return (
-    <div className="mt-3">
-      <div className="voice-memo">
-        <button
-          type="button"
-          className="voice-memo-play"
-          onClick={() => setPlaying((value) => !value)}
-          aria-label={playing ? 'Pause voice memo' : 'Play voice memo'}
-        >
-          {playing ? (
-            <Pause className="h-4 w-4" aria-hidden="true" />
-          ) : (
-            <Play className="ml-0.5 h-4 w-4" aria-hidden="true" />
-          )}
-        </button>
-
-        <div className="waveform" aria-hidden="true">
-          {memo.peaks.map((peak, index) => (
-            <span
-              key={index}
-              style={{ '--peak': peak } as React.CSSProperties}
-              data-played={playing && index < playedThrough}
-            />
-          ))}
-        </div>
-
-        <span className="flex-none text-[13px] font-extrabold tabular-nums">
-          {memo.duration}
-        </span>
-      </div>
-
-      <p className="text-pana-ink/55 mt-1.5 text-[12px] font-bold">
-        {memo.note}
-      </p>
     </div>
   );
 }
