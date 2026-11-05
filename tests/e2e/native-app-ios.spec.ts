@@ -74,6 +74,50 @@ test.use({
   },
 });
 
+for (const platform of ['android', 'ios'] as const) {
+  test(`${platform} keeps native headers and the status-area surface the same cream`, async ({
+    page,
+  }) => {
+    await nativeBridge(page, {
+      platform,
+      googlePlugin: platform === 'android',
+    });
+    await installNativeApiFixtures(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/d');
+    const app = page.locator('[data-native-app]');
+    const header = app.locator(':scope > header');
+    const consistentCream = async () => {
+      await expect(page.locator('html')).toHaveClass(/native-app/);
+      await expect(page.locator('html')).toHaveCSS(
+        'background-color',
+        'rgb(255, 247, 236)'
+      );
+      await expect(app).toHaveCSS('background-color', 'rgb(255, 247, 236)');
+      await expect(header).toHaveCSS('background-color', 'rgb(255, 247, 236)');
+      await expect(header).toHaveCSS('background-image', 'none');
+      await expect(app).toHaveCSS('background-image', 'none');
+    };
+    await consistentCream();
+    const sheetHeader = page.locator(
+      '[data-map-results="Directory"] > section > header'
+    );
+    await expect(sheetHeader).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(sheetHeader.locator('..')).toHaveCSS(
+      'background-color',
+      'rgb(255, 247, 236)'
+    );
+    const nav = page.getByRole('navigation', { name: 'App navigation' });
+    for (const tab of ['Community', 'Social', 'Directory']) {
+      await nav.getByRole('link', { name: tab, exact: true }).click();
+      await expect(
+        nav.getByRole('link', { name: tab, exact: true })
+      ).toHaveAttribute('aria-current', 'page');
+      await consistentCream();
+    }
+  });
+}
+
 test.describe('iOS results sheet', () => {
   test.use({
     viewport: { width: 390, height: 844 },

@@ -86,6 +86,10 @@ floats over Directory, Social, Community, and Profile; scrolling pages include
 bottom space so their final content can be brought above it. Open conversations
 do not reserve space for the hidden dock.
 
+The status-area surface and native headers use the same solid Pana cream
+(`#fff7ec`). The website's directory masthead palette is scoped to the website,
+so it cannot tint the native app or results-sheet headers.
+
 These are deployed web changes, not a new APK requirement. Apply
 `drizzle/0073_event_bookmarks.sql` before deploying the Worker, then reload the
 app. Saving an event is a private bookmark, not an RSVP. Normal browsers keep
