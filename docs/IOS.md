@@ -59,6 +59,10 @@ the corresponding iPad screenshots.
   file picker, not a new native plugin, and discloses the existing shareable-media
   link model. Photos are re-encoded without camera metadata before uploading;
   photo/GIF drafts, failed uploads and retry remain scoped to their conversation.
+- While the iOS keyboard is open, the chat composer uses balanced 8px padding
+  rather than reserving the home-indicator inset above the keyboard. Dismissing
+  the keyboard restores the normal safe area; attachment and send controls
+  remain aligned with the growing input.
 - iOS offers email-link sign-in. Android's Google SDK is deliberately excluded
   from the iOS native package. Do not enable Google on iOS without implementing
   the corresponding Apple-compliant login options and configuring their credentials.
