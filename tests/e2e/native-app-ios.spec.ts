@@ -788,8 +788,50 @@ test('story captions stay inside the visible iOS viewport above the keyboard', a
       }),
     });
   });
+  await page.route('**/api/social/media', (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: {
+          type: 'image',
+          mediaType: 'image/png',
+          url: '/img/impact/zine-series.webp',
+          name: 'A story photo',
+        },
+      },
+    })
+  );
   await page.goto('/s');
+  const rail = page.getByRole('region', { name: 'Stories', exact: true });
+  await expect(rail.locator('.stories-rail-placeholder')).toHaveCount(4);
+  const ownerAvatar = await rail
+    .locator('[data-owner="true"] .stories-rail-avatar')
+    .boundingBox();
+  expect(ownerAvatar!.width).toBe(64);
+  expect(ownerAvatar!.height).toBe(64);
+  await page.screenshot({
+    path: test.info().outputPath('story-rail-ios-ghost-circles.png'),
+  });
   await page.getByRole('button', { name: 'Post a story' }).click();
+  const camera = page.getByRole('dialog', {
+    name: 'Story camera',
+    exact: true,
+  });
+  await expect(camera).toBeVisible();
+  const choosing = page.waitForEvent('filechooser');
+  await camera.getByRole('button', { name: 'Choose from gallery' }).click();
+  const chooser = await choosing;
+  await chooser.setFiles({
+    name: 'story.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
+      'base64'
+    ),
+  });
+  await expect(
+    page.getByRole('button', { name: 'Post story', exact: true })
+  ).toBeEnabled();
   const caption = page.getByRole('textbox', { name: 'Caption' });
   await caption.focus();
   await page.evaluate(() => {
