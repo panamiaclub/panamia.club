@@ -7,6 +7,7 @@
  * tapping can be gathered in advance -- everywhere else a ring is incidental
  * to a row that exists for another reason. It shows the viewer's own circle
  * first, then only the panas they follow who actually have something to watch.
+ * Empty slots are decorative circles, never fake people or watch buttons.
  *
  * Which panas those are is decided here rather than by the rings. StoryRing
  * renders a plain avatar when there is nothing to watch, so handing it every
@@ -29,6 +30,7 @@ import type { SocialActor } from '@/lib/schema';
    this point lose their ring in the strip, not their story -- it is still on
    their profile and in the feed. */
 const FOLLOW_SCAN_LIMIT = 50;
+const OTHER_STORY_SLOTS = 4;
 
 function initials(actor: Pick<SocialActor, 'name' | 'username'>): string {
   const source = actor.name || actor.username || '';
@@ -92,6 +94,7 @@ export function StoriesRail({ actor }: { actor: SocialActor | null }) {
   if (!actor) return null;
 
   const empty = live.length === 0;
+  const ghostCount = Math.max(0, OTHER_STORY_SLOTS - live.length);
 
   return (
     <section className="stories-rail" data-empty={empty} aria-label="Stories">
@@ -99,7 +102,7 @@ export function StoriesRail({ actor }: { actor: SocialActor | null }) {
         {/* The viewer's own circle. StoryRing already answers both states from
             the summary it fetches -- the add button when there is nothing up,
             the ring when there is -- so this does not duplicate that logic. */}
-        <li className="stories-rail-item">
+        <li className="stories-rail-item" data-owner="true">
           <span className="stories-rail-slot">
             <StoryRing username={actor.username} size="sm">
               <Avatar className="stories-rail-avatar">
@@ -108,14 +111,8 @@ export function StoriesRail({ actor }: { actor: SocialActor | null }) {
               </Avatar>
             </StoryRing>
           </span>
-          <div className={empty ? 'min-w-0 space-y-1' : 'contents'}>
-            <span className="stories-rail-label">Your story</span>
-            {empty && (
-              <p className="stories-rail-note">
-                A little moment from your day.
-              </p>
-            )}
-          </div>
+          <span className="stories-rail-label">Your story</span>
+          {empty && <p className="sr-only">A little moment from your day.</p>}
         </li>
 
         {live.map((pana) => (
@@ -137,13 +134,20 @@ export function StoriesRail({ actor }: { actor: SocialActor | null }) {
             </span>
           </li>
         ))}
+        {Array.from({ length: ghostCount }, (_, index) => (
+          <li
+            key={`empty-story-${index}`}
+            className="stories-rail-item stories-rail-placeholder"
+            aria-hidden="true"
+          >
+            <span className="stories-rail-slot">
+              <span className="stories-rail-ghost" />
+            </span>
+          </li>
+        ))}
       </ul>
 
-      {empty && (
-        <span className="text-pana-ink/60 hidden flex-none text-[10px] font-semibold sm:block">
-          Here for 24 hours
-        </span>
-      )}
+      {empty && <p className="sr-only">Stories stay here for 24 hours.</p>}
     </section>
   );
 }

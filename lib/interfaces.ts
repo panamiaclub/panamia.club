@@ -132,6 +132,7 @@ export interface ProfileInterface {
   /** Hex x-only Nostr pubkey, set once the profile completes relay enrollment. */
   nostrPubkey?: string;
   active?: boolean;
+  lastReviewedAt?: string | null;
   /**
    * True for an online business without a public storefront. Suppresses exact
    * distance and directions; the directory may show its approximate base ZIP.
@@ -169,6 +170,7 @@ export interface ProfileInterface {
   addressLocality?: string | null;
   addressRegion?: string | null;
   addressPostalCode?: string | null;
+  addressCountry?: string | null;
   addressHours?: string | null;
   addressLat?: string | null;
   addressLng?: string | null;

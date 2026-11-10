@@ -12,6 +12,49 @@ import {
   searchParamsToString,
   type DirectorySearchParams,
 } from '../lib/query/directory';
+import { getDirectorySearchParams } from '../app/directory/search/_lib/search-params';
+
+describe('viewport-based directory parameters', () => {
+  it('ignores every legacy radius without losing the supported filters', () => {
+    for (const radius of ['5', '10', '25', '50', 'all', 'invalid', '']) {
+      const params = getDirectorySearchParams(
+        new URLSearchParams(
+          `radius=${radius}&fcat=food%2Bart&sort=name&certified=true&events=true`
+        ),
+        'coffee'
+      );
+      assert.equal(params.radius, 'all');
+      assert.equal(params.searchTerm, 'coffee');
+      assert.equal(params.filterCategories, 'food+art');
+      assert.equal(params.sort, 'name');
+      assert.equal(params.certifiedOnly, true);
+      assert.equal(params.withEventsOnly, true);
+    }
+    assert.equal(getDirectorySearchParams(new URLSearchParams()).radius, 'all');
+  });
+
+  it('requests all areas before and after location sharing, for list and map queries', () => {
+    const params = getDirectorySearchParams(
+      new URLSearchParams('radius=5&sort=nearest')
+    );
+    for (const resultsView of [undefined, 'map'] as const) {
+      for (const geolat of [0, 25.761689]) {
+        const query = new URLSearchParams(
+          searchParamsToString({
+            ...params,
+            sort: 'nearest',
+            resultsView,
+            geolat,
+            geolng: geolat ? -80.191788 : 0,
+          })
+        );
+        assert.equal(query.get('radius'), 'all');
+        assert.equal(query.get('geolat'), geolat ? '25.76' : null);
+        assert.equal(query.get('geolng'), geolat ? '-80.19' : null);
+      }
+    }
+  });
+});
 
 describe('directory radius parsing', () => {
   it('accepts only the public radius options', () => {
@@ -88,5 +131,18 @@ describe('directory radius query encoding', () => {
     assert.equal(query.get('radius'), 'all');
     assert.equal(query.has('geolat'), false);
     assert.equal(query.has('geolng'), false);
+  });
+
+  it('distinguishes complete-map requests without changing their filters', () => {
+    const list = new URLSearchParams(searchParamsToString(base));
+    const map = new URLSearchParams(
+      searchParamsToString({ ...base, resultsView: 'map' })
+    );
+    assert.equal(map.get('v'), 'map');
+    assert.equal(map.get('mapVersion'), '2');
+    assert.equal(list.has('v'), false);
+    map.delete('v');
+    map.delete('mapVersion');
+    assert.equal(map.toString(), list.toString());
   });
 });

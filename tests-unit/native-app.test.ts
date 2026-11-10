@@ -3,10 +3,12 @@ import { describe, it } from 'node:test';
 import {
   NATIVE_TABS,
   nativeDeepLinkTarget,
+  nativeHeaderForPath,
   nativeRootForPath,
   usesNativeAppLayout,
 } from '@/lib/mobile/app-navigation';
 import {
+  matchesNativeVisit,
   nativeBusiness,
   nativeCalendarEvent,
   nativeCoords,
@@ -18,7 +20,9 @@ import {
 } from '@/lib/mobile/browse';
 import {
   nativePreviewHeight,
+  nativePreviewRange,
   nativeSheetHeights,
+  nativeSheetStopForDrag,
 } from '@/lib/mobile/map-sheet';
 import { getDirectorySearchParams } from '@/app/directory/search/_lib/search-params';
 import {
@@ -99,6 +103,74 @@ const group: GroupSearchSummary = {
 };
 
 describe('native navigation', () => {
+  it('keeps only Back in the Messages header, including nested message routes', () => {
+    for (const pathname of ['/messages', '/messages/', '/messages/thread']) {
+      assert.deepEqual(nativeHeaderForPath(pathname, '/p/viewer'), {
+        showBack: true,
+        showMessages: false,
+      });
+    }
+  });
+
+  it('treats the personal Profile destination and Account aliases as header roots without hiding their content', () => {
+    for (const pathname of [
+      '/p/viewer',
+      '/account',
+      '/account/user',
+      '/account/user/edit',
+    ]) {
+      assert.deepEqual(nativeHeaderForPath(pathname, '/p/viewer'), {
+        showBack: false,
+        showMessages: true,
+      });
+      assert.equal(nativeRootForPath(pathname), null);
+    }
+    assert.equal(
+      nativeHeaderForPath('/p/mar%C3%ADa', '/p/mar%C3%ADa').showBack,
+      false
+    );
+    assert.equal(nativeHeaderForPath('/account', '/account').showBack, false);
+  });
+
+  it('retains Back on nested settings, other profiles and real detail pages', () => {
+    for (const pathname of [
+      '/account/privacy',
+      '/account/profile/edit',
+      '/account/user/notifications',
+      '/form/delete-account',
+      '/p/someone-else',
+      '/p/viewer/post',
+      '/e/coffee',
+      '/g/garden/chat',
+    ]) {
+      assert.deepEqual(nativeHeaderForPath(pathname, '/p/viewer'), {
+        showBack: true,
+        showMessages: true,
+      });
+    }
+  });
+
+  it('does not hide controls for similarly prefixed routes or add Back to retained root tabs', () => {
+    assert.equal(
+      nativeHeaderForPath('/messages-archive', '/p/viewer').showMessages,
+      true
+    );
+    assert.equal(
+      nativeHeaderForPath('/p/viewer-other', '/p/viewer').showBack,
+      true
+    );
+    for (const pathname of ['/d', '/s', '/groups']) {
+      assert.deepEqual(nativeHeaderForPath(pathname, '/p/viewer'), {
+        showBack: false,
+        showMessages: true,
+      });
+    }
+    assert.equal(
+      nativeHeaderForPath('/', '/p/viewer', 'social').showBack,
+      false
+    );
+  });
+
   it('opens the main app in Directory with the approved tab order', () => {
     assert.deepEqual(
       NATIVE_TABS.map(({ id }) => id),
@@ -140,6 +212,8 @@ describe('native navigation', () => {
       '/g/coffee',
       '/groups/new',
       '/account',
+      '/account/privacy',
+      '/form/delete-account',
     ]) {
       assert.equal(nativeRootForPath(path), null, path);
       assert.equal(usesNativeAppLayout(path), true, path);
@@ -198,6 +272,64 @@ describe('native navigation', () => {
 });
 
 describe('native data models', () => {
+  it('filters Visit using declared online-only status, not coordinates or ZIP placement', () => {
+    const area = {
+      postalCode: '33138',
+      country: 'US' as const,
+      city: 'Miami',
+      region: 'FL',
+      lat: 25.8521,
+      lng: -80.1821,
+    };
+    const listings: SearchResultsInterface[] = [
+      { ...business, _id: 'physical', online_only: false },
+      { ...business, _id: 'unlocated-physical', geo: null },
+      {
+        ...business,
+        _id: 'approximate-physical',
+        geo: null,
+        online_only: false,
+        primary_address: { city: 'Miami', zipcode: '33138' },
+        zip_area: area,
+      },
+      {
+        ...business,
+        _id: 'private-online',
+        online_only: true,
+        primary_address: { city: 'Miami', zipcode: '33138' },
+        online_zip: area,
+      },
+      {
+        ...business,
+        _id: 'unlocated-online',
+        geo: null,
+        online_only: true,
+      },
+    ];
+    const ids = (visit: Parameters<typeof matchesNativeVisit>[1]) =>
+      listings
+        .filter((item) => matchesNativeVisit(item, visit))
+        .map((item) => item._id);
+    assert.deepEqual(
+      ids('both'),
+      listings.map((item) => item._id)
+    );
+    assert.deepEqual(ids('in-person'), [
+      'physical',
+      'unlocated-physical',
+      'approximate-physical',
+    ]);
+    assert.deepEqual(ids('online'), ['private-online', 'unlocated-online']);
+    const online = listings
+      .filter((item) => matchesNativeVisit(item, 'online'))
+      .map(nativeBusiness);
+    assert.ok(online.every((item) => item.coords === null));
+    assert.deepEqual(
+      nativeMapPins(online).map((pin) => pin.coords),
+      [{ lat: area.lat, lng: area.lng }]
+    );
+  });
+
   it('validates actual coordinates without making up fallback positions', () => {
     assert.deepEqual(nativeCoords('25.76', '-80.19'), {
       lat: 25.76,
@@ -273,6 +405,39 @@ describe('native data models', () => {
     ]);
     assert.equal(defensive.length, 1);
     assert.deepEqual(defensive[0].coords, zip.coords);
+  });
+
+  it('keeps ZIP-only businesses approximate without classifying them as online', () => {
+    const area = {
+      postalCode: '33138',
+      country: 'US' as const,
+      city: 'Miami',
+      region: 'FL',
+      lat: 25.8521,
+      lng: -80.1821,
+    };
+    const zipOnly = nativeBusiness({
+      ...business,
+      geo: null,
+      online_only: false,
+      primary_address: { city: 'Miami', zipcode: '33138' },
+      zip_area: area,
+    });
+    assert.deepEqual(zipOnly.coords, { lat: area.lat, lng: area.lng });
+    assert.match(zipOnly.location, /Approximate ZIP 33138 area/);
+    assert.equal(zipOnly.zipArea, null);
+    assert.deepEqual(zipOnly.approximateZip, area);
+    const online = nativeBusiness({
+      ...business,
+      _id: 'online',
+      online_only: true,
+      primary_address: { zipcode: '33138' },
+      online_zip: area,
+    });
+    const pins = nativeMapPins([zipOnly, online]);
+    assert.equal(pins.length, 2);
+    assert.equal(pins.filter((pin) => pin.zipArea).length, 1);
+    assert.equal(pins.find((pin) => !pin.zipArea)?.items[0], zipOnly);
   });
 
   it('uses the real event venue, event timezone, attendance and detail page', () => {
@@ -358,6 +523,7 @@ describe('shared URL parsing and measured map sheet', () => {
     assert.equal(params.languages, 'es');
     assert.equal(params.freeOnly, true);
     assert.equal(params.sort, 'name');
+    assert.equal(params.radius, 'all');
     assert.equal(params.certifiedOnly, true);
     assert.equal(params.withEventsOnly, true);
     assert.equal(params.view, 'map');
@@ -368,25 +534,35 @@ describe('shared URL parsing and measured map sheet', () => {
   });
 
   it('keeps exact viewer location off directory request URLs', () => {
-    const params = getDirectorySearchParams(new URLSearchParams());
+    const params = getDirectorySearchParams(new URLSearchParams('radius=5'));
     const query = new URLSearchParams(
       searchParamsToString({
         ...params,
         sort: 'nearest',
-        radius: 'all',
         geolat: 25.761689,
         geolng: -80.191788,
       })
     );
     assert.equal(query.get('geolat'), '25.76');
     assert.equal(query.get('geolng'), '-80.19');
+    assert.equal(query.get('radius'), 'all');
   });
 
-  it('fits a selected card with exactly twelve pixels above and below', () => {
+  it('fits the measured preview span with twelve pixels above and below', () => {
     assert.equal(nativePreviewHeight(600, 48, 160), 232);
     assert.equal(nativePreviewHeight(142, 30, 78), 132);
     assert.equal(nativePreviewHeight(80, 30, 78), 80);
     assert.equal(nativePreviewHeight(0, 48, 160), 0);
+  });
+
+  it('selects up to two adjacent profiles without changing listing order', () => {
+    assert.deepEqual(nativePreviewRange(9, 0), { start: 0, end: 2 });
+    assert.deepEqual(nativePreviewRange(9, 4), { start: 4, end: 6 });
+    assert.deepEqual(nativePreviewRange(9, 8), { start: 7, end: 9 });
+    assert.deepEqual(nativePreviewRange(1, 0), { start: 0, end: 1 });
+    assert.deepEqual(nativePreviewRange(0, -1), { start: 0, end: 0 });
+    assert.deepEqual(nativePreviewRange(9, -1), { start: 0, end: 2 });
+    assert.deepEqual(nativePreviewRange(9, 8, 1), { start: 8, end: 9 });
   });
 
   it('orders sheet stops and stays within available height, including landscape', () => {
@@ -398,5 +574,54 @@ describe('shared URL parsing and measured map sheet', () => {
     }
     assert.equal(nativeSheetHeights(142, 106).expanded, 142);
     assert.equal(nativeSheetHeights(600, 106).expanded, 486);
+    assert.equal(nativeSheetHeights(600, 106).peek, 54);
+  });
+
+  it('advances a sheet stop for short deliberate swipes in either direction', () => {
+    const heights = nativeSheetHeights(721, 106);
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.peek, heights.peek + 23),
+      'peek'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.peek, heights.peek + 24),
+      'half'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.half, heights.half + 24),
+      'expanded'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.expanded, heights.expanded - 24),
+      'half'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.half, heights.half - 24),
+      'peek'
+    );
+  });
+
+  it('still follows long drags and never snaps beyond the available stops', () => {
+    const heights = nativeSheetHeights(721, 106);
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.peek, heights.expanded),
+      'expanded'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.expanded, heights.peek),
+      'peek'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.peek, heights.peek),
+      'peek'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(heights, heights.expanded, heights.expanded),
+      'expanded'
+    );
+    assert.equal(
+      nativeSheetStopForDrag(nativeSheetHeights(0, 106), 0, 0),
+      'peek'
+    );
   });
 });

@@ -1,4 +1,6 @@
 .app {
+  --native-dock-space: calc(58px + max(8px, env(safe-area-inset-bottom)) + 8px);
+  --native-scroll-space: var(--native-dock-space);
   position: fixed;
   inset: 0;
   display: flex;
@@ -8,6 +10,25 @@
     env(safe-area-inset-left);
   background: var(--color-pana-cream, #fff7ec);
   color: var(--color-pana-ink, #110d0d);
+}
+
+:global(html[data-native-platform='ios']) .app {
+  top: var(--native-viewport-top, 0px);
+  bottom: auto;
+  height: var(--native-viewport-height, 100dvh);
+}
+
+:global(html[data-native-platform='ios'][data-native-keyboard]) .bottomNav,
+:global(html[data-native-platform='ios'][data-native-keyboard]) .filterRow {
+  display: none;
+}
+
+:global(html[data-native-platform='ios'][data-native-keyboard]) .app {
+  --native-dock-space: 8px;
+}
+
+.app[data-native-conversation] {
+  --native-scroll-space: 0px;
 }
 
 .app [hidden] {
@@ -21,34 +42,51 @@
 
 .header {
   z-index: 60;
-  display: flex;
+  display: grid;
   flex: none;
+  grid-template-columns: 92px minmax(0, 1fr) 92px;
   align-items: center;
-  gap: 8px;
-  min-height: 58px;
-  padding: 5px 12px;
+  gap: 0;
+  height: 52px;
+  min-height: 52px;
+  padding: 3px 8px;
   border-bottom: 1px solid rgb(17 13 13 / 0.1);
   background: var(--color-pana-cream);
 }
 
 .brand {
   display: inline-flex;
-  flex: 1;
   align-items: center;
+  justify-content: center;
   min-width: 0;
+  min-height: 44px;
 }
 
 .brand img {
-  width: 128px;
-  height: 32px;
+  width: 160px;
+  max-width: 100%;
+  height: 35px;
   object-fit: contain;
-  object-position: left;
+  object-position: center;
 }
 
+.headerLeading,
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
+  min-width: 0;
+}
+
+.headerActions {
+  justify-content: flex-end;
+}
+
+.headerLeading > :where(a, button),
+.headerActions :global(button[aria-haspopup='menu']) {
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .iconButton,
@@ -81,17 +119,38 @@
   height: 100%;
   overflow: auto;
   overscroll-behavior: contain;
+  padding-bottom: var(--native-scroll-space);
+  scroll-padding-bottom: var(--native-scroll-space);
 }
 
 .bottomNav {
+  position: absolute;
   z-index: 40;
+  right: calc(11px + env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  left: calc(11px + env(safe-area-inset-left));
   display: grid;
   flex: none;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
-  padding: 5px 8px max(5px, env(safe-area-inset-bottom));
-  border-top: 1px solid rgb(17 13 13 / 0.12);
-  background: var(--color-pana-cream);
+  gap: 3px;
+  height: 58px;
+  margin: 0;
+  padding: 4px 6px;
+  border: 1px solid rgb(17 13 13 / 0.15);
+  border-radius: 34px;
+  background: rgb(255 247 236 / 0.95);
+  box-shadow: 0 5px 16px rgb(44 30 17 / 0.1);
+  backdrop-filter: blur(20px);
+}
+
+:global(html[data-native-platform='ios']) .chips button,
+:global(html[data-native-platform='ios']) .viewTabs > button {
+  min-height: 44px;
+}
+
+:global(html[data-native-platform='ios']) .locate {
+  width: 44px;
+  height: 44px;
 }
 
 .navItem {
@@ -99,11 +158,11 @@
   align-items: center;
   flex-direction: column;
   justify-content: center;
-  gap: 3px;
-  min-height: 54px;
-  border-radius: 13px;
+  gap: 1px;
+  min-height: 44px;
+  border-radius: 26px;
   color: rgb(17 13 13 / 0.62);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
 }
 
@@ -132,9 +191,9 @@
 .directoryControls {
   position: absolute;
   z-index: 30;
-  inset: 12px 12px auto;
+  inset: 8px 10px auto;
   display: grid;
-  gap: 8px;
+  gap: 3px;
 }
 
 .directory[data-controls-covered] .directoryControls {
@@ -146,8 +205,9 @@
   align-items: center;
   gap: 7px;
   min-width: 0;
-  min-height: 50px;
-  padding: 2px 6px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 4px;
   border: 1px solid rgb(17 13 13 / 0.14);
   border-radius: 25px;
   background: var(--color-pana-cream);
@@ -161,19 +221,206 @@
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 .search .iconButton {
-  width: 36px;
+  width: 44px;
 }
 
-.categoryRow {
-  display: flex;
-  align-items: center;
+.filterBoundary {
+  position: absolute;
+  inset: 0 10px var(--native-dock-space);
+  pointer-events: none;
+}
+
+.filterRow {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1.05fr 0.9fr;
   gap: 6px;
   min-width: 0;
+  height: 44px;
+}
+
+.filterRow :global(.dirsearch-menu) {
+  min-width: 0;
+}
+
+.filterRow :global(.dirsearch-filtertrigger) {
+  position: relative;
+  isolation: isolate;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  height: 44px;
+  min-width: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--color-pana-ink);
+  font-size: 11px;
+}
+
+.filterRow :global(.dirsearch-filtertrigger)::before {
+  position: absolute;
+  z-index: -1;
+  inset: 6px 0;
+  border: 1px solid rgb(17 13 13 / 0.17);
+  border-radius: 999px;
+  background: var(--color-pana-cream);
+  content: '';
+}
+
+.filterRow :global(.dirsearch-filtertrigger[data-on='true']) {
+  background: transparent;
+  color: var(--color-pana-indigo);
+}
+
+.filterRow :global(.dirsearch-filtertrigger[data-on='true'])::before {
+  border-color: rgb(48 62 140 / 0.45);
+  background: #f0eef8;
+}
+
+.filterRow :global(.dirsearch-filtertrigger[aria-expanded='true'])::before {
+  border-color: var(--color-pana-indigo);
+  box-shadow: 0 0 0 1px var(--color-pana-indigo);
+}
+
+.filterRow :global(.dirsearch-filtertrigger:focus-visible) {
+  outline: 0;
+}
+
+.filterRow :global(.dirsearch-filtertrigger:focus-visible)::before {
+  outline: 2px solid var(--color-pana-indigo);
+  outline-offset: 2px;
+}
+
+.filterRow :global(.dirsearch-menuname) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filterRow :global(.dirsearch-filtertrigger > svg) {
+  width: 11px;
+  height: 11px;
+}
+
+.filterRow :global(.dirsearch-menucount) {
+  display: grid;
+  flex: none;
+  place-items: center;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--color-pana-indigo);
+  color: var(--color-pana-cream);
+  font-size: 8px;
+}
+
+.filterRow :global(.dirsearch-filterpanel) {
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100cqw - 20px);
+  overflow: hidden;
+  padding: 6px;
+  border: 1px solid rgb(17 13 13 / 0.17);
+  border-radius: 18px;
+  background: var(--color-pana-cream);
+}
+
+.filterRow :global(.dirsearch-menucaption) {
+  flex: none;
+  padding: 5px 8px 8px;
+}
+
+.filterRow :global(.dirsearch-menucaption strong) {
+  color: var(--color-pana-ink);
+  font-size: 14px;
+}
+
+.filterRow :global(.dirsearch-menucaption span) {
+  display: block;
+  margin-top: 5px;
+}
+
+.filterRow :global(.dirsearch-menucontent) {
+  min-height: 0;
+  overflow-y: auto;
+  scroll-padding-block: 5px;
+  scrollbar-width: thin;
+}
+
+.filterRow :global(.dirsearch-menulist) {
+  overflow: visible;
+  padding: 5px;
+}
+
+.filterRow :global(.dirsearch-menulist:has([role='menuitemcheckbox'])) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 4px;
+}
+
+.filterRow :global(.dirsearch-filterpanel:has([role='menuitemcheckbox'])) {
+  width: min(340px, calc(100cqw - 20px));
+}
+
+.filterRow :global(.dirsearch-filteroption) {
+  min-height: 44px;
+  padding: 7px;
+}
+
+.filterRow :global(.surface-option-name) {
+  font-size: 12px;
+}
+
+.filterRow :global(.surface-option-blurb) {
+  font-size: 11px;
+}
+
+.filterRow :global(.dirsearch-menufooter) {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid rgb(17 13 13 / 0.1);
+}
+
+.filterRow :global(.dirsearch-menufooter button) {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.filterRow :global(.dirsearch-menufooter button:first-child) {
+  color: var(--color-pana-burnt-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.filterRow :global(.dirsearch-menufooter button:last-child) {
+  min-width: 72px;
+  background: var(--color-pana-indigo);
+  color: var(--color-pana-cream);
+}
+
+@media (max-width: 350px) {
+  .filterRow {
+    gap: 5px;
+  }
+
+  .filterRow :global(.dirsearch-filtertrigger) {
+    gap: 3px;
+    padding-inline: 5px;
+    font-size: 10px;
+  }
 }
 
 .chips {
@@ -182,7 +429,7 @@
   gap: 7px;
   min-width: 0;
   overflow-x: auto;
-  padding: 3px 1px;
+  padding: 0 1px;
   scrollbar-width: none;
 }
 
@@ -192,36 +439,63 @@
 }
 
 .chips button {
+  position: relative;
   flex: none;
-  min-height: 34px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 6px 12px;
-  border: 1px solid rgb(17 13 13 / 0.17);
+  border: 0;
   border-radius: 20px;
-  background: var(--color-pana-cream);
+  background: transparent;
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
 }
 
+.chips button::before {
+  position: absolute;
+  z-index: -1;
+  inset: 6px 0;
+  border: 1px solid rgb(17 13 13 / 0.17);
+  border-radius: 999px;
+  background: var(--color-pana-cream);
+  content: '';
+}
+
+.chips button {
+  isolation: isolate;
+}
+
 .chips button[aria-pressed='true'] {
-  border-color: var(--color-pana-ink);
-  background: var(--color-pana-ink);
   color: var(--color-pana-cream);
 }
 
-.categoryRow .chips {
-  flex: 1;
+.chips button[aria-pressed='true']::before {
+  border-color: var(--color-pana-ink);
+  background: var(--color-pana-ink);
 }
 
 .locate {
-  width: 38px;
-  height: 38px;
-  border: 1px solid rgb(17 13 13 / 0.15);
-  background: var(--color-pana-cream);
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+}
+
+.search .locate::before {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 1px;
+  background: rgb(17 13 13 / 0.14);
+  content: '';
 }
 
 .locate[aria-pressed='true'] {
-  background: var(--color-pana-orange);
+  color: var(--color-pana-burnt-deep);
+  background: rgb(238 135 61 / 0.16);
 }
 
 .mapPane,
@@ -230,6 +504,7 @@
   inset: 0;
 }
 
+/* The dock and results sheet overlay this fixed-size map. */
 .mapViewport {
   position: absolute;
   inset: 0;
@@ -244,32 +519,15 @@
   height: 100%;
 }
 
-.mapResults :global(.maplibregl-ctrl-top-left) {
-  top: 72px;
+.mapViewport :global(.maplibregl-ctrl-bottom-left),
+.mapViewport :global(.maplibregl-ctrl-bottom-right) {
+  bottom: calc(var(--native-dock-space) + var(--native-sheet-height, 54px));
 }
 
-.mapResults[data-map-results='Directory'] :global(.maplibregl-ctrl-top-left) {
-  top: 112px;
-}
-
-.mapResults :global(.maplibregl-ctrl-group button) {
-  width: 36px;
-  height: 36px;
-}
-
-.offMap {
-  position: absolute;
-  right: 8px;
-  bottom: 28px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  max-width: calc(100% - 64px);
-  padding: 5px 8px;
-  border-radius: 10px;
-  background: rgb(255 247 236 / 0.96);
-  font-size: 10px;
-  font-weight: 800;
+.mapViewport :global(.dirsearch-zip-attribution) {
+  bottom: calc(
+    var(--native-dock-space) + var(--native-sheet-height, 54px) + 0.3rem
+  );
 }
 
 .pin {
@@ -289,29 +547,32 @@
   border-color: var(--color-pana-pink);
 }
 
-.pin[data-online-zip] {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: auto;
-  min-width: 112px;
-  min-height: 44px;
-  padding: 6px 10px;
-  border: 2px solid var(--color-pana-indigo);
-  border-radius: 999px;
-  background: white;
-  color: var(--color-pana-indigo);
-  font-size: 12px;
+.pin[data-approximate] {
+  border-style: dashed;
 }
 
-.pin[data-online-zip] strong {
+.pin[data-online-zip] {
   display: grid;
-  place-items: center;
-  min-width: 22px;
-  height: 22px;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  font-size: 11px;
+  width: auto;
+  min-width: 64px;
+  height: 44px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-pana-indigo);
+  box-shadow: none;
+}
+
+.pin[data-online-zip][aria-pressed='true'],
+.pin[data-online-zip]:focus-visible {
+  outline: none;
+}
+
+.pin[data-online-zip][aria-pressed='true'] :global(.dirsearch-zip-label),
+.pin[data-online-zip]:focus-visible :global(.dirsearch-zip-label) {
+  outline: 2px solid var(--color-pana-indigo);
+  outline-offset: 2px;
 }
 
 .pin[aria-pressed='true'] {
@@ -320,13 +581,17 @@
 }
 
 .pin img {
+  /* Intrinsic image height must not enlarge the marker's grid track. */
+  position: absolute;
+  inset: 0;
+  display: block;
   width: 100%;
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
 }
 
-.pin > span {
+.pinCount {
   position: absolute;
   top: -7px;
   right: -7px;
@@ -345,34 +610,48 @@
 .sheet {
   position: absolute;
   z-index: 20;
-  inset: auto 0 0;
+  right: 8px;
+  bottom: var(--native-dock-space);
+  left: 8px;
   display: flex;
   flex-direction: column;
+  height: var(--native-sheet-height, 54px);
   overflow: hidden;
   border: 1px solid rgb(17 13 13 / 0.13);
-  border-bottom: 0;
-  border-radius: 22px 22px 0 0;
+  border-radius: 22px;
   background: var(--color-pana-cream);
   box-shadow: 0 -4px 20px rgb(17 13 13 / 0.12);
 }
 
 .sheetHeader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex: none;
-  padding: 0 13px;
+  height: 52px;
+  padding: 6px 4px 0 14px;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
 }
 
 .sheetHandle {
   display: grid;
   place-items: center;
-  width: 100%;
-  height: 20px;
+  flex: none;
+  width: 44px;
+  height: 44px;
   cursor: ns-resize;
   touch-action: none;
 }
 
-.sheetHandle span {
-  width: 38px;
-  height: 4px;
+.sheetGrip {
+  position: absolute;
+  top: 5px;
+  left: calc(50% - 15px);
+  width: 30px;
+  height: 3px;
   border-radius: 4px;
   background: rgb(17 13 13 / 0.24);
 }
@@ -380,22 +659,63 @@
 .sheetHeading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
   min-height: 30px;
 }
 
 .sheetHeading h2 {
-  font-size: 13px;
+  overflow: hidden;
+  font-size: 14px;
   font-weight: 900;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.sheetHeading button {
-  min-height: 30px;
-  padding: 2px 6px;
-  font-size: 12px;
-  font-weight: 900;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.sheetMapCount {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 4px;
+  padding-left: 12px;
+  border-left: 1px solid rgb(17 13 13 / 0.15);
+  color: var(--color-pana-indigo);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.sheetContent {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sheet[data-collapsed='true'] .sheetContent {
+  visibility: hidden;
+}
+
+.sheetCollections {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  padding: 0 12px 8px;
+  border-bottom: 1px solid rgb(17 13 13 / 0.1);
+}
+
+.sheetCollections button {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.sheetCollections button[aria-selected='true'] {
+  background: #eaeaf0;
+  color: var(--color-pana-indigo);
 }
 
 .sheetList {
@@ -409,6 +729,31 @@
   padding: 12px;
 }
 
+.resultSection {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.resultSection + .resultSection {
+  margin-top: 12px;
+  padding-top: 20px;
+  border-top: 1px solid rgb(17 13 13 / 0.18);
+}
+
+.resultSection h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.resultSectionCopy {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .card {
   position: relative;
   min-width: 0;
@@ -419,8 +764,33 @@
 }
 
 .card[data-selected] {
-  border-color: var(--color-pana-orange);
-  box-shadow: inset 0 0 0 1px var(--color-pana-orange);
+  border-color: var(--color-pana-indigo);
+  background: #fff1db;
+  box-shadow: inset 3px 0 var(--color-pana-indigo);
+}
+
+.mapResults .cardLink {
+  min-height: 88px;
+}
+
+.mapResults .cardImage {
+  width: 64px;
+  height: 64px;
+  min-height: 64px;
+  margin: 10px 0 10px 10px;
+}
+
+.mapResults .cardBody {
+  gap: 2px;
+  padding: 9px 10px;
+}
+
+.mapResults .cardTitle {
+  font-size: 13px;
+}
+
+.mapResults .cardDescription {
+  font-size: 11px;
 }
 
 .cardLink {
@@ -613,19 +983,6 @@
   font-weight: 900;
 }
 
-.filtersDialog {
-  max-height: 85dvh;
-  overflow-y: auto;
-}
-
-.filtersDialog > label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 700;
-}
-
 .community {
   max-width: 900px;
   margin: 0 auto;
@@ -798,39 +1155,12 @@
   padding: 0 12px;
 }
 
-.app :global(.native-feed-filters) {
-  position: sticky;
-  z-index: 10;
-  top: 0;
-  margin: 0 -12px 12px;
-  padding: 0 12px;
-  background: var(--color-pana-cream);
-}
-
-.app :global(.native-feed-filters .profile-tabs) {
-  display: flex;
-}
-
-.app :global(.native-feed-filters .profile-tab) {
-  flex: 1;
-  min-height: 44px;
-  padding-inline: 5px;
-  font-size: 13px;
-  text-align: center;
-}
-
-.mapResults[data-short='true'] .sheetHandle {
-  height: 10px;
-}
-
-.mapResults[data-short='true'] .sheetHeading,
-.mapResults[data-short='true'] .sheetHeading button {
-  min-height: 22px;
-  font-size: 11px;
-}
-
 .mapResults[data-short='true'] .cardLink {
   min-height: 64px;
+}
+
+.mapResults[data-short='true'] .sheet[data-preview='true'] .sheetCollections {
+  display: none;
 }
 
 .mapResults[data-short='true'] .cardImage {
@@ -872,22 +1202,43 @@
   }
 }
 
+@container (min-width: 600px) and (max-height: 230px) {
+  .directoryControls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .filterRow :global(.dirsearch-filterpanel) {
+    padding: 4px;
+  }
+
+  .filterRow :global(.dirsearch-menucaption) {
+    padding: 0 6px 4px;
+    line-height: 1.2;
+  }
+
+  .filterRow :global(.dirsearch-menufooter) {
+    margin-top: 2px;
+    padding-top: 0;
+  }
+
+  .filterRow :global(.dirsearch-filteroption) {
+    padding: 4px 7px;
+  }
+
+  .filterRow :global(.surface-option-name) {
+    line-height: 1.25;
+  }
+
+  .filterRow :global(.surface-option-blurb) {
+    font-size: 10px;
+    line-height: 1.1;
+  }
+}
+
 @media (max-height: 480px) {
-  .categoryRow {
-    display: none;
-  }
-
-  .header {
-    min-height: 44px;
-    padding-block: 0;
-  }
-
-  .bottomNav {
-    padding-top: 2px;
-  }
-
   .navItem {
-    min-height: 43px;
+    min-height: 44px;
     gap: 1px;
     font-size: 10px;
   }

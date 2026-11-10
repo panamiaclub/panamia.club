@@ -23,6 +23,7 @@ let follows: typeof import('@/lib/federation/wrappers/follow');
 let me: typeof import('../app/api/social/actors/me/route');
 let followRoute: typeof import('../app/api/social/actors/[username]/follow/route');
 let screennameRoute: typeof import('../app/api/user/screenname/set/route');
+let screennameCheckRoute: typeof import('../app/api/user/screenname/check/route');
 let activeProfile: typeof import('@/lib/server/active-profile');
 let gate: typeof import('@/components/social/SocialEligibilityGate');
 let NextRequest: typeof import('next/server').NextRequest;
@@ -135,6 +136,7 @@ before(async () => {
   followRoute =
     await import('../app/api/social/actors/[username]/follow/route');
   screennameRoute = await import('../app/api/user/screenname/set/route');
+  screennameCheckRoute = await import('../app/api/user/screenname/check/route');
   gate = await import('@/components/social/SocialEligibilityGate');
   ({ NextRequest } = await import('next/server'));
 });
@@ -204,6 +206,12 @@ function claim(screenname = 'viewer-new') {
       body: JSON.stringify({ screenname, name: 'Viewer' }),
     })
   );
+}
+
+function checkHandle(screenname: string) {
+  const url = new URL(`https://${domain}/api/user/screenname/check`);
+  url.searchParams.set('name', screenname);
+  return screennameCheckRoute.GET(new NextRequest(url));
 }
 
 function gateMarkup() {
@@ -401,6 +409,139 @@ test('choosing a first handle makes a new member followable immediately', async 
   assert.ok(actor);
   assert.equal(actor.domain, domain);
   assert.equal(actor.username, 'viewer-new');
+});
+
+test('a brand-new account can replace a taken handle and finish setup exactly once', async () => {
+  await db.delete(schema.profiles);
+  await db.update(schema.users).set({ screenname: null, name: null });
+  await member('existing-member', { handle: 'ana-taken' });
+  await db.insert(schema.screennameHistory).values({
+    userId: 'existing-member',
+    screenname: 'existing-retired',
+    redirectTo: 'ana-taken',
+  });
+
+  const taken = await checkHandle('  ANA-TAKEN  ');
+  assert.deepEqual(await taken.json(), {
+    available: false,
+    error: 'This screenname is already taken',
+  });
+  const rejected = await claim('  ANA-TAKEN  ');
+  assert.equal(rejected.status, 400);
+  assert.equal(
+    (await rejected.json()).error,
+    'This screenname is already taken'
+  );
+  const before = await db.query.users.findFirst({
+    where: eq(schema.users.id, 'viewer'),
+    with: { profile: true },
+  });
+  assert.equal(before?.screenname, null);
+  assert.equal(before?.profile, null);
+  assert.equal(generatedKeys, 0);
+
+  assert.deepEqual(await (await checkHandle('viewer-new')).json(), {
+    available: true,
+  });
+  assert.equal((await claim('  viewer-new  ')).status, 200);
+  const saved = await db.query.users.findFirst({
+    where: eq(schema.users.id, 'viewer'),
+    with: { profile: { with: { socialActor: true } } },
+  });
+  assert.equal(saved?.screenname, 'viewer-new');
+  assert.equal(saved?.name, 'Viewer');
+  assert.equal(saved?.lastScreennameChange, null);
+  assert.equal(saved?.profile?.name, 'Viewer');
+  assert.equal(saved?.profile?.screenname, 'viewer-new');
+  assert.equal(saved?.profile?.socialActor?.username, 'viewer-new');
+  assert.equal(saved?.profile?.socialActor?.profileId, saved?.profile?.id);
+  assert.equal(generatedKeys, 1);
+  assert.deepEqual(
+    await db
+      .select()
+      .from(schema.screennameHistory)
+      .where(eq(schema.screennameHistory.userId, 'viewer')),
+    []
+  );
+
+  assert.deepEqual(await (await checkHandle('viewer-new')).json(), {
+    available: true,
+  });
+  assert.equal((await claim()).status, 200);
+  assert.equal(generatedKeys, 1);
+  assert.equal((await db.select().from(schema.socialActors)).length, 1);
+});
+
+test('two new signups can recover when a handle is claimed after both availability checks', async () => {
+  await db.delete(schema.profiles);
+  await db.update(schema.users).set({ screenname: null, name: null });
+  await db.insert(schema.users).values({
+    id: 'second-signup',
+    email: 'second-signup@test.invalid',
+  });
+  const firstSession = session;
+  const secondSession = {
+    user: {
+      id: 'second-signup',
+      email: 'second-signup@test.invalid',
+      name: '',
+      isAdmin: false,
+    },
+  };
+
+  assert.deepEqual(await (await checkHandle('shared-choice')).json(), {
+    available: true,
+  });
+  session = secondSession;
+  assert.deepEqual(await (await checkHandle('shared-choice')).json(), {
+    available: true,
+  });
+
+  session = firstSession;
+  assert.equal((await claim('shared-choice')).status, 200);
+  session = secondSession;
+  const rejected = await claim('SHARED-CHOICE');
+  assert.equal(rejected.status, 400);
+  assert.equal(
+    (await rejected.json()).error,
+    'This screenname is already taken'
+  );
+  const unchanged = await db.query.users.findFirst({
+    where: eq(schema.users.id, 'second-signup'),
+    with: { profile: true },
+  });
+  assert.equal(unchanged?.screenname, null);
+  assert.equal(unchanged?.profile, null);
+
+  assert.equal((await claim('second-choice')).status, 200);
+  const saved = await db.query.users.findMany({
+    with: { profile: { with: { socialActor: true } } },
+    orderBy: schema.users.id,
+  });
+  assert.deepEqual(
+    saved.map((user) => ({
+      id: user.id,
+      handle: user.screenname,
+      profileHandle: user.profile?.screenname,
+      actorHandle: user.profile?.socialActor?.username,
+    })),
+    [
+      {
+        id: 'second-signup',
+        handle: 'second-choice',
+        profileHandle: 'second-choice',
+        actorHandle: 'second-choice',
+      },
+      {
+        id: 'viewer',
+        handle: 'shared-choice',
+        profileHandle: 'shared-choice',
+        actorHandle: 'shared-choice',
+      },
+    ]
+  );
+  assert.equal(generatedKeys, 2);
+  assert.deepEqual(await db.select().from(schema.screennameHistory), []);
 });
 
 test('retrying an unchanged handle repairs a missing actor without a rename', async () => {

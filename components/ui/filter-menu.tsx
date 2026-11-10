@@ -4,15 +4,20 @@ import { ChevronDown, Check } from 'lucide-react';
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  type RefObject,
 } from 'react';
+import { NATIVE_BACK_BUTTON_EVENT } from '@/lib/mobile/native';
 
 export interface FilterMenuOption {
   value: string;
   label: string;
+  /** A shorter selected label for compact triggers. */
+  triggerLabel?: string;
   /** Second line under the label, for options whose name is not self-evident. */
   hint?: string;
   /** Disables the row and explains why on hover. */
@@ -44,6 +49,14 @@ interface FilterMenuProps {
   defaultValue?: string;
   /** Shown above the options when the menu is open. */
   caption?: ReactNode;
+  /** Opt in to the masthead's cream surface primitives. */
+  appearance?: 'default' | 'surface';
+  /** A small pill face with a count for multi-select choices. */
+  compact?: boolean;
+  /** Adds Clear all / Done; choices stay open until explicitly dismissed. */
+  onClearAll?: () => void;
+  /** Usable overlay area, excluding native headers and the floating dock. */
+  boundaryRef?: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -89,24 +102,139 @@ export function FilterMenu({
   action = false,
   defaultValue,
   caption,
+  appearance = 'default',
+  compact = false,
+  onClearAll,
+  boundaryRef,
 }: FilterMenuProps) {
-  const closesOnPick = single || action;
+  const surface = appearance === 'surface';
+  const closesOnPick = (single || action) && !onClearAll;
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const initialFocus = useRef(0);
   const menuId = useId();
 
   const reachable = options.filter((option) => !option.disabledReason);
 
   useEffect(() => {
     if (!open) return;
-    function onPointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    function onPointerDown(event: PointerEvent) {
+      if (
+        event.target instanceof Node &&
+        !rootRef.current?.contains(event.target)
+      )
+        setOpen(false);
     }
-    document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
+    // Capture before a containing dialog handles Escape at the document.
+    function onEscape(event: KeyboardEvent) {
+      if (
+        event.key !== 'Escape' ||
+        !(event.target instanceof Node) ||
+        !rootRef.current?.contains(event.target)
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+    function onNativeBack(event: Event) {
+      if (event.defaultPrevented) return;
+      event.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+    document.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('keydown', onEscape, true);
+    window.addEventListener(NATIVE_BACK_BUTTON_EVENT, onNativeBack, true);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('keydown', onEscape, true);
+      window.removeEventListener(NATIVE_BACK_BUTTON_EVENT, onNativeBack, true);
+    };
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    itemRefs.current[initialFocus.current]?.focus({
+      preventScroll: Boolean(onClearAll),
+    });
+    if (!surface) return;
+    const root = rootRef.current;
+    const panel = panelRef.current;
+    // Dialogs lay these panels out in flow, inside their own scroll area.
+    if (!root || !panel || getComputedStyle(panel).position !== 'absolute')
+      return;
+
+    const place = () => {
+      const box = root.getBoundingClientRect();
+      const boundary = boundaryRef?.current?.getBoundingClientRect();
+      const gutter = boundary ? 0 : 16;
+      const gap = 8;
+      const bounds = boundary ?? {
+        left: 0,
+        top: 0,
+        right: window.innerWidth,
+        bottom: window.innerHeight,
+      };
+      const left = Math.max(
+        bounds.left + gutter,
+        Math.min(box.left, bounds.right - gutter - panel.offsetWidth)
+      );
+      const below = bounds.bottom - box.bottom - gap - gutter;
+      const above = box.top - gap - bounds.top - gutter;
+      const panelHeight =
+        panel.scrollHeight + panel.offsetHeight - panel.clientHeight;
+      const opensAbove = below < panelHeight && above > below;
+      // Short landscape views need to cover the search controls rather than
+      // leave no room for options between the trigger and the dock.
+      const overlay = boundary && Math.max(below, above) < 160;
+      const available = overlay
+        ? bounds.bottom - bounds.top
+        : opensAbove
+          ? above
+          : below;
+      const top = overlay
+        ? `${
+            Math.max(
+              bounds.top,
+              Math.min(
+                box.bottom + gap,
+                bounds.bottom - Math.min(panelHeight, available)
+              )
+            ) - box.top
+          }px`
+        : opensAbove
+          ? 'auto'
+          : 'calc(100% + 0.5rem)';
+      Object.assign(panel.style, {
+        left: `${left - box.left}px`,
+        top,
+        bottom: !overlay && opensAbove ? 'calc(100% + 0.5rem)' : 'auto',
+        maxHeight: `min(24rem, ${Math.max(0, available)}px)`,
+      });
+    };
+    place();
+    if (onClearAll)
+      itemRefs.current[initialFocus.current]?.scrollIntoView({
+        block: 'nearest',
+      });
+    const observer = new ResizeObserver(place);
+    observer.observe(root);
+    if (boundaryRef?.current) observer.observe(boundaryRef.current);
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    window.visualViewport?.addEventListener('resize', place);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+      window.visualViewport?.removeEventListener('resize', place);
+    };
+  }, [open, surface, boundaryRef, onClearAll]);
 
   const focusItem = (index: number) => {
     const bounded = (index + reachable.length) % reachable.length;
@@ -114,8 +242,8 @@ export function FilterMenu({
   };
 
   const openWith = (index: number) => {
+    initialFocus.current = index;
     setOpen(true);
-    window.requestAnimationFrame(() => focusItem(index));
   };
 
   const close = (refocus: boolean) => {
@@ -124,11 +252,11 @@ export function FilterMenu({
   };
 
   const toggle = (value: string) => {
-    if (closesOnPick) {
+    if (single || action) {
       onChange([value]);
       // A single-answer menu has nothing left to ask once answered, and an
       // action menu is already on its way somewhere else.
-      close(true);
+      if (closesOnPick) close(true);
       return;
     }
     onChange(
@@ -176,13 +304,6 @@ export function FilterMenu({
         event.preventDefault();
         focusItem(reachable.length - 1);
         break;
-      case 'Escape':
-        event.preventDefault();
-        close(true);
-        break;
-      case 'Tab':
-        setOpen(false);
-        break;
       default:
         break;
     }
@@ -205,20 +326,54 @@ export function FilterMenu({
     !(single && defaultValue !== undefined && selected[0] === defaultValue);
 
   return (
-    <div className="dirsearch-menu" ref={rootRef}>
+    <div
+      className="dirsearch-menu"
+      ref={rootRef}
+      onKeyDown={(event) => {
+        if (open && !onClearAll && event.key === 'Tab') setOpen(false);
+      }}
+      onBlur={(event) => {
+        if (
+          open &&
+          onClearAll &&
+          event.relatedTarget instanceof Node &&
+          !event.currentTarget.contains(event.relatedTarget)
+        )
+          close(false);
+      }}
+    >
       <button
         ref={triggerRef}
         type="button"
-        className="dirsearch-menubtn"
+        className={
+          surface ? 'surface-pill dirsearch-filtertrigger' : 'dirsearch-menubtn'
+        }
+        data-compact={compact || undefined}
         data-on={active}
-        aria-haspopup="menu"
+        aria-haspopup={onClearAll ? 'dialog' : 'menu'}
+        aria-label={
+          compact
+            ? `${label}${active && summary ? `: ${summary}` : ''}`
+            : undefined
+        }
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         onClick={() => (open ? close(false) : openWith(0))}
         onKeyDown={onTriggerKeyDown}
       >
-        <span className="dirsearch-menuname">{label}</span>
-        {summary && <span className="dirsearch-menuvalue">{summary}</span>}
+        <span className="dirsearch-menuname">
+          {compact && single && active
+            ? (chosen[0].triggerLabel ?? chosen[0].label)
+            : label}
+        </span>
+        {compact
+          ? !single &&
+            chosen.length > 0 && (
+              <span className="dirsearch-menucount" aria-hidden="true">
+                {chosen.length}
+              </span>
+            )
+          : summary && <span className="dirsearch-menuvalue">{summary}</span>}
         <ChevronDown
           className="h-3.5 w-3.5 flex-none transition-transform"
           style={{ transform: open ? 'rotate(180deg)' : undefined }}
@@ -228,60 +383,101 @@ export function FilterMenu({
 
       {open && (
         <div
+          ref={panelRef}
           id={menuId}
-          role="menu"
+          role={onClearAll ? 'dialog' : 'menu'}
+          aria-modal={onClearAll ? false : undefined}
           aria-label={label}
-          className="dirsearch-menupanel"
+          className={
+            surface
+              ? 'surface-panel dirsearch-filterpanel'
+              : 'dirsearch-menupanel'
+          }
         >
-          {caption && <p className="dirsearch-menucaption">{caption}</p>}
+          <div className="dirsearch-menucontent">
+            {caption && <p className="dirsearch-menucaption">{caption}</p>}
 
-          <div className="dirsearch-menulist">
-            {options.map((option) => {
-              const on = selected.includes(option.value);
-              const index = reachable.indexOf(option);
+            <div
+              className="dirsearch-menulist"
+              role={onClearAll ? 'menu' : undefined}
+              aria-label={onClearAll ? label : undefined}
+            >
+              {options.map((option) => {
+                const on = selected.includes(option.value);
+                const index = reachable.indexOf(option);
+                const hint =
+                  option.hint ?? (surface ? option.disabledReason : undefined);
 
-              return (
-                <button
-                  key={option.value}
-                  ref={(node) => {
-                    if (index >= 0) itemRefs.current[index] = node;
-                  }}
-                  type="button"
-                  role={
-                    action
-                      ? 'menuitem'
-                      : single
-                        ? 'menuitemradio'
-                        : 'menuitemcheckbox'
-                  }
-                  aria-checked={action ? undefined : on}
-                  disabled={Boolean(option.disabledReason)}
-                  title={option.disabledReason}
-                  className="dirsearch-menuitem"
-                  data-on={on}
-                  onClick={() => toggle(option.value)}
-                  onKeyDown={(event) => onItemKeyDown(event, index)}
-                >
-                  {!action && (
-                    <span className="dirsearch-menutick" aria-hidden="true">
-                      {on && <Check className="h-3 w-3" />}
-                    </span>
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="dirsearch-menulabel">{option.label}</span>
-                    {option.hint && (
-                      <span className="dirsearch-menuhint">{option.hint}</span>
+                return (
+                  <button
+                    key={option.value}
+                    ref={(node) => {
+                      if (index >= 0) itemRefs.current[index] = node;
+                    }}
+                    type="button"
+                    role={
+                      action
+                        ? 'menuitem'
+                        : single
+                          ? 'menuitemradio'
+                          : 'menuitemcheckbox'
+                    }
+                    aria-checked={action ? undefined : on}
+                    disabled={Boolean(option.disabledReason)}
+                    title={option.disabledReason}
+                    className={
+                      surface
+                        ? 'surface-option dirsearch-filteroption'
+                        : 'dirsearch-menuitem'
+                    }
+                    data-on={on}
+                    data-current={surface && on ? true : undefined}
+                    onClick={() => toggle(option.value)}
+                    onKeyDown={(event) => onItemKeyDown(event, index)}
+                  >
+                    {!action && (
+                      <span className="dirsearch-menutick" aria-hidden="true">
+                        {on && <Check className="h-3 w-3" />}
+                      </span>
                     )}
-                  </span>
-                </button>
-              );
-            })}
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={
+                          surface
+                            ? 'surface-option-name block'
+                            : 'dirsearch-menulabel'
+                        }
+                      >
+                        {option.label}
+                      </span>
+                      {hint && (
+                        <span
+                          className={
+                            surface
+                              ? 'surface-option-blurb'
+                              : 'dirsearch-menuhint'
+                          }
+                        >
+                          {hint}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Only offered when there is something to clear, and only on the
-              multi-select menus — "no sort" is not a state this page has, and
-              an action menu holds no state to clear. */}
-          {!single && !action && chosen.length > 0 && (
+          {onClearAll ? (
+            <div className="dirsearch-menufooter">
+              <button type="button" onClick={onClearAll}>
+                Clear all
+              </button>
+              <button type="button" onClick={() => close(true)}>
+                Done
+              </button>
+            </div>
+          ) : !single && !action && chosen.length > 0 ? (
             <button
               type="button"
               className="dirsearch-menuclear"
@@ -289,7 +485,7 @@ export function FilterMenu({
             >
               Clear {label.toLowerCase()}
             </button>
-          )}
+          ) : null}
         </div>
       )}
     </div>

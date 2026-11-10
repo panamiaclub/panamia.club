@@ -9,8 +9,7 @@ import SurfaceLink from '@/components/panaverse/SurfaceLink';
 import { useSession } from '@/lib/auth-client';
 import { useIsNativeApp } from '@/lib/mobile/use-native-app';
 import { SocialEligibilityGate } from '@/components/social';
-import { useTimeline, usePublicTimeline, useMyActor } from '@/lib/query/social';
-import type { SocialStatusDisplay } from '@/lib/interfaces';
+import { useTimeline, useMyActor } from '@/lib/query/social';
 import { FeedPostCard } from './feed-post-card';
 import { FeedRail } from './feed-rail';
 import { StoriesRail } from './stories-rail';
@@ -28,36 +27,6 @@ const PostComposer = dynamic(
     })),
   { ssr: false }
 );
-
-type FeedFilter = 'panas' | 'everyone' | 'voice';
-
-const FEED_FILTERS: { id: FeedFilter; label: string; hint: string }[] = [
-  {
-    id: 'everyone',
-    label: 'Everyone',
-    hint: 'Every public post from Pana Mia members, newest first.',
-  },
-  {
-    id: 'panas',
-    label: 'Panas',
-    hint: 'Posts from your mutual Panas, your groups, and you.',
-  },
-  {
-    id: 'voice',
-    label: 'Voice notes',
-    hint: 'Audio posts from your mutual Panas, your groups, and you.',
-  },
-];
-
-function hasAudio(status: SocialStatusDisplay): boolean {
-  return Boolean(
-    status.attachments?.some(
-      (attachment) =>
-        attachment.type === 'audio' ||
-        attachment.mediaType?.startsWith('audio/')
-    )
-  );
-}
 
 /**
  * The Pana Social feed.
@@ -131,28 +100,21 @@ function FeedContent({
   native: boolean;
   captureSession: number;
 }) {
-  const [filter, setFilter] = useState<FeedFilter>('everyone');
   /* Latched, not a timer: once a member has posted in this visit the ask stays
      available until they act on it or wave it away. Resetting it on the next
      render would take the card away mid-reach. */
   const [hasPosted, setHasPosted] = useState(false);
 
   const { data: me } = useMyActor();
-  const home = useTimeline();
-  const everyone = usePublicTimeline();
-
-  const source = filter === 'everyone' ? everyone : home;
-  const statuses = source.data?.statuses ?? [];
-
-  /* Voice filters what the timeline already returned rather than asking for
-     audio posts specifically, because no endpoint offers that. The honest
-     consequence is that it only sees the current page: a member whose voice
-     memos are all older than the newest 20 posts gets an empty tab. The empty
-     state says so rather than implying none exist. */
-  const posts = filter === 'voice' ? statuses.filter(hasAudio) : statuses;
-
-  const activeFilter = FEED_FILTERS.find((entry) => entry.id === filter);
   const actor = me?.actor ?? null;
+  const source = useTimeline(actor?.id);
+  const posts = [
+    ...new Map(
+      source.data?.pages
+        .flatMap((page) => page?.statuses ?? [])
+        .map((post) => [post.id, post])
+    ).values(),
+  ];
   const firstName = (actor?.name || actor?.username || '').split(' ')[0];
 
   return (
@@ -164,7 +126,6 @@ function FeedContent({
       }
     >
       <div className="min-w-0">
-        {native && <FeedFilters filter={filter} onChange={setFilter} compact />}
         <StoriesRail key={`stories-${captureSession}`} actor={actor} />
         <div>
           <PostComposer
@@ -189,101 +150,65 @@ function FeedContent({
           />
         )}
 
-        {!native && <FeedFilters filter={filter} onChange={setFilter} />}
-
-        {!native && activeFilter && (
-          <p className="text-pana-ink/60 mt-3 text-[13px] font-bold">
-            {activeFilter.hint}
-          </p>
-        )}
-
-        <div
+        <section
           id="feed-panel"
-          role="tabpanel"
-          aria-labelledby={`feed-tab-${filter}`}
+          aria-label="Community feed"
+          aria-busy={source.isPending}
           className="mt-4 space-y-4"
         >
-          {source.isLoading ? (
+          <p className="sr-only">
+            Community posts, with recent posts from your Panas given a little
+            priority.
+          </p>
+          {source.isPending ? (
             <FeedSkeleton />
-          ) : source.isError ? (
+          ) : source.isError && !posts.length ? (
             <FeedError onRetry={() => source.refetch()} />
           ) : posts.length > 0 ? (
             withModules(
               posts.map((post) => <FeedPostCard key={post.id} status={post} />)
             )
-          ) : filter === 'panas' && statuses.length === 0 ? (
-            <FeedEmpty />
           ) : (
-            <FilterEmpty filter={filter} />
+            <FeedEmpty />
           )}
-        </div>
-
-        {!source.isLoading && !source.isError && posts.length > 0 && (
-          <div className="feed-end mt-8">
-            <span>You&apos;re all caught up</span>
-          </div>
-        )}
+          {posts.length > 0 && source.isError && (
+            <FeedError
+              message={
+                source.isFetchNextPageError
+                  ? 'Could not load more posts. Your current feed is still here.'
+                  : 'Could not refresh the feed. Your current posts are still here.'
+              }
+              onRetry={() =>
+                source.isFetchNextPageError
+                  ? source.fetchNextPage()
+                  : source.refetch()
+              }
+            />
+          )}
+          {source.hasNextPage && (
+            <button
+              type="button"
+              onClick={() => source.fetchNextPage()}
+              disabled={source.isFetching}
+              className="text-pana-indigo focus-visible:ring-pana-indigo min-h-11 rounded-xl px-4 text-sm font-extrabold focus-visible:ring-2 disabled:opacity-50"
+            >
+              {source.isFetchingNextPage
+                ? 'Loading more...'
+                : 'Load more posts'}
+            </button>
+          )}
+          {!source.isPending &&
+            !source.isError &&
+            !source.hasNextPage &&
+            posts.length > 0 && (
+              <div className="feed-end mt-8">
+                <span>You&apos;re all caught up</span>
+              </div>
+            )}
+        </section>
       </div>
 
       {actor && !native && <FeedRail actor={actor} />}
-    </div>
-  );
-}
-
-function FeedFilters({
-  filter,
-  onChange,
-  compact = false,
-}: {
-  filter: FeedFilter;
-  onChange: (filter: FeedFilter) => void;
-  compact?: boolean;
-}) {
-  return (
-    <div
-      className={compact ? 'native-feed-filters' : 'mt-6'}
-      role="tablist"
-      aria-label="Feed filters"
-    >
-      <div className="profile-tabs">
-        {FEED_FILTERS.map((entry, index) => {
-          const selected = entry.id === filter;
-          return (
-            <button
-              key={entry.id}
-              type="button"
-              role="tab"
-              id={`feed-tab-${entry.id}`}
-              aria-selected={selected}
-              aria-controls="feed-panel"
-              tabIndex={selected ? 0 : -1}
-              className="profile-tab"
-              data-active={selected}
-              onClick={() => onChange(entry.id)}
-              onKeyDown={(event) => {
-                const next =
-                  event.key === 'ArrowRight'
-                    ? (index + 1) % FEED_FILTERS.length
-                    : event.key === 'ArrowLeft'
-                      ? (index + FEED_FILTERS.length - 1) % FEED_FILTERS.length
-                      : event.key === 'Home'
-                        ? 0
-                        : event.key === 'End'
-                          ? FEED_FILTERS.length - 1
-                          : null;
-                if (next === null) return;
-                event.preventDefault();
-                onChange(FEED_FILTERS[next].id);
-                document
-                  .getElementById(`feed-tab-${FEED_FILTERS[next].id}`)
-                  ?.focus();
-              }}
-            >
-              {compact && entry.id === 'panas' ? 'My Panas' : entry.label}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -333,13 +258,18 @@ function FeedSkeleton() {
 /* The previous feed had no error branch at all, so a failing request was
    indistinguishable from an empty timeline — the member was told to go follow
    people when the real problem was a 500. */
-function FeedError({ onRetry }: { onRetry: () => void }) {
+function FeedError({
+  onRetry,
+  message = 'Something went wrong fetching the timeline. This is a problem on our side, not an empty feed.',
+}: {
+  onRetry: () => void;
+  message?: string;
+}) {
   return (
-    <div className="reserved-slot items-start p-6">
+    <div role="alert" className="reserved-slot items-start p-6">
       <p className="reserved-slot-title">That didn&apos;t load</p>
-      <p className="text-pana-ink/65 text-[13px] font-medium leading-snug">
-        Something went wrong fetching the timeline. This is a problem on our
-        side, not an empty feed.
+      <p className="text-pana-ink/65 text-[13px] leading-snug font-medium">
+        {message}
       </p>
       <button
         type="button"
@@ -356,10 +286,10 @@ function FeedEmpty() {
   return (
     <div className="space-y-5">
       <div className="reserved-slot items-start p-6">
-        <p className="reserved-slot-title">Your Panas feed starts here</p>
-        <p className="text-pana-ink/65 text-[13px] font-medium leading-snug">
-          When you and someone follow each other, you become Panas. Their posts,
-          your own posts, and posts from groups you join will appear here.
+        <p className="reserved-slot-title">Your community feed starts here</p>
+        <p className="text-pana-ink/65 text-[13px] leading-snug font-medium">
+          No posts yet. Share a moment with Everyone, connect with Panas, or
+          join a group to start the conversation.
         </p>
         <SurfaceLink
           href="/directory/search"
@@ -371,21 +301,6 @@ function FeedEmpty() {
       </div>
 
       <SuggestionsModule />
-    </div>
-  );
-}
-
-function FilterEmpty({ filter }: { filter: FeedFilter }) {
-  const label = FEED_FILTERS.find((entry) => entry.id === filter)?.label ?? '';
-
-  return (
-    <div className="reserved-slot items-start p-6">
-      <p className="reserved-slot-title">Nothing under {label} right now</p>
-      <p className="text-pana-ink/65 text-[13px] font-medium leading-snug">
-        {filter === 'voice'
-          ? 'No voice memos in the posts loaded so far. Older ones further down the timeline will not show up here yet.'
-          : 'No public posts yet. Share a post with Everyone to start the conversation.'}
-      </p>
     </div>
   );
 }

@@ -3,148 +3,287 @@ import {
   mobileMagicLinkAppUrl,
   mobileMagicLinkUrl,
 } from '../../lib/mobile/auth-links';
+import { calls, nativeBridge } from './fixtures/native-bridge';
+import { installNativeApiFixtures } from './fixtures/native-app-api';
 
-async function nativeBridge(
+async function testTurnstile(page: Page) {
+  await page.route('**/api/config/turnstile', (route) =>
+    route.fulfill({ json: { siteKey: 'mobile-auth-test-site-key' } })
+  );
+  await page.route(
+    'https://challenges.cloudflare.com/turnstile/v0/api.js?*',
+    (route) =>
+      route.fulfill({
+        contentType: 'application/javascript',
+        body: `window.turnstile = {
+          render: function (element, options) {
+            queueMicrotask(function () { options.callback('mobile-auth-test-token'); });
+            return 'mobile-auth-test-widget';
+          },
+          reset: function () {},
+          remove: function () {}
+        };`,
+      })
+  );
+}
+
+async function openNativeReport(
   page: Page,
-  options: {
-    platform?: 'android' | 'ios';
-    googlePlugin?: boolean;
-    cancelGoogle?: boolean;
-    launchUrl?: string;
-  } = {}
+  name: 'Report a bug' | 'Report a safety concern'
 ) {
-  await page.addInitScript((config) => {
-    const callbacks: Record<string, (data: unknown) => void> = {};
-    const record = (plugin: string, method: string, args: unknown) => {
-      const calls = JSON.parse(
-        sessionStorage.getItem('native-auth-test.calls') ?? '[]'
-      );
-      calls.push({ plugin, method, args });
-      sessionStorage.setItem('native-auth-test.calls', JSON.stringify(calls));
-    };
-    const headers = [
-      {
-        name: 'App',
-        methods: [
-          { name: 'getLaunchUrl', rtype: 'promise' },
-          { name: 'exitApp', rtype: 'promise' },
-          { name: 'addListener', rtype: 'callback' },
-          { name: 'removeListener', rtype: 'callback' },
-        ],
-      },
-      {
-        name: 'SplashScreen',
-        methods: [{ name: 'hide', rtype: 'promise' }],
-      },
-      ...(config.googlePlugin === false
-        ? []
-        : [
-            {
-              name: 'SocialLogin',
-              methods: [
-                { name: 'initialize', rtype: 'promise' },
-                { name: 'login', rtype: 'promise' },
-              ],
-            },
-          ]),
-    ];
-    Object.assign(window, {
-      CapacitorCustomPlatform: { name: config.platform ?? 'android' },
-      Capacitor: {
-        isNativePlatform: () => true,
-        getPlatform: () => config.platform ?? 'android',
-        isPluginAvailable: (name: string) =>
-          headers.some((header) => header.name === name),
-        PluginHeaders: headers,
-        nativePromise: async (
-          plugin: string,
-          method: string,
-          args: unknown
-        ) => {
-          record(plugin, method, args);
-          if (plugin === 'SocialLogin' && method === 'login') {
-            if (config.cancelGoogle) {
-              throw Object.assign(new Error('Cancelled'), {
-                code: 'USER_CANCELLED',
-              });
-            }
-            return {
-              provider: 'google',
-              result: {
-                responseType: 'online',
-                idToken: 'native-google-test-id-token',
-                accessToken: null,
-              },
-            };
-          }
-          if (plugin === 'App' && method === 'getLaunchUrl') {
-            return config.launchUrl ? { url: config.launchUrl } : {};
-          }
-          return {};
-        },
-        nativeCallback: (
-          plugin: string,
-          method: string,
-          args: { eventName: string },
-          callback: (data: unknown) => void
-        ) => {
-          record(plugin, method, args);
-          if (method === 'addListener') callbacks[args.eventName] = callback;
-          if (method === 'removeListener') delete callbacks[args.eventName];
-          return args.eventName;
-        },
-      },
-    });
-    window.addEventListener('native-auth-test.app-url', (event) => {
-      if (event instanceof CustomEvent) {
-        callbacks.appUrlOpen?.({ url: event.detail });
-      }
-    });
-    window.addEventListener('native-auth-test.back', (event) => {
-      if (event instanceof CustomEvent) {
-        callbacks.backButton?.({ canGoBack: event.detail });
-      }
-    });
-  }, options);
-  await page.route('**/api/auth/get-session', (route) =>
-    route.fulfill({ json: null })
-  );
+  await page
+    .locator('[data-native-app] > header')
+    .getByRole('button', { name: 'Create account or sign in', exact: true })
+    .click();
+  await page.getByRole('menuitem', { name, exact: true }).click();
 }
 
-function calls(page: Page) {
-  return page.evaluate(
-    () =>
-      JSON.parse(sessionStorage.getItem('native-auth-test.calls') ?? '[]') as {
-        plugin: string;
-        method: string;
-        args: {
-          eventName?: string;
-          google?: { webClientId: string; mode: string };
-          options?: { nonce: string; scopes: string[] };
-        };
-      }[]
+test('native safety reports retain their draft after an error and submit without attachments or navigation', async ({
+  page,
+}) => {
+  await nativeBridge(page);
+  const fixtures = await installNativeApiFixtures(page);
+  fixtures.state.signedIn = false;
+  await testTurnstile(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const requests: Record<string, FormDataEntryValue>[] = [];
+  await page.route('**/api/bug-reports', async (route) => {
+    const form = await new Request(route.request().url(), {
+      method: 'POST',
+      headers: route.request().headers(),
+      body: route.request().postData() ?? '',
+    }).formData();
+    requests.push(Object.fromEntries(form));
+    await route.fulfill(
+      requests.length === 1
+        ? {
+            status: 503,
+            json: { error: 'Safety reports are temporarily unavailable.' },
+          }
+        : {
+            json: {
+              success: true,
+              message: 'Your safety report has been received for review.',
+            },
+          }
+    );
+  });
+  await page.goto('/d');
+  await openNativeReport(page, 'Report a safety concern');
+  const dialog = page.getByRole('dialog', {
+    name: 'Report a safety concern',
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('form')).toHaveAttribute('method', 'post');
+  await expect(dialog.locator('input[type=file]')).toHaveCount(0);
+  await expect(
+    dialog.getByText(/do not copy, download, or attach/)
+  ).toBeVisible();
+  await dialog.getByLabel('Name', { exact: true }).fill('Safety Test Reporter');
+  await dialog
+    .getByLabel('Email', { exact: true })
+    .fill('reporter@example.test');
+  await dialog.getByLabel('Safety reason').selectOption('child_safety');
+  await dialog
+    .getByLabel('What happened?')
+    .fill('Readiness test only; no real incident or illegal material.');
+  const send = dialog.getByRole('button', { name: 'Send report', exact: true });
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(
+    page.getByText('Safety reports are temporarily unavailable.')
+  ).toBeVisible();
+  await expect(dialog.getByLabel('What happened?')).toHaveValue(
+    'Readiness test only; no real incident or illegal material.'
   );
-}
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(
+    page.getByText('Safety report received', { exact: true })
+  ).toBeVisible();
+  await expect(dialog).toHaveCount(0);
+  expect(new URL(page.url()).pathname).toBe('/d');
+  expect(requests).toHaveLength(2);
+  expect(requests[0]).toMatchObject({
+    reportType: 'safety',
+    targetType: 'other',
+    reason: 'child_safety',
+    name: 'Safety Test Reporter',
+    email: 'reporter@example.test',
+    turnstileToken: 'mobile-auth-test-token',
+  });
+  expect(requests[0]).not.toHaveProperty('screenshot');
+  expect(requests[0]).not.toHaveProperty('viewport');
+  expect(requests[0]).not.toHaveProperty('locale');
+  await openNativeReport(page, 'Report a bug');
+  const bug = page.getByRole('dialog', { name: 'Report a bug', exact: true });
+  await bug
+    .getByLabel('What happened?')
+    .fill('Keep this ordinary bug report draft when closing the dialog.');
+  await page.keyboard.press('Escape');
+  await expect(bug).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Create account or sign in', exact: true })
+  ).toBeFocused();
+  await openNativeReport(page, 'Report a bug');
+  await expect(bug.getByLabel('What happened?')).toHaveValue(
+    'Keep this ordinary bug report draft when closing the dialog.'
+  );
+  await page.keyboard.press('Escape');
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth)
+  ).toBeLessThanOrEqual(390);
+});
 
 test.describe('sign-in hydration', () => {
   test.use({ javaScriptEnabled: false });
+
+  test('report controls cannot accept taps before their dialog handlers are ready', async ({
+    page,
+  }) => {
+    await page.goto('/d');
+    await expect(
+      page.getByRole('button', {
+        name: 'Report a safety concern',
+        exact: true,
+      })
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Report a bug', exact: true })
+    ).toBeDisabled();
+  });
 
   test('sign-in controls cannot accept taps before event handlers are ready', async ({
     page,
   }) => {
     await page.goto('/signin');
     await expect(
+      page.getByRole('heading', {
+        name: 'Create an account or sign in',
+        exact: true,
+      })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', {
+        name: 'Menu',
+        exact: true,
+        disabled: false,
+      })
+    ).toHaveCount(0);
+    await expect(
       page.getByRole('button', { name: 'Continue with Google' })
     ).toBeDisabled();
     await expect(
-      page.getByRole('button', { name: 'Sign in with email' })
+      page.getByRole('button', { name: 'Continue with email' })
     ).toBeDisabled();
     await page.goto('/signin?error=INVALID_TOKEN');
     await expect(page.getByPlaceholder('your@email.com')).toBeDisabled();
     await expect(
-      page.getByRole('button', { name: 'Send sign-in link', exact: true })
+      page.getByRole('button', { name: 'Email me a link', exact: true })
     ).toBeDisabled();
   });
+
+  test('review credentials cannot be submitted before hydration or through a GET form', async ({
+    page,
+  }) => {
+    await page.goto('/signin/reviewer');
+    await expect(page.locator('form')).toHaveAttribute('method', 'post');
+    await expect(page.getByLabel('Review account email')).toBeDisabled();
+    await expect(page.getByLabel('Review account password')).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Sign in for review' })
+    ).toBeDisabled();
+  });
+});
+
+test.describe('dedicated app reviewer sign-in', () => {
+  for (const platform of ['android', 'ios'] as const) {
+    test(`${platform}: the native Social tab redirects signed-out reviewers to sign-in instead of a screen failure`, async ({
+      page,
+    }) => {
+      await nativeBridge(page, {
+        platform,
+        googlePlugin: platform === 'android',
+      });
+      await page.goto('/s');
+      await expect(page).toHaveURL(/\/signin\?callbackUrl=%2Fs$/);
+      await expect(
+        page.getByRole('link', { name: 'App reviewer sign-in' })
+      ).toBeVisible();
+      await expect(page.getByText('This screen could not open')).toHaveCount(0);
+    });
+
+    test(`${platform}: is discoverable in the app and submits credentials only in the POST body`, async ({
+      page,
+    }) => {
+      await nativeBridge(page, {
+        platform,
+        googlePlugin: platform === 'android',
+      });
+      await page.goto('/signin');
+      if (platform === 'ios') {
+        await expect(
+          page.getByRole('button', { name: 'Continue with Google' })
+        ).toHaveCount(0);
+      }
+      await page.getByRole('link', { name: 'App reviewer sign-in' }).click();
+      await expect(page).toHaveURL(/\/signin\/reviewer$/);
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+        'content',
+        /noindex/
+      );
+      await expect(
+        page.getByText(
+          /credentials supplied in App Store Connect or Play Console/
+        )
+      ).toBeVisible();
+      await expect(
+        page.getByRole('link', { name: 'the standard sign-in page' })
+      ).toHaveAttribute('href', '/signin');
+      const credentialEndpoint = new URL('/api/auth/sign-in/email', page.url())
+        .href;
+      const requests: { method: string; url: string; body: unknown }[] = [];
+      await page.route('**/api/auth/sign-in/email', async (route) => {
+        requests.push({
+          method: route.request().method(),
+          url: route.request().url(),
+          body: route.request().postDataJSON(),
+        });
+        await route.fulfill({
+          status: 401,
+          json: {
+            code: 'INVALID_EMAIL_OR_PASSWORD',
+            message: 'Invalid email or password.',
+          },
+        });
+      });
+      const password = 'browser-review-test-not-for-production-2026';
+      await page
+        .getByLabel('Review account email')
+        .fill('play-review@panamia.club');
+      await page.getByLabel('Review account password').fill(password);
+      await page.getByRole('button', { name: 'Sign in for review' }).click();
+      await expect(page.getByRole('alert')).toHaveText(
+        'Invalid email or password.'
+      );
+      expect(requests).toEqual([
+        {
+          method: 'POST',
+          url: credentialEndpoint,
+          body: {
+            email: 'play-review@panamia.club',
+            password,
+            callbackURL: '/d',
+          },
+        },
+      ]);
+      expect(page.url()).not.toContain(password);
+      await expect(
+        page.getByRole('button', { name: 'Sign in for review' })
+      ).toBeEnabled();
+    });
+  }
 });
 
 test.describe('native Google sign-in', () => {
@@ -309,24 +448,7 @@ test.describe('app email-link handoff', () => {
     baseURL,
   }) => {
     await nativeBridge(page, { googlePlugin: false });
-    await page.route('**/api/config/turnstile', (route) =>
-      route.fulfill({ json: { siteKey: 'mobile-auth-test-site-key' } })
-    );
-    await page.route(
-      'https://challenges.cloudflare.com/turnstile/v0/api.js?*',
-      (route) =>
-        route.fulfill({
-          contentType: 'application/javascript',
-          body: `window.turnstile = {
-            render: function (element, options) {
-              queueMicrotask(function () { options.callback('mobile-auth-test-token'); });
-              return 'mobile-auth-test-widget';
-            },
-            reset: function () {},
-            remove: function () {}
-          };`,
-        })
-    );
+    await testTurnstile(page);
     await page.route('**/api/auth/verify-turnstile', (route) =>
       route.fulfill({ json: { success: true } })
     );
@@ -338,7 +460,7 @@ test.describe('app email-link handoff', () => {
     await page.goto('/signin');
     await page.getByPlaceholder('your@email.com').fill('member@example.test');
     const button = page.getByRole('button', {
-      name: 'Send sign-in link',
+      name: 'Email me a link',
       exact: true,
     });
     await expect(button).toBeEnabled();
@@ -372,8 +494,10 @@ test.describe('app email-link handoff', () => {
     expect(response?.headers()['referrer-policy']).toBe('no-referrer');
   });
 
-  for (const cold of [true, false]) {
-    test(`${cold ? 'cold launch' : 'warm app link'} verifies once in the app's cookie store`, async ({
+  for (const { platform, cold } of (['android', 'ios'] as const).flatMap(
+    (platform) => [true, false].map((cold) => ({ platform, cold }))
+  )) {
+    test(`${platform} ${cold ? 'cold launch' : 'warm app link'} verifies once in the app's cookie store`, async ({
       page,
       context,
       baseURL,
@@ -385,16 +509,21 @@ test.describe('app email-link handoff', () => {
       }).toString();
       const mobile = mobileMagicLinkUrl(verification.href);
       const appUrl = mobileMagicLinkAppUrl(mobile);
-      await nativeBridge(page, cold ? { launchUrl: appUrl } : {});
+      await nativeBridge(page, {
+        platform,
+        ...(cold ? { launchUrl: appUrl } : {}),
+      });
       let verifications = 0;
       await page.route('**/api/auth/magic-link/verify?*', (route) => {
         verifications += 1;
         return route.fulfill({
-          status: 302,
+          // WebKit cannot fulfill mocked 3xx responses. Keep the cookie and
+          // final document navigation that the verification redirect performs.
+          contentType: 'text/html',
           headers: {
-            Location: '/signin?emailComplete=1',
             'Set-Cookie': 'native-email-test-session=app; Path=/; HttpOnly',
           },
+          body: '<!doctype html><script>location.replace("/signin?emailComplete=1")</script>',
         });
       });
       await page.goto('/signin');

@@ -209,13 +209,15 @@ member.
 | Where                                               | Meaning                                       | Kind                           |
 | --------------------------------------------------- | --------------------------------------------- | ------------------------------ |
 | Rail stat, suggestions copy, `/panas` endpoint      | Mutual follow                                 | Bilateral                      |
-| **Feed tab "Panas"** (`feed-page.tsx`)              | Mutual follows, self, joined groups           | Bilateral + membership         |
+| **Mixed-feed Pana priority** (`feed-page.tsx`)      | Recency boost for accepted mutual follows      | Bilateral                      |
 | **Post audience "Panas"** (`PostComposer.tsx`)      | The author's accepted mutuals at posting time | Bilateral + recipient snapshot |
 | "Ask the Panas", "hosted by Panas", "N Panas going" | Any member                                    | Everyone                       |
 
-The Panas feed uses the same accepted-in-both-directions join as the Pana count and profile list.
-One-way, pending, and rejected follows do not add personal posts. Own posts and posts from groups
-the viewer has joined remain in this feed, with group membership independent of mutual follows.
+Feed priority uses the same accepted-in-both-directions join as the Pana count and
+profile list. One-way, pending, and rejected follows do not earn a boost or grant
+private-post access. Their public posts can still appear through community
+discovery. Own posts and joined-group posts remain, with membership independent
+of mutual follows.
 
 ### Resolution
 
@@ -230,11 +232,13 @@ Remaining strings to change:
 | `feed-modules.tsx` L149 | "N Panas going"                                    |
 | `stories-rail.tsx` L9   | "the panas they follow"                            |
 
-**Everyone is the default view; Panas remains an optional mutual-follow view.** Everyone shows
-public posts from local accounts without requiring a connection. Members can switch to Panas for
-mutual connections, their own posts, and joined-group posts. Voice notes filters that same Panas
-timeline to audio posts. The public default avoids making a new member's first impression depend
-on having mutual connections already.
+**One mixed feed replaces the Everyone/My Panas reading switch.** Local public
+posts appear without requiring a connection, alongside authorized mutual-Pana,
+own, and joined-group posts. Mutual authors receive a fixed six-hour publication-time
+boost; a ten-hour-old Pana post cannot outrank a fresh community post. No popularity
+or activity-tracking signals are used. Ranking and cursor pagination happen on the
+server after access rules are applied. Private Panas content is never promoted
+into the public audience. The composer keeps its Everyone/Panas publishing choice.
 
 Local profile-linked accounts remain included even when their saved federation identity uses an
 older domain. Local-author filtering happens before pagination, so remote posts cannot consume
@@ -264,13 +268,13 @@ New personal composers start with **Everyone (public)**. Members can choose **Pa
 audience control; no local-only or group destinations are offered there. Group posting starts on the group's
 page, and replies keep their parent's audience instead of offering another destination.
 
-The media-forward card supports photos, video and audio, file drop, and image paste, with up to four
+The media-forward card supports photos and video, file drop, and image paste, with up to four
 attachments and a 500-character caption. Media-only posts are valid. Posting and removal are disabled
 during uploads, and upload/publishing failures remain visible without discarding the draft. Content
 warnings and the optional Markdown formatting preview live under **More**; the preview hides text and
 media together when a warning is set. The account's saved Creative Commons license is applied on the
 server, without a per-post CC button. Explicit API license overrides remain supported. The idle card stays
-compact, with labelled photo/video, audio, audience and Post controls. Writing or adding media expands it;
+compact, with labelled photo/video, audience and Post controls. Writing or adding media expands it;
 an empty draft can be collapsed with Done. Large drop targets appear only while dragging files.
 
 **Panas posting is not a rename of followers-only visibility.** New posts carry the internal `Panas`
@@ -282,7 +286,7 @@ later does not disclose older posts.
 
 Replies retain the original circle owner, recipients, and status type, never the replier's separate
 circle. Unauthorized or audience-widening replies are refused before inserting a row. Panas notes
-are excluded from Everyone, the federation outbox, inbox/sent mail, requests, and DM conversations.
+are excluded from public discovery, the federation outbox, inbox/sent mail, requests, and DM conversations.
 Real mention tags still work for authorized readers. Declining a DM request cannot mutate a Panas
 post's recipients.
 
@@ -642,7 +646,7 @@ folder at all, and `nobody` for those who want no new threads.
 only, on the reasoning that a name is the minimum needed to triage. It is also less than the minimum:
 if you cannot see what was said, **accepting becomes the only way to find out** — and accepting is
 exactly the consent the gate exists to ask for. For a local network the content is also the whole
-signal that separates a neighbour from a bot. So `/updates` renders the held body and its voice memo,
+signal that separates a neighbour from a bot. So `/updates` renders the held body and its supported attachments,
 with no like or reply affordance, and the composer stays shut until the thread is accepted.
 
 The body is rendered as **plain text, not HTML**. Status content is `marked.parse()` output and
@@ -741,7 +745,7 @@ than after it.
 
 ### Phase 1 — Naming and legibility
 
-- [x] Default to Everyone; keep Panas for mutual follows, own posts, and joined groups
+- [x] Combine public discovery, mutual Panas, own posts, and joined groups in one feed with a bounded Pana recency boost
 - [ ] Fix the remaining "Pana = any member" strings
 - [x] Add `Follows you` / `Pana` badges to the personal profile, suggestion cards and directory results
 - [ ] Add the same badges to follower and following lists — blocked on the line below
@@ -846,6 +850,6 @@ probably acceptable; anything finer is not.
 because the directory half of the product needs businesses to be followable without limit. Worth
 remembering that the cap option exists if the graph later turns into an audience race.
 
-**The Panas feed can be quiet for new members.** Everyone remains the default so discovery does
-not depend on having mutual connections. Panas is the optional view for mutual follows, own posts,
-and joined-group posts.
+**A new member must not need mutuals to have a feed.** Local public discovery is
+always part of the mixed feed. Mutual Panas get a gentle recency preference rather
+than a separate, potentially empty reading view.

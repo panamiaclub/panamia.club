@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { ensureProfile } from '@/lib/server/profile';
-import { getActiveProfileId } from '@/lib/server/active-profile';
+import {
+  getActiveProfileId,
+  getEditableProfile,
+} from '@/lib/server/active-profile';
 import { db } from '@/lib/db';
 import { profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
@@ -45,13 +48,28 @@ function withLegacyImages<
   };
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   const session = await auth();
 
   if (!session?.user?.id) {
     return NextResponse.json(
       { error: 'No user session available' },
       { status: 401 }
+    );
+  }
+
+  const listingId = request.nextUrl.searchParams.get('listingId');
+  if (listingId !== null) {
+    const listing = await getEditableProfile(session.user.id, listingId);
+    if (!listing) {
+      return NextResponse.json(
+        { success: false, error: 'You do not manage that business listing.' },
+        { status: 403, headers: { 'Cache-Control': 'private, no-store' } }
+      );
+    }
+    return NextResponse.json(
+      { success: true, data: withLegacyImages(listing) },
+      { headers: { 'Cache-Control': 'private, no-store' } }
     );
   }
 

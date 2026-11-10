@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
-import { profileOwners, profiles } from '@/lib/schema';
+import { profileOwners, profiles, verification } from '@/lib/schema';
+import { listingInvitationIdentifier } from '@/lib/listing-invitation';
 import { and, eq, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
 
 /**
@@ -44,9 +45,10 @@ export type ProfileOwnerRole = 'owner' | 'admin' | 'editor';
  */
 export async function canAdministerProfile(
   userId: string,
-  profileId: string
+  profileId: string,
+  database: Pick<typeof db, 'select'> = db
 ): Promise<boolean> {
-  const [row] = await db
+  const [row] = await database
     .select({ id: profiles.id })
     .from(profiles)
     .leftJoin(
@@ -182,54 +184,71 @@ export async function claimUnownedProfile(
   userId: string,
   invitationEmail?: string
 ): Promise<FirstClaimOutcome> {
-  return db.transaction(async (tx) => {
-    const [profile] = await tx
-      .select({
-        id: profiles.id,
-        name: profiles.name,
-        screenname: profiles.screenname,
-        userId: profiles.userId,
-        pendingOwnerEmail: profiles.pendingOwnerEmail,
-        status: profiles.status,
-      })
-      .from(profiles)
-      .where(eq(profiles.id, profileId))
-      .for('update');
-    if (!profile) return { outcome: 'not-found' };
-    if (
-      invitationEmail !== undefined &&
-      (profile.userId !== null ||
-        profile.pendingOwnerEmail !== invitationEmail ||
-        (profile.status as { source?: string } | null)?.source !==
-          BUSINESS_INTAKE_SOURCE)
-    ) {
-      return { outcome: 'not-found' };
+  return db.transaction((tx) =>
+    claimUnownedProfileInTransaction(tx, profileId, userId, invitationEmail)
+  );
+}
+
+export type ProfileOwnershipTransaction = Parameters<
+  Parameters<typeof db.transaction>[0]
+>[0];
+
+/** Reuse the same first-owner check inside an invitation's token transaction. */
+export async function claimUnownedProfileInTransaction(
+  tx: ProfileOwnershipTransaction,
+  profileId: string,
+  userId: string,
+  invitationEmail?: string
+): Promise<FirstClaimOutcome> {
+  const [profile] = await tx
+    .select({
+      id: profiles.id,
+      name: profiles.name,
+      screenname: profiles.screenname,
+      userId: profiles.userId,
+      pendingOwnerEmail: profiles.pendingOwnerEmail,
+      status: profiles.status,
+    })
+    .from(profiles)
+    .where(eq(profiles.id, profileId))
+    .for('update');
+  if (!profile) return { outcome: 'not-found' };
+  if (
+    invitationEmail !== undefined &&
+    (profile.userId !== null ||
+      profile.pendingOwnerEmail !== invitationEmail ||
+      (profile.status as { source?: string } | null)?.source !==
+        BUSINESS_INTAKE_SOURCE)
+  ) {
+    return { outcome: 'not-found' };
+  }
+  const [owner] = await tx
+    .select({ id: profileOwners.id })
+    .from(profileOwners)
+    .where(eq(profileOwners.profileId, profileId))
+    .limit(1);
+  if (profile.userId || owner) {
+    if (invitationEmail !== undefined) {
+      await tx
+        .update(profiles)
+        .set({ pendingOwnerEmail: null })
+        .where(eq(profiles.id, profileId));
     }
-    const [owner] = await tx
-      .select({ id: profileOwners.id })
-      .from(profileOwners)
-      .where(eq(profileOwners.profileId, profileId))
-      .limit(1);
-    if (profile.userId || owner) {
-      if (invitationEmail !== undefined) {
-        await tx
-          .update(profiles)
-          .set({ pendingOwnerEmail: null })
-          .where(eq(profiles.id, profileId));
-      }
-      return { outcome: 'already-claimed' };
-    }
-    await tx.insert(profileOwners).values({ profileId, userId, role: 'owner' });
-    await tx
-      .update(profiles)
-      .set({ pendingOwnerEmail: null })
-      .where(eq(profiles.id, profileId));
-    return {
-      outcome: 'accepted',
-      name: profile.name,
-      screenname: profile.screenname,
-    };
-  });
+    return { outcome: 'already-claimed' };
+  }
+  await tx.insert(profileOwners).values({ profileId, userId, role: 'owner' });
+  await tx
+    .update(profiles)
+    .set({ pendingOwnerEmail: null })
+    .where(eq(profiles.id, profileId));
+  await tx
+    .delete(verification)
+    .where(eq(verification.identifier, listingInvitationIdentifier(profileId)));
+  return {
+    outcome: 'accepted',
+    name: profile.name,
+    screenname: profile.screenname,
+  };
 }
 
 /**

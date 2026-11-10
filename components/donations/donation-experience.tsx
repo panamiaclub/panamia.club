@@ -34,6 +34,9 @@ import {
   type DonationGift,
 } from '@/lib/donations';
 import { useIsNativeApp } from '@/lib/mobile/use-native-app';
+import { nativePlatform } from '@/lib/mobile/native';
+import PublicPageShell from '@/components/PublicPageShell';
+import { Button } from '@/components/ui/button';
 import {
   SupportPanaNavigation,
   SupportPanaSponsorship,
@@ -75,7 +78,31 @@ const SUPPORT_AREAS = [
   },
 ];
 
-export function DonationExperience({
+export function DonationExperience(props: DonationExperienceProps) {
+  const native = useIsNativeApp();
+  if (!props.previewOnly && native && nativePlatform() === 'ios') {
+    return (
+      <PublicPageShell
+        eyebrow="Support Pana MIA"
+        title="THANK YOU FOR YOUR SUPPORT"
+        intro="Donations are not available inside the iOS app yet."
+      >
+        <div className="mx-auto max-w-xl space-y-6">
+          <p>
+            You can visit panamia.club in your browser to support Pana MIA Club.
+            Donations do not unlock app features or digital content.
+          </p>
+          <Button asChild>
+            <Link href="/d">Back to Directory</Link>
+          </Button>
+        </div>
+      </PublicPageShell>
+    );
+  }
+  return <DonationForm {...props} />;
+}
+
+function DonationForm({
   previewOnly = false,
   initialGift,
   checkoutCanceled = false,

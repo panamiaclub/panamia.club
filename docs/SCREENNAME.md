@@ -71,6 +71,14 @@ or
 
 - No authentication required (for real-time validation in forms)
 - Validates format before checking database
+- Signed-in checks use the authenticated account to exclude its own personal
+  profile, current handle, and retired handles, matching the save endpoint.
+  A business listing sharing the account's email still reserves its handle.
+- Whitespace is trimmed and comparisons are case-insensitive in both checking
+  and saving. Personalized availability responses are private and not cached.
+- Welcome, modal, and account-settings forms share a debounced checker. Editing
+  the handle immediately invalidates the previous result; canceled or older
+  responses cannot approve or reject the new input.
 
 ### Set/Update Screenname
 
@@ -127,6 +135,35 @@ or for deleted/non-existent users:
 
 - Public endpoint (no auth required)
 - Returns profile verification status when user has a profile
+
+## Regression Coverage
+
+```bash
+yarn node --experimental-test-module-mocks --import tsx --test tests-db/screenname-required-fields.test.ts tests-db/screenname-profile-email-collision.test.ts tests-db/social-activation.test.ts tests-db/magic-link.test.ts
+yarn playwright test screenname-availability.spec.ts --project chromium
+```
+
+The browser suite covers both the legacy popup and the actual new-account
+`/welcome` page, including the first-run redirect, empty initial fields, delayed
+availability responses, a handle taken during submission, and successful return
+to the interrupted page after setup. Fresh sessions are issued through Better
+Auth magic links using memory-only storage and intercepted mail delivery.
+The fixture only supports local servers and reads the matching auth secret from
+the test environment, `.dev.vars`, or `.env.local`; it never creates production
+accounts or sends real email.
+
+The database suites exercise the real handlers against isolated PGlite databases.
+They verify that rejecting a taken handle leaves a new account untouched, choosing
+another handle persists the user, personal profile, and social actor, and two
+new signups can recover when one claims a handle after both have checked it.
+First claims do not acquire a rename cooldown, and retrying completed setup does
+not create another identity.
+
+Fixtures also include unrelated handle history belonging to other live members.
+That data must not make an unused name appear taken to signed-in callers; only
+history for the requested handle can reserve it. Production deployment runs a
+read-only check of anonymous and signed-in availability against the real dataset
+using a random unused name. It creates no account or handle reservation.
 
 ## Components
 

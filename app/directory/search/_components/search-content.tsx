@@ -11,15 +11,14 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { useSearch, type DirectorySort } from '@/lib/query/directory';
-import { groupOnlineZipListings } from '@/lib/online-zip';
-import { searchPath } from '@/lib/directory-search-path';
 import {
-  DEFAULT_DIRECTORY_RADIUS,
-  effectiveDirectoryRadius,
-  isDirectoryRadius,
-  type DirectoryRadius,
-} from '@/lib/directory-radius';
+  searchParamsToString,
+  useSearch,
+  type DirectorySort,
+} from '@/lib/query/directory';
+import { groupOnlineZipListings } from '@/lib/online-zip';
+import { mapContainsPoint, type MapBounds } from '@/lib/map/viewport';
+import { searchPath } from '@/lib/directory-search-path';
 import { useViewerLocation } from '@/app/p/[user]/_lib/use-viewer-location';
 import { DirectoryViewerProvider } from './directory-viewer';
 import { SearchBand } from './search-band';
@@ -27,8 +26,8 @@ import { FilterBar, type FilterState } from './filter-bar';
 import { ResultCard } from './result-card';
 import { MapPanel } from './map-panel';
 import { EmptyState } from './empty-state';
-import { SearchPagination } from './search-pagination';
 import { getDirectorySearchParams } from '../_lib/search-params';
+import { resultMapCoords, resultZipArea } from '../_lib/format';
 
 /** `a+b+c` is the directory's existing multi-value encoding. Kept as-is. */
 function splitList(raw: string): string[] {
@@ -51,62 +50,71 @@ export function DirectorySearchContent({
   );
 
   // Precise coordinates stay in the browser. Only a 2dp version reaches the
-  // server for radius filtering and ordering — see searchParamsToString.
+  // server for ordering — see searchParamsToString.
   const { coords, status: locationStatus, request } = useViewerLocation();
   const locationShared = coords !== null;
 
-  // A radius without coordinates cannot narrow anything. Keep the configured
-  // URL state private-coordinate-free, but make the effective public fallback
-  // the complete South Florida directory until cached or click-granted
-  // coordinates are available.
-  const effectiveRadius: DirectoryRadius = effectiveDirectoryRadius(
-    params.radius,
-    locationShared
-  );
-
-  // A missing sort means "use the product default for this scope": nearest for
-  // a finite local radius, relevance everywhere else. A valid URL sort remains
-  // explicit and wins, except nearest when there is nothing to measure from.
-  const defaultSort: DirectorySort =
-    locationShared && effectiveRadius !== 'all' ? 'nearest' : 'relevance';
+  // Location changes the default order and camera, never the discovery area.
+  // Explicit sorts still win, except nearest without a point to measure from.
   const sort: DirectorySort =
     params.sort === 'nearest' && !locationShared
       ? 'relevance'
-      : (params.sort ?? defaultSort);
+      : (params.sort ?? (locationShared ? 'nearest' : 'relevance'));
 
   // Pane switching is UI state, not a new search; it must preserve ZIP focus.
   const { view: _view, ...searchFilters } = params;
-  const { data: searchResult, isLoading } = useSearch({
+  const queryFilters = {
     ...searchFilters,
     sort,
     geolat: coords?.lat ?? 0,
     geolng: coords?.lng ?? 0,
-    radius: effectiveRadius,
-  });
+  };
+  const {
+    data: searchResult,
+    isLoading,
+    isError,
+    refetch,
+  } = useSearch({ ...queryFilters, pageNum: 1, resultsView: 'map' });
+  const mapScopeKey = searchParamsToString({ ...queryFilters, pageNum: 1 });
 
-  const results = useMemo(() => searchResult?.data ?? [], [searchResult]);
+  const mapResults = useMemo(() => searchResult?.data ?? [], [searchResult]);
+  const onlineResults = useMemo(
+    () => searchResult?.map?.unmappedResults ?? [],
+    [searchResult]
+  );
+  const [bounds, setBounds] = useState<MapBounds | null>(null);
   const [focusedZip, setFocusedZip] = useState<string | null>(null);
   const zipGroups = useMemo(
     () =>
-      groupOnlineZipListings(results, (result) =>
-        result.online_only ? result.online_zip : null
+      groupOnlineZipListings(mapResults, (result) =>
+        result.online_only ? resultZipArea(result) : null
       ),
-    [results]
+    [mapResults]
   );
   const zipGroup = zipGroups.find(
     (group) => group.area.postalCode === focusedZip
   );
-  const visibleResults = zipGroup?.items ?? results;
-  const totalResults = searchResult?.pagination?.total ?? 0;
-  const totalPages = searchResult?.pagination?.totalPages ?? 1;
+  const inMapResults = useMemo(
+    () =>
+      (zipGroup?.items ?? mapResults).filter((result) =>
+        mapContainsPoint(bounds, resultMapCoords(result))
+      ),
+    [zipGroup, mapResults, bounds]
+  );
+  const visibleResults = useMemo(
+    () => [...inMapResults, ...onlineResults],
+    [inMapResults, onlineResults]
+  );
+  const totalResults = searchResult?.map?.totalResults ?? 0;
+  const failed = isError || searchResult?.success === false;
 
   const profileIds = useMemo(
-    () => results.map((result) => result._id),
-    [results]
+    () => [...mapResults, ...onlineResults].map((result) => result._id),
+    [mapResults, onlineResults]
   );
 
   /**
-   * Filters and pagination stay in the query string — only the term lives in
+   * Filters stay in the query string — only the term lives in
    * the path — so every navigation rebuilds the term's path and carries the
    * rest across as params. `q` is dropped on the way: keeping it would leave
    * two copies of the term in one URL, free to disagree.
@@ -125,6 +133,7 @@ export function DirectorySearchContent({
   const pushSearch = useCallback(
     (term: string, nextParams: URLSearchParams) => {
       nextParams.delete('q');
+      nextParams.delete('radius');
       const qs = nextParams.toString();
       startNavigation(() => {
         router.push(`${searchPath(term)}${qs ? `?${qs}` : ''}`);
@@ -136,6 +145,7 @@ export function DirectorySearchContent({
   const replaceSearch = useCallback(
     (term: string, nextParams: URLSearchParams) => {
       nextParams.delete('q');
+      nextParams.delete('radius');
       const qs = nextParams.toString();
       router.replace(`${searchPath(term)}${qs ? `?${qs}` : ''}`);
     },
@@ -155,7 +165,7 @@ export function DirectorySearchContent({
     [params.searchTerm, pushSearch, searchParams]
   );
 
-  // County filtering was removed from the public directory. Old links remain
+  // County and radius filtering were removed from the directory. Old links remain
   // valid, but stale or invalid state is stripped with replace() so it cannot
   // hide results or linger in copied URLs.
   const rawSearchParams = searchParams?.toString() || '';
@@ -166,8 +176,7 @@ export function DirectorySearchContent({
       next.delete('floc');
       changed = true;
     }
-    const rawRadius = next.get('radius');
-    if (rawRadius !== null && !isDirectoryRadius(rawRadius)) {
+    if (next.has('radius')) {
       next.delete('radius');
       changed = true;
     }
@@ -175,15 +184,10 @@ export function DirectorySearchContent({
       next.delete('sort');
       changed = true;
     }
-    if (locationStatus === 'denied' && params.radius !== 'all') {
-      next.set('radius', 'all');
-      changed = true;
-    }
     if (!changed) return;
     replaceSearch(params.searchTerm, next);
   }, [
     locationStatus,
-    params.radius,
     params.searchTerm,
     params.sort,
     rawSearchParams,
@@ -192,7 +196,6 @@ export function DirectorySearchContent({
 
   const filters: FilterState = {
     categories: splitList(params.filterCategories),
-    radius: params.radius,
     certifiedOnly: params.certifiedOnly,
     withEventsOnly: params.withEventsOnly,
     sort,
@@ -206,12 +209,6 @@ export function DirectorySearchContent({
       // Any change to what is being asked invalidates which page you were on.
       p: null,
     };
-    // Only persist radius when the radius control changed. An unrelated
-    // category or checkbox change must preserve the configured URL mode.
-    if (next.radius !== params.radius) {
-      changes.radius =
-        next.radius === DEFAULT_DIRECTORY_RADIUS ? null : next.radius;
-    }
     // Preserve implicit dynamic defaults across unrelated filter changes.
     // Only write a sort when the visitor actually changed the sort control.
     if (next.sort !== sort) changes.sort = next.sort;
@@ -230,7 +227,7 @@ export function DirectorySearchContent({
   // up for the whole wait instead of flashing the old list in between.
   const busy = isLoading || navigating;
 
-  const showEmpty = !busy && results.length === 0;
+  const showEmpty = !busy && !failed && totalResults === 0;
 
   // Which card the cursor is over, so the matching pin can light up. Held here
   // rather than in either pane because it is the one piece of state the list
@@ -255,7 +252,7 @@ export function DirectorySearchContent({
     setHoveredId(null);
     setSelectedId(null);
     setFocusedZip(null);
-  }, [searchResult]);
+  }, [mapScopeKey]);
 
   // The map drops its own selection the moment the viewer's location arrives,
   // because it re-frames to their neighbourhood and the chosen pin may not be
@@ -282,10 +279,10 @@ export function DirectorySearchContent({
     setSelectedId(id);
   }, []);
   useEffect(() => {
-    if (!selectedId) return;
+    if (!selectedId || busy) return;
     const card = document.getElementById(`dirsearch-result-${selectedId}`);
     card?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, [selectedId, focusedZip]);
+  }, [selectedId, focusedZip, busy]);
 
   const handleZipSelect = (zip: string) => {
     setFocusedZip((current) => (current === zip ? null : zip));
@@ -299,6 +296,27 @@ export function DirectorySearchContent({
       patch({ view: null });
     }
   };
+
+  const sections = [
+    {
+      id: 'in-map',
+      title: 'In map',
+      description: bounds
+        ? 'Businesses in the visible map area. ZIP-area locations are approximate.'
+        : 'Businesses with a public map location. Open the map to narrow by area.',
+      items: inMapResults,
+      empty:
+        'No matches in this map area. Move or zoom out on the map to see more.',
+    },
+    {
+      id: 'online',
+      title: 'Online',
+      description:
+        'Listings without a usable map location. This does not imply online service.',
+      items: onlineResults,
+      empty: 'No matching listings without a map location.',
+    },
+  ];
 
   return (
     <DirectoryViewerProvider profileIds={profileIds}>
@@ -319,7 +337,6 @@ export function DirectorySearchContent({
                 totalCount={totalResults}
                 loading={busy}
                 locationStatus={locationStatus}
-                radius={effectiveRadius}
                 nearestFirst={sort === 'nearest'}
                 onSearch={handleSearch}
                 onShareLocation={request}
@@ -337,8 +354,7 @@ export function DirectorySearchContent({
               {zipGroup && (
                 <div className="dirsearch-zip-focus" role="status">
                   <span>
-                    On this page: online businesses based near ZIP{' '}
-                    {zipGroup.area.postalCode}
+                    Online businesses based near ZIP {zipGroup.area.postalCode}
                   </span>
                   <button
                     type="button"
@@ -363,45 +379,73 @@ export function DirectorySearchContent({
                       ))}
                     </ul>
                   </div>
+                ) : failed ? (
+                  <div className="dirsearch-results" role="alert">
+                    <p>Could not load directory results.</p>
+                    <button
+                      type="button"
+                      className="underline"
+                      onClick={() => void refetch()}
+                    >
+                      Retry
+                    </button>
+                  </div>
                 ) : showEmpty ? (
                   <EmptyState
                     term={params.searchTerm}
                     filters={filters}
-                    radiusActive={locationShared}
                     onChange={applyFilters}
                     onTermChange={handleSearch}
                   />
                 ) : (
                   <div className="dirsearch-results">
-                    <ul className="dirsearch-grid">
-                      {visibleResults.map((result) => (
-                        <li
-                          key={result._id}
-                          id={`dirsearch-result-${result._id}`}
-                          data-on={result._id === hoveredId}
-                          data-selected={result._id === selectedId}
-                          onMouseEnter={() => setHoveredId(result._id)}
-                          onMouseLeave={() => setHoveredId(null)}
-                          onFocus={() => setHoveredId(result._id)}
-                          onBlur={() => setHoveredId(null)}
-                        >
-                          <ResultCard
-                            result={result}
-                            index={results.indexOf(result) + 1}
-                            viewerCoords={coords}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-
-                    {totalPages > 1 && !zipGroup && (
-                      <SearchPagination
-                        currentPage={params.pageNum}
-                        totalPages={totalPages}
-                        totalResults={totalResults}
-                        onPageChange={(page) => patch({ p: page.toString() })}
-                      />
-                    )}
+                    {sections.map((section) => (
+                      <section
+                        key={section.id}
+                        id={`dirsearch-${section.id}`}
+                        className="dirsearch-resultsection"
+                        aria-labelledby={`dirsearch-${section.id}-title`}
+                      >
+                        <div className="dirsearch-sectionhead">
+                          <h2 id={`dirsearch-${section.id}-title`}>
+                            {section.title}
+                          </h2>
+                          <span aria-live="polite">{section.items.length}</span>
+                        </div>
+                        <p className="dirsearch-sectioncopy">
+                          {section.description}
+                        </p>
+                        {section.items.length === 0 ? (
+                          <p className="dirsearch-sectionempty">
+                            {section.empty}
+                          </p>
+                        ) : (
+                          <ul className="dirsearch-grid">
+                            {section.items.map((result) => (
+                              <li
+                                key={result._id}
+                                id={`dirsearch-result-${result._id}`}
+                                data-on={result._id === hoveredId}
+                                data-selected={result._id === selectedId}
+                                onMouseEnter={() => setHoveredId(result._id)}
+                                onMouseLeave={() => setHoveredId(null)}
+                                onFocus={() => setHoveredId(result._id)}
+                                onBlur={() => setHoveredId(null)}
+                              >
+                                <ResultCard
+                                  result={result}
+                                  index={
+                                    result.result_index ??
+                                    visibleResults.indexOf(result) + 1
+                                  }
+                                  viewerCoords={coords}
+                                />
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </section>
+                    ))}
                   </div>
                 )}
 
@@ -464,13 +508,18 @@ export function DirectorySearchContent({
               map a remount, and a re-frame, every time the toggle is used. */}
           <aside className="dirsearch-mappane" aria-label="Results on a map">
             <MapPanel
-              results={results}
+              results={mapResults}
               viewerCoords={coords}
-              radius={effectiveRadius}
+              scopeKey={mapScopeKey}
+              onBoundsChange={setBounds}
               highlightId={hoveredId}
               onPinSelect={handlePinSelect}
               selectedZip={focusedZip}
               onZipSelect={handleZipSelect}
+              unmappedCount={searchResult?.map?.unmappedCount}
+              loading={isLoading}
+              failed={failed}
+              onRetry={() => void refetch()}
             />
           </aside>
         </div>

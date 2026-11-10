@@ -63,6 +63,15 @@ test('the setup email names the business, escapes HTML, and retains a non-expiri
   assert.match(email.text, /Staff approval is separate/);
   assert.match(
     email.text,
+    /A public visiting location needs a street address, city, state and ZIP/
+  );
+  assert.match(
+    email.text,
+    /Online and mobile services need only a business base ZIP, not a street or home address/
+  );
+  assert.doesNotMatch(email.text, /A street or home address is not required/);
+  assert.match(
+    email.text,
     /https:\/\/pana.test\/listings\/setup\?profileId=business-id/
   );
 });

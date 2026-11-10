@@ -6,6 +6,7 @@ import {
   normalizeUsZip,
   onlineBusinessLocation,
   readOnlineZipArea,
+  withOnlineZipArea,
   type OnlineZipArea,
 } from '@/lib/online-zip';
 
@@ -70,6 +71,15 @@ describe('online base ZIP locations', () => {
     );
     assert.equal(readOnlineZipArea({ zipArea: miami }, '33301'), null);
     assert.equal(readOnlineZipArea({ zipArea: miami }, '33138-1234'), miami);
+    assert.equal(readOnlineZipArea({ zipArea: miami }, '33138', 'CA'), null);
+    assert.equal(readOnlineZipArea({ zipArea: miami }, '33138', 'us'), miami);
+  });
+
+  test('caching a verified ZIP preserves a confirmed public point without promoting the ZIP centroid to street coordinates', () => {
+    const geo = { type: 'Point', coordinates: [-80.2, 25.8], imported: true };
+    assert.deepEqual(withOnlineZipArea(geo, miami), { ...geo, zipArea: miami });
+    assert.deepEqual(withOnlineZipArea(null, miami), { zipArea: miami });
+    assert.deepEqual(geo.coordinates, [-80.2, 25.8]);
   });
 
   test('creates one nonempty bubble per base ZIP, regardless of service area', () => {

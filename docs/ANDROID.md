@@ -63,10 +63,82 @@ Events use real venue locations on the map. Community separates **Yours**
 (joined groups, pending requests, plans, saved events) from **Discover**.
 Profile opens your existing personal profile page.
 
+Social uses a newspaper icon; Messages uses overlapping chat bubbles. These
+navigation icons are consistent across the native app and website entry points.
+
+Directory and Events maps support two-finger pinch-to-zoom without on-map
+zoom buttons. Rotation and tilt stay disabled. The website's directory map
+also supports pinch-to-zoom and keeps zoom buttons for mouse and trackpad users.
+
+Results sheets slide over a fixed map without resizing or recentering it.
+Drag anywhere on the results header; short deliberate swipes advance to the
+next sheet position. Scrolling the results remains independent of the sheet.
+
+The compact native layout uses a 52px app header, a 58px rounded navigation
+dock, and a 54px collapsed results row showing total listings and the In map
+count. Device safe areas and 44px touch targets are preserved. In map and Without location
+tabs keep unlocated listings available without a banner covering the map.
+Tapping a photo pin or ZIP bubble scrolls the complete list to its highlighted
+listing and opens a measured two-profile preview, not a filtered single-card
+view. The last listing is shown with the preceding profile. A list with only
+one match shows that profile; short landscape views clamp to the available
+space. Drag up to browse more, or collapse the sheet to return to the map.
+
+The location action is inside search. Category, Visit, Certified, and Events
+dropdown pills sit directly below it with 32px faces and 44px hit areas.
+Visit uses the listing's declared online-only setting: In person excludes
+online-only listings, Online includes them, and Both includes all. Missing
+coordinates do not determine Visit availability. The complete mapped and
+unlocated collections are filtered together, not just one results page.
+Each menu has Clear all and Done, keyboard navigation, Escape, outside-tap,
+and native Back dismissal. Clear all preserves search text and shared location.
+Menus fit above the dock, including in short landscape views. Very short,
+wide views place filters alongside search to leave map pins reachable. Opening or
+refining them keeps the map camera and canvas fixed. A new search can reframe
+its results. Desktop web filters and sorting are unchanged.
+
+The header leaves vertical breathing room around its 44px controls. The dock
+floats over Directory, Social, Community, and Profile; scrolling pages include
+bottom space so their final content can be brought above it. Open conversations
+do not reserve space for the hidden dock.
+
+The status-area surface and native headers use the same solid Pana cream
+(`#fff7ec`). The website's directory masthead palette is scoped to the website,
+so it cannot tint the native app or results-sheet headers.
+
+ZIP markers use compact 24px-tall ZIP-and-count labels inside 44px tap targets.
+Photo markers crop portrait and landscape images into the same circular frame;
+event-cluster counts remain visible outside that frame.
+
 These are deployed web changes, not a new APK requirement. Apply
 `drizzle/0073_event_bookmarks.sql` before deploying the Worker, then reload the
 app. Saving an event is a private bookmark, not an RSVP. Normal browsers keep
 the existing website navigation.
+
+## In-app safety reports
+
+The app header's **Report a safety concern** control is available without
+sign-in. Posts, profiles, stories, and incoming direct or group messages also
+have contextual report actions. These open the same report dialog without
+navigating away from the current screen.
+
+Browser reporting controls stay disabled until their dialog handlers are ready.
+On the homepage they become compact icon buttons beside the signup footer,
+without covering the signup action.
+
+Reports include the reporter's contact details, a reason, the relevant link,
+and a description. No attachments are accepted, including for child-safety
+reports. The server verifies Turnstile, derives any signed-in identity from the
+session, and saves the report in the existing private support queue under
+**Safety / abusive content or users**. Staff can filter and action these at
+`/admin/contactus`; notifications go to `hola@panamia.club`. Safety receipt
+emails do not repeat the reported content or link.
+
+Apply `drizzle/0077_safety_reports.sql` through the normal migration journal
+before deploying this interface. Reporting does not automatically remove
+content or block a user; the operator must review and act on reports under the
+published safety standards. Existing blocking, muting, and bug reports remain
+separate.
 
 ## Native Google sign-in
 
@@ -123,20 +195,35 @@ cannot transfer that browser session to the app; request a new one instead.
 
 ## Story camera
 
-Open **Your story (+) → Open camera** to capture inside the app. Use **Photo**
+Tap **Your story (+)** to open the live camera directly, without a chooser
+dialog first. Use **Photo**
 for a still image, or **Video** to tap to start/stop a recording with sound.
 Videos stop automatically after 60 seconds. The camera-switch button changes
 between front and rear cameras when available.
 
+The live frame and camera captures are vertical (9:16). A landscape camera
+stream is center-cropped rather than stretched or letterboxed; photos and
+recorded video use the same portrait frame. Videos retain microphone sound.
+
 Review the capture, **Retake** if needed, or choose **Use photo / Use video** to
 upload it through the existing story uploader. Add a caption and tap **Post
 story** to publish; capturing or uploading alone does not publish anything.
-**Choose from gallery** remains available without camera permissions.
+**Choose from gallery** opens Android's photo/video library directly through
+the native FilePicker plugin, without camera or broad storage permissions.
+It stays in the camera view until a file is selected, then offers the same
+local review and **Use photo / Use video** action as a capture. Canceling
+resumes the camera without opening the editor or uploading anything.
 Recorded MP4 and WebM clips use the same H.264/AAC MP4 conversion as gallery
 videos, so the posted story remains playable across Android, iOS, and browsers.
 
-Camera access is requested only after opening the camera; microphone access is
-requested only when starting a video. If access was denied, enable it under
+Install a rebuilt app after `yarn mobile:sync` to register the library plugin.
+Older builds explicitly report that an update is needed and use the system
+picker in the meantime. Browsers keep the system file picker; a web page
+cannot bypass its source menu.
+
+Camera access is requested only after tapping **Your story (+)** or reopening
+the camera from the editor; microphone access is requested only when starting
+a video. If access was denied, enable it under
 **Android Settings → Apps → Pana Mia → Permissions** and try again. Back returns
 to the story editor before leaving the screen. Closing the camera, reviewing a
 capture, or backgrounding the app releases the camera and microphone.
@@ -200,17 +287,40 @@ mobile\android\app\build\outputs\bundle\release\app-release.aab
 
 ## First Google Play release
 
+Public submission also requires live policy pages without draft placeholders:
+`https://panamia.club/legal/privacy`, its public `#delete-account` instructions,
+and the child-safety standards at
+`https://panamia.club/legal/terms#child-safety`. The policy JSON is the version
+source of truth; a major version change renews applicable consent gates.
+Public support, privacy and safety reports go to `hola@panamia.club`.
+
+Data safety includes the controlled WebView, server-side transfers, and SDKs,
+not just Android permissions. Apply sharing exemptions only to verified
+service-provider processing, expected user-initiated transfers, qualifying
+legal transfers, or fully anonymous data. Cloudflare's Turnstile notice also
+describes independent use of security signals to improve bot detection; the
+hosting/CRM processor exemption does not establish "No data shared" for those
+signals. Remote Google Fonts requests also transmit connection/browser
+information. Disclose the applicable technical/security data and purposes
+without classifying every account, content, or payment record as shared.
+
+Set app access to include the dedicated reviewer login described in
+[Sign-in documentation](./SIGNIN.md#google-play-reviewer-access), and verify it
+against the production deployment before submission. Do not send reviewers a
+magic link or require access to a private inbox.
+
 1. Create the app in [Google Play Console](https://play.google.com/console/) and
    choose package name `social.pana.app`.
 2. Enroll in **Play App Signing** and upload the `.aab` to **Internal testing**.
 3. Complete the store listing, content rating, target audience, ads, data
    safety, app access, privacy-policy, and account-deletion declarations.
 4. Add testers and install the Play-signed build from its opt-in link.
-5. In **Setup → App integrity → App signing**, copy both SHA-256 certificate
-   fingerprints: the **app signing key** and the **upload key**.
-6. Set `ANDROID_APP_CERT_FINGERPRINTS` to both comma-separated fingerprints in
+5. In **Setup → App integrity → App signing**, copy all applicable SHA-256
+   certificate fingerprints: the **app signing certificates**, including
+   original and upgraded keys when present, and the **upload key**.
+6. Set `ANDROID_APP_CERT_FINGERPRINTS` to those comma-separated fingerprints in
    the deployed Worker environment, redeploy, and verify that
-   `https://panamia.club/.well-known/assetlinks.json` contains both.
+   `https://panamia.club/.well-known/assetlinks.json` contains all of them.
 7. Test sign-in, deep links, account deletion, offline launch, donations, and
    external links on the Play-installed build before promoting it.
 

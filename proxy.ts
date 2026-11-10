@@ -64,6 +64,13 @@ export function proxy(request: NextRequest) {
     );
   const isMobileAuthPage =
     pathname.replace(/\/+$/, '') === MOBILE_MAGIC_LINK_PATH;
+  const listingPath = pathname.replace(/\/+$/, '');
+  // Vinext applies proxy headers after route headers, so proof journeys must
+  // opt out here rather than relying only on their page/API response.
+  const isReferrerFreeListingRoute =
+    ['/listings/invite', '/listings/reminders/stop'].includes(listingPath) ||
+    /^\/api\/listings\/(?:invitations|review)(?:\/|$)/.test(listingPath) ||
+    /^\/api\/admin\/listings\/[^/]+\/(?:invitation|refresh)$/.test(listingPath);
   if (hasSessionCookie || isMobileAuthPage) {
     response.headers.set('Cache-Control', 'private, no-store, max-age=0');
   }
@@ -85,7 +92,9 @@ export function proxy(request: NextRequest) {
   // Referrer policy
   response.headers.set(
     'Referrer-Policy',
-    isMobileAuthPage ? 'no-referrer' : 'strict-origin-when-cross-origin'
+    isMobileAuthPage || isReferrerFreeListingRoute
+      ? 'no-referrer'
+      : 'strict-origin-when-cross-origin'
   );
 
   // Permissions policy - restrict access to sensitive APIs

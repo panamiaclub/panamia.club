@@ -19,7 +19,8 @@
     "membership": "Membresía y perfiles",
     "press": "Prensa y colaboraciones",
     "technical": "Problema técnico o del sitio web",
-    "other": "Otro"
+    "other": "Otro",
+    "safety": "Seguridad / contenido o usuarios abusivos"
   },
   "messageLabel": "Mensaje o Preguntas",
   "namePlaceholder": "Nombre",

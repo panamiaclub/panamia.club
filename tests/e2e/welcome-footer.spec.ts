@@ -89,6 +89,33 @@ async function expectOpen(page: Page) {
     .toBeLessThan(0.5);
 }
 
+async function expectReportControlsClearSignup(page: Page) {
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const reports = document
+          .querySelector('[data-report-controls]')
+          ?.getBoundingClientRect();
+        const signup = document
+          .getElementById('welcome-footer-signup')
+          ?.getBoundingClientRect();
+        if (!reports || !signup) return false;
+        return (
+          reports.right <= signup.left ||
+          reports.left >= signup.right ||
+          reports.bottom <= signup.top ||
+          reports.top >= signup.bottom
+        );
+      })
+    )
+    .toBe(true);
+  for (const name of ['Report a safety concern', 'Report a bug']) {
+    await page
+      .getByRole('button', { name, exact: true })
+      .click({ trial: true });
+  }
+}
+
 function townGeometry(page: Page) {
   return page.locator('.story-street').evaluate((element) => {
     const town = element.getBoundingClientRect();
@@ -231,6 +258,7 @@ test('the town keeps the live homepage dimensions while the bar overlays its low
         exact: true,
       });
       await expect(signup).toBeInViewport({ ratio: 1 });
+      await expectReportControlsClearSignup(page);
       await signup.click({ trial: true });
     }
   } finally {
@@ -324,6 +352,7 @@ test('the compact bookmark reopens the footer on desktop and short phone screens
     });
     await expect(signup).toBeFocused();
     await expect(signup).toBeInViewport({ ratio: 1 });
+    await expectReportControlsClearSignup(page);
     await signup.click({ trial: true });
     await expect
       .poll(() => page.evaluate(() => window.scrollY))

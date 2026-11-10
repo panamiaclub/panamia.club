@@ -19,8 +19,11 @@ import { db } from '@/lib/db';
 import { profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { ensureActorForProfile } from '@/lib/federation/wrappers/actor';
-import { canAdministerProfile } from './profile-owners';
+import { BUSINESS_INTAKE_SOURCE, canAdministerProfile } from './profile-owners';
+import { isDirectoryAccountType } from '@/lib/accounts';
 import type { NextResponse } from 'next/server';
+
+type ProfileReader = Pick<typeof db, 'select' | 'query'>;
 
 export const ACTIVE_PROFILE_COOKIE = 'pana_active_profile';
 
@@ -44,16 +47,17 @@ export function selectActiveProfile(
  * Returns null only when the user has no profile at all.
  */
 export async function getActiveProfileId(
-  userId: string
+  userId: string,
+  database: ProfileReader = db
 ): Promise<string | null> {
   const store = await cookies();
   const selected = store.get(ACTIVE_PROFILE_COOKIE)?.value;
 
-  if (selected && (await canAdministerProfile(userId, selected))) {
+  if (selected && (await canAdministerProfile(userId, selected, database))) {
     return selected;
   }
 
-  const own = await db.query.profiles.findFirst({
+  const own = await database.query.profiles.findFirst({
     where: eq(profiles.userId, userId),
     columns: { id: true },
   });
@@ -64,13 +68,49 @@ export async function getActiveProfileId(
 /**
  * Full profile row for whoever the user is acting as.
  */
-export async function getActiveProfile(userId: string) {
-  const id = await getActiveProfileId(userId);
+export async function getActiveProfile(
+  userId: string,
+  database: ProfileReader = db
+) {
+  const id = await getActiveProfileId(userId, database);
   if (!id) return null;
 
   return (
-    (await db.query.profiles.findFirst({ where: eq(profiles.id, id) })) ?? null
+    (await database.query.profiles.findFirst({
+      where: eq(profiles.id, id),
+    })) ?? null
   );
+}
+
+/**
+ * An explicit listing scope never falls back to the active/personal profile.
+ * The ordinary account editors keep their existing cookie-scoped behavior.
+ */
+export async function getEditableProfile(
+  userId: string,
+  listingId: string | null,
+  database: ProfileReader = db
+) {
+  if (listingId === null) return getActiveProfile(userId, database);
+  if (!listingId || !(await canAdministerProfile(userId, listingId, database)))
+    return null;
+
+  const listing = await database.query.profiles.findFirst({
+    where: eq(profiles.id, listingId),
+    with: { user: { columns: { accountType: true } } },
+  });
+  if (
+    !listing ||
+    (listing.userId !== null &&
+      (listing.status as { source?: string } | null)?.source !==
+        BUSINESS_INTAKE_SOURCE &&
+      !isDirectoryAccountType(listing.user?.accountType))
+  ) {
+    return null;
+  }
+
+  const { user: _user, ...profile } = listing;
+  return profile;
 }
 
 /**

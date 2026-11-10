@@ -13,10 +13,27 @@ import type {
 } from '@/lib/query/social';
 import type { DiscoveryEvent } from '@/lib/events/lanes';
 import { formatWhen } from '@/lib/events/lanes';
-import { CATEGORY_LABEL, resultHref } from '@/app/directory/search/_lib/format';
+import {
+  CATEGORY_LABEL,
+  resultHref,
+  resultMapCoords,
+  resultZipArea,
+} from '@/app/directory/search/_lib/format';
+import { readMapPoint } from '@/lib/map/viewport';
 
 export interface NativeEvent extends UpcomingEvent {
   mode: 'online' | 'offline' | 'hybrid';
+}
+
+export type NativeDirectoryVisit = 'both' | 'in-person' | 'online';
+
+export function matchesNativeVisit(
+  result: SearchResultsInterface,
+  visit: NativeDirectoryVisit
+): boolean {
+  return (
+    visit === 'both' || (result.online_only === true) === (visit === 'online')
+  );
 }
 
 export interface NativeResult {
@@ -30,6 +47,7 @@ export interface NativeResult {
   meta: string;
   coords: { lat: number; lng: number } | null;
   zipArea?: OnlineZipArea | null;
+  approximateZip?: OnlineZipArea | null;
   slug?: string;
   when?: string;
   annotation?: string;
@@ -39,23 +57,11 @@ export function nativeCoords(
   latitude: unknown,
   longitude: unknown
 ): NativeResult['coords'] {
-  const numberOf = (value: unknown) =>
-    typeof value === 'number'
-      ? value
-      : typeof value === 'string' && value.trim()
-        ? Number(value)
-        : NaN;
-  const lat = numberOf(latitude);
-  const lng = numberOf(longitude);
-  return Number.isFinite(lat) &&
-    Number.isFinite(lng) &&
-    Math.abs(lat) <= 90 &&
-    Math.abs(lng) <= 180
-    ? { lat, lng }
-    : null;
+  return readMapPoint(latitude, longitude);
 }
 
 export function nativeBusiness(result: SearchResultsInterface): NativeResult {
+  const area = resultZipArea(result);
   return {
     id: result._id,
     kind: 'directory',
@@ -65,17 +71,15 @@ export function nativeBusiness(result: SearchResultsInterface): NativeResult {
     description: result.five_words || result.details || '',
     location: result.online_only
       ? onlineBusinessLocation(result.primary_address?.zipcode)
-      : result.primary_address?.city || 'Location not listed',
+      : area
+        ? `Approximate ZIP ${area.postalCode} area - ${result.primary_address?.city || area.city}`
+        : result.primary_address?.city || 'Location not listed',
     meta: (result.categories ?? [])
       .map((category) => CATEGORY_LABEL[category] ?? category)
       .join(' / '),
-    coords: result.online_only
-      ? null
-      : nativeCoords(
-          result.geo?.coordinates?.[1],
-          result.geo?.coordinates?.[0]
-        ),
-    zipArea: result.online_only ? (result.online_zip ?? null) : null,
+    coords: result.online_only ? null : resultMapCoords(result),
+    zipArea: result.online_only ? area : null,
+    approximateZip: !result.online_only ? area : null,
     annotation: result.certified ? 'Pana certified' : undefined,
   };
 }

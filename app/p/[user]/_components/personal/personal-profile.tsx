@@ -24,7 +24,7 @@ import {
   PostList,
   FollowButton,
   RelationshipBadge,
-  SendVoiceMemoButton,
+  SendMessageButton,
   BlockMenu,
 } from '@/components/social';
 import { Button } from '@/components/ui/button';
@@ -326,15 +326,9 @@ function renderActions({
 
   return (
     <>
-      <SendVoiceMemoButton
-        recipient={{
-          id: actor.id,
-          username: actor.username,
-          displayName: actor.name || actor.username,
-          avatarUrl: actor.iconUrl || undefined,
-          uri: actor.uri,
-        }}
-        size="sm"
+      <SendMessageButton
+        actorId={actor.id}
+        name={actor.name || actor.username}
       />
       <FollowButton
         username={actor.username}
@@ -349,6 +343,7 @@ function renderActions({
       */}
       <BlockMenu
         username={actor.username}
+        actorUri={actor.uri}
         displayName={actor.name || actor.username}
         isBlocked={isBlocked}
         isMuted={isMuted}

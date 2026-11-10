@@ -71,9 +71,42 @@ describe('account menu destinations', () => {
     assert.ok(start >= 0 && end > start);
     const footer = source.slice(start, end);
     const admin = footer.indexOf('<AdminMenuLink');
-    const about = footer.indexOf("t('nav.siteMenu.aboutPana')");
+    const support = footer.indexOf('<AccountSupportLinks');
     const signOut = footer.indexOf('<LogOut');
-    assert.ok(admin >= 0 && admin < about && about < signOut);
+    assert.ok(admin >= 0 && admin < support && support < signOut);
+    const supportSource = readFileSync(
+      new URL(
+        '../components/account/account-support-links.tsx',
+        import.meta.url
+      ),
+      'utf8'
+    );
+    assert.match(supportSource, /t\('nav\.siteMenu\.aboutPana'\)/);
+    assert.match(
+      footer,
+      /<AccountSupportLinks\s+onClose=\{close\}\s+includeReportActions=\{includeReportActions\}/
+    );
+  });
+
+  test('keeps native bug and safety actions before About Pana for guests and members', () => {
+    const support = readFileSync(
+      new URL(
+        '../components/account/account-support-links.tsx',
+        import.meta.url
+      ),
+      'utf8'
+    );
+    const bug = support.indexOf("t('reporting.bug')");
+    const safety = support.indexOf("t('reporting.safety')");
+    const about = support.indexOf("t('nav.siteMenu.aboutPana')");
+    assert.ok(bug >= 0 && bug < safety && safety < about);
+    assert.match(support, /includeReportActions = false/);
+    const native = readFileSync(
+      new URL('../components/mobile/NativeApp.tsx', import.meta.url),
+      'utf8'
+    );
+    assert.match(native, /<IdentityMenu compact includeReportActions\s*\/>/);
+    assert.match(native, /<AuthMenu compact includeReportActions\s*\/>/);
   });
 
   test('renders Admin as a session-gated row, not a destination bubble', () => {

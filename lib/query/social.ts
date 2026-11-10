@@ -268,10 +268,13 @@ export const useMyActor = () => {
   });
 };
 
-export const useTimeline = (cursor?: string, limit: number = 20) => {
-  return useQuery<TimelineResponse | null, Error>({
-    queryKey: [socialQueryKey, 'timeline', 'home', cursor, limit],
-    queryFn: () => fetchTimeline(cursor, limit),
+export const useTimeline = (actorId?: string, limit: number = 20) => {
+  return useInfiniteQuery({
+    queryKey: [socialQueryKey, 'timeline', 'mixed', actorId, limit],
+    initialPageParam: '',
+    queryFn: ({ pageParam }) => fetchTimeline(pageParam, limit),
+    getNextPageParam: (page) => page?.nextCursor ?? undefined,
+    enabled: Boolean(actorId),
   });
 };
 
@@ -1387,6 +1390,7 @@ export const useSentMessages = (cursor?: string, limit: number = 20) => {
 export interface DmRequestEntry {
   sender: {
     id: string;
+    uri?: string;
     username: string;
     domain: string;
     name: string | null;
@@ -1687,8 +1691,8 @@ export interface MessageableActor {
  * empty state had to send members to someone's profile to begin, which is a
  * different page, reachable from a different search.
  *
- * Reuses the actor-search endpoint the voice-memo composer already calls
- * rather than adding a messages-specific one. It answers exactly the question
+ * Uses the shared actor-search endpoint rather than a messages-specific one.
+ * It answers exactly the question
  * being asked -- local actors with a profile, signed-in only -- and a second
  * endpoint would be a second place for the membership-enumeration gate to be
  * got wrong.

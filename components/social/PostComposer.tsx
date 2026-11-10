@@ -38,7 +38,6 @@ import {
   ImagePlus,
   Lock,
   Users,
-  Volume2,
   X,
 } from 'lucide-react';
 import {
@@ -469,7 +468,7 @@ export function PostComposer({
               role="status"
               className="border-pana-indigo/40 bg-pana-indigo/5 text-pana-indigo rounded-2xl border-2 border-dashed p-5 text-center text-sm font-extrabold"
             >
-              Drop your photos, video or audio here
+              Drop your photos or video here
             </div>
           )}
           {submitError && (
@@ -497,25 +496,12 @@ export function PostComposer({
                   disabled={mediaDisabled}
                   onClick={() => {
                     setExpanded(true);
-                    mediaInput.current?.openPicker('media');
+                    mediaInput.current?.openPicker();
                   }}
                   className="text-pana-burnt-deep hover:bg-pana-flame/10 focus-visible:ring-pana-indigo inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2.5 text-xs font-extrabold focus-visible:ring-2 disabled:opacity-45"
                 >
                   <ImagePlus className="h-4 w-4" aria-hidden="true" />
                   Photo / video
-                </button>
-                <button
-                  type="button"
-                  aria-label="Add audio"
-                  disabled={mediaDisabled}
-                  onClick={() => {
-                    setExpanded(true);
-                    mediaInput.current?.openPicker('audio');
-                  }}
-                  className="text-pana-indigo hover:bg-pana-indigo/6 focus-visible:ring-pana-indigo inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2.5 text-xs font-extrabold focus-visible:ring-2 disabled:opacity-45"
-                >
-                  <Volume2 className="h-4 w-4" aria-hidden="true" />
-                  Audio
                 </button>
               </div>
               <div className="min-w-0 justify-self-start sm:ml-auto">

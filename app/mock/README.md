@@ -169,8 +169,8 @@ the loopback address with no hosts-file entry, and `resolveSurface` maps
 `social.localhost` exactly the way it maps `social.panamia.club`, so this
 exercises the real production rule rather than a preview-only shortcut.
 
-`/mock/composer` uses the same Pana Social hostname. Its photo/video and audio
-pickers, file drop target, and image paste handling create browser-local previews
+`/mock/composer` uses the same Pana Social hostname. Its photo/video
+picker, file drop target, and image paste handling create browser-local previews
 only. No files are uploaded and no posts are published. Removing an attachment
 or leaving the page releases its local preview; the sample-photo button needs
 no personal files.
@@ -190,7 +190,7 @@ Use **Receive message** while reading older messages to try the jump-to-latest
 control, or **Fail next send** followed by a message to try failure and Retry.
 Requests can be accepted or deleted, and the sample remote and refused threads
 retain their distinct states. GIF tiles are original CSS animations, not live
-GIPHY results; the voice memo is a visual sample without audio. No messaging API,
+GIPHY results. No messaging API,
 WebSocket, upload, or browser storage is used by this mock. **Reset** restores
 the fixtures and clears pending simulated sends.
 

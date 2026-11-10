@@ -4,8 +4,8 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
-import { getActiveProfile } from '@/lib/server/active-profile';
-// slugify removed - unused
+import { getEditableProfile } from '@/lib/server/active-profile';
+import { revalidatePublicListing } from '@/lib/server/profile';
 import { ProfileDescriptions } from '@/lib/interfaces';
 
 export async function POST(request: NextRequest) {
@@ -13,41 +13,57 @@ export async function POST(request: NextRequest) {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json({
-      success: false,
-      error: 'No user session available',
-    });
+    return NextResponse.json(
+      { success: false, error: 'No user session available' },
+      { status: 401 }
+    );
   }
 
-  const { name, five_words, details, background, tags } = body;
+  const { name } = body;
 
-  // The profile being acted as - their own, or a business listing they administer
-  const existingProfile = await getActiveProfile(session.user.id);
+  const listingId = request.nextUrl.searchParams.get('listingId');
+  const existingProfile = await getEditableProfile(session.user.id, listingId);
 
   if (!existingProfile) {
-    return NextResponse.json({
-      success: false,
-      error: 'Could not find profile',
-    });
+    return NextResponse.json(
+      { success: false, error: 'You do not manage that profile.' },
+      { status: listingId !== null ? 403 : 404 }
+    );
   }
 
   // Build update data
   const updateData: Partial<typeof profiles.$inferInsert> = {};
 
-  if (name) {
-    updateData.name = name;
+  if (name !== undefined) {
+    if (typeof name !== 'string' || !name.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Please enter a business or profile name.' },
+        { status: 400 }
+      );
+    }
+    updateData.name = name.trim();
   }
 
   // Merge with existing descriptions
   const existingDescriptions =
     existingProfile.descriptions as ProfileDescriptions | null;
-  const descriptions: ProfileDescriptions = {
-    fiveWords: five_words || existingDescriptions?.fiveWords,
-    details: details || existingDescriptions?.details,
-    background: background ?? existingDescriptions?.background,
-    tags: tags ?? existingDescriptions?.tags,
-    hearaboutus: existingDescriptions?.hearaboutus,
-  };
+  const descriptions: ProfileDescriptions = { ...existingDescriptions };
+  const fields = [
+    ['five_words', 'fiveWords'],
+    ['details', 'details'],
+    ['background', 'background'],
+    ['tags', 'tags'],
+  ] as const;
+  for (const [field, key] of fields) {
+    if (body[field] === undefined) continue;
+    if (typeof body[field] !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Description fields must be text.' },
+        { status: 400 }
+      );
+    }
+    descriptions[key] = body[field];
+  }
   updateData.descriptions = descriptions;
 
   try {
@@ -57,6 +73,7 @@ export async function POST(request: NextRequest) {
       .where(eq(profiles.id, existingProfile.id))
       .returning();
 
+    revalidatePublicListing(existingProfile.id, existingProfile.screenname);
     return NextResponse.json(
       { success: true, data: updatedProfile },
       { status: 200 }

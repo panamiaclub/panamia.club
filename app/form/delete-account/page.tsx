@@ -2,9 +2,11 @@ import dynamic from 'next/dynamic';
 
 const DeleteAccountForm = dynamic(() => import('./DeleteAccountForm'), {
   loading: () => (
-    <div className="flex min-h-screen items-center justify-center">
-      <p className="text-lg">Loading...</p>
-    </div>
+    <main className="surface-cream flex min-h-screen items-center justify-center">
+      <p role="status" className="font-bold">
+        Loading...
+      </p>
+    </main>
   ),
 });
 

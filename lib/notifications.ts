@@ -501,7 +501,7 @@ export function getNotificationMessage(notif: {
 
     case 'message':
       if (notif.type === 'Create') {
-        return `${actor} sent you a voice memo`;
+        return `${actor} sent you a message`;
       }
       break;
 

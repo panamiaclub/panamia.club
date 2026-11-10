@@ -9,6 +9,7 @@ import {
   MOBILE_MAGIC_LINK_PATH,
   magicLinkVerificationUrl,
 } from '@/lib/mobile/auth-links';
+import { listingInvitationPath } from '@/lib/listing-invitation';
 
 const origin = 'https://panamia.club';
 const email = 'magic-link-member@example.test';
@@ -111,6 +112,37 @@ function recoveryLocation(response: Response, callbackURL: string) {
 }
 
 describe('app magic-link lifetime and recovery', () => {
+  test('a chosen-account passwordless link returns to the exact listing invitation without carrying its proof or signing in the business contact', async () => {
+    const businessContact = 'hello@separate-business.test';
+    storage.user.push({
+      id: 'business-contact-account',
+      email: businessContact,
+      name: 'Business Contact',
+      emailVerified: true,
+      createdAt: start,
+      updatedAt: start,
+    });
+    const callbackURL = listingInvitationPath('exact-public-business');
+    const { url, message } = await requestLink(callbackURL);
+    assert.equal(
+      new URL(url.searchParams.get('callbackURL') ?? '', origin).href,
+      `${origin}${callbackURL}`
+    );
+    assert.equal(url.hash, '');
+    assert.equal(storage.user.length, 1);
+    assert.equal(storage.session.length, 0);
+    assert.doesNotMatch(message.text ?? '', /#token=/);
+    const response = await handler(new Request(url));
+    assert.equal(response.status, 302);
+    assert.equal(response.headers.get('Location'), `${origin}${callbackURL}`);
+    const chosen = storage.user.find((user) => user.email === email);
+    assert.ok(chosen);
+    assert.equal(storage.user.length, 2);
+    assert.notEqual(storage.session[0].userId, 'business-contact-account');
+    assert.equal(storage.session[0].userId, chosen.id);
+    recoveryLocation(await handler(new Request(url)), callbackURL);
+  });
+
   test('app-requested email defers verification until the link reaches the app', async () => {
     const callbackURL = '/m/schedule/book?mentor=taylor&mode=video';
     const { url, message } = await requestLink(callbackURL, true);

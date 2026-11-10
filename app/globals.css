@@ -748,11 +748,32 @@
     );
 }
 
-/* A standalone auth page has no masthead above it, so it owns the whole
-   viewport — the subtraction above compensates for chrome that is not there.
-   Sign-in is the only such page today; see lib/panaverse/chrome.ts. */
+/* Native auth and loading states have no masthead. Browser sign-in owns its
+   focused masthead and subtracts the measured height below. */
 .auth-surface[data-standalone='true'] {
   min-height: 100vh;
+}
+
+.auth-page-header {
+  display: contents;
+}
+
+.auth-page-header-loading {
+  height: 4.5rem;
+  background-color: var(--color-pana-cream);
+}
+
+.auth-surface[data-auth-entry='true'][data-standalone='false'] {
+  min-height: calc(100svh - var(--main-masthead-offset, 4.5rem));
+}
+
+html.native-app .auth-page-header,
+html.native-app .auth-page-header-loading {
+  display: none;
+}
+
+html.native-app .auth-surface[data-auth-entry='true'] {
+  min-height: 100svh;
 }
 
 /* Cream is a light surface, so the dark theme has to take it back over —
@@ -2393,6 +2414,7 @@ button.bizprofile-update-action:hover {
    the more expensive one. */
 .stories-rail {
   --story-circle: 3.5rem;
+  --story-owner-circle: 4rem;
   margin-bottom: 0.875rem;
 }
 
@@ -2418,7 +2440,7 @@ button.bizprofile-update-action:hover {
   flex-direction: column;
   align-items: center;
   gap: 0.375rem;
-  width: 4.25rem;
+  width: 4.5rem;
 }
 
 /* StoryRing adds its ring only when a story exists; reserve that space so
@@ -2427,7 +2449,7 @@ button.bizprofile-update-action:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: calc(var(--story-circle) + 7px);
+  height: calc(var(--story-owner-circle) + 7px);
 }
 
 .stories-rail-avatar {
@@ -2446,35 +2468,23 @@ button.bizprofile-update-action:hover {
   color: rgb(17 13 13 / 0.6);
 }
 
-.stories-rail[data-empty='true'] {
-  --story-circle: 2.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  justify-content: space-between;
+.stories-rail-item[data-owner='true'] .stories-rail-avatar {
+  width: var(--story-owner-circle);
+  height: var(--story-owner-circle);
 }
 
-.stories-rail[data-empty='true'] .stories-rail-item {
-  width: auto;
-  flex-direction: row;
-  gap: 0.75rem;
-}
-
-.stories-rail[data-empty='true'] .stories-rail-label {
+.stories-rail-item[data-owner='true'] .stories-rail-label {
   font-size: 0.75rem;
   font-weight: 800;
 }
 
-.stories-rail[data-empty='true'] .stories-rail-slot {
-  flex: none;
-  padding: 0 0.25rem;
-}
-
-.stories-rail-note {
-  margin: 0;
-  font-size: 0.6875rem;
-  line-height: 1.4;
-  color: rgb(17 13 13 / 0.6);
+.stories-rail-ghost {
+  display: block;
+  width: var(--story-circle);
+  height: var(--story-circle);
+  border: 2px dashed rgb(17 13 13 / 0.14);
+  border-radius: 50%;
+  background-color: rgb(17 13 13 / 0.025);
 }
 
 /* Composer. Butter rather than white so the one box the reader is meant to
@@ -2514,8 +2524,7 @@ button.bizprofile-update-action:hover {
   font-weight: 600;
 }
 
-/* Attachment affordances under the composer. Named rather than icon-only —
-   "Voice memo" is a feature nobody discovers from a microphone glyph. */
+/* Named attachment affordances under the composer. */
 .composer-chip {
   display: inline-flex;
   align-items: center;
@@ -3044,61 +3053,6 @@ button.bizprofile-update-action:hover {
 
 .cw-toggle:hover {
   background-color: rgb(217 98 54 / 0.13);
-}
-
-/* Voice memo player. Indigo field so audio reads as its own kind of post at a
-   glance while scrolling past — the feature is distinctive and the card should
-   be too. */
-.voice-memo {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-  padding: 0.75rem 1rem;
-  border-radius: 1rem;
-  background-color: var(--color-pana-indigo);
-  color: var(--color-pana-cream);
-}
-
-.voice-memo-play {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  background-color: var(--color-pana-butter);
-  color: var(--color-pana-ink);
-  transition: transform 0.2s ease;
-}
-
-.voice-memo-play:hover {
-  transform: scale(1.06);
-}
-
-/* Waveform. Bars are spans sized by an inline --peak, so the shape comes from
-   the data rather than from a background image that cannot change per post. */
-.waveform {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  flex: 1;
-  height: 2rem;
-}
-
-.waveform span {
-  flex: 1;
-  min-width: 2px;
-  border-radius: 999px;
-  background-color: var(--color-pana-butter);
-  height: calc(var(--peak, 0.5) * 100%);
-  opacity: 0.85;
-}
-
-/* The portion already played. Flame against butter keeps the progress readable
-   on the indigo field without introducing a fifth colour. */
-.waveform span[data-played='true'] {
-  background-color: var(--color-pana-flame);
-  opacity: 1;
 }
 
 /* Unfurled link. Flat and bordered so it cannot be mistaken for an attachment
@@ -3793,8 +3747,6 @@ button.bizprofile-update-action:hover {
   .feed-new-pill:hover,
   .composer-chip,
   .destination-option,
-  .voice-memo-play,
-  .voice-memo-play:hover,
   .link-preview,
   .mock-switch button {
     transition: none;
@@ -4018,6 +3970,28 @@ html.native-app {
 
 html.native-app body {
   padding-top: env(safe-area-inset-top);
+}
+
+html.native-app[data-native-platform='ios']:has([data-native-app]),
+html.native-app[data-native-platform='ios'] body:has([data-native-app]) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Smaller form text makes WebKit zoom the entire app when a field is focused. */
+html.native-app[data-native-platform='ios']
+  :where(input:not([type='checkbox']):not([type='radio']), textarea, select) {
+  font-size: max(16px, 1em);
+}
+
+html.native-app[data-native-platform='ios'] [data-story-composer] {
+  top: calc(
+    var(--native-viewport-top, 0px) + var(--native-viewport-height, 100dvh) / 2
+  );
+  max-height: calc(
+    var(--native-viewport-height, 100dvh) - env(safe-area-inset-top) -
+      env(safe-area-inset-bottom) - 2rem
+  );
 }
 
 .panaverse-masthead {
@@ -5565,6 +5539,11 @@ body {
   border-color: var(--color-pana-indigo);
 }
 
+.dirsearch-checkfilter:has(.dirsearch-checkinput:focus-visible) {
+  outline: 2px solid var(--color-pana-indigo);
+  outline-offset: 2px;
+}
+
 .dirsearch-checkfilter[data-on='true'] {
   background-color: rgb(48 62 140 / 0.08);
   border-color: var(--color-pana-indigo);
@@ -5711,6 +5690,84 @@ body {
 .dirsearch-menuclear:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* Directory menus opt in to the same paper, ink and selected rows as the
+   masthead scope selector. Other FilterMenu callers retain their own skin. */
+.dirsearch-filtertrigger {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.dirsearch-filtertrigger[aria-expanded='true'] {
+  border-color: var(--color-pana-indigo);
+}
+
+.dirsearch-filtertrigger[data-on='true'] {
+  border-color: var(--color-pana-indigo);
+  background-color: var(--color-pana-indigo);
+  color: var(--color-pana-cream);
+}
+
+.dirsearch-filtertrigger .dirsearch-menuvalue {
+  font-weight: 800;
+}
+
+.dirsearch-filterpanel {
+  top: calc(100% + 0.5rem);
+  right: auto;
+  left: 0;
+  z-index: 45;
+  width: 18rem;
+  max-width: calc(100vw - 2rem);
+  max-height: 24rem;
+  padding: 0.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Upward-opening panels must clear the sticky masthead and floating bug button. */
+.dirsearch-filters:has(.dirsearch-filterpanel) {
+  z-index: 45;
+}
+
+.dirsearch-filterpanel .dirsearch-menulist {
+  gap: 0.25rem;
+  max-height: none;
+  overflow: visible;
+}
+
+.dirsearch-filteroption {
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.dirsearch-filtertrigger:focus-visible,
+.dirsearch-filteroption:focus-visible,
+.dirsearch-filterpanel .dirsearch-menuclear:focus-visible {
+  outline: 2px solid var(--color-pana-indigo);
+  outline-offset: 2px;
+}
+
+.dirsearch-filteroption:focus-visible {
+  background-color: var(--surface-tone-soft, rgb(48 62 140 / 0.08));
+}
+
+.dirsearch-filteroption:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dirsearch-filteroption:disabled:hover {
+  background-color: transparent;
+}
+
+.dirsearch-filteroption[data-on='true'] .dirsearch-menutick {
+  border-color: var(--color-pana-indigo);
+  background-color: var(--color-pana-indigo);
 }
 
 /* --- Active filters ----------------------------------------------------- */
@@ -6854,35 +6911,55 @@ body {
    positions its own overlay wrapper — a pin that also positions itself would
    fight it and land in the wrong place. */
 .dirsearch-zip-bubble {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-height: 44px;
-  padding: 0.4rem 0.75rem;
-  border: 2px solid var(--color-pana-indigo);
+  display: grid;
+  place-items: center;
+  min-width: 64px;
+  height: 44px;
+  padding: 0 2px;
+  border: 0;
   border-radius: 999px;
-  background: #fff;
+  background: transparent;
   color: var(--color-pana-indigo);
-  box-shadow: 0 4px 14px rgb(17 13 13 / 0.12);
-  font-size: 0.8125rem;
-  font-weight: 800;
   cursor: pointer;
 }
 
-.dirsearch-zip-bubble strong {
-  display: grid;
-  place-items: center;
-  min-width: 1.4rem;
-  height: 1.4rem;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  font-size: 0.6875rem;
+.dirsearch-zip-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  background: var(--color-pana-cream);
+  box-shadow: 0 2px 6px rgb(17 13 13 / 0.12);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
-.dirsearch-zip-bubble[data-on='true'],
+.dirsearch-zip-label strong {
+  display: grid;
+  place-items: center;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--color-pana-indigo);
+  color: var(--color-pana-cream);
+  font-size: 9px;
+}
+
 .dirsearch-zip-bubble:focus-visible {
-  outline: 3px solid var(--color-pana-indigo);
-  outline-offset: 3px;
+  outline: none;
+}
+
+.dirsearch-zip-bubble[data-on='true'] .dirsearch-zip-label,
+.dirsearch-zip-bubble:focus-visible .dirsearch-zip-label {
+  outline: 2px solid var(--color-pana-indigo);
+  outline-offset: 2px;
 }
 
 .dirsearch-zip-focus {
@@ -11823,6 +11900,31 @@ body:has(.dirsearch) {
   margin-top: auto;
 }
 
+.dirsearch-resultsection + .dirsearch-resultsection {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgb(2 8 17 / 0.18);
+}
+
+.dirsearch-sectionhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-weight: 900;
+}
+
+.dirsearch-sectionhead h2 {
+  font-size: 1.25rem;
+}
+
+.dirsearch-sectioncopy,
+.dirsearch-sectionempty {
+  margin-block: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
 @container (min-width: 44rem) {
   .dirsearch-listbody .dirsearch-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -11835,8 +11937,6 @@ body:has(.dirsearch) {
   }
 }
 
-/* Number and logo travel together. The number links the map to the list at a
-   glance; the logo keeps the identity that made the original pins useful. */
 .dirsearch-pin {
   display: flex;
   align-items: center;
@@ -11848,16 +11948,8 @@ body:has(.dirsearch) {
   overflow: visible;
 }
 
-.dirsearch-pin > span {
-  display: grid;
-  width: 1.35rem;
-  height: 1.35rem;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--story-blue);
-  color: #fff;
-  font-size: 0.62rem;
-  font-weight: 900;
+.dirsearch-pin[data-approximate] {
+  border-style: dashed;
 }
 
 .dirsearch-pin img {
@@ -11871,10 +11963,6 @@ body:has(.dirsearch) {
   box-shadow:
     0 0 0 4px rgb(242 136 47 / 0.38),
     0 8px 20px rgb(17 13 13 / 0.26);
-}
-
-.dirsearch-pin[data-on='true'] > span {
-  background: var(--story-coral);
 }
 
 @media (min-width: 72rem) {
@@ -11900,23 +11988,7 @@ body:has(.dirsearch) {
   }
 
   .dirsearch-split .dirsearch-filterinner--menus .dirsearch-menurow {
-    flex-wrap: nowrap;
     gap: 0.4rem;
-  }
-
-  .dirsearch-split .dirsearch-menubtn {
-    min-height: 2.35rem;
-    border-width: 1px;
-    border-color: rgb(2 8 17 / 0.16);
-    border-radius: 0.75rem;
-    background: #fff;
-    color: var(--story-ink);
-  }
-
-  .dirsearch-split .dirsearch-menubtn[data-on='true'] {
-    border-color: var(--story-blue);
-    background: var(--story-blue);
-    color: #fff;
   }
 
   .dirsearch-split .dirsearch-checkfilter {
@@ -12057,9 +12129,12 @@ body:has(.dirsearch) {
 
    The scoped pages are listed alongside it because they are the same page in
    a different clothing: the same cream paper meeting the same white bar on the
-   same horizontal edge. */
-body:has(.dirsearch) header,
-body:has(.dirscope) header {
+   same horizontal edge.
+
+   Only the body's own website masthead belongs to this palette. Native app
+   and results-sheet headers must keep the platform/status-area cream. */
+body:has(.dirsearch) > header,
+body:has(.dirscope) > header {
   background-color: var(--story-cream);
 }
 

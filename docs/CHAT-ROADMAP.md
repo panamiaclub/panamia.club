@@ -85,25 +85,57 @@ out for group and event conversations.
 
 ## Current Messages workspace
 
-The approved `/mock/dm-chat` layout is applied to `/messages`, sharing
-`components/messages/workspace.module.css` but no mock data or simulated send controls.
+The production `/messages` workspace shares transcript/composer primitives and
+`components/messages/workspace.module.css` with `/mock/dm-chat`, but no mock data or
+simulated send controls. Its compact inbox intentionally omits the mock's heading,
+marketing copy, search field and New message button on both the website and native apps.
 Messages belongs to Pana Social's route registry and retains the real masthead and account menu.
-The workspace fills the remaining viewport, with legal links kept below it.
+The workspace fills the remaining viewport, with legal links kept below it in browsers.
+Native messaging omits the legal footer and composer helper text. Its header message
+shortcut stays hidden throughout Messages, including the inbox and Requests.
+Opening a conversation hides the app's bottom tabs and inner Back control; the
+app-header Back (and Android hardware Back) returns to the message list, preserving drafts
+and restoring focus. Standalone group chats keep their existing Back-to-group destination.
 The chat uses a warm, lightly textured cream/butter canvas, distinct sender bubbles, shared
 photo/initial avatars, clearer timestamps, and 44px primary touch controls. The desktop and
 mobile workspace avoid a redundant outer scrollbar; only their content panes scroll.
 The GIF picker stays inside the visible conversation, including when a multiline draft and
 an existing attachment leave too little room above the composer.
 
+- The compact composer starts as one row and grows to 128px before scrolling.
+  Return inserts a newline on phones; desktop Enter sends, Shift+Enter inserts
+  a newline, and IME composition is never submitted as a message.
+- **Attach a photo** opens the system image chooser directly in one gesture.
+  One photo and the existing GIF may accompany a message, including without a caption.
+  Photos reuse the authenticated `/api/social/media` upload and the existing
+  Pana media-link delivery model; they are not end-to-end encrypted and copied
+  media links can be viewed outside the conversation. Conversation details and
+  the photo control's accessible description explain this without an intermediary
+  attachment menu; no new privacy or encryption promise is made.
+  Camera pixels are resized to a 2048px longest edge and re-encoded as JPEG so
+  source metadata such as GPS is not uploaded. The original-file limit is 10 MB.
+  JPEG, PNG and WebP are supported; HEIC files can be converted when the browser
+  can decode them, with an explicit JPEG/PNG/WebP recovery message otherwise.
+- Message timestamps, compact per-message expiry and actual server acceptance
+  live inside tighter Pana-coloured bubbles. Direct messages omit redundant
+  sender avatars; groups retain sender identity. Report and authorized delete
+  controls stay accessible. There are still no calls, voice, presence or read receipts.
 - Desktop conversation and transcript panes scroll independently; the composer stays in view.
   Mobile uses a list/detail flow with Back navigation, including during loading and errors.
-- Conversation filtering is local. **New message** searches the existing actor API by name or
-  handle, excludes the viewer, and opens the same gated conversation endpoint as an existing chat.
+- Individual and group conversations share one inbox ordered by recent activity;
+  Requests remains separate and contains only held individual messages. A subtle group icon
+  identifies group rows. Separate selection keys, drafts and delivery paths keep the two
+  conversation types distinct; membership and consent checks are unchanged.
+- Start a text chat using **Message** on another pana's profile. The shared personal/business
+  profile action opens `/messages?to=<actor-id>` through the existing gated DM endpoint.
+  Incoming requests still need explicit acceptance. Sign-in preserves the selected target,
+  and existing standalone group links (`/messages?group=<handle>`) open the same mixed inbox.
+  Newly started profile chats stay easy to find while their first draft is still unsent.
 - DMs stay out of profile **Posts** lists and counts, including the sender's and recipient's
   views. Profile filtering happens before pagination and also excludes direct replies when
   requested. Public, followers-only, Panas, and readable group posts retain their audiences;
   Messages and authorized DM permalinks remain unchanged.
-- Text and mirrored-GIF drafts are held per conversation in component memory. Reloading, unmounting
+- Text, photo and mirrored-GIF drafts are held per conversation in component memory. Reloading, unmounting
   the workspace, signing out, or switching the active profile clears them; browser storage is not used.
 - Each submitted message retains its recipient, text, and attachments while sending or failed.
   **Retry** reuses that local bubble. A server acknowledgement is matched to its refetched row by
@@ -198,7 +230,6 @@ A DM today is a `socialStatuses` row with `visibility: 'direct'`. Retiring that 
 | What breaks                | Where                                         | Why it matters                                                         |
 | -------------------------- | --------------------------------------------- | ---------------------------------------------------------------------- |
 | **Federation**             | ActivityPub direct addressing                 | A DM to a Mastodon account works today. Chat does not federate at all. |
-| **Voice memos**            | `components/social/VoiceMemoComposer.tsx:331` | Shipped feature; sends `visibility: 'direct'`                          |
 | **The DM consent gate**    | `lib/federation/wrappers/dm-gate.ts`          | `allow`/`hold`/`refuse`, the Requests folder, the no-notify property   |
 | **Block / mute semantics** | `isBlockedEitherWay`, `filterHiddenActorIds`  | Already audited against the status read path                           |
 | **Moderation**             | A DM is a status, so status tooling applies   | A chat transcript is not a status; nothing we built would apply        |
@@ -261,7 +292,7 @@ of that backfill are deliberate and worth keeping if it is ever revisited:
 
 - **It extends, it does not revive.** The predicate is `expires_at > NOW()`. Dropping it would
   un-hide every DM sent in the last thirty days, because the rows were never deleted. Disappearing
-  was documented — `docs/FEATURES.md` told panas voice memos auto-expire — and somebody may have
+  was documented for legacy voice memos, and somebody may have
   sent something they would not have sent otherwise. Honouring that costs old history nobody
   currently sees; breaking it costs somebody a reasonable expectation of privacy, and cannot be
   undone once they have seen it.
@@ -458,15 +489,15 @@ one. It was priced as though buying it meant buying the chat model, and it does 
 own list:
 
 - _"Does not federate."_
-- _"Two parallel DM systems unless the direct-status path is retired, and voice memos live on that
-  path."_
+- _"Two parallel DM systems unless the direct-status path is retired."_
 - _"Block, mute, and report all need re-implementing against a second store."_
 - _"Moderation gets harder: a transcript is not a status, so nothing we built applies."_
 
 Every one of those is caused by `chat_messages` being a new table, not by the socket. Adding a
 socket in front of `socialStatuses` pays none of them: federation still works because the message is
 still a status, block filtering still applies because it is the same read path, moderation still
-applies because it is the same row, and voice memos keep working because nothing moved.
+applies because it is the same row. Audio notes and voice memos have since been retired without
+changing this direct-message substrate.
 
 **Conclusion: buy column one, decline column two.** That deletes the only cost recorded against the
 mail substrate while costing nothing the mock warned about — which is why the substrate survives the

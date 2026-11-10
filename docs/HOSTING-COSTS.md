@@ -77,8 +77,7 @@ bends upward.**
 ### 2. We transcode on the member's device, not on a server
 
 `lib/media/transcode.ts` runs ffmpeg compiled to WebAssembly in the browser.
-Video becomes H.264/AAC MP4 and audio becomes Opus _before_ it is ever
-uploaded.
+Video becomes H.264/AAC MP4 _before_ it is ever uploaded.
 
 Most social platforms pay for this server-side — Cloudflare Stream, Mux, and
 AWS MediaConvert all bill per minute of video processed, and at story volumes

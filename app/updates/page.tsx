@@ -1,8 +1,7 @@
 /**
  * Updates Page
  *
- * Combines voice memo composer, messages (@-me/sent), and notifications (Pana Updates).
- * Voice memos are direct messages shown in the Messages section.
+ * Combines messages (@-me/sent) and notifications (Pana Updates).
  *
  * UPSTREAM REFERENCE: external/activities.next/lib/services/timelines/
  */
@@ -17,7 +16,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   CheckCheck,
   Bell,
-  Mic,
   Inbox,
   Send,
   Trash2,
@@ -26,7 +24,6 @@ import {
   Clock,
 } from 'lucide-react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { formatDistanceToNow } from 'date-fns';
 import NotificationItem from '@/components/NotificationItem';
 import { PostCard } from '@/components/social/PostCard';
@@ -34,13 +31,6 @@ import { AttachmentGrid } from '@/components/social/AttachmentGrid';
 import { BlockMenu } from '@/components/social/BlockMenu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-const VoiceMemoComposer = dynamic(
-  () =>
-    import('@/components/social/VoiceMemoComposer').then((m) => ({
-      default: m.VoiceMemoComposer,
-    })),
-  { ssr: false }
-);
 import {
   useNotifications,
   useMarkAsRead,
@@ -139,19 +129,6 @@ export default function UpdatesPage() {
   return (
     <main className="container mx-auto max-w-4xl px-4 py-8">
       <div className="space-y-6">
-        {/* Voice Memo Composer */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mic className="h-5 w-5" />
-              Voice Memo
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <VoiceMemoComposer />
-          </CardContent>
-        </Card>
-
         {/* Main Content Card */}
         <Card>
           <CardHeader>
@@ -213,7 +190,7 @@ export default function UpdatesPage() {
                 isLoading={inboxLoading}
                 emptyIcon={<Inbox className="mb-3 h-12 w-12 text-gray-400" />}
                 emptyTitle="No messages yet"
-                emptyDescription="When someone sends you a voice memo, it will appear here."
+                emptyDescription="When someone sends you a message, it will appear here."
               />
             )}
             {activeTab === 'requests' && (
@@ -235,7 +212,7 @@ export default function UpdatesPage() {
                 isLoading={sentLoading}
                 emptyIcon={<Send className="mb-3 h-12 w-12 text-gray-400" />}
                 emptyTitle="No sent messages"
-                emptyDescription="Voice memos you send will appear here."
+                emptyDescription="Messages you send will appear here."
                 showDelete
                 onDeleteMessage={handleDeleteMessage}
                 isDeleting={deletePost.isPending}
@@ -511,7 +488,11 @@ function RequestCard({
             <Trash2 className="mr-1 h-4 w-4" />
             Delete without replying
           </Button>
-          <BlockMenu username={sender.username} displayName={displayName} />
+          <BlockMenu
+            username={sender.username}
+            actorUri={sender.uri}
+            displayName={displayName}
+          />
         </div>
       </div>
     </div>

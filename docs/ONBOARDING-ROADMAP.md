@@ -76,6 +76,284 @@ a different business contact gets a receipt without the sign-in link. Connected
 owners receive future decisions at their current account email. Sign-in and setup
 links stay private to that account.
 
+Invitation/reminder proof pages and their private APIs select `no-referrer`
+in the global proxy: the runtime applies proxy headers after route headers.
+Route-owned cache directives and public directory/map policies are unchanged.
+
+### Review and claim an existing listing
+
+The permanent entry for an existing directory business is
+`/listings/claim/start?id={profileId}`. Use the actual public PostgreSQL profile
+ID, never an import/source ID or an email address. The page shows a public-only
+preview before sign-in. Opening it or signing in does not assign ownership.
+
+An unclaimed business requires an explicit request for a one-hour, one-time
+ownership link sent to its business contact inbox. The requesting Pana account
+may use a different email. Verification is bound to that account; a signed-out
+visitor returns to the same token after sign-in, and a wrong-account visit can
+switch accounts without consuming the rightful requester's link. Existing claim
+URLs still work. New verification emails also retain the public profile ID for
+expired/used-link recovery.
+
+Already-authorized owners go directly to `/listings/review?id={profileId}`,
+not an "already claimed" dead end. Owners can still use the permanent entry
+when their listing is not public; other visitors cannot preview it, and the
+review does not offer a broken public destination. The canonical review entry
+checks access and redirects straight to Location, with no separate card
+overview. One branded six-step wizard reuses the address, description, category,
+private contact, public link and photo editors, in that order. The existing
+`/account/profile/{step}?listingId={profileId}` deep links keep their section,
+including after sign-in and reload. Each editor carries `listingId` explicitly
+and checks `profile_owners` (or the
+existing direct ownership link) again on reads and writes. Invalid, foreign or
+personal profile scopes never fall back to the currently active identity.
+The journey does not switch the active-profile cookie.
+
+Existing information is prefilled and omitted values are preserved. Every
+business must provide a real, recognized five-digit US ZIP to complete its
+listing review, including online-only and mobile/appointment-based businesses.
+ZIP+4 is normalized to its first five digits, preserving leading zeros. Location
+asks how people can find the business before showing the corresponding fields.
+**Public visiting address** requires a public street address, city, state and
+recognized ZIP; an exact map point remains optional. **Online** and
+**Mobile or by appointment** ask only for a recognized business base ZIP, never
+a street, private home address or exact point. A missing, invalid or
+not-yet-verified saved ZIP leaves all location choices unselected and offers no
+**Keep current location details** shortcut. Keyboard focus alone does not choose
+a mode. A verified saved ZIP still allows keeping current details unchanged,
+including legacy ZIP-only or public-point locations.
+
+Selecting a mode changes only the form until an explicit save. Online/mobile
+saves clear previous street/exact-point data while preserving unrelated service
+counties and profile fields; mobile does not mark the business online-only.
+Returning to a public visiting address never restores a legacy online row's
+hidden street or exact point without explicit entry. Missing location is not
+classified as online-only.
+Without a visiting address, a ZIP is an approximate base area, not directions,
+a service/delivery boundary or an exact street point. ZIP validation and
+street/point privacy use the existing address API and verified ZIP cache.
+Each review editor has one Back/continue footer after its editable fields in DOM
+and keyboard order, including **Continue to confirmation** at the end of Photos.
+There is no duplicate top or sticky next action. Saving each section continues
+to the next; Back returns to the preceding step and the six pills allow direct navigation.
+The first Back exits to the selected listing's permanent entry. Keeping location
+or photos unchanged uses the same continue action rather than a second save
+button. A saved **primary business photo** is required to finish the review.
+An existing real saved primary photo counts without another upload. Gallery
+photos remain optional and cannot substitute for the primary; neither an
+unsaved selection, failed/empty upload response, personal avatar nor site
+placeholder meets the requirement. Photos checks the scoped upload response and
+refetches this business before continuing. Saving, skipping and switching steps
+never confirm the review, and optional steps need not be visited.
+
+Photo saves stage new, uniquely keyed objects before changing the profile.
+Only selected slots are merged into the locked current row after access is
+rechecked, so concurrent saves to different slots keep both changes. Failed
+uploads or database writes leave saved photos intact; unreferenced staged
+objects are cleaned up where possible. Superseded objects are removed only
+after persistence, never while another current slot retains their URL.
+Cleanup failures are logged without reporting a committed save as failed.
+Storage cleanup is best-effort: provider failures or an unavailable database
+can leave unreferenced objects, and foreign/imported media is not deleted.
+
+After Photos, `/listings/review?id={profileId}&complete=1` opens the final check
+inside the same wizard frame, with a read-only summary and Back to photos. It
+does not mark anything complete on arrival. Only the authenticated **Confirm
+business information** POST, after verifying the locked business's current ZIP
+and saved primary photo, can save `lastReviewedAt`, complete the current
+reminder cycle and restore an eligible overdue-review pause; staff restrictions
+remain authoritative. The success screen is backed by the server's review state,
+not `complete` or `confirmed` query parameters alone. It links to the updated
+public listing when available and the exact business's management wizard.
+Direct requests, skipped steps, stale location/photo data and URL flags cannot
+bypass these requirements. A missing primary photo returns a Photos-field error before
+any completion/restoration writes, with a link back to Photos. Historical review
+timestamps are preserved when requirements are no longer met. No external
+image-existence lookup is made. Unknown ZIPs return a Location-field error;
+temporary lookup failures are retryable and leave review, cycle and visibility unchanged. A
+previously verified ZIP does not require another network lookup.
+
+Cream/ink surfaces, orange actions, indigo step pills and progress are scoped to
+listing-review mode; ordinary personal editors retain their account styling and
+save behavior. Review deadlines, holds and errors stay in the wizard. Reminder
+preferences are available in a compact disclosure without changing campaign or
+visibility policies, including when the business has no primary photo.
+
+This is a product UI path only. It does not create, schedule or send a campaign,
+import contacts, bulk-claim businesses, or modify existing listings on arrival.
+Published legacy listings without ZIPs or primary photos remain published. There
+is no data backfill, migration or new background requirement-based deactivation.
+Personal editors, intake drafts and edits to other business fields do not
+acquire these review requirements.
+
+### Inbox invitation shortcut (operator-issued, not an account login)
+
+An operator may prepare a distinct invitation for a published, unclaimed intake
+listing. The delivery contract is
+`/listings/invite?id={publicProfileId}#token={opaqueInvitation}`. Deliver that URL
+privately **only to the business contact returned by issuance**; do not publish
+it, log it, drop its fragment, or copy it to another address. The plain stable
+claim/review URLs above remain the non-secret recovery and management routes.
+
+The invitation lasts **seven days from issuance**, independently of the existing
+30-minute passwordless sign-in link and one-hour account-bound ownership email.
+It proves access to the business inbox for one listing; it cannot log in as or
+impersonate a personal account. Opening it, including scanner/preview loads,
+performs no account creation, ownership grant, email send or token consumption.
+
+The raw invitation is carried in a URL fragment, not a query string sent to
+servers or third parties. The client checks it through a same-origin JSON POST
+and retains it in a host-only, HttpOnly, SameSite=Lax cookie scoped to the
+invitation API (Secure in production). This only preserves context: inspection
+is read-only and does not spend the proof. The fragment is removed from the
+address bar. No invitation proof or business email is put into login callbacks,
+browser storage, public API responses or analytics. Passwordless sign-in returns
+to `/listings/invite?id={publicProfileId}` on the same origin; use the same
+browser, or reopen the original invitation in the browser already signed in.
+
+Signed-in visitors see the account that would manage the listing and can change
+accounts before **Confirm claim and review**. Signed-out visitors see **Sign in
+or create an account**, first-time Google/email guidance, and the business name
+they will confirm after returning. Existing members use their Pana account.
+Business and personal login emails can differ; a personal public profile or
+screenname is not required to manage a business. A valid invitation
+replaces the second business-inbox verification email, not the chosen account's
+sign-in. Existing public claim links without invitations keep their original
+account-bound verification. Already-authorized managers may go directly to the
+stable review route even when the invitation has been used or expired.
+
+Authenticated acceptance checks the displayed account ID/email again and locks
+the listing before its invitation. Ownership and invitation consumption commit
+together using the shared first-claim helper; an outage rolls both back.
+Inspection and acceptance check current contact, pending setup and ownership
+state. A contact edit or successful first claim revokes outstanding invitation
+proof. Reissue/revoke operations use the same listing lock, so concurrent
+requests cannot produce two first owners or two usable invitations.
+
+Issuance plumbing (no delivery or campaign execution):
+
+- `POST /api/admin/listings/{profileId}/invitation`: admin session and same-origin
+  request required. Reads the actual current business contact, replaces any
+  prior invitation for that listing, and returns the URL, recipient and expiry.
+  A caller-supplied recipient/email cannot change the destination.
+- `DELETE /api/admin/listings/{profileId}/invitation`: admin-only revocation.
+  This does not touch passwordless or existing account-bound claim tokens.
+- `POST /api/listings/invitations/context`: validates the fragment and stages
+  browser context only. `GET /api/listings/invitations?profileId={id}` is read-only.
+- `POST /api/listings/invitations`: requires the current session, explicit
+  acceptance and its expected account ID/email; grants only the scoped listing
+  and returns its exact review path. It never changes the active identity.
+
+Only hashes of the invitation and bound inbox fields are stored, namespaced in
+the existing verification table. An admin receives the raw delivery URL once;
+normal inspection never returns it or private contacts. Replaced, revoked,
+expired, contact-changed and wrong-context links offer the stable claim path
+or support; changed sessions must reload and confirm again. No production
+invitations are minted by development/testing, and campaign delivery remains
+subject to separate approval.
+
+### Thirty-day review reminders and overdue recovery
+
+Staff may explicitly enroll one published business at
+`/admin/listings/{profileId}/refresh`. The page is read-only until the operator
+checks the authorization box and starts the cycle. The migration, ordinary
+sign-in, claim links and listing edits do not enroll anyone.
+
+The existing hourly Worker checks due cycles. A successful initial email starts
+the 30-day clock. Reminders follow at days 7, 14, 21 and 28; the fourth is the
+final notice. At day 30 an unanswered cycle is paused by setting `active=false`
+and recording `status.refreshPause.reason = 'review_overdue'`. No profile,
+photos, location or ownership data is deleted. Late notices remain seven days
+apart, and the last successful reminder always receives at least 48 hours before
+hiding; delivery lateness extends the deadline rather than shortening notice.
+
+The last step of the listing journey now requires an explicit, authenticated
+**Confirm business information** action. It records `profiles.lastReviewedAt`
+and completes the current cycle atomically with cancellation of pending
+reminders. Merely opening `?complete=1`, signing in, claiming, or saving one
+section does not confirm the review. Existing values can be left unchanged
+when the business already has a verified US ZIP. Otherwise, add a real ZIP in
+Location before confirming; online and mobile businesses are not exempt. Choose
+the public visiting-address form or the ZIP-only online/mobile form as appropriate.
+Never guess a ZIP or provide a private home address.
+
+Unclaimed businesses receive fresh seven-day inbox invitations in reminders.
+Claimed businesses receive a non-secret review link at their current managing
+account emails, not whichever identity is active in the browser. Recipients are
+resolved from actual ownership links, with duplicate inboxes removed. Business
+and personal login emails remain separate.
+
+Overdue unclaimed listings retain the secure claim path even while their public
+directory/profile page is hidden. A valid overdue-pause marker and cycle allow
+ownership verification; claiming alone does not republish them. The subsequent
+authorized confirmation restores only that overdue pause. The marker contains a
+guard against changes to staff decisions, administrative state, or identity.
+Staff approve/decline operations cancel the cycle and clear the marker. A manual
+suspension or cancelled cycle is never overridden by an owner confirmation.
+
+Delivery is recorded per cycle, round and recipient hash before the provider is
+called. Confirmed recipients are not automatically mailed twice for that round.
+The native mail binding does not promise delivery idempotency: rejected sends
+and abandoned/unacknowledged attempts put the cycle on hold, not into a blind
+retry loop. Development console logging cannot count as a delivered reminder.
+The initial clock stays unset when the first email fails. Staff can inspect
+delivery references, mark a delayed bounce, hold/cancel a cycle, or explicitly
+acknowledge resend risk before retrying. Changed recipients, known bounces, and
+a held final notice require a fresh cycle rather than an immediate overdue hide.
+Before hiding, the job also checks that the initial notice and every reminder
+reached a currently relevant manager or business inbox; a new, unnotified
+contact/ownership handoff is held instead of inheriting an old deadline.
+
+Local email opt-outs and existing CRM Email DND are checked before sending and
+before hiding; an unavailable preference lookup holds the cycle. Every reminder
+includes a scoped stop-reminders link whose GET is read-only and whose explicit
+confirmation records the listing preference without claiming or republishing
+it. Owners can also stop reminders from the review page. Opt-outs are not
+treated as ignored notices, and staff cannot bypass the preference with retry.
+An owner can allow future listing reminders without starting a new campaign.
+
+Initial, weekly and final `listing.refresh` notices use the listing-only variant
+of `emailLayout` in `lib/email-templates/layout.ts`, along with the closely
+related `listing.claim` and `listing.setup` messages. The cream/orange/indigo
+palette, current PNG wordmark, inline table layout and text fallbacks match the
+site without changing unrelated authentication or admin templates. The job's
+`reminderNotice` flag selects presentation only; deadlines, recipient selection,
+proof URLs, opt-outs and successful-delivery lifecycle rules are unchanged.
+All refresh stages put the new-account and different-login-email reassurance
+before the review button and detailed ZIP/photo instructions in both HTML and
+plain text. The invitation guidance still requires sign-in and explicit claim
+confirmation for an unclaimed listing, not a second business verification email.
+
+For a private, no-send preview, run
+`yarn tsx scripts\preview-listing-emails.ts <private-output-directory>`.
+It writes HTML, plain text and a subject manifest directly from the registered
+`renderTemplate` path used by `sendTemplateEmail`, including all refresh stages,
+owned-listing links, claim verification and setup recovery. It uses only sample
+data, reserved `.invalid` action URLs and deliberately invalid proof strings;
+it imports neither the transport nor the database and requires no credentials.
+Keep previews outside public assets. Outlook can fall back to square corners
+and system fonts; images can be blocked without losing the name, content or CTA.
+Presentation does not guarantee Inbox placement. Mail provider/authentication
+settings, controlled sends and production campaign approvals remain separate.
+
+The server APIs are:
+
+- `GET/POST /api/admin/listings/{profileId}/refresh`: authorized staff status,
+  explicit start, hold, bounce flag, cancellation and controlled retry.
+- `GET/POST /api/listings/review`: private exact-business status and authenticated
+  final confirmation or reminder preference. Account and cycle snapshots are
+  checked again on writes.
+- `POST /api/listings/review/stop`: a scoped, non-login suppression capability
+  from `/listings/reminders/stop?cycleId={id}#token={proof}`.
+
+Recipient emails and delivery/invitation URLs are not copied into the delivery
+ledger. Only hashes, dates, states and references are retained; the tables have
+RLS with no direct-client policies and cascade when their business is deleted.
+Cron telemetry remains aggregate counts, not private contacts or messages.
+Migration `0076_listing_refresh.sql` is required before deployment. It changes
+no listing visibility and creates no cycles. Campaign enrollment, real sends,
+merge and deployment are still separate operational approvals.
+
 ### What happens on a first sign-in
 
 | Step                   | Where       | Effect                                                                                                      |
@@ -301,9 +579,11 @@ It is also redundant. The directory already answers "near me" directly and
 does not need a zip:
 
 - **Distance** comes from shared browser coordinates: `geolat`/`geolng` through
-  `calcDistance` in `lib/geolocation.ts`, driving the finite radius filter and
-  the `nearest` sort. Coordinates are cached for a day and sent to the search
-  API only at two decimal places.
+  `calcDistance` in `lib/geolocation.ts`, driving the `nearest` sort. Coordinates
+  are cached for a day and sent to the search API only at two decimal places.
+- **Area** comes from the visible map bounds. Sharing location centers the
+  camera on the viewer without imposing a hidden radius; old radius links
+  cannot exclude distant or unlocated matches from directory discovery.
 - **No location** means the complete South Florida directory. The browser is
   prompted only after an explicit "Use my location" click; denied, unsupported
   and unavailable location all keep the directory usable without a geographic
@@ -323,7 +603,8 @@ while this work was in flight and re-created the input in
 called "Where you are" whose lede promised "A ZIP code is enough to sort the
 directory and the events near you." That is the same promise the old copy made and the same one nothing kept. The
 directory now keeps location discovery in context: an explicit location CTA,
-finite radius choices when coordinates exist, and all South Florida otherwise.
+nearest sorting when coordinates exist, and viewport-based area discovery
+without a separate radius control.
 
 ---
 

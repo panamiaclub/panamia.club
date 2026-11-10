@@ -1,17 +1,9 @@
-function Placeholder({ label }: { label: string }) {
-  return (
-    <p className="rounded border border-dashed border-blue-400/50 bg-blue-50/50 p-4 text-sm text-blue-800 dark:bg-blue-950/20 dark:text-blue-200">
-      {label} — full legal text to be drafted.
-    </p>
-  );
-}
-
 export interface ModuleDefinition {
   id: string;
   title: string;
   summary: string;
   items: string[];
-  placeholder: string;
+  terms: string[];
 }
 
 export const moduleDefinitions: ModuleDefinition[] = [
@@ -28,7 +20,10 @@ export const moduleDefinitions: ModuleDefinition[] = [
       'Membership levels',
       'Image upload requirements and CC licensing',
     ],
-    placeholder: 'Profiles module terms',
+    terms: [
+      'Describe your work accurately and obtain permission before managing another person’s listing. Published fields and images can be visible to others; do not put secrets or sensitive private information in them. A listing may require human approval and may be limited to the supported South Florida communities.',
+      'Approval is not an endorsement, license, background check, or guarantee of a business. Manage delegated access through the permissions the service provides. Profile records are eligible for deletion as described in the Privacy Policy, subject to the separate rules for published contributions and required records.',
+    ],
   },
   {
     id: 'articles',
@@ -44,7 +39,10 @@ export const moduleDefinitions: ModuleDefinition[] = [
       'ActivityPub federation of articles',
       'Reply threading',
     ],
-    placeholder: 'Articles module terms',
+    terms: [
+      'Authors and accepted collaborators are responsible for rights, accuracy, attribution, and the publication license. Invitations and peer review do not authorize publishing another author’s private work outside the agreed workflow. A review or approval is not a warranty from Pana MIA Club. Wholly AI-generated publication is prohibited; disclose permitted AI assistance.',
+      'Articles may be delivered through supported federation features. Before the three-month archive threshold, removal is available under the applicable workflow. Afterward, community-record retention and attribution removal apply as described in the Privacy Policy. Independently licensed or remote copies may remain.',
+    ],
   },
   {
     id: 'social',
@@ -61,7 +59,10 @@ export const moduleDefinitions: ModuleDefinition[] = [
       'Interaction with external Mastodon users',
       'CC license on all posts',
     ],
-    placeholder: 'Social module terms',
+    terms: [
+      'Visibility settings and content warnings help choose an audience but cannot prevent recipients from copying information they can access. Public or federated posts may reach independent servers and their users. Follow requests, blocking, muting, groups, and messaging follow the controls the service exposes. Do not evade those controls or contact someone who has asked you to stop.',
+      'Social posts on our service are eligible for deletion at any age. We send supported deletion notices to known peers on a best-effort basis, not a guarantee of remote removal. The community and child-safety rules apply to posts, stories, profiles, and messages alike.',
+    ],
   },
   {
     id: 'mentoring',
@@ -75,36 +76,40 @@ export const moduleDefinitions: ModuleDefinition[] = [
       'Whiteboard: collaborative Temporary Data (purged after session)',
       'Chat: Temporary Data',
       'Session notes: Persistent Data',
-      'No server-side recording unless explicitly enabled with consent',
+      'No server-side recording',
       'All-party consent for recordings (Fla. Stat. \u00a7 934.03)',
       'Cancellation and no-show policy',
       'Free vs paid sessions and rate expectations',
     ],
-    placeholder: 'Mentoring module terms',
+    terms: [
+      'Arrange a session with the participants’ consent and confirm its topic, timing, price if any, and cancellation arrangements before making a commitment. The platform does not certify a mentor’s qualifications or make a session a substitute for regulated professional advice.',
+      'Be respectful and do not record audio, video, or screen content without all participants’ explicit consent. Available calls use peer-to-peer technology. Temporary chat, whiteboard, signaling, and retained session notes follow the Privacy Policy; a recording or transcript is not promised. Cancel or complete pending sessions before account deletion when the deletion workflow requires it.',
+    ],
   },
   {
     id: 'events',
     title: 'Events',
     summary:
-      'Event records become part of the community record after completion. Event photos are CC-licensed and archived 3 months post-event. Recording at events requires all-party consent per Florida law. RSVP data is fully deletable.',
+      'Event records become part of the community record after completion. Organizers are responsible for accurate event details and permissions. Attendance data is eligible for deletion. Recording must respect consent and applicable law.',
     items: [
       'Event creation and organizer responsibilities',
       'Venue submission and approval',
       'RSVP and attendee data visibility',
-      'Photo uploads and approval workflow (CC-licensed)',
-      'Livestreaming: Cloudflare Stream, SRT keys as Temporary Data',
       'All-party consent for recordings (Fla. Stat. \u00a7 934.03)',
       'Age restrictions and photo policies',
       'Cancellation policy',
       'Organizer and volunteer roles',
     ],
-    placeholder: 'Events module terms',
+    terms: [
+      'Organizers must describe an event accurately, obtain needed venue permissions, state admission terms and age restrictions, and update material changes or cancellations. Check those details with the organizer before traveling or paying. An RSVP does not guarantee admission, availability, safety, or a refund.',
+      'Attendance information is visible as described by the event feature. Do not photograph or record people in violation of their consent or applicable law. Completed event records can become community record; personal attendance records remain subject to the deletion rules. These terms do not promise event photo uploads, livestreaming, or another feature that is not enabled.',
+    ],
   },
   {
     id: 'uploads',
     title: 'Uploads',
     summary:
-      'All uploaded media must be Creative Commons licensed (CC BY or CC BY-SA). No "all rights reserved" content. Uploads are stored on Cloudflare R2 and follow the retention class of their parent content. DMCA takedown process available.',
+      'Published uploads must use a supported Creative Commons instrument (CC BY, CC BY-SA, or CC0). Uploads are stored on Cloudflare R2 and normally follow the retention class of their parent content. Pornography, sexually explicit material, gratuitous graphic violence, illegal material, and infringement are prohibited.',
     items: [
       'Supported formats (JPEG, PNG, WebP, GIF)',
       'CC license required on all uploads',
@@ -114,7 +119,12 @@ export const moduleDefinitions: ModuleDefinition[] = [
       'NCMEC/CyberTipline reporting obligation',
       'Prohibited content (CSAM, copyright infringement, etc.)',
     ],
-    placeholder: 'Uploads module terms',
+    terms: [
+      'Only upload files you are authorized to provide and license. A publication license does not cure copyright infringement, a privacy violation, or abuse. Do not upload malware, pornography, sexually explicit content, content intended to be sexually gratifying, non-consensual intimate imagery, gratuitous graphic real-world violence, or child sexual abuse material.',
+      'Lawful nonsexual nudity may be permitted only in a clearly justified educational, documentary, scientific, or artistic context and must not be gratuitous. This exception never permits child sexual abuse or exploitation, non-consensual intimate imagery, or other illegal content.',
+      'Graphic real-world violence is permitted only in non-gratuitous newsworthy coverage.',
+      'File types and limits depend on the feature and may change for safety or operational reasons. Media is hosted through our infrastructure providers and normally follows its parent content’s retention. Moderation, legally required retention, brief caching, and independent remote copies can affect removal. Report prohibited material without downloading or redistributing it.',
+    ],
   },
   {
     id: 'payments',
@@ -129,7 +139,10 @@ export const moduleDefinitions: ModuleDefinition[] = [
       'Refund policy',
       'Tax receipts and record retention (7 years)',
     ],
-    placeholder: 'Payments module terms',
+    terms: [
+      'Review the amount, currency, goods or service, recurrence, shipping, and any cancellation or refund terms displayed at checkout before authorizing payment. Stripe processes supported donations, memberships, and merchandise transactions; applicable provider terms and non-waivable consumer rights also apply.',
+      'A recurring contribution or membership continues according to the terms you accept until cancelled through the provided account or support controls. Account deletion does not erase required financial records or an already incurred obligation. Contact support about payment or fulfillment problems. A donation does not buy digital privileges unless expressly described; these terms introduce no new paid feature and do not promise that every contribution is tax-deductible.',
+    ],
   },
   {
     id: 'resilience',
@@ -149,13 +162,16 @@ export const moduleDefinitions: ModuleDefinition[] = [
       'Abuse reports (NIP-56) are retained after account deletion',
       'Published Nostr events cannot be retracted (NIP-09 deletes are advisory)',
     ],
-    placeholder: 'Resilience Network module terms',
+    terms: [
+      'Keep your Nostr secret key private and backed up. Keys created or imported on your device are not recoverable by the operator if you lose them. Bringing an existing public key can allow others to connect your identities across relays. Key rotation does not automatically transfer every prior relationship or remote copy.',
+      'Group membership controls relay access, not end-to-end confidentiality: participants and the relay can see messages, and a recipient can retain a copy. Respect invitations, membership rules, and restricted communications. Leaving can be subject to the stated grace period. Published signed events cannot be guaranteed to disappear from other relays; deletion notices are advisory. Abuse reports are safety records and may outlive account deletion.',
+    ],
   },
   {
     id: 'community',
     title: 'Community',
     summary:
-      'Community conduct is enforced through a graduated process: warning, suspension, then termination. Appeals are available at each stage. Repeat copyright infringers are subject to account termination per DMCA policy.',
+      'Moderators may warn, restrict, suspend, or terminate access according to severity and safety needs. Serious risks can require immediate action. Appeals may be sent to the published contact. Repeat infringement can lead to termination.',
     items: [
       'Code of conduct',
       'Behavioral expectations',
@@ -164,7 +180,10 @@ export const moduleDefinitions: ModuleDefinition[] = [
       'Repeat infringer policy (DMCA)',
       'Admin moderation powers and transparency',
     ],
-    placeholder: 'Community module terms',
+    terms: [
+      'Apply the acceptable-use and child-safety rules in profiles, posts, messages, groups, and events. Moderators may warn, remove content, restrict features, suspend, or terminate access according to severity, available evidence, and safety needs. A warning is not required before acting on a serious risk.',
+      'Do not retaliate against a good-faith reporter or try to erase moderation records. Send an appeal to hola@panamia.club with enough context to identify the decision, without passwords or illegal material. Appeals do not promise a particular outcome, disclosure of someone else’s private report, or restoration of content that cannot lawfully be hosted. Repeat infringement can lead to termination under the copyright policy.',
+    ],
   },
 ];
 
@@ -183,7 +202,9 @@ export function ModuleContent({ module }: { module: ModuleDefinition }) {
           <li key={item}>{item}</li>
         ))}
       </ul>
-      <Placeholder label={module.placeholder} />
+      {module.terms.map((paragraph) => (
+        <p key={paragraph}>{paragraph}</p>
+      ))}
     </>
   );
 }

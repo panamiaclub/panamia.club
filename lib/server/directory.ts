@@ -7,7 +7,7 @@ import { ProfileDescriptions, ProfileMentoring } from '@/lib/interfaces';
 import { extractCoordinates } from './profile';
 import { calcDistance } from '@/lib/geolocation';
 import { normalizeUsZip, type OnlineZipArea } from '@/lib/online-zip';
-import { getOnlineZipAreasForProfiles } from './online-zip';
+import { getDirectoryZipAreasForProfiles } from './online-zip';
 import { claimedProfileIds } from './profile-owners';
 import { countyList, profileCategoryList } from '@/lib/lists';
 import {
@@ -328,7 +328,7 @@ export const getSearch = async ({
   geolat,
   geolng,
   radius,
-  resultsView: _resultsView,
+  resultsView,
   sort = 'relevance',
   certifiedOnly,
   withEventsOnly,
@@ -337,6 +337,7 @@ export const getSearch = async ({
   languages,
   freeOnly,
 }: SearchInterface) => {
+  const mapView = resultsView === 'map';
   const viewerLat = Number(geolat);
   const viewerLng = Number(geolng);
   const hasViewerLocation =
@@ -354,7 +355,15 @@ export const getSearch = async ({
     return {
       success: true,
       data: [],
-      pagination: { page: pageNum, limit: pageLimit, total: 0, totalPages: 0 },
+      pagination: {
+        page: mapView ? 1 : pageNum,
+        limit: mapView ? 1 : pageLimit,
+        total: 0,
+        totalPages: 0,
+      },
+      map: mapView
+        ? { totalResults: 0, unmappedCount: 0, unmappedResults: [] }
+        : undefined,
     };
   }
 
@@ -454,10 +463,16 @@ export const getSearch = async ({
     filtered = filtered.filter((p) => p.panaCertifiedAt != null);
   }
 
-  // Online businesses use their coarse base ZIP, never a private street point.
-  const zipAreas = await getOnlineZipAreasForProfiles(filtered);
-  // A finite radius includes public storefronts and approximate online ZIP
-  // areas. An online listing without a usable ZIP remains All-areas-only.
+  // Online businesses always use a coarse ZIP, never a private street point.
+  // Other listings may use their existing ZIP only when no exact point exists.
+  const zipAreas = await getDirectoryZipAreasForProfiles(
+    filtered.filter(
+      (profile) =>
+        profile.onlineOnly === true || extractCoordinates(profile) === null
+    )
+  );
+  // A finite radius includes public points and approximate ZIP areas.
+  // An unlocated listing remains All-areas-only.
   // Without usable viewer coordinates the public fallback is the full South
   // Florida directory, even if a stale client asks for a finite radius.
   const locationContext = {
@@ -501,21 +516,47 @@ export const getSearch = async ({
 
   const total = ordered.length;
   const skip = pageNum > 1 ? (pageNum - 1) * pageLimit : 0;
-  const data = await enrichPage(
-    ordered.slice(skip, skip + pageLimit),
+  const indexed = ordered.map((profile, index) => ({
+    profile,
+    resultIndex: index + 1,
+  }));
+  const selected = mapView ? indexed : indexed.slice(skip, skip + pageLimit);
+  const enriched = await enrichPage(
+    selected.map(({ profile }) => profile),
     countsForSort,
     zipAreas
   );
+  const results = enriched.map((result, index) => ({
+    ...result,
+    result_index: selected[index].resultIndex,
+  }));
+  const mappable = (result: (typeof results)[number]) =>
+    result.geo !== null ||
+    result.online_zip !== null ||
+    result.zip_area !== null;
+  const data = mapView ? results.filter(mappable) : results;
+  const unmappedResults = mapView
+    ? results.filter((result) => !mappable(result))
+    : [];
 
   return {
     success: true,
     data,
     pagination: {
-      page: pageNum,
-      limit: pageLimit,
-      total,
-      totalPages: Math.ceil(total / pageLimit),
+      page: mapView ? 1 : pageNum,
+      limit: mapView ? Math.max(data.length, 1) : pageLimit,
+      total: mapView ? data.length : total,
+      totalPages: mapView
+        ? Number(data.length > 0)
+        : Math.ceil(total / pageLimit),
     },
+    map: mapView
+      ? {
+          totalResults: total,
+          unmappedCount: unmappedResults.length,
+          unmappedResults,
+        }
+      : undefined,
   };
 };
 
@@ -555,7 +596,12 @@ function distanceFor(p: ProfileRow, ctx: LocationContext): number | null {
   }
 
   const coordinates = extractCoordinates(p);
-  if (!coordinates) return null;
+  if (!coordinates) {
+    const area = ctx.zipAreas.get(p.id);
+    return area
+      ? calcDistance(ctx.viewerLat, ctx.viewerLng, area.lat, area.lng)
+      : null;
+  }
 
   const [lng, lat] = coordinates;
   return calcDistance(ctx.viewerLat, ctx.viewerLng, lat, lng);
@@ -620,11 +666,8 @@ function sortProfiles(
 }
 
 /**
- * Join the extra data onto one page of results.
- *
- * Only ever called with the slice being rendered. Running this over the whole
- * filtered set would issue the same three queries against thousands of ids to
- * throw all but twenty rows away.
+ * Enrich one list page, or the complete map-browsing collection including the
+ * unlocated results shown beneath the viewport-filtered list.
  */
 async function enrichPage(
   rows: ProfileRow[],
@@ -712,6 +755,7 @@ function transformProfile(
     // wrong and a privacy leak.
     online_only: online,
     online_zip: online ? extra.zipArea : null,
+    zip_area: !online && !coordinates ? extra.zipArea : null,
     categories: categoryKeys(p.categories),
     counties: countyKeys(p.counties),
     certified: p.panaCertifiedAt != null,

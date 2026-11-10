@@ -7,6 +7,7 @@ import { getTableConfig } from 'drizzle-orm/pg-core';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/lib/schema';
 import { groupOnlineZipListings, type OnlineZipArea } from '@/lib/online-zip';
+import { getDirectorySearchParams } from '@/app/directory/search/_lib/search-params';
 
 const pg = new PGlite();
 const db = drizzle(pg, { schema });
@@ -178,6 +179,9 @@ const tables = [
   schema.users,
   schema.profiles,
   schema.profileOwners,
+  schema.verification,
+  schema.listingRefreshCycles,
+  schema.listingRefreshDeliveries,
   schema.articles,
   schema.recommendationLists,
   schema.recommendationListItems,
@@ -1498,6 +1502,391 @@ test('nearby online results use ZIP areas rather than old home coordinates and g
   assert.equal(groups.length, 2);
   assert.ok(groups.every((group) => group.items.length === 1));
   assert.ok(all.data.every((row) => row.geo === null));
+});
+
+test('viewport browsing ignores old radius links with viewer coordinates and retains far and unlocated matches', async () => {
+  await db.insert(schema.profiles).values([
+    {
+      id: 'viewport-near',
+      email: 'viewport-near@test.invalid',
+      name: 'Nearby storefront',
+      active: true,
+      categories: { art: true },
+      addressLat: '25.851',
+      addressLng: '-80.18',
+    },
+    {
+      id: 'viewport-far',
+      email: 'viewport-far@test.invalid',
+      name: 'Broward storefront',
+      active: true,
+      categories: { art: true },
+      addressLat: '26.12',
+      addressLng: '-80.14',
+    },
+    {
+      id: 'viewport-unlocated',
+      email: 'viewport-unlocated@test.invalid',
+      name: 'Unlocated business',
+      active: true,
+      categories: { art: true },
+    },
+  ]);
+  const params = getDirectorySearchParams(
+    new URLSearchParams('radius=5&sort=nearest&fcat=art')
+  );
+  const found = await directory.getSearch({
+    ...params,
+    sort: params.sort ?? 'relevance',
+    geolat: '25.85',
+    geolng: '-80.18',
+    resultsView: 'map',
+  });
+  assert.equal(found.map?.totalResults, 3);
+  assert.deepEqual(
+    found.data.map((row) => row.id),
+    ['viewport-near', 'viewport-far']
+  );
+  assert.deepEqual(
+    found.map?.unmappedResults.map((row) => row.id),
+    ['viewport-unlocated']
+  );
+});
+
+test('complete maps ignore list pagination while preserving filters, positions, and location privacy', async () => {
+  await db.insert(schema.profiles).values([
+    ...Array.from({ length: 21 }, (_, index) => ({
+      id: `unlocated-${index}`,
+      email: `unlocated-${index}@test.invalid`,
+      name: `A Unlocated ${String(index).padStart(2, '0')}`,
+      active: true,
+      categories: { music: true },
+    })),
+    {
+      id: 'public-miami',
+      email: 'public-miami@test.invalid',
+      name: 'B Miami storefront',
+      active: true,
+      categories: { food: true },
+      addressLat: '25.85',
+      addressLng: '-80.18',
+    },
+    {
+      id: 'public-broward',
+      email: 'public-broward@test.invalid',
+      name: 'C Broward storefront',
+      active: true,
+      categories: { art: true },
+      geo: { type: 'Point', coordinates: [-80.1288, 26.1216] },
+    },
+    {
+      id: 'online-miami',
+      email: 'online-miami@test.invalid',
+      name: 'D Online shop',
+      active: true,
+      categories: { food: true },
+      onlineOnly: true,
+      addressPostalCode: '33138',
+      addressCountry: 'US',
+      addressLat: '37.8',
+      addressLng: '-122.4',
+      geo: { type: 'Point', coordinates: [-122.4, 37.8] },
+    },
+    {
+      id: 'online-unknown',
+      email: 'online-unknown@test.invalid',
+      name: 'E Unknown online shop',
+      active: true,
+      onlineOnly: true,
+      addressPostalCode: '00000',
+      addressCountry: 'US',
+      addressLat: '25.85',
+      addressLng: '-80.18',
+    },
+    {
+      id: 'inactive-point',
+      email: 'inactive-point@test.invalid',
+      name: 'F Inactive storefront',
+      active: false,
+      addressLat: '25.85',
+      addressLng: '-80.18',
+    },
+  ]);
+  const options = {
+    pageNum: 1,
+    pageLimit: 20,
+    searchTerm: '',
+    filterCategories: '',
+    geolat: '',
+    geolng: '',
+    radius: 'all' as const,
+    resultsView: '',
+  };
+  const firstPage = await directory.getSearch(options);
+  assert.equal(firstPage.data.length, 20);
+  assert.equal(firstPage.pagination.total, 25);
+  assert.ok(firstPage.data.every((row) => row.geo === null));
+  assert.deepEqual(
+    firstPage.data.map((row) => row.result_index),
+    Array.from({ length: 20 }, (_, index) => index + 1)
+  );
+
+  const map = await directory.getSearch({
+    ...options,
+    pageNum: 999,
+    resultsView: 'map',
+  });
+  assert.deepEqual(
+    map.data.map((row) => row.id),
+    ['public-miami', 'public-broward', 'online-miami']
+  );
+  assert.deepEqual(
+    map.data.map((row) => row.result_index),
+    [22, 23, 24]
+  );
+  assert.equal(map.map?.totalResults, 25);
+  assert.equal(map.map?.unmappedCount, 22);
+  assert.equal(map.map?.unmappedResults.length, 22);
+  assert.deepEqual(
+    map.map?.unmappedResults.map((row) => row.id),
+    [
+      ...Array.from({ length: 21 }, (_, index) => `unlocated-${index}`),
+      'online-unknown',
+    ]
+  );
+  assert.equal(map.map?.unmappedResults.at(-1)?.result_index, 25);
+  assert.deepEqual(map.pagination, {
+    page: 1,
+    limit: 3,
+    total: 3,
+    totalPages: 1,
+  });
+  const online = map.data.find((row) => row.id === 'online-miami');
+  assert.ok(online);
+  assert.equal(online.geo, null);
+  assert.deepEqual(online.online_zip, zipArea('33138'));
+  assert.ok(map.data.every((row) => !('email' in row)));
+  assert.ok(map.data.every((row) => !('addressLat' in row)));
+  assert.ok(map.map?.unmappedResults.every((row) => !('email' in row)));
+  assert.ok(map.map?.unmappedResults.every((row) => row.geo === null));
+
+  const filtered = await directory.getSearch({
+    ...options,
+    resultsView: 'map',
+    filterCategories: 'food',
+  });
+  assert.deepEqual(
+    filtered.data.map((row) => [row.id, row.result_index]),
+    [
+      ['public-miami', 1],
+      ['online-miami', 2],
+    ]
+  );
+  assert.deepEqual(filtered.map, {
+    totalResults: 2,
+    unmappedCount: 0,
+    unmappedResults: [],
+  });
+
+  const nearby = await directory.getSearch({
+    ...options,
+    resultsView: 'map',
+    geolat: '25.85',
+    geolng: '-80.18',
+    radius: '5',
+    sort: 'nearest',
+  });
+  assert.deepEqual(
+    nearby.data.map((row) => row.id),
+    ['public-miami', 'online-miami']
+  );
+  assert.deepEqual(nearby.map, {
+    totalResults: 2,
+    unmappedCount: 0,
+    unmappedResults: [],
+  });
+
+  const unlocated = await directory.getSearch({
+    ...options,
+    resultsView: 'map',
+    filterCategories: 'music',
+  });
+  assert.deepEqual(unlocated.data, []);
+  assert.equal(unlocated.map?.totalResults, 21);
+  assert.equal(unlocated.map?.unmappedCount, 21);
+  assert.equal(unlocated.map?.unmappedResults.length, 21);
+  assert.equal(unlocated.pagination.totalPages, 0);
+
+  const empty = await directory.getSearch({
+    ...options,
+    resultsView: 'map',
+    certifiedOnly: true,
+  });
+  assert.deepEqual(empty.data, []);
+  assert.deepEqual(empty.map, {
+    totalResults: 0,
+    unmappedCount: 0,
+    unmappedResults: [],
+  });
+});
+
+test('a complete map includes more than one page of located listings', async () => {
+  await db.insert(schema.profiles).values([
+    ...Array.from({ length: 20 }, (_, index) => ({
+      id: `unlocated-${index}`,
+      email: `unlocated-${index}@test.invalid`,
+      name: `A Unlocated ${String(index).padStart(2, '0')}`,
+      active: true,
+    })),
+    ...Array.from({ length: 27 }, (_, index) => ({
+      id: `located-${index}`,
+      email: `located-${index}@test.invalid`,
+      name: `B Located ${String(index).padStart(2, '0')}`,
+      active: true,
+      addressLat: '25.85',
+      addressLng: '-80.18',
+    })),
+  ]);
+  const map = await directory.getSearch({
+    pageNum: 2,
+    pageLimit: 20,
+    searchTerm: '',
+    filterCategories: '',
+    geolat: '',
+    geolng: '',
+    radius: 'all',
+    resultsView: 'map',
+  });
+  assert.equal(map.data.length, 27);
+  assert.equal(map.map?.totalResults, 47);
+  assert.equal(map.map?.unmappedCount, 20);
+  assert.equal(map.map?.unmappedResults.length, 20);
+  assert.deepEqual(
+    map.data.map((row) => row.result_index),
+    Array.from({ length: 27 }, (_, index) => index + 21)
+  );
+});
+
+test('ZIP-only directory locations reuse existing public ZIPs without changing profiles or exact points', async () => {
+  await db.insert(schema.profiles).values([
+    {
+      id: 'zip-only',
+      email: 'zip-only@test.invalid',
+      name: 'A ZIP-only business',
+      active: true,
+      onlineOnly: false,
+      addressLocality: 'Miami',
+      addressPostalCode: '33138-1234',
+      addressCountry: 'US',
+    },
+    {
+      id: 'stored-zip-only',
+      email: 'stored-zip-only@test.invalid',
+      name: 'B Stored ZIP-only business',
+      active: true,
+      addressPostalCode: '33301',
+      geo: { zipArea: zipArea('33301') },
+    },
+    {
+      id: 'exact-with-zip',
+      email: 'exact-with-zip@test.invalid',
+      name: 'C Exact business',
+      active: true,
+      addressPostalCode: '33138',
+      addressLat: '25.85',
+      addressLng: '-80.18',
+    },
+    ...[
+      ['invalid-zip', '3313', 'US'],
+      ['unknown-zip', '00000', 'US'],
+      ['non-us-zip', '33138', 'CA'],
+      ['missing-zip', null, 'US'],
+    ].map(([id, zip, country]) => ({
+      id: id!,
+      email: `${id}@test.invalid`,
+      name: `D ${id}`,
+      active: true,
+      addressPostalCode: zip,
+      addressCountry: country,
+    })),
+  ]);
+  const options = {
+    pageNum: 999,
+    pageLimit: 20,
+    searchTerm: '',
+    filterCategories: '',
+    geolat: '',
+    geolng: '',
+    radius: 'all' as const,
+    resultsView: 'map',
+  };
+  const map = await directory.getSearch(options);
+  assert.deepEqual(
+    map.data.map((row) => row.id),
+    ['zip-only', 'stored-zip-only', 'exact-with-zip']
+  );
+  const approximate = map.data[0];
+  assert.equal(approximate.geo, null);
+  assert.equal(approximate.online_only, false);
+  assert.equal(approximate.online_zip, null);
+  assert.deepEqual(approximate.zip_area, zipArea('33138'));
+  assert.deepEqual(map.data[1].zip_area, zipArea('33301'));
+  assert.deepEqual(map.data[2].geo?.coordinates, [-80.18, 25.85]);
+  assert.equal(map.data[2].zip_area, null);
+  assert.equal(map.map?.unmappedCount, 4);
+  assert.equal(map.map?.unmappedResults.length, 4);
+  assert.deepEqual(zipRequests, [
+    'https://api.zippopotam.us/us/33138',
+    'https://api.zippopotam.us/us/00000',
+  ]);
+
+  const original = await db.query.profiles.findFirst({
+    where: eq(schema.profiles.id, 'zip-only'),
+  });
+  assert.equal(original?.addressPostalCode, '33138-1234');
+  assert.equal(original?.addressLat, null);
+  assert.equal(original?.addressLng, null);
+  assert.equal(original?.geo, null);
+  assert.equal(original?.onlineOnly, false);
+
+  const nearby = await directory.getSearch({
+    ...options,
+    geolat: '25.85',
+    geolng: '-80.18',
+    radius: '5',
+  });
+  assert.deepEqual(
+    nearby.data.map((row) => row.id),
+    ['zip-only', 'exact-with-zip']
+  );
+  assert.equal(nearby.map?.unmappedCount, 0);
+});
+
+test('ZIP lookup failures retain ZIP-only listings as explicitly unlocated results', async () => {
+  await db.insert(schema.profiles).values({
+    id: 'zip-only-unavailable',
+    email: 'zip-only-unavailable@test.invalid',
+    name: 'ZIP-only business',
+    active: true,
+    addressPostalCode: '33138',
+  });
+  zipUnavailable = true;
+  const map = await directory.getSearch({
+    pageNum: 1,
+    pageLimit: 20,
+    searchTerm: '',
+    filterCategories: '',
+    geolat: '',
+    geolng: '',
+    radius: 'all',
+    resultsView: 'map',
+  });
+  assert.deepEqual(map.data, []);
+  assert.equal(map.map?.unmappedCount, 1);
+  assert.equal(map.map?.unmappedResults[0].id, 'zip-only-unavailable');
+  assert.equal(map.map?.unmappedResults[0].primary_address.zipcode, '33138');
+  assert.equal(map.map?.unmappedResults[0].zip_area, null);
+  assert.equal(map.map?.unmappedResults[0].geo, null);
 });
 
 test('an existing pana can submit and manage a separate listing with the same email', async () => {

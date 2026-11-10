@@ -26,7 +26,7 @@ import { Button } from '@/components/ui/button';
 import { NpubQr } from '@/components/relay/NpubQr';
 import { npubFromHex } from '@/lib/nostr/keys';
 import { useIdentity } from '@/components/account/identity-provider';
-import { listingPublicPath } from '@/lib/listing-url';
+import { listingPublicPath, listingReviewPath } from '@/lib/listing-url';
 
 const SpanBlank = () => {
   return <span className="text-gray-400 italic">blank</span>;
@@ -165,6 +165,14 @@ export default function AccountProfileEdit() {
       <h2 className="mb-8 text-3xl font-bold">
         {isBusiness ? `Manage ${profileData.name}` : 'Your Pana Profile'}
       </h2>
+
+      {isBusiness && profileData.id && (
+        <Button asChild className="mb-6 rounded-full font-extrabold">
+          <Link href={listingReviewPath(profileData.id)}>
+            Review business details
+          </Link>
+        </Button>
+      )}
 
       {/* Profile Status */}
       <Card className="mb-6">

@@ -129,6 +129,9 @@ export const inventory: Record<TableExport, Classification> = {
 
   // --- Notifications / preferences ---
   notifications: ['notifications'],
+  listingRefreshCycles: ['profile', 'notifications', 'account'],
+  // No email address or delivery URL is copied: only recipient/proof hashes.
+  listingRefreshDeliveries: ['notifications', 'verification_tokens'],
 
   // --- Onboarding ---
   intakeForms: ['intake'],
@@ -222,6 +225,7 @@ export const inventory: Record<TableExport, Classification> = {
   commerceOrders: ['payments'],
   commerceOrderItems: ['payments'],
   commerceSubscriptions: ['payments'],
+  billingCustomers: ['payments'],
   commerceShopSettings: NOT_PERSONAL_DATA,
   stripeWebhookEvents: NOT_PERSONAL_DATA,
 

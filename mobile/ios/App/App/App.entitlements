@@ -21,9 +21,10 @@
     2. APPLE_APP_TEAM_ID must be set in the deploy, or the association file
        404s and iOS finds nothing to verify against.
 
-  Both surfaces are listed because they are separate hostnames served by the
-  same Worker (see lib/panaverse/surfaces.ts) and this one app carries both.
-  Verification is per-host: an unlisted host is an unclaimed host.
+  The first store release claims only panamia.club. Both surfaces use paths
+  on that host while PANAVERSE_SUBDOMAINS is disabled; social.panamia.club is
+  not healthy and must not be claimed as a working Universal Links host.
+  Keep this list in step with IOS_UNIVERSAL_LINK_HOSTS in lib/mobile/app-identity.ts.
 
   iOS fetches these over Apple's CDN at install time. Edits to the served
   association file can take a while to propagate; during development, the
@@ -35,7 +36,6 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:panamia.club</string>
-		<string>applinks:social.panamia.club</string>
 	</array>
 </dict>
 </plist>

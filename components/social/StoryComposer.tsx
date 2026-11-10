@@ -16,7 +16,12 @@ import MultiMediaUpload, {
   type MediaUploadHandle,
   type UploadedMedia,
 } from '@/components/MultiMediaUpload';
-import { NATIVE_BACK_BUTTON_EVENT } from '@/lib/mobile/native';
+import { isNativeApp, NATIVE_BACK_BUTTON_EVENT } from '@/lib/mobile/native';
+import {
+  hasNativeMediaLibrary,
+  pickNativeStoryMedia,
+} from '@/lib/mobile/media-library';
+import { useToast } from '@/hooks/use-toast';
 import { StoryCamera } from './StoryCamera';
 
 const MAX_CAPTION_LENGTH = 280;
@@ -29,19 +34,23 @@ interface StoryComposerProps {
 export function StoryComposer({ onClose, onPosted }: StoryComposerProps) {
   const mediaInput = useRef<MediaUploadHandle>(null);
   const cameraButton = useRef<HTMLButtonElement>(null);
+  const galleryInput = useRef<HTMLInputElement>(null);
+  const gallerySelection = useRef<((file: File | null) => void) | null>(null);
+  const picking = useRef(false);
   const [media, setMedia] = useState<UploadedMedia[]>([]);
   const [caption, setCaption] = useState('');
-  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const selected = media[0];
   const overLimit = caption.length > MAX_CAPTION_LENGTH;
   const canPost = !!selected && !overLimit && !posting && !uploading;
 
   const close = () => {
-    if (posting || mediaInput.current?.isUploading()) return;
+    if (posting || picking.current || mediaInput.current?.isUploading()) return;
     if (cameraOpen) {
       setCameraOpen(false);
       requestAnimationFrame(() => cameraButton.current?.focus());
@@ -59,6 +68,65 @@ export function StoryComposer({ onClose, onPosted }: StoryComposerProps) {
     return () =>
       window.removeEventListener(NATIVE_BACK_BUTTON_EVENT, handleBack);
   });
+
+  useEffect(() => () => gallerySelection.current?.(null), []);
+
+  const chooseFromGallery = async (): Promise<File | null> => {
+    if (picking.current) {
+      throw new Error('Finish choosing your current photo or video first.');
+    }
+    picking.current = true;
+    try {
+      if (hasNativeMediaLibrary()) return await pickNativeStoryMedia();
+      if (isNativeApp()) {
+        toast({
+          title: 'App update needed',
+          description:
+            'This app version uses the system picker. Update Pana Mia to open the photo library directly.',
+        });
+      }
+      return await new Promise<File | null>((resolve, reject) => {
+        if (!galleryInput.current) {
+          reject(
+            new Error('The photo library picker is not ready. Try again.')
+          );
+          return;
+        }
+        gallerySelection.current = resolve;
+        galleryInput.current.click();
+      });
+    } finally {
+      picking.current = false;
+    }
+  };
+
+  const useMedia = async (file: File): Promise<boolean> => {
+    if (!mediaInput.current) {
+      throw new Error('The story uploader is not ready. Please try again.');
+    }
+    const uploaded = await mediaInput.current.addFiles([file]);
+    if (uploaded.length !== 1) return false;
+    setCameraOpen(false);
+    requestAnimationFrame(() =>
+      document.getElementById('story-caption')?.focus()
+    );
+    return true;
+  };
+
+  const chooseFromEditor = async () => {
+    setError(null);
+    try {
+      const file = await chooseFromGallery();
+      if (file) await useMedia(file);
+    } catch (failure) {
+      console.error('Story library selection failed:', failure);
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : 'Could not open your photo library. Please try again.'
+      );
+    }
+  };
 
   const handlePost = async () => {
     if (!canPost || mediaInput.current?.isUploading()) return;
@@ -104,6 +172,7 @@ export function StoryComposer({ onClose, onPosted }: StoryComposerProps) {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/70" />
         <Dialog.Content
+          data-story-composer={!cameraOpen || undefined}
           className={
             cameraOpen
               ? 'fixed inset-0 z-[101] h-dvh w-screen overflow-hidden bg-black sm:inset-auto sm:top-1/2 sm:left-1/2 sm:h-[min(90dvh,56rem)] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl'
@@ -120,6 +189,28 @@ export function StoryComposer({ onClose, onPosted }: StoryComposerProps) {
             Capture or choose a photo or video, then add a caption and post it
             for 24 hours.
           </Dialog.Description>
+          <input
+            ref={(input) => {
+              galleryInput.current = input;
+              if (!input) return;
+              const cancel = () => {
+                gallerySelection.current?.(null);
+                gallerySelection.current = null;
+              };
+              input.addEventListener('cancel', cancel);
+              return () => input.removeEventListener('cancel', cancel);
+            }}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,video/*"
+            aria-label="Choose story from gallery"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0] ?? null;
+              event.currentTarget.value = '';
+              gallerySelection.current?.(file);
+              gallerySelection.current = null;
+            }}
+          />
           <div className={cameraOpen ? 'hidden' : undefined}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold">Post a story</h2>
@@ -152,7 +243,7 @@ export function StoryComposer({ onClose, onPosted }: StoryComposerProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => mediaInput.current?.openPicker('media')}
+                  onClick={() => void chooseFromEditor()}
                   disabled={posting || uploading}
                   className="border-input hover:bg-muted flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold disabled:opacity-50"
                 >
@@ -225,24 +316,8 @@ export function StoryComposer({ onClose, onPosted }: StoryComposerProps) {
           {cameraOpen && (
             <StoryCamera
               onClose={close}
-              onChooseFromGallery={() => {
-                setCameraOpen(false);
-                mediaInput.current?.openPicker('media');
-              }}
-              onCapture={async (file) => {
-                if (!mediaInput.current) {
-                  throw new Error(
-                    'The story uploader is not ready. Please try again.'
-                  );
-                }
-                const uploaded = await mediaInput.current.addFiles([file]);
-                if (uploaded.length !== 1) return false;
-                setCameraOpen(false);
-                requestAnimationFrame(() =>
-                  document.getElementById('story-caption')?.focus()
-                );
-                return true;
-              }}
+              onChooseFromGallery={chooseFromGallery}
+              onCapture={useMedia}
             />
           )}
         </Dialog.Content>

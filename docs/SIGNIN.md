@@ -1,5 +1,41 @@
 # Sign-In System Documentation
 
+## Creating an account or signing in
+
+Both entry points use the same passwordless flow at `/signin`. The public
+masthead makes **Create account** the primary action and keeps **Sign in**
+visible beside it; on narrow screens they stack without hiding either option.
+The shared page explains account creation and returning-member access rather
+than assuming every visitor already has an account.
+
+The browser page owns a focused, surface-branded masthead. Its two account
+links, and those in a regular masthead retained after client navigation,
+target the same form without replacing the current callback URL. The same
+applies to their desktop/mobile drawer entries, preserving exact business
+and invitation returns without copying query parameters or proof fragments.
+Native screens keep their existing compact account menu, reporting actions,
+and reviewer access instead of adding a second masthead.
+
+Email uses **Continue with email** and **Email me a link**, with a visible email
+label and a no-password explanation. Copy is available in English and Spanish
+and adapts when Google or all OAuth options are unavailable. Provider gating,
+verification, terms, callback destinations, and first-signup onboarding are
+unchanged.
+
+After a successful email-link request, an in-page status names the submitted
+inbox and stays visible after the popup notification closes, including while
+the address is edited or the email form is closed. It explains using the same
+browser and checking Spam or Junk; native shells instead say to open the link
+in the Pana Mia app. A new request clears the old status while pending, and a
+failed request never reports a new link as sent. This acknowledges the request,
+not inbox delivery, account creation, listing ownership, or a completed review.
+
+Listing invitations explicitly offer **Sign in or create an account** and
+explain that the login email can differ from the listing's business contact.
+After signing in, an unclaimed invitation still requires confirmation of the
+chosen account and exact business before review. No personal public profile
+or screenname is required to manage a business.
+
 ## Seamless Provider Switching
 
 ### Can users freely change between sign-in methods?
@@ -125,6 +161,50 @@ Accounts are unchanged: Google and email sign-in to the same verified address
 use the same account. iOS does not expose Google or other third-party providers;
 adding native Google there must include the corresponding Sign in with Apple
 and App Store guideline 4.8 work.
+
+## App Store and Google Play reviewer access
+
+Ordinary members still use Google or single-use email links. A separate
+English-language `/signin/reviewer` page, linked from sign-in, accepts the
+operator-issued `play-review@panamia.club` credential. This is a regular,
+unverified demonstration identity, not an administrator or a directory listing.
+The session enrichment layer excludes it from all staff roles, including
+`ADMIN_EMAILS`. No residence, age, payment, or membership evidence is fabricated.
+The existing credential is shared by App Store and Google Play reviewers; its
+legacy email address does not require Google sign-in or an App Store Connect
+team role.
+
+Better Auth handles its password hash, origin checks, HttpOnly cookie and normal
+account-lock checks. Credential sign-in is restricted server-side to that email.
+Public password signup, password changes and password-reset endpoints are
+disabled. The password endpoint has an additional five-attempt/15-minute limit
+within the existing per-isolate in-memory limiter; this is not a global lockout.
+The reviewer form uses a fixed `/d` destination and never puts a password in a URL.
+
+Provisioning is an explicit operator action, not an HTTP API:
+
+1. Generate a unique 32-128-character password and store it in the organization's
+   password manager and the protected Actions secret `PLAY_REVIEW_PASSWORD`.
+   Do not put the password in source, shell arguments, issue comments, or logs.
+2. After this code reaches trusted `main`, run **Play Review Account** manually
+   from `main`. It uses the existing production database secret and refuses
+   identity/handle collisions or a founder-email conflict.
+3. Verify repeated sign-in, ordinary-account rejection and a non-admin session.
+   Enter the credential only in App Store Connect's App Review sign-in fields
+   and Play Console's app-access section. Include English navigation instructions,
+   but keep the password out of review notes. Reviewers do not need an inbox,
+   MFA, or an expiring link.
+4. For rotation, update the protected secret, explicitly enable
+   `rotate_password`, and rerun. Rotation refuses unrelated or staff accounts,
+   revokes review-account sessions, and does not clear an account lock. Update
+   App Store Connect, Play Console, and the password-manager record immediately
+   after a confirmed rotation.
+
+For controlled local maintenance, provide `POSTGRES_URL`, `ADMIN_EMAILS` and
+`PLAY_REVIEW_PASSWORD` securely in the environment, then run
+`yarn node --import tsx scripts/provision-play-reviewer.ts --apply`. Add
+`--rotate` only for intentional rotation. The command does not print hashes,
+passwords, connection strings or driver parameters.
 
 ## Data Structure
 

@@ -18,30 +18,6 @@ async function getFFmpeg(): Promise<FFmpeg> {
 }
 
 /**
- * Transcode any audio blob to audio/ogg (Opus).
- * Input is typically audio/webm from MediaRecorder.
- */
-export async function transcodeToOpus(blob: Blob): Promise<Blob> {
-  const ffmpeg = await getFFmpeg();
-  const { fetchFile } = await import('@ffmpeg/util');
-  const inputData = await fetchFile(blob);
-  await ffmpeg.writeFile('input.webm', inputData);
-  await ffmpeg.exec([
-    '-i',
-    'input.webm',
-    '-c:a',
-    'libopus',
-    '-b:a',
-    '64k',
-    'output.ogg',
-  ]);
-  const data = (await ffmpeg.readFile('output.ogg')) as Uint8Array;
-  await ffmpeg.deleteFile('input.webm');
-  await ffmpeg.deleteFile('output.ogg');
-  return new Blob([data.buffer as ArrayBuffer], { type: 'audio/ogg' });
-}
-
-/**
  * Transcode any video blob to video/mp4 (H.264 + AAC).
  *
  * H.264 rather than VP8, because this is the only combination Apple hardware

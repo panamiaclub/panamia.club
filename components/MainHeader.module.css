@@ -272,6 +272,24 @@
   }
 }
 
+@media (max-width: 700px) {
+  .mastheadInner[data-auth-entry='true'] .mastheadLogo img {
+    width: 120px;
+    height: auto;
+  }
+}
+
+@media (max-width: 380px) {
+  .mastheadInner[data-auth-entry='true'] {
+    gap: 0.25rem;
+    padding-inline: 0.25rem;
+  }
+
+  .mastheadInner[data-auth-entry='true'] .mastheadLogo img {
+    width: 96px;
+  }
+}
+
 /* Borderless on purpose: the outlined CTA beside it is the loud element, and a
    second outlined pill next to it reads as a matching twin rather than a
    quieter control. */
@@ -360,9 +378,7 @@
   }
 }
 
-/* Flame pill. Ink text, not cream — cream on flame is 2.42:1 and fails.
-   Now a <button> rather than an <a>: it opens the auth menu instead of
-   navigating, so it has to undo the UA button defaults the anchor never had. */
+/* Flame pill. Ink text, not cream — cream on flame is 2.42:1 and fails. */
 .cta {
   display: inline-flex;
   align-items: center;
@@ -415,7 +431,7 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 1100px) {
   .directoryJoin {
     display: none;
   }

@@ -34,7 +34,7 @@ Find local shows, markets, gallery openings, and community gatherings. Stay conn
 
 ### Social Timeline
 
-A multimedia microblogging platform built into the community. Share posts with markdown formatting, images, and voice memos. Follow other community members, like and reply to posts. Built on [ActivityPub](https://www.w3.org/TR/activitypub/) for future federation with Mastodon, Pixelfed, and other fediverse servers.
+A multimedia microblogging platform built into the community. Share posts with markdown formatting, images, GIFs, and video. Follow other community members, like and reply to posts. Built on [ActivityPub](https://www.w3.org/TR/activitypub/) for future federation with Mastodon, Pixelfed, and other fediverse servers.
 
 _Features: Markdown editor, media attachments, post visibility controls, content-sensitivity labels_
 
@@ -104,6 +104,7 @@ See [FEATURES.md](./docs/FEATURES.md) for a complete feature overview.
 | ---------------------------------------------- | --------------------------------------- |
 | [Quick Start](./docs/QUICK-START.md)           | Developer setup guide                   |
 | [Android](./docs/ANDROID.md)                   | Phone testing and Google Play releases  |
+| [iOS](./docs/IOS.md)                           | iPhone/iPad testing and App Store releases |
 | [Features](./docs/FEATURES.md)                 | Platform feature overview               |
 | [Database Design](./docs/DATABASE-DESIGN.md)   | Schema, migrations, connection setup    |
 | [Articles Roadmap](./docs/ARTICLE-ROADMAP.md)  | Community articles implementation plan  |

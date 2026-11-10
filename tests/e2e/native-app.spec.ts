@@ -1,6 +1,7 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { installNativeApiFixtures } from './fixtures/native-app-api';
 import { NATIVE_BACK_BUTTON_EVENT } from '@/lib/mobile/native';
+import type { SearchResultsInterface } from '@/lib/query/directory';
 
 test.use({
   viewport: { width: 390, height: 844 },
@@ -16,7 +17,10 @@ test.use({
   },
 });
 
-async function native(page: Page) {
+async function native(
+  page: Page,
+  options: { businesses?: SearchResultsInterface[] } = {}
+) {
   await page.addInitScript(() => {
     window.Capacitor = {
       isNativePlatform: () => true,
@@ -24,7 +28,7 @@ async function native(page: Page) {
     };
     Object.assign(window, { androidBridge: { postMessage: () => {} } });
   });
-  return installNativeApiFixtures(page);
+  return installNativeApiFixtures(page, options);
 }
 
 async function nativeBrowser(
@@ -89,21 +93,34 @@ async function fitted(page: Page, label = 'Directory') {
   const results = map(page, label);
   const sheet = results.getByRole('region', { name: `${label} results` });
   await expect(sheet).toHaveAttribute('data-preview', 'true');
-  await expect(sheet.locator('article[data-result-id]')).toHaveCount(1);
+  await expect(sheet.locator('article[data-selected]')).toHaveCount(1);
   await expect
     .poll(async () =>
       sheet.evaluate((node) => {
-        const card = node.querySelector('article')!.getBoundingClientRect();
-        const head = node.querySelector('header')!.getBoundingClientRect();
-        const bounds = node.getBoundingClientRect();
+        const card = node
+          .querySelector('article[data-selected]')!
+          .getBoundingClientRect();
+        const bounds = node
+          .querySelector('[aria-label$=" listings"]')!
+          .getBoundingClientRect();
+        const complete = [...node.querySelectorAll('article')].filter(
+          (item) => {
+            const box = item.getBoundingClientRect();
+            return (
+              box.height > 0 &&
+              box.top >= bounds.top - 0.5 &&
+              box.bottom <= bounds.bottom + 0.5
+            );
+          }
+        );
         return {
-          above: Math.round(card.top - head.bottom),
-          below: Math.round(bounds.bottom - card.bottom),
-          clipped: card.bottom > bounds.bottom + 0.5,
+          selectedVisible:
+            card.top >= bounds.top - 0.5 && card.bottom <= bounds.bottom + 0.5,
+          compact: complete.length >= 1 && complete.length <= 2,
         };
       })
     )
-    .toEqual({ above: 12, below: 12, clipped: false });
+    .toEqual({ selectedVisible: true, compact: true });
 }
 
 test('Directory is the native front door, with actual identity and branded categories', async ({
@@ -121,7 +138,7 @@ test('Directory is the native front door, with actual identity and branded categ
   const navBounds = await nav.boundingBox();
   expect(navBounds).not.toBeNull();
   expect(Math.round(navBounds!.y + navBounds!.height)).toBe(
-    await page.evaluate(() => window.innerHeight)
+    await page.evaluate(() => window.innerHeight - 8)
   );
   await expect(
     nav.getByRole('link', { name: 'Directory', exact: true })
@@ -130,6 +147,35 @@ test('Directory is the native front door, with actual identity and branded categ
     'href',
     '/p/native-viewer'
   );
+  await expect(
+    nav
+      .getByRole('link', { name: 'Social', exact: true })
+      .locator('svg.lucide-newspaper')
+  ).toBeVisible();
+  await expect(
+    nav
+      .getByRole('link', { name: 'Social', exact: true })
+      .locator('svg.lucide-newspaper')
+  ).toHaveCSS('width', '21px');
+  const messages = page.getByRole('link', { name: 'Messages', exact: true });
+  await expect(messages.locator('svg.lucide-messages-square')).toBeVisible();
+  await expect(messages.locator('svg')).toHaveCSS('width', '18px');
+  await page.getByRole('button', { name: /^Switch account/ }).click();
+  await expect(
+    page
+      .getByRole('menuitem', { name: 'Pana Social', exact: true })
+      .locator('svg.lucide-newspaper')
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page
+    .getByRole('button', { name: 'Notifications', exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole('menuitem', { name: 'Messages', exact: true })
+      .locator('svg.lucide-messages-square')
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
   await expect(
     page.getByRole('searchbox', { name: 'Search directory' })
   ).toBeVisible();
@@ -145,6 +191,1027 @@ test('Directory is the native front door, with actual identity and branded categ
     picker.getByRole('menuitem', { name: /Directory/ }).locator('svg')
   ).toBeVisible();
   expect(fixtures.state.unhandled).toEqual([]);
+});
+
+for (const label of ['Directory', 'Events']) {
+  test(`native ${label} map supports pinch zoom without zoom buttons`, async ({
+    page,
+    context,
+  }) => {
+    await native(page);
+    await page.goto('/d');
+    if (label === 'Events') await scope(page, 'Events');
+
+    const results = map(page, label);
+    const camera = results.locator('.dirsearch-mapcanvas[data-map-zoom]');
+    const surface = results.locator('.maplibregl-canvas');
+    await expect(surface).toBeVisible();
+    await expect
+      .poll(async () => {
+        const center = (await camera.getAttribute('data-map-center'))!
+          .split(',')
+          .map(Number);
+        return Math.max(
+          Math.abs(center[0] - 25.94),
+          Math.abs(center[1] + 80.165)
+        );
+      })
+      .toBeLessThan(0.000001);
+    await expect(
+      results.getByRole('button', { name: /^Zoom (in|out)$/ })
+    ).toHaveCount(0);
+
+    const box = (await surface.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height * 0.4;
+    const cdp = await context.newCDPSession(page);
+    const pinch = async (from: number, to: number) => {
+      const points = (offset: number) => [
+        { id: 0, x: x - offset, y },
+        { id: 1, x: x + offset, y },
+      ];
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: points(from),
+      });
+      for (let step = 1; step <= 12; step++) {
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: points(from + ((to - from) * step) / 12),
+        });
+        await page.waitForTimeout(16);
+      }
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      });
+    };
+
+    const before = Number(await camera.getAttribute('data-map-zoom'));
+    await pinch(40, 110);
+    await expect
+      .poll(async () => Number(await camera.getAttribute('data-map-zoom')))
+      .toBeGreaterThan(before + 1);
+    const zoomedIn = Number(await camera.getAttribute('data-map-zoom'));
+    await pinch(110, 40);
+    await expect
+      .poll(async () => Number(await camera.getAttribute('data-map-zoom')))
+      .toBeLessThan(zoomedIn - 1);
+    expect(await page.evaluate(() => window.visualViewport?.scale)).toBe(1);
+    await cdp.detach();
+  });
+}
+
+test('native results sheets expand over a stable map without moving its pins', async ({
+  page,
+}) => {
+  await native(page);
+  await page.goto('/d');
+  for (const label of ['Directory', 'Events']) {
+    if (label === 'Events') await scope(page, 'Events');
+    const results = map(page, label);
+    const camera = results.locator('.dirsearch-mapcanvas[data-map-center]');
+    await expect
+      .poll(async () => {
+        const center = (await camera.getAttribute('data-map-center'))!
+          .split(',')
+          .map(Number);
+        return Math.abs(center[0] - 25.94);
+      })
+      .toBeLessThan(0.000001);
+    const canvas = results.locator('.maplibregl-canvas');
+    const marker = results.locator('.maplibregl-marker').first();
+    const before = {
+      canvas: await canvas.boundingBox(),
+      marker: await marker.boundingBox(),
+      center: await camera.getAttribute('data-map-center'),
+      zoom: await camera.getAttribute('data-map-zoom'),
+    };
+    const sheet = results.getByRole('region', { name: `${label} results` });
+    const peekHeight = (await sheet.boundingBox())!.height;
+    await sheet
+      .getByRole('button', { name: 'Resize results', exact: true })
+      .click();
+    await expect
+      .poll(async () => (await sheet.boundingBox())!.height)
+      .toBeGreaterThan(peekHeight + 100);
+    expect(await canvas.boundingBox()).toEqual(before.canvas);
+    expect(await marker.boundingBox()).toEqual(before.marker);
+    expect(await camera.getAttribute('data-map-center')).toBe(before.center);
+    expect(await camera.getAttribute('data-map-zoom')).toBe(before.zoom);
+    await sheet
+      .getByRole('button', { name: 'Resize results', exact: true })
+      .press('Home');
+    await expect
+      .poll(async () => (await sheet.boundingBox())!.height)
+      .toBe(peekHeight);
+    expect(await canvas.boundingBox()).toEqual(before.canvas);
+  }
+});
+
+test('native sheet header accepts short touch swipes without disturbing map geometry or list scrolling', async ({
+  page,
+  context,
+}) => {
+  const businesses: SearchResultsInterface[] = Array.from(
+    { length: 343 },
+    (_, index) => ({
+      _id: `sheet-business-${index}`,
+      id: `sheet-business-${index}`,
+      name: `Sheet business ${index}`,
+      screenname: `sheet-business-${index}`,
+      score: 1,
+      score_details: {},
+      details: 'A sheet interaction fixture.',
+      five_words: 'A sheet interaction fixture.',
+      geo:
+        index < 31 ? { coordinates: [-80.19 + index * 0.0001, 25.76] } : null,
+      images: { primaryCDN: '/logos/pana_logo_long_orange.png' },
+      primary_address: { city: 'Miami' },
+      socials: {},
+    })
+  );
+  await native(page, { businesses });
+  await page.goto('/d');
+  const results = map(page);
+  const sheet = results.getByRole('region', { name: 'Directory results' });
+  const handle = sheet.getByRole('button', { name: 'Resize results' });
+  const title = sheet.getByRole('heading', { name: '343 listings' });
+  await expect(title).toBeVisible();
+  await expect(results.locator('.maplibregl-marker')).toHaveCount(31);
+  const canvas = results.locator('.maplibregl-canvas');
+  const before = await canvas.boundingBox();
+  const peekHeight = (await sheet.boundingBox())!.height;
+  const cdp = await context.newCDPSession(page);
+  const swipe = async (
+    target: Locator,
+    distance: number,
+    cancelled = false
+  ) => {
+    const box = (await target.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x, y }],
+    });
+    for (let step = 1; step <= 8; step++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x, y: y - (distance * step) / 8 }],
+      });
+      expect(await canvas.boundingBox()).toEqual(before);
+    }
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: cancelled ? 'touchCancel' : 'touchEnd',
+      touchPoints: [],
+    });
+  };
+
+  await swipe(title, 64);
+  await expect(handle).toHaveAttribute('aria-expanded', 'true');
+  await expect
+    .poll(async () => (await sheet.boundingBox())!.height)
+    .toBeGreaterThan(peekHeight + 100);
+  const halfHeight = (await sheet.boundingBox())!.height;
+  await swipe(title, 64, true);
+  expect((await sheet.boundingBox())!.height).toBe(halfHeight);
+  await handle.press('End');
+  await expect
+    .poll(async () => (await sheet.boundingBox())!.height)
+    .toBeGreaterThan(halfHeight);
+  const expandedHeight = (await sheet.boundingBox())!.height;
+  const list = sheet
+    .getByRole('region', { name: 'In map', exact: true })
+    .locator('..');
+  await swipe(list, 120);
+  await expect
+    .poll(() => list.evaluate((node) => node.scrollTop))
+    .toBeGreaterThan(40);
+  expect((await sheet.boundingBox())!.height).toBe(expandedHeight);
+  await swipe(title, -64);
+  await expect
+    .poll(async () => (await sheet.boundingBox())!.height)
+    .toBe(halfHeight);
+  await handle.press('Home');
+  await expect(handle).toHaveAttribute('aria-expanded', 'false');
+  await expect
+    .poll(async () => (await sheet.boundingBox())!.height)
+    .toBe(peekHeight);
+  await handle.tap();
+  await expect(handle).toHaveAttribute('aria-expanded', 'true');
+  expect(await canvas.boundingBox()).toEqual(before);
+  await cdp.detach();
+});
+
+test('native directory shows complete In map and Without location collections with camera-stable photo selection', async ({
+  page,
+}) => {
+  const businesses: SearchResultsInterface[] = Array.from(
+    { length: 47 },
+    (_, index) => ({
+      _id: `business-${index}`,
+      id: `business-${index}`,
+      name: `Business ${index}`,
+      screenname: `business-${index}`,
+      score: 1,
+      score_details: {},
+      details: 'A directory map fixture.',
+      five_words: 'A directory map fixture.',
+      geo: index < 20 ? null : { coordinates: [-80.19 + index * 0.001, 25.76] },
+      images: { primaryCDN: '/logos/pana_logo_long_orange.png' },
+      primary_address: { city: 'Miami' },
+      socials: {},
+    })
+  );
+  const fixtures = await native(page, { businesses });
+  await page.goto('/d');
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(27);
+  await expect(
+    map(page).getByText('20 without usable map locations, in Online below')
+  ).toHaveCount(0);
+  const canvas = map(page).locator('.dirsearch-mapcanvas[data-map-center]');
+  await expect
+    .poll(async () => {
+      const center = (await canvas.getAttribute('data-map-center'))!
+        .split(',')
+        .map(Number);
+      return Math.max(
+        Math.abs(center[0] - 25.76),
+        Math.abs(center[1] + 80.157)
+      );
+    })
+    .toBeLessThan(0.000001);
+  const before = {
+    center: await canvas.getAttribute('data-map-center'),
+    zoom: await canvas.getAttribute('data-map-zoom'),
+  };
+  await expect(
+    map(page)
+      .getByRole('region', { name: 'In map', exact: true, includeHidden: true })
+      .locator('article[data-result-id]')
+  ).toHaveCount(27);
+  await expect(
+    map(page)
+      .getByRole('region', {
+        name: 'Without location',
+        exact: true,
+        includeHidden: true,
+      })
+      .locator('article[data-result-id]')
+  ).toHaveCount(20);
+  const pin = map(page).getByRole('button', {
+    name: 'Business 46',
+    exact: true,
+  });
+  await expect(pin).toHaveText('');
+  await expect(pin.locator('img')).toHaveCount(1);
+  await map(page)
+    .getByRole('button', { name: 'Business 46', exact: true })
+    .click();
+  await fitted(page);
+  await expect(
+    map(page).locator('article[data-selected] a').first()
+  ).toHaveAttribute('href', '/p/business-46');
+  // The old selection ease lasted 420ms; include it in the regression check.
+  await page.waitForTimeout(550);
+  expect(await canvas.getAttribute('data-map-center')).toBe(before.center);
+  expect(await canvas.getAttribute('data-map-zoom')).toBe(before.zoom);
+  await map(page)
+    .getByRole('button', { name: 'Resize results', exact: true })
+    .press('End');
+  await expect(
+    map(page).getByRole('button', { name: 'Next', exact: true })
+  ).toHaveCount(0);
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(27);
+  expect(
+    fixtures.state.requests.filter(
+      (request) =>
+        request.pathname === '/api/getDirectorySearch' &&
+        new URLSearchParams(request.query).get('v') === 'map'
+    )
+  ).toHaveLength(1);
+});
+
+test('native location sharing ignores old radius links and can recenter after browsing farther away', async ({
+  page,
+  context,
+}) => {
+  const viewer = { latitude: 25.761689, longitude: -80.191788 };
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation(viewer);
+  const businesses: SearchResultsInterface[] = [
+    ...[
+      { id: 'near', lng: viewer.longitude + 0.005 },
+      { id: 'far', lng: viewer.longitude + 0.18 },
+    ].map(({ id, lng }) => ({
+      _id: id,
+      id,
+      name: id,
+      screenname: id,
+      score: 1,
+      score_details: {},
+      details: '',
+      five_words: '',
+      geo: { coordinates: [lng, viewer.latitude] },
+      images: { primaryCDN: '/logos/pana_logo_long_orange.png' },
+      primary_address: { city: 'Miami' },
+      socials: {},
+    })),
+    {
+      _id: 'unlocated',
+      id: 'unlocated',
+      name: 'Unlocated business',
+      screenname: null,
+      score: 1,
+      score_details: {},
+      details: '',
+      five_words: '',
+      geo: null,
+      images: { primaryCDN: '' },
+      socials: {},
+    },
+  ];
+  const fixtures = await native(page, { businesses });
+  const queries = () =>
+    fixtures.state.requests
+      .filter((request) => request.pathname === '/api/getDirectorySearch')
+      .map((request) => new URLSearchParams(request.query));
+  await page.goto('/d?radius=5');
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Use my location' }).tap();
+  const canvas = map(page).locator('.dirsearch-mapcanvas[data-map-bounds]');
+  const center = async () =>
+    (await canvas.getAttribute('data-map-center'))!.split(',').map(Number);
+  const atViewer = async () =>
+    Math.max(
+      Math.abs((await center())[0] - viewer.latitude),
+      Math.abs((await center())[1] - viewer.longitude)
+    );
+  await expect.poll(atViewer).toBeLessThan(0.000001);
+  await expect.poll(() => queries().at(-1)?.get('sort')).toBe('nearest');
+  expect(queries().every((query) => query.get('radius') === 'all')).toBe(true);
+  expect(queries().at(-1)?.get('geolat')).toBe('25.76');
+  expect(queries().at(-1)?.get('geolng')).toBe('-80.19');
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
+  const online = map(page).getByRole('region', {
+    name: 'Without location',
+    exact: true,
+    includeHidden: true,
+  });
+  await expect(online.locator('article')).toHaveCount(1);
+  const requests = queries().length;
+  const box = (await map(page).locator('canvas').boundingBox())!;
+  const sheet = (await map(page)
+    .getByRole('region', { name: 'Directory results' })
+    .boundingBox())!;
+  // The canvas now stays fixed behind the sheet; pan in its exposed area.
+  const panY = box.y + Math.min(box.height, sheet.y - box.y) * 0.55;
+  for (let step = 0; step < 4; step++) {
+    const bounds = JSON.parse(
+      (await canvas.getAttribute('data-map-bounds'))!
+    ) as { west: number; east: number };
+    const farLng = viewer.longitude + 0.18;
+    if (farLng >= bounds.west && farLng <= bounds.east) break;
+    const previous = (await center())[1];
+    await page.mouse.move(box.x + box.width * 0.85, panY);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.15, panY, {
+      steps: 20,
+    });
+    await page.mouse.up();
+    await expect
+      .poll(async () => (await center())[1])
+      .toBeGreaterThan(previous + 0.01);
+  }
+  await expect
+    .poll(async () => (await center())[1])
+    .toBeGreaterThan(viewer.longitude + 0.08);
+  await expect(
+    map(page)
+      .getByRole('region', { name: 'In map', exact: true, includeHidden: true })
+      .locator('article[data-result-id="far"]')
+  ).toHaveCount(1);
+  await expect(online.locator('article')).toHaveCount(1);
+  const before = {
+    center: await canvas.getAttribute('data-map-center'),
+    zoom: await canvas.getAttribute('data-map-zoom'),
+  };
+  await map(page)
+    .getByRole('button', { name: 'Resize results', exact: true })
+    .press('Home');
+  await map(page).getByRole('button', { name: 'far', exact: true }).tap();
+  await fitted(page);
+  await page.waitForTimeout(550);
+  expect(await canvas.getAttribute('data-map-center')).toBe(before.center);
+  expect(await canvas.getAttribute('data-map-zoom')).toBe(before.zoom);
+  await map(page)
+    .getByRole('button', { name: 'Resize results', exact: true })
+    .press('Home');
+  await page.getByRole('button', { name: 'Use my location' }).tap();
+  await expect.poll(atViewer).toBeLessThan(0.000001);
+  expect(queries()).toHaveLength(requests);
+  await expect(online.locator('article')).toHaveCount(1);
+});
+
+for (const viewport of [
+  { width: 390, height: 844 },
+  { width: 320, height: 568 },
+  { width: 740, height: 320 },
+  { width: 740, height: 270 },
+]) {
+  test(`native directory dropdowns keep branded, accessible filters at ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }, testInfo) => {
+    const fixtures = await native(page);
+    await page.setViewportSize(viewport);
+    await page.goto('/d?radius=5&sort=recommended');
+    await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
+    const filters = page.getByRole('group', { name: 'Directory filters' });
+    await expect(filters.getByRole('button')).toHaveText([
+      'Category',
+      'Visit',
+      'Certified',
+      'Events',
+    ]);
+    await expect(page.getByRole('button', { name: /^Sort/ })).toHaveCount(0);
+    await expect(
+      page.getByRole('search').getByRole('button', { name: 'Use my location' })
+    ).toBeVisible();
+    const category = filters.getByRole('button', { name: /^Category/ });
+    await expect(category).toHaveCSS('border-radius', '999px');
+    for (const button of await filters.getByRole('button').all()) {
+      const box = (await button.boundingBox())!;
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+      const face = await button.evaluate((node) => {
+        const style = getComputedStyle(node, '::before');
+        return (
+          node.getBoundingClientRect().height -
+          parseFloat(style.top) -
+          parseFloat(style.bottom)
+        );
+      });
+      expect(face).toBe(32);
+    }
+    const canvas = map(page).locator('.maplibregl-canvas');
+    const camera = map(page).locator('.dirsearch-mapcanvas[data-map-center]');
+    const before = {
+      bounds: await canvas.boundingBox(),
+      center: await camera.getAttribute('data-map-center'),
+      zoom: await camera.getAttribute('data-map-zoom'),
+    };
+    const bounded = async (panel: Locator) => {
+      await expect(panel).toBeInViewport({ ratio: 1 });
+      const box = (await panel.boundingBox())!;
+      const dock = (await page
+        .getByRole('navigation', { name: 'App navigation' })
+        .boundingBox())!;
+      const header = (await page
+        .locator('[data-native-app] > header')
+        .boundingBox())!;
+      expect(box.y).toBeGreaterThanOrEqual(header.y + header.height);
+      expect(box.y + box.height).toBeLessThanOrEqual(dock.y - 7);
+      await expect(
+        panel.getByRole('button', { name: 'Done', exact: true })
+      ).toBeInViewport({ ratio: 1 });
+    };
+    await category.tap();
+    const dialog = page.getByRole('dialog', {
+      name: 'Category',
+      exact: true,
+    });
+    await expect(dialog).toHaveCSS('background-color', 'rgb(255, 247, 236)');
+    await bounded(dialog);
+    const menu = dialog.getByRole('menu', { name: 'Category', exact: true });
+    const choices = menu.getByRole('menuitemcheckbox');
+    await choices.first().press('End');
+    await expect(choices.last()).toBeFocused();
+    await expect(choices.last()).toBeInViewport({ ratio: 1 });
+    await choices.last().press('Home');
+    await expect(choices.first()).toBeFocused();
+    await menu
+      .getByRole('menuitemcheckbox', { name: 'Art', exact: true })
+      .tap();
+    await menu
+      .getByRole('menuitemcheckbox', { name: 'Food', exact: true })
+      .tap();
+    await expect(
+      menu.getByRole('menuitemcheckbox', { name: 'Art', exact: true })
+    ).toHaveAttribute('aria-checked', 'true');
+    await page.screenshot({
+      path: testInfo.outputPath('native-category-open.png'),
+      animations: 'disabled',
+    });
+    await choices.last().focus();
+    await page.keyboard.press('Tab');
+    await expect(
+      dialog.getByRole('button', { name: 'Clear all', exact: true })
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
+      dialog.getByRole('button', { name: 'Done', exact: true })
+    ).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(category).toBeFocused();
+    await category.tap();
+    expect(
+      await page.evaluate((name) => {
+        const event = new Event(name, { cancelable: true });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      }, NATIVE_BACK_BUTTON_EVENT)
+    ).toBe(true);
+    await expect(dialog).toHaveCount(0);
+    await expect(category).toBeFocused();
+    const visit = filters.getByRole('button', { name: /^Visit/ });
+    await visit.press('ArrowDown');
+    const visitDialog = page.getByRole('dialog', {
+      name: 'Visit',
+      exact: true,
+    });
+    await bounded(visitDialog);
+    await visitDialog
+      .getByRole('menuitemradio', { name: /^Online / })
+      .press('Enter');
+    await expect(visitDialog).toBeVisible();
+    await visitDialog
+      .getByRole('button', { name: 'Done', exact: true })
+      .click();
+    await expect(visit).toBeFocused();
+    await filters.getByRole('button', { name: /^Certified/ }).tap();
+    const certified = page.getByRole('dialog', {
+      name: 'Certified',
+      exact: true,
+    });
+    await bounded(certified);
+    await certified
+      .getByRole('menuitemradio', { name: 'Pana certified only', exact: true })
+      .click();
+    await certified.getByRole('button', { name: 'Done', exact: true }).click();
+    await filters.getByRole('button', { name: /^Events/ }).tap();
+    const events = page.getByRole('dialog', { name: 'Events', exact: true });
+    await bounded(events);
+    await events
+      .getByRole('menuitemradio', {
+        name: 'Hosting upcoming events',
+        exact: true,
+      })
+      .click();
+    await expect
+      .poll(() => {
+        const request = fixtures.state.requests
+          .filter((item) => item.pathname === '/api/getDirectorySearch')
+          .at(-1)!;
+        const params = new URLSearchParams(request.query);
+        return [
+          params.get('fcat'),
+          params.get('sort'),
+          params.get('certified'),
+          params.get('events'),
+          params.get('radius'),
+        ];
+      })
+      .toEqual(['art+food', 'recommended', 'true', 'true', 'all']);
+    await events.getByRole('button', { name: 'Clear all', exact: true }).tap();
+    await expect(
+      events.getByRole('menuitemradio', { name: 'All listings', exact: true })
+    ).toHaveAttribute('aria-checked', 'true');
+    await events.getByRole('button', { name: 'Done', exact: true }).tap();
+    await expect(events).toHaveCount(0);
+    await expect(filters.getByRole('button')).toHaveText([
+      'Category',
+      'Visit',
+      'Certified',
+      'Events',
+    ]);
+    await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(2);
+    await expect(
+      map(page)
+        .getByRole('region', {
+          name: 'Without location',
+          exact: true,
+          includeHidden: true,
+        })
+        .locator('article')
+    ).toHaveCount(1);
+    expect(
+      fixtures.state.requests
+        .filter((item) => item.pathname === '/api/getDirectorySearch')
+        .every(
+          (item) => new URLSearchParams(item.query).get('radius') === 'all'
+        )
+    ).toBe(true);
+    expect(await canvas.boundingBox()).toEqual(before.bounds);
+    expect(await camera.getAttribute('data-map-center')).toBe(before.center);
+    expect(await camera.getAttribute('data-map-zoom')).toBe(before.zoom);
+    await category.click();
+    await page
+      .getByRole('navigation', { name: 'App navigation' })
+      .getByRole('link', { name: 'Directory', exact: true })
+      .click();
+    await expect(dialog).toHaveCount(0);
+  });
+}
+
+test('native Visit filters the complete directory without mistaking missing coordinates for online service', async ({
+  page,
+}) => {
+  const zip = {
+    postalCode: '33138',
+    country: 'US' as const,
+    city: 'Miami',
+    region: 'FL',
+    lat: 25.8,
+    lng: -80.2,
+  };
+  const businesses: SearchResultsInterface[] = Array.from(
+    { length: 47 },
+    (_, index) => ({
+      _id: `visit-${index}`,
+      id: `visit-${index}`,
+      name: `Visit business ${index}`,
+      screenname: `visit-${index}`,
+      score: 1,
+      score_details: {},
+      details: 'Complete Visit fixture',
+      five_words: 'Complete Visit fixture',
+      geo:
+        index % 5 === 0
+          ? null
+          : { coordinates: [-80.21 + index * 0.001, 25.76] },
+      images: { primaryCDN: '/logos/pana_logo_long_orange.png' },
+      primary_address: { city: 'Miami', zipcode: '33138' },
+      categories: [index % 2 === 0 ? 'art' : 'food'],
+      online_only: index % 3 === 0,
+      online_zip: index % 6 === 0 ? zip : null,
+      certified: index % 2 === 0,
+      nextEvent:
+        index % 4 === 0
+          ? {
+              slug: 'fixture-event',
+              title: 'Upcoming gathering',
+              startsAt: '2027-01-01T18:00:00Z',
+              timezone: 'America/New_York',
+              online: false,
+              venueCity: 'Miami',
+            }
+          : null,
+      socials: {},
+    })
+  );
+  const fixtures = await native(page, { businesses });
+  await page.goto('/d');
+  const results = map(page);
+  const filters = page.getByRole('group', { name: 'Directory filters' });
+  const camera = results.locator('.dirsearch-mapcanvas[data-map-center]');
+  const canvas = results.locator('.maplibregl-canvas');
+  await expect(
+    results.getByRole('heading', { name: '47 listings', exact: true })
+  ).toBeVisible();
+  await expect(results.locator('.maplibregl-marker button')).toHaveCount(26);
+  const before = {
+    bounds: await canvas.boundingBox(),
+    center: await camera.getAttribute('data-map-center'),
+    zoom: await camera.getAttribute('data-map-zoom'),
+  };
+  const requests = () =>
+    fixtures.state.requests.filter(
+      (item) => item.pathname === '/api/getDirectorySearch'
+    );
+  const initialRequests = requests().length;
+  const selectVisit = async (name: RegExp) => {
+    await filters.getByRole('button', { name: /^Visit/ }).click();
+    const dialog = page.getByRole('dialog', { name: 'Visit', exact: true });
+    await dialog.getByRole('menuitemradio', { name }).click();
+    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+  };
+  const unlocated = results.getByRole('region', {
+    name: 'Without location',
+    exact: true,
+    includeHidden: true,
+  });
+  await selectVisit(/^In person /);
+  await expect(
+    results.getByRole('heading', { name: '31 listings', exact: true })
+  ).toBeVisible();
+  await expect(results.locator('.maplibregl-marker button')).toHaveCount(25);
+  await expect(unlocated.locator('article')).toHaveCount(6);
+  await expect(
+    unlocated.locator('article[data-result-id="visit-5"]')
+  ).toHaveCount(1);
+  await expect(
+    unlocated.locator('article[data-result-id="visit-15"]')
+  ).toHaveCount(0);
+  await selectVisit(/^Online /);
+  await expect(
+    results.getByRole('heading', { name: '16 listings', exact: true })
+  ).toBeVisible();
+  await expect(results.locator('.maplibregl-marker button')).toHaveCount(1);
+  await expect(unlocated.locator('article')).toHaveCount(8);
+  await expect(
+    unlocated.locator('article[data-result-id="visit-15"]')
+  ).toHaveCount(1);
+  await expect(
+    unlocated.locator('article[data-result-id="visit-5"]')
+  ).toHaveCount(0);
+  expect(requests()).toHaveLength(initialRequests);
+  await scope(page, 'Events');
+  await expect(
+    map(page, 'Events').getByRole('heading', {
+      name: '24 events shown',
+      exact: true,
+    })
+  ).toBeVisible();
+  await scope(page, 'Directory');
+  await expect(
+    results.getByRole('heading', { name: '16 listings', exact: true })
+  ).toBeVisible();
+  for (const [label, option] of [
+    ['Category', 'Art'],
+    ['Certified', 'Pana certified only'],
+    ['Events', 'Hosting upcoming events'],
+  ]) {
+    await filters
+      .getByRole('button', { name: new RegExp(`^${label}`) })
+      .click();
+    const dialog = page.getByRole('dialog', { name: label, exact: true });
+    await dialog
+      .getByRole(label === 'Category' ? 'menuitemcheckbox' : 'menuitemradio', {
+        name: option,
+        exact: true,
+      })
+      .click();
+    await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+  }
+  await expect(
+    results.getByRole('heading', { name: '4 listings', exact: true })
+  ).toBeVisible();
+  await expect(results.locator('.dirsearch-zip-label')).toHaveText('331384');
+  await filters.getByRole('button', { name: /^Visit/ }).click();
+  const visit = page.getByRole('dialog', { name: 'Visit', exact: true });
+  await visit.getByRole('button', { name: 'Clear all', exact: true }).click();
+  await expect(
+    visit.getByRole('menuitemradio', { name: /^Both / })
+  ).toHaveAttribute('aria-checked', 'true');
+  await visit.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(
+    results.getByRole('heading', { name: '47 listings', exact: true })
+  ).toBeVisible();
+  expect(await canvas.boundingBox()).toEqual(before.bounds);
+  expect(await camera.getAttribute('data-map-center')).toBe(before.center);
+  expect(await camera.getAttribute('data-map-zoom')).toBe(before.zoom);
+  await results
+    .getByRole('button', { name: 'Visit business 46', exact: true })
+    .click();
+  await fitted(page);
+  await page
+    .getByRole('searchbox', { name: 'Search directory', exact: true })
+    .fill('Visit business 46');
+  await expect(
+    results.getByRole('heading', { name: '1 listing', exact: true })
+  ).toBeVisible();
+  await expect
+    .poll(async () => {
+      const [lat, lng] = (await camera.getAttribute('data-map-center'))!
+        .split(',')
+        .map(Number);
+      return Math.max(Math.abs(lat - 25.76), Math.abs(lng + 80.164));
+    })
+    .toBeLessThan(0.000001);
+  expect(await canvas.boundingBox()).toEqual(before.bounds);
+  expect(fixtures.state.unhandled).toEqual([]);
+});
+
+test('native Clear all preserves search and location while clearing legacy link filters', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: 25.761689, longitude: -80.191788 });
+  const fixtures = await native(page);
+  await page.goto('/d?q=Bay&certified=true&mentors=true&sort=name');
+  const search = page.getByRole('searchbox', { name: 'Search directory' });
+  const location = page
+    .getByRole('search')
+    .getByRole('button', { name: 'Use my location' });
+  await expect(search).toHaveValue('Bay');
+  await location.click();
+  await expect(location).toHaveAttribute('aria-pressed', 'true');
+  await page
+    .getByRole('group', { name: 'Directory filters' })
+    .getByRole('button', { name: /^Category/ })
+    .click();
+  const category = page.getByRole('dialog', { name: 'Category', exact: true });
+  await expect(category).toContainText(
+    'Additional mentoring or language filters'
+  );
+  await category
+    .getByRole('button', { name: 'Clear all', exact: true })
+    .click();
+  await expect(category).not.toContainText(
+    'Additional mentoring or language filters'
+  );
+  await category.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(
+    map(page).getByRole('heading', { name: '1 listing', exact: true })
+  ).toBeVisible();
+  await expect(search).toHaveValue('Bay');
+  await expect(location).toHaveAttribute('aria-pressed', 'true');
+  await expect
+    .poll(() => {
+      const request = fixtures.state.requests
+        .filter((item) => item.pathname === '/api/getDirectorySearch')
+        .at(-1)!;
+      const params = new URLSearchParams(request.query);
+      return ['q', 'geolat', 'geolng', 'certified', 'mentors', 'sort'].map(
+        (key) => params.get(key)
+      );
+    })
+    .toEqual(['Bay', '25.76', '-80.19', null, null, 'nearest']);
+});
+
+test('native In map follows zoom, pan, and resizing while unlocated matches remain in Without location', async ({
+  page,
+}) => {
+  const points = [
+    { id: 'near-west', lng: -80.21 },
+    { id: 'near-east', lng: -80.19 },
+    { id: 'edge', lng: -80.3 },
+    { id: 'far-west', lng: -80.6 },
+    { id: 'far-east', lng: -79.8 },
+  ];
+  const businesses: SearchResultsInterface[] = [
+    ...points.map(({ id, lng }) => ({
+      _id: id,
+      id,
+      name: id,
+      screenname: id,
+      score: 1,
+      score_details: {},
+      details: '',
+      five_words: '',
+      geo: { coordinates: [lng, 25.8] },
+      images: { primaryCDN: '/logos/pana_logo_long_orange.png' },
+      primary_address: { city: 'Miami' },
+      socials: {},
+    })),
+    ...['missing-location', 'private-online'].map((id) => ({
+      _id: id,
+      id,
+      name: id,
+      screenname: null,
+      score: 1,
+      score_details: {},
+      details: '',
+      five_words: '',
+      geo: id === 'private-online' ? { coordinates: [-122.4, 37.8] } : null,
+      online_only: id === 'private-online',
+      images: { primaryCDN: '' },
+      socials: {},
+    })),
+  ];
+  const fixtures = await native(page, { businesses });
+  await page.goto('/d');
+  const canvas = map(page).locator('.dirsearch-mapcanvas[data-map-bounds]');
+  await expect(canvas).toHaveCount(1);
+  await expect
+    .poll(async () => {
+      const center = (await canvas.getAttribute('data-map-center'))!
+        .split(',')
+        .map(Number);
+      return Math.abs(center[1] + 80.2);
+    })
+    .toBeLessThan(0.000001);
+  for (let step = 0; step < 3; step++) {
+    const zoom = Number(await canvas.getAttribute('data-map-zoom'));
+    await map(page).locator('.maplibregl-canvas').press('Equal');
+    await expect
+      .poll(async () => Number(await canvas.getAttribute('data-map-zoom')))
+      .toBeGreaterThan(zoom + 0.99);
+  }
+  const inMap = map(page).getByRole('region', {
+    name: 'In map',
+    exact: true,
+    includeHidden: true,
+  });
+  const online = map(page).getByRole('region', {
+    name: 'Without location',
+    exact: true,
+    includeHidden: true,
+  });
+  await expect(inMap.locator('article')).toHaveCount(2);
+  await expect(online.locator('article')).toHaveCount(2);
+  await expect(online).not.toContainText('far-west');
+  await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(5);
+
+  const assertViewportMatches = async () => {
+    const bounds = JSON.parse(
+      (await canvas.getAttribute('data-map-bounds'))!
+    ) as {
+      west: number;
+      east: number;
+      south: number;
+      north: number;
+    };
+    const expected = points
+      .filter(
+        ({ lng }) =>
+          lng >= bounds.west &&
+          lng <= bounds.east &&
+          25.8 >= bounds.south &&
+          25.8 <= bounds.north
+      )
+      .map(({ id }) => id);
+    await expect
+      .poll(() =>
+        inMap
+          .locator('article')
+          .evaluateAll((nodes) =>
+            nodes.map((node) => node.getAttribute('data-result-id'))
+          )
+      )
+      .toEqual(expected);
+  };
+  await page.setViewportSize({ width: 740, height: 844 });
+  await expect(inMap.locator('[data-result-id="edge"]')).toBeAttached();
+  await assertViewportMatches();
+  const before = (await canvas.getAttribute('data-map-center'))!
+    .split(',')
+    .map(Number);
+  const box = (await map(page).locator('canvas').boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.85, box.y + box.height * 0.6);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.6, {
+    steps: 20,
+  });
+  await page.mouse.up();
+  await expect
+    .poll(async () => {
+      const center = (await canvas.getAttribute('data-map-center'))!
+        .split(',')
+        .map(Number);
+      return center[1] - before[1];
+    })
+    .toBeGreaterThan(0.02);
+  await assertViewportMatches();
+  await expect(online.locator('article')).toHaveCount(2);
+  expect(
+    fixtures.state.requests.filter(
+      (request) => request.pathname === '/api/getDirectorySearch'
+    )
+  ).toHaveLength(1);
+});
+
+test('native ZIP-only businesses use labelled approximate photo pins without online classification', async ({
+  page,
+}) => {
+  await native(page, {
+    businesses: [
+      {
+        _id: 'zip-only',
+        id: 'zip-only',
+        name: 'ZIP-only business',
+        screenname: null,
+        score: 1,
+        score_details: {},
+        details: 'A business with an existing public ZIP.',
+        five_words: '',
+        geo: null,
+        online_only: false,
+        zip_area: {
+          postalCode: '33138',
+          country: 'US',
+          city: 'Miami',
+          region: 'FL',
+          lat: 25.8521,
+          lng: -80.1821,
+        },
+        primary_address: { city: 'Miami', zipcode: '33138' },
+        images: { primaryCDN: '' },
+        socials: {},
+      },
+    ],
+  });
+  await page.goto('/d');
+  const pin = map(page).getByRole('button', {
+    name: 'ZIP-only business, approximate ZIP 33138 area',
+    exact: true,
+  });
+  await expect(pin).toBeVisible();
+  await expect(pin).toHaveText('');
+  await expect(pin.locator('img')).toHaveCount(1);
+  await expect(pin).toHaveAttribute('data-approximate', 'true');
+  await expect(pin).toHaveCSS('border-style', 'dashed');
+  await expect(pin).not.toHaveAttribute('data-online-zip');
+  await pin.click();
+  await fitted(page);
+  await expect(map(page).locator('article')).toContainText(
+    'Approximate ZIP 33138 area'
+  );
 });
 
 test('mobile browsers keep the website layout rather than the native tabs', async ({
@@ -251,18 +1318,22 @@ for (const viewport of [
   { width: 390, height: 844 },
   { width: 740, height: 270 },
 ]) {
-  test(`one selected card fits with breathing room at ${viewport.width}x${viewport.height}`, async ({
+  test(`selected profiles fit with breathing room at ${viewport.width}x${viewport.height}`, async ({
     page,
   }) => {
     await native(page);
     await page.setViewportSize(viewport);
     await page.goto('/d');
+    const business = viewport.height < 300 ? 'North Studio' : 'Bay Cafe';
     await map(page)
-      .getByRole('button', { name: 'Bay Cafe', exact: true })
+      .getByRole('button', { name: business, exact: true })
       .click();
     await fitted(page);
-    const href = map(page).locator('article a').first();
-    await expect(href).toHaveAttribute('href', '/p/bay-cafe');
+    const href = map(page).locator('article[data-selected] a').first();
+    await expect(href).toHaveAttribute(
+      'href',
+      viewport.height < 300 ? '/p/north-studio' : '/p/bay-cafe'
+    );
   });
 }
 
@@ -276,10 +1347,13 @@ test('a real profile destination and Back preserve the selected card and search'
     .fill('coffee');
   await expect(map(page).locator('.maplibregl-marker button')).toHaveCount(1);
   await map(page)
+    .getByRole('button', { name: 'Resize results', exact: true })
+    .press('Home');
+  await map(page)
     .getByRole('button', { name: 'Bay Cafe', exact: true })
     .click();
   await fitted(page);
-  await map(page).locator('article a').first().click();
+  await map(page).locator('article[data-selected] a').first().click();
   await expect(page).toHaveURL(/\/p\/bay-cafe$/);
   await expect(
     page.getByRole('heading', { name: 'Bay Cafe', exact: true })
@@ -349,16 +1423,15 @@ test('Events retain their own map, shared-venue cluster and unpinned online resu
   });
   const before = (await marker.boundingBox())!.x;
   const canvas = (await map(page).locator('canvas').boundingBox())!;
-  await page.mouse.move(
-    canvas.x + canvas.width * 0.8,
-    canvas.y + canvas.height * 0.6
-  );
+  const sheetTop = (await map(page)
+    .getByRole('region', { name: 'Directory results', exact: true })
+    .boundingBox())!.y;
+  const panY = canvas.y + (sheetTop - canvas.y) * 0.65;
+  await page.mouse.move(canvas.x + canvas.width * 0.8, panY);
   await page.mouse.down();
-  await page.mouse.move(
-    canvas.x + canvas.width * 0.8 - 60,
-    canvas.y + canvas.height * 0.6,
-    { steps: 12 }
-  );
+  await page.mouse.move(canvas.x + canvas.width * 0.8 - 60, panY, {
+    steps: 12,
+  });
   await page.mouse.up();
   await expect
     .poll(async () => Math.abs((await marker.boundingBox())!.x - before))
@@ -381,11 +1454,11 @@ test('Events retain their own map, shared-venue cluster and unpinned online resu
   await map(page, 'Events')
     .getByRole('button', { name: /2 events results at Bay Cafe/ })
     .click();
-  await expect(map(page, 'Events').locator('article')).toHaveCount(2);
-  await map(page, 'Events').getByRole('button', { name: 'Show all' }).click();
+  await expect(map(page, 'Events').locator('article')).toHaveCount(24);
+  await fitted(page, 'Events');
   await map(page, 'Events')
-    .getByRole('button', { name: 'List', exact: true })
-    .click();
+    .getByRole('button', { name: 'Resize results', exact: true })
+    .press('End');
   await expect(
     map(page, 'Events').getByText('Online conversation', { exact: true })
   ).toBeVisible();
@@ -407,7 +1480,7 @@ test('event search and pagination use the server and reach beyond the first batc
   const fixtures = await native(page);
   await page.goto('/d?scope=event');
   await map(page, 'Events')
-    .getByRole('button', { name: 'List', exact: true })
+    .getByRole('button', { name: 'Resize results', exact: true })
     .click();
   await map(page, 'Events')
     .getByRole('button', { name: 'More events' })
@@ -587,7 +1660,7 @@ test('guest event bookmarks return to the real event after signing in', async ({
   fixtures.state.signedIn = false;
   await page.goto('/d?scope=event');
   await map(page, 'Events')
-    .getByRole('button', { name: 'List', exact: true })
+    .getByRole('button', { name: 'Resize results', exact: true })
     .click();
   await expect(
     page.getByRole('link', { name: 'Sign in to save Coffee at Bay Cafe' })
@@ -613,11 +1686,13 @@ test('WebGL failure preserves a useful results list and an explicit map retry', 
     page.getByText('Map unavailable', { exact: true })
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Retry map' })).toBeVisible();
-  await map(page).getByRole('button', { name: 'List', exact: true }).click();
+  await map(page)
+    .getByRole('button', { name: 'Resize results', exact: true })
+    .click();
   await expect(map(page).getByText('Bay Cafe', { exact: true })).toBeVisible();
 });
 
-test('leaving Social stops camera and microphone without losing the audience filter or reopening capture', async ({
+test('one mixed Social feed saves the filter row while keeping posting audience and capture lifecycle intact', async ({
   page,
 }) => {
   await native(page);
@@ -634,9 +1709,38 @@ test('leaving Social stops camera and microphone without losing the audience fil
     Object.assign(window, { nativeTestStreams: streams });
   });
   await page.goto('/s');
-  await page.getByRole('tab', { name: 'My Panas', exact: true }).click();
+  await expect(page.getByRole('tablist', { name: 'Feed filters' })).toHaveCount(
+    0
+  );
+  await expect(page.getByRole('tab', { name: /Everyone|Panas/ })).toHaveCount(
+    0
+  );
+  const header = page.locator('[data-native-app] > header');
+  const stories = page.getByRole('region', { name: 'Stories', exact: true });
+  const headerBox = await header.boundingBox();
+  const storiesBox = await stories.boundingBox();
+  expect(storiesBox!.y - headerBox!.y - headerBox!.height).toBeLessThanOrEqual(
+    16
+  );
+  const composer = page.getByRole('form', {
+    name: 'Post composer',
+    exact: true,
+  });
+  await composer.getByRole('button', { name: 'Audience: Everyone' }).click();
+  await page.getByRole('menuitemradio', { name: /^Panas/ }).click();
+  await expect(
+    composer.getByRole('button', { name: 'Audience: Panas' })
+  ).toBeVisible();
+  await page.screenshot({
+    path: test.info().outputPath('native-mixed-feed.png'),
+  });
   await page.getByRole('button', { name: 'Post a story' }).click();
-  await page.getByRole('button', { name: 'Open camera', exact: true }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Story camera', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Take photo', exact: true })
+  ).toBeEnabled();
   await expect
     .poll(() =>
       page.evaluate(
@@ -686,8 +1790,11 @@ test('leaving Social stops camera and microphone without losing the audience fil
     .getByRole('link', { name: 'Social', exact: true })
     .click();
   await expect(
-    page.getByRole('tab', { name: 'My Panas', exact: true })
-  ).toHaveAttribute('aria-selected', 'true');
+    page.getByRole('region', { name: 'Community feed', exact: true })
+  ).toBeVisible();
+  await expect(
+    composer.getByRole('button', { name: 'Audience: Everyone' })
+  ).toBeVisible();
   await expect(
     page.getByRole('dialog', { name: /^(Story camera|Post a story)$/ })
   ).toHaveCount(0);

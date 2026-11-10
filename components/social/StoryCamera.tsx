@@ -10,6 +10,12 @@ import {
   Square,
   SwitchCamera,
 } from 'lucide-react';
+import {
+  drawStoryFrame,
+  STORY_FRAME_HEIGHT,
+  STORY_FRAME_RATIO,
+  STORY_FRAME_WIDTH,
+} from '@/lib/media/story-frame';
 
 const MAX_RECORDING_SECONDS = 60;
 const RECORDING_TYPES = [
@@ -33,8 +39,8 @@ function deviceError(error: unknown, device: 'camera' | 'microphone'): string {
   const name = error instanceof Error ? error.name : '';
   if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
     return device === 'camera'
-      ? 'Camera access was denied. Allow it in your browser or Android app settings, then try again, or choose from your gallery.'
-      : 'Microphone access was denied. Allow it in your browser or Android app settings to record video, or switch to Photo.';
+      ? 'Camera access was denied. Allow it in your browser or app settings, then try again, or choose from your gallery.'
+      : 'Microphone access was denied. Allow it in your browser or app settings to record video, or switch to Photo.';
   }
   if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
     return `No ${device} was found. You can still choose a photo or video from your gallery.`;
@@ -47,7 +53,7 @@ function deviceError(error: unknown, device: 'camera' | 'microphone'): string {
 
 interface StoryCameraProps {
   onClose: () => void;
-  onChooseFromGallery: () => void;
+  onChooseFromGallery: () => Promise<File | null>;
   onCapture: (file: File) => Promise<boolean>;
 }
 
@@ -57,6 +63,7 @@ export function StoryCamera({
   onCapture,
 }: StoryCameraProps) {
   const preview = useRef<HTMLVideoElement>(null);
+  const frameArea = useRef<HTMLDivElement>(null);
   const backButton = useRef<HTMLButtonElement>(null);
   const camera = useRef<MediaStream | null>(null);
   const microphone = useRef<MediaStream | null>(null);
@@ -64,6 +71,10 @@ export function StoryCamera({
   const generation = useRef(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingLimit = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const portraitStream = useRef<MediaStream | null>(null);
+  const paintFrame = useRef<number | null>(null);
+  const selecting = useRef(false);
+  const mounted = useRef(true);
   const [phase, setPhase] = useState<Phase>('starting');
   const [facing, setFacing] = useState<FacingMode>('environment');
   const [mode, setMode] = useState<'photo' | 'video'>('photo');
@@ -72,7 +83,16 @@ export function StoryCamera({
     null
   );
   const [saving, setSaving] = useState(false);
+  const [choosing, setChoosing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
+
+  const stopPortraitFrames = useCallback(() => {
+    if (paintFrame.current !== null) cancelAnimationFrame(paintFrame.current);
+    paintFrame.current = null;
+    portraitStream.current?.getTracks().forEach((track) => track.stop());
+    portraitStream.current = null;
+  }, []);
 
   const clearTimers = useCallback(() => {
     if (timer.current !== null) clearInterval(timer.current);
@@ -93,12 +113,13 @@ export function StoryCamera({
       activeRecorder.onerror = null;
       if (activeRecorder.state !== 'inactive') activeRecorder.stop();
     }
+    stopPortraitFrames();
     camera.current?.getTracks().forEach((track) => track.stop());
     microphone.current?.getTracks().forEach((track) => track.stop());
     camera.current = null;
     microphone.current = null;
     if (preview.current) preview.current.srcObject = null;
-  }, [clearTimers]);
+  }, [clearTimers, stopPortraitFrames]);
 
   const startCamera = useCallback(
     async (direction: FacingMode) => {
@@ -167,14 +188,34 @@ export function StoryCamera({
   );
 
   useEffect(() => {
+    mounted.current = true;
     backButton.current?.focus();
     void startCamera('environment');
-    return releaseDevices;
+    return () => {
+      mounted.current = false;
+      releaseDevices();
+    };
   }, [startCamera, releaseDevices]);
 
   useEffect(() => {
+    const area = frameArea.current;
+    if (!area) return;
+    const resize = () => {
+      const width = Math.min(
+        area.clientWidth,
+        area.clientHeight * STORY_FRAME_RATIO
+      );
+      setFrameSize({ width, height: width / STORY_FRAME_RATIO });
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(area);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     const pause = () => {
-      if (capture) return;
+      if (capture || selecting.current) return;
       const wasRecording = recorder.current?.state === 'recording';
       releaseDevices();
       setPhase('error');
@@ -216,13 +257,13 @@ export function StoryCamera({
     setError(null);
     try {
       const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      canvas.width = STORY_FRAME_WIDTH;
+      canvas.height = STORY_FRAME_HEIGHT;
       const context = canvas.getContext('2d');
-      if (!context || !canvas.width || !canvas.height) {
+      if (!context) {
         throw new Error('The camera is not ready for a photo. Try again.');
       }
-      context.drawImage(video, 0, 0);
+      drawStoryFrame(context, video);
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(
           (result) =>
@@ -256,7 +297,8 @@ export function StoryCamera({
 
   const startRecording = async () => {
     const stream = camera.current;
-    if (phase !== 'live' || !stream) return;
+    const video = preview.current;
+    if (phase !== 'live' || !stream || !video) return;
     setError(null);
     const mimeType =
       typeof MediaRecorder !== 'undefined'
@@ -265,6 +307,16 @@ export function StoryCamera({
     if (!mimeType) {
       setError(
         'Video recording is not supported on this device. Take a photo or choose a video from your gallery.'
+      );
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = STORY_FRAME_WIDTH;
+    canvas.height = STORY_FRAME_HEIGHT;
+    const context = canvas.getContext('2d');
+    if (!context || typeof canvas.captureStream !== 'function') {
+      setError(
+        'Portrait video recording is not supported on this device. Take a photo or choose a video from your gallery.'
       );
       return;
     }
@@ -281,9 +333,32 @@ export function StoryCamera({
         return;
       }
       microphone.current = audio;
+      drawStoryFrame(context, video);
+      const portrait = canvas.captureStream(30);
+      portraitStream.current = portrait;
+      let lastPaint = 0;
+      const paint = (now: number) => {
+        if (current !== generation.current) return;
+        try {
+          if (video.readyState >= 2 && now - lastPaint >= 1000 / 30) {
+            drawStoryFrame(context, video);
+            lastPaint = now;
+          }
+        } catch (failure) {
+          console.error('Portrait story recording failed:', failure);
+          releaseDevices();
+          setPhase('error');
+          setError(
+            'The portrait recording was interrupted. Try recording a new video.'
+          );
+          return;
+        }
+        paintFrame.current = requestAnimationFrame(paint);
+      };
+      paintFrame.current = requestAnimationFrame(paint);
       const recording = new MediaRecorder(
         new MediaStream([
-          ...stream.getVideoTracks(),
+          ...portrait.getVideoTracks(),
           ...audio.getAudioTracks(),
         ]),
         { mimeType, videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 128_000 }
@@ -350,10 +425,44 @@ export function StoryCamera({
         ? 'Could not start video recording. Try again, or switch to Photo.'
         : deviceError(failure, 'microphone');
       microphone.current?.getTracks().forEach((track) => track.stop());
+      stopPortraitFrames();
       microphone.current = null;
       recorder.current = null;
       setPhase('live');
       setError(message);
+    }
+  };
+
+  const chooseFromGallery = async () => {
+    if (selecting.current || saving || phase === 'recording') return;
+    const resumeCamera = phase !== 'error';
+    const previousError = error;
+    selecting.current = true;
+    releaseDevices();
+    const current = generation.current;
+    setChoosing(true);
+    setError(null);
+    try {
+      const file = await onChooseFromGallery();
+      if (current !== generation.current) return;
+      if (file) review(file);
+      else if (resumeCamera) await startCamera(facing);
+      else {
+        setPhase('error');
+        setError(previousError);
+      }
+    } catch (failure) {
+      if (current !== generation.current) return;
+      console.error('Story library selection failed:', failure);
+      setPhase('error');
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : 'Could not open your photo library. Please try again.'
+      );
+    } finally {
+      selecting.current = false;
+      if (mounted.current) setChoosing(false);
     }
   };
 
@@ -378,18 +487,21 @@ export function StoryCamera({
 
   const recording = phase === 'recording';
   const working =
-    phase === 'starting' || phase === 'microphone' || phase === 'processing';
+    choosing ||
+    phase === 'starting' ||
+    phase === 'microphone' ||
+    phase === 'processing';
   const minutes = Math.floor(elapsed / 60);
   const seconds = String(elapsed % 60).padStart(2, '0');
 
   return (
     <div className="flex h-full flex-col bg-black text-white">
-      <header className="flex flex-none items-center justify-between gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3">
+      <header className="flex flex-none items-center justify-between gap-3 pt-[max(1rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-3 pl-[max(1rem,env(safe-area-inset-left))]">
         <button
           ref={backButton}
           type="button"
           onClick={onClose}
-          disabled={saving}
+          disabled={saving || choosing}
           aria-label="Back to story"
           className="grid h-11 w-11 place-items-center rounded-full bg-white/10 disabled:opacity-50"
         >
@@ -399,66 +511,77 @@ export function StoryCamera({
         <span className="w-11 text-right text-xs text-white/70">60s max</span>
       </header>
 
-      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-        <video
-          ref={preview}
-          autoPlay
-          muted
-          playsInline
-          aria-label="Live camera preview"
-          className={capture ? 'hidden' : 'h-full w-full object-contain'}
-        />
-        {capture &&
-          (capture.file.type.startsWith('image/') ? (
-            <img
-              src={capture.url}
-              alt="Story photo preview"
-              className="h-full w-full object-contain"
-            />
-          ) : (
-            <video
-              src={capture.url}
-              controls
-              playsInline
-              aria-label="Story video preview"
-              className="h-full w-full object-contain"
-            />
-          ))}
-        {working && (
-          <div
-            role="status"
-            className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/50 text-sm"
-          >
-            <Loader2 className="h-7 w-7 animate-spin" aria-hidden="true" />
-            {phase === 'starting'
-              ? 'Opening camera...'
-              : phase === 'microphone'
-                ? 'Allow microphone access to record video...'
-                : 'Preparing capture...'}
-          </div>
-        )}
-        {recording && (
-          <div
-            role="timer"
-            aria-label="Recording duration"
-            className="absolute top-3 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold tabular-nums"
-          >
-            {minutes}:{seconds} / 1:00
-          </div>
-        )}
-        {phase === 'error' && (
-          <button
-            type="button"
-            onClick={() => void startCamera(facing)}
-            className="absolute flex min-h-11 items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black"
-          >
-            <RefreshCw className="h-4 w-4" aria-hidden="true" />
-            Try camera again
-          </button>
-        )}
+      <div
+        ref={frameArea}
+        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden"
+      >
+        <div
+          data-story-camera-frame
+          className="relative flex items-center justify-center overflow-hidden bg-black"
+          style={{ width: frameSize.width, height: frameSize.height }}
+        >
+          <video
+            ref={preview}
+            autoPlay
+            muted
+            playsInline
+            aria-label="Live camera preview"
+            className={capture ? 'hidden' : 'h-full w-full object-cover'}
+          />
+          {capture &&
+            (capture.file.type.startsWith('image/') ? (
+              <img
+                src={capture.url}
+                alt="Story photo preview"
+                className="h-full w-full object-contain"
+              />
+            ) : (
+              <video
+                src={capture.url}
+                controls
+                playsInline
+                aria-label="Story video preview"
+                className="h-full w-full object-contain"
+              />
+            ))}
+          {working && (
+            <div
+              role="status"
+              className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/50 text-sm"
+            >
+              <Loader2 className="h-7 w-7 animate-spin" aria-hidden="true" />
+              {choosing
+                ? 'Opening photo library...'
+                : phase === 'starting'
+                  ? 'Opening camera...'
+                  : phase === 'microphone'
+                    ? 'Allow microphone access to record video...'
+                    : 'Preparing capture...'}
+            </div>
+          )}
+          {recording && (
+            <div
+              role="timer"
+              aria-label="Recording duration"
+              className="absolute top-3 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold tabular-nums"
+            >
+              {minutes}:{seconds} / 1:00
+            </div>
+          )}
+          {phase === 'error' && !choosing && (
+            <button
+              type="button"
+              onClick={() => void startCamera(facing)}
+              className="absolute flex min-h-11 items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black"
+            >
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              Try camera again
+            </button>
+          )}
+        </div>
       </div>
 
-      <footer className="flex-none space-y-4 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <footer className="flex-none space-y-4 pt-4 pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))]">
         {error && (
           <p role="alert" className="text-center text-sm text-red-200">
             {error}
@@ -507,7 +630,7 @@ export function StoryCamera({
                   key={kind}
                   type="button"
                   aria-pressed={mode === kind}
-                  disabled={phase !== 'live'}
+                  disabled={phase !== 'live' || choosing}
                   onClick={() => {
                     setMode(kind);
                     setError(null);
@@ -521,8 +644,8 @@ export function StoryCamera({
             <div className="grid grid-cols-3 items-center justify-items-center gap-4">
               <button
                 type="button"
-                onClick={onChooseFromGallery}
-                disabled={recording}
+                onClick={() => void chooseFromGallery()}
+                disabled={recording || choosing}
                 aria-label="Choose from gallery"
                 className="grid h-12 w-12 place-items-center rounded-2xl bg-white/15 disabled:opacity-50"
               >
@@ -530,7 +653,7 @@ export function StoryCamera({
               </button>
               <button
                 type="button"
-                disabled={phase !== 'live' && !recording}
+                disabled={choosing || (phase !== 'live' && !recording)}
                 onClick={() => {
                   if (recording) stopRecording();
                   else if (mode === 'photo') void takePhoto();
@@ -560,7 +683,7 @@ export function StoryCamera({
                     facing === 'environment' ? 'user' : 'environment'
                   )
                 }
-                disabled={phase !== 'live'}
+                disabled={phase !== 'live' || choosing}
                 aria-label="Switch camera"
                 className="grid h-12 w-12 place-items-center rounded-full bg-white/15 disabled:opacity-50"
               >

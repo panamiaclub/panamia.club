@@ -171,10 +171,13 @@ export async function isScreennameAvailable(
   excludeEmail?: string,
   excludeProfileId?: string
 ): Promise<boolean> {
+  const trimmedName = name.trim();
   // PostgreSQL case-insensitive search - check current users
   const conditions = [
-    sql`lower(${users.screenname}) = lower(${name})`,
-    ...(excludeEmail ? [ne(users.email, excludeEmail)] : []),
+    sql`lower(${users.screenname}) = lower(${trimmedName})`,
+    ...(excludeEmail
+      ? [sql`lower(${users.email}) != lower(${excludeEmail})`]
+      : []),
   ];
 
   const existingUser = await db.query.users.findFirst({
@@ -186,7 +189,7 @@ export async function isScreennameAvailable(
   // Check profiles — a claimed business listing holds its handle here and has
   // no users row to be found above.
   const profileConditions = [
-    sql`lower(${profiles.screenname}) = lower(${name})`,
+    sql`lower(${profiles.screenname}) = lower(${trimmedName})`,
     ...(excludeProfileId ? [ne(profiles.id, excludeProfileId)] : []),
     // A person's own profile mirrors their handle, so a plain user rename must
     // not collide with itself. A listing sharing their inbox still blocks.
@@ -220,7 +223,7 @@ export async function isScreennameAvailable(
     .select({ id: socialGroups.id })
     .from(socialGroups)
     .innerJoin(socialActors, eq(socialGroups.actorId, socialActors.id))
-    .where(sql`lower(${socialActors.username}) = lower(${name})`)
+    .where(sql`lower(${socialActors.username}) = lower(${trimmedName})`)
     .limit(1);
 
   if (existingGroup.length > 0) return false;
@@ -241,8 +244,11 @@ export async function isScreennameAvailable(
       .leftJoin(users, eq(screennameHistory.userId, users.id))
       .where(
         and(
-          sql`lower(${screennameHistory.screenname}) = lower(${name})`,
-          sql`${users.email} is null or lower(${users.email}) != lower(${excludeEmail})`
+          sql`lower(${screennameHistory.screenname}) = lower(${trimmedName})`,
+          or(
+            isNull(users.email),
+            sql`lower(${users.email}) != lower(${excludeEmail})`
+          )
         )
       )
       .limit(1);
@@ -250,7 +256,7 @@ export async function isScreennameAvailable(
     if (historical.length > 0) return false;
   } else {
     const historical = await db.query.screennameHistory.findFirst({
-      where: sql`lower(${screennameHistory.screenname}) = lower(${name})`,
+      where: sql`lower(${screennameHistory.screenname}) = lower(${trimmedName})`,
     });
 
     if (historical) return false;

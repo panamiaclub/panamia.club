@@ -4,12 +4,14 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { profiles } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
-import { getActiveProfile } from '@/lib/server/active-profile';
-import { normalizeUsZip } from '@/lib/online-zip';
+import { getEditableProfile } from '@/lib/server/active-profile';
+import { revalidatePublicListing } from '@/lib/server/profile';
+import { withOnlineZipArea, type OnlineZipArea } from '@/lib/online-zip';
+import { validateBusinessZip } from '@/lib/server/online-zip';
 import {
-  getOnlineZipArea,
-  ZipLookupUnavailableError,
-} from '@/lib/server/online-zip';
+  isListingLocationMode,
+  publicVisitingAddressIssue,
+} from '@/lib/listing-review';
 
 export async function POST(request: NextRequest) {
   let parsed: unknown;
@@ -31,29 +33,62 @@ export async function POST(request: NextRequest) {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return NextResponse.json({
-      success: false,
-      error: 'No user session available',
-    });
+    return NextResponse.json(
+      { success: false, error: 'No user session available' },
+      { status: 401 }
+    );
   }
 
-  const { primary_address, online_only } = body;
+  const { primary_address, online_only, location_mode } = body;
 
-  // The profile being acted as - their own, or a business listing they administer
-  const existingProfile = await getActiveProfile(session.user.id);
+  const listingId = request.nextUrl.searchParams.get('listingId');
+  const existingProfile = await getEditableProfile(session.user.id, listingId);
 
   if (!existingProfile) {
-    return NextResponse.json({
-      success: false,
-      error: 'Could not find profile',
-    });
+    return NextResponse.json(
+      { success: false, error: 'You do not manage that profile.' },
+      { status: listingId !== null ? 403 : 404 }
+    );
   }
 
+  if (
+    location_mode !== undefined &&
+    (listingId === null || !isListingLocationMode(location_mode))
+  ) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          'Choose a public visiting address, online business or mobile service.',
+        field: 'location_mode',
+        step: 'address',
+      },
+      { status: 400 }
+    );
+  }
+  const locationMode = isListingLocationMode(location_mode)
+    ? location_mode
+    : undefined;
   if (online_only !== undefined && typeof online_only !== 'boolean') {
     return NextResponse.json(
       {
         success: false,
         error: 'The online-business choice must be true or false.',
+      },
+      { status: 400 }
+    );
+  }
+  if (
+    locationMode &&
+    online_only !== undefined &&
+    online_only !== (locationMode === 'online')
+  ) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'The location type and online-business choice must agree.',
+        field: 'location_mode',
+        step: 'address',
       },
       { status: 400 }
     );
@@ -68,13 +103,17 @@ export async function POST(request: NextRequest) {
     );
   }
   const address = primary_address as Record<string, unknown> | null | undefined;
-  const online =
-    typeof online_only === 'boolean' ? online_only : existingProfile.onlineOnly;
+  const online = locationMode
+    ? locationMode === 'online'
+    : typeof online_only === 'boolean'
+      ? online_only
+      : existingProfile.onlineOnly;
 
   try {
     const updateData: Partial<typeof profiles.$inferInsert> = {};
     if ('counties' in body) updateData.counties = body.counties ?? null;
-    if (typeof online_only === 'boolean') updateData.onlineOnly = online_only;
+    if (locationMode || typeof online_only === 'boolean')
+      updateData.onlineOnly = online;
 
     // Preserve both existing address vocabularies and fields omitted by a caller.
     const fields = [
@@ -87,6 +126,7 @@ export async function POST(request: NextRequest) {
       ['addressPostalCode', ['zipcode', 'postalCode']],
       ['addressCountry', ['country']],
       ['addressHours', ['hours']],
+      ['addressGooglePlaceId', ['googlePlaceId']],
     ] as const;
     for (const [column, keys] of fields) {
       const key = keys.find((candidate) => address?.[candidate] !== undefined);
@@ -102,46 +142,77 @@ export async function POST(request: NextRequest) {
         typeof value === 'string' ? value.trim() || null : null;
     }
 
-    if (online) {
-      const zip = normalizeUsZip(
-        updateData.addressPostalCode !== undefined
-          ? updateData.addressPostalCode
-          : existingProfile.addressPostalCode
-      );
-      if (!zip) {
+    if (locationMode === 'storefront') {
+      const issue = publicVisitingAddressIssue({
+        street1:
+          updateData.addressLine1 !== undefined
+            ? updateData.addressLine1
+            : existingProfile.onlineOnly
+              ? null
+              : existingProfile.addressLine1,
+        city:
+          updateData.addressLocality !== undefined
+            ? updateData.addressLocality
+            : existingProfile.onlineOnly
+              ? null
+              : existingProfile.addressLocality,
+        state:
+          updateData.addressRegion !== undefined
+            ? updateData.addressRegion
+            : existingProfile.onlineOnly
+              ? null
+              : existingProfile.addressRegion,
+      });
+      if (issue) {
         return NextResponse.json(
           {
             success: false,
-            error:
-              'Online businesses require a valid five-digit base ZIP code.',
+            error: issue.message,
+            field: issue.field,
+            step: 'address',
           },
           { status: 400 }
         );
       }
-      if (
-        updateData.addressCountry &&
-        updateData.addressCountry.toUpperCase() !== 'US'
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              'Please provide the US ZIP where this online business is based.',
-          },
-          { status: 400 }
-        );
+      // Legacy online rows may still carry hidden address fields. Publishing a
+      // visiting address must not restore them unless explicitly supplied.
+      if (existingProfile.onlineOnly) {
+        Object.assign(updateData, {
+          addressName: updateData.addressName ?? null,
+          addressLine2: updateData.addressLine2 ?? null,
+          addressLine3: updateData.addressLine3 ?? null,
+          addressHours: updateData.addressHours ?? null,
+          addressGooglePlaceId: updateData.addressGooglePlaceId ?? null,
+          addressLat: null,
+          addressLng: null,
+          geo: null,
+        });
       }
-      const zipArea = await getOnlineZipArea(zip);
-      if (!zipArea) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              'We could not find a map location for that ZIP. Check the code or contact us.',
-          },
-          { status: 400 }
-        );
-      }
+    }
+
+    let zipArea: OnlineZipArea | undefined;
+    if (listingId !== null || online) {
+      const verified = await validateBusinessZip({
+        addressPostalCode:
+          updateData.addressPostalCode !== undefined
+            ? updateData.addressPostalCode
+            : existingProfile.addressPostalCode,
+        addressCountry:
+          updateData.addressCountry !== undefined
+            ? updateData.addressCountry
+            : listingId !== null && updateData.addressPostalCode !== undefined
+              ? 'US'
+              : existingProfile.addressCountry,
+        geo: existingProfile.geo,
+      });
+      if (!verified.success)
+        return NextResponse.json(verified, { status: verified.status });
+      zipArea = verified.area;
+      updateData.addressPostalCode = zipArea.postalCode;
+      updateData.addressCountry = 'US';
+    }
+
+    if ((online || locationMode === 'mobile') && zipArea) {
       Object.assign(updateData, {
         addressName: null,
         addressLine1: null,
@@ -149,17 +220,16 @@ export async function POST(request: NextRequest) {
         addressLine3: null,
         addressGooglePlaceId: null,
         addressHours: null,
-        addressLocality: zipArea.city,
-        addressRegion: zipArea.region,
+        addressLocality: online ? zipArea.city : null,
+        addressRegion: online ? zipArea.region : null,
         addressCountry: 'US',
-        addressPostalCode: zip,
+        addressPostalCode: zipArea.postalCode,
         addressLat: null,
         addressLng: null,
         geo: { zipArea },
       });
     } else {
-      if (existingProfile.onlineOnly && online_only === false)
-        updateData.geo = null;
+      if (existingProfile.onlineOnly && !online) updateData.geo = null;
       if (address?.lat !== undefined || address?.lng !== undefined) {
         const empty = (value: unknown) =>
           value == null || (typeof value === 'string' && value.trim() === '');
@@ -200,28 +270,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (zipArea && !online) {
+      updateData.geo = withOnlineZipArea(
+        updateData.geo !== undefined ? updateData.geo : existingProfile.geo,
+        zipArea
+      );
+    }
+
     const [updatedProfile] = await db
       .update(profiles)
       .set(updateData)
       .where(eq(profiles.id, existingProfile.id))
       .returning();
 
+    revalidatePublicListing(existingProfile.id, existingProfile.screenname);
     return NextResponse.json(
       { success: true, data: updatedProfile },
       { status: 200 }
     );
   } catch (e) {
-    if (e instanceof ZipLookupUnavailableError) {
-      console.error('Profile ZIP location lookup failed:', e);
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            'ZIP location lookup is temporarily unavailable. Please try again.',
-        },
-        { status: 503 }
-      );
-    }
     if (e instanceof Error) {
       console.log(e.message);
       return NextResponse.json(

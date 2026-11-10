@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { BadgeCheck, Play, Store } from 'lucide-react';
+import { BadgeCheck, Store } from 'lucide-react';
 import type { MockDmPerson } from '../_data/mock-dms';
 
 /* Primitives shared by both DM models.
@@ -84,55 +84,6 @@ export function DmName({
           aria-label="Pana"
         />
       )}
-    </span>
-  );
-}
-
-/* Voice memos are the only DM Pana Social can send today, so both models have
-   to have an answer for them. The answer differs: mail gives it a full-width
-   player because it is the whole letter, chat gives it a bubble. This renders
-   the waveform itself, which is identical either way.
- *
-   `tone="dark"` is for the viewer's own chat bubble, which is indigo. The
-   contrast rule recorded in globals.css is why that bubble is indigo and not
-   flame: cream on flame measures 2.42:1 and fails even the large-text bar,
-   while cream on indigo is 9.01:1. */
-export function DmWaveform({
-  peaks,
-  duration,
-  tone = 'light',
-}: {
-  peaks: number[];
-  duration: string;
-  tone?: 'light' | 'dark';
-}) {
-  const dark = tone === 'dark';
-  const barColor = dark ? 'bg-pana-cream/55' : 'bg-pana-flame';
-  const textColor = dark ? 'text-pana-cream/75' : 'text-pana-ink/55';
-  const buttonColor = dark
-    ? 'bg-pana-cream/20 text-pana-cream'
-    : 'bg-pana-flame text-pana-ink';
-
-  return (
-    <span className="flex items-center gap-3">
-      <span
-        className={`flex h-8 w-8 flex-none items-center justify-center rounded-full ${buttonColor}`}
-        aria-hidden="true"
-      >
-        <Play className="h-3.5 w-3.5 translate-x-px" />
-      </span>
-      <span className="flex flex-1 items-center gap-[3px]" aria-hidden="true">
-        {peaks.map((peak, index) => (
-          <span
-            key={index}
-            className={`w-[3px] flex-1 rounded-full ${barColor}`}
-            style={{ height: `${Math.max(4, peak * 28)}px` }}
-          />
-        ))}
-      </span>
-      <span className={`flex-none text-xs font-bold tabular-nums ${textColor}`}>
-        {duration}
-      </span>
     </span>
   );
 }

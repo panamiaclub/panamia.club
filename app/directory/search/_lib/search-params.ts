@@ -1,6 +1,5 @@
 import { forceInt } from '@/lib/standardized';
 import type { DirectorySort } from '@/lib/query/directory';
-import { parseDirectoryRadius } from '@/lib/directory-radius';
 
 const SORTS: DirectorySort[] = ['relevance', 'nearest', 'recommended', 'name'];
 
@@ -21,7 +20,9 @@ export function getDirectorySearchParams(
     sort: SORTS.includes(rawSort as DirectorySort)
       ? (rawSort as DirectorySort)
       : null,
-    radius: parseDirectoryRadius(searchParams.get('radius')),
+    // The viewport, not a distance cutoff, defines the directory's area.
+    // Explicitly override the API's radius default, including for old links.
+    radius: 'all' as const,
     certifiedOnly: searchParams.get('certified') === 'true',
     withEventsOnly: searchParams.get('events') === 'true',
     view: (searchParams.get('view') === 'map' ? 'map' : 'list') as

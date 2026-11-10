@@ -11,20 +11,27 @@ import type {
   GroupChatMessage,
   GroupChatRoom,
 } from '@/lib/chat';
+import { nativeBridge } from './fixtures/native-bridge';
+import {
+  chatPhotoFile,
+  chooseChatPhoto,
+  installChatPhotoFixtures,
+} from './fixtures/chat-photo';
 
 const log = (page: Page) => page.getByRole('log');
 const compose = (page: Page, name = 'Garden Crew') =>
   page.getByRole('textbox', { name: `Message ${name}`, exact: true });
 const groupRow = (page: Page, name: string) =>
   page
-    .getByRole('list', { name: 'Group chats', exact: true })
-    .getByRole('button', { name: new RegExp(name) });
+    .getByRole('list', { name: 'Conversations', exact: true })
+    .getByRole('button', { name: new RegExp(name) })
+    .and(page.locator('[data-conversation-kind="group"]'));
 
 interface FixtureOptions {
   url?: string;
   role?: GroupChatRoom['role'];
   signedIn?: boolean;
-  native?: boolean;
+  native?: 'android' | 'ios';
   failSends?: number;
   failDeletes?: number;
   pageSize?: number;
@@ -39,12 +46,9 @@ interface FixtureOptions {
 // HTTP and actor-mailbox boundaries replaced. No real group data is changed.
 async function openGroupChat(page: Page, options: FixtureOptions = {}) {
   if (options.native) {
-    await page.addInitScript(() => {
-      window.Capacitor = {
-        isNativePlatform: () => true,
-        getPlatform: () => 'android',
-      };
-      Object.assign(window, { androidBridge: { postMessage: () => {} } });
+    await nativeBridge(page, {
+      platform: options.native,
+      googlePlugin: options.native === 'android',
     });
   }
   const person = (id: string, name: string): ChatMessage['actor'] => ({
@@ -58,6 +62,17 @@ async function openGroupChat(page: Page, options: FixtureOptions = {}) {
   const business = person('business', 'Neighborhood Studio');
   const bee = person('bee', 'Bee Maria');
   const mart = person('mart', 'Mart Ruiz');
+  const directMessage = {
+    id: 'direct-bee',
+    uri: 'https://localhost/statuses/direct-bee',
+    actor: bee,
+    content: '<p>A direct hello from Bee.</p>',
+    published: new Date(Date.now() - 3_600_000).toISOString(),
+    expiresAt: new Date(Date.now() + 29 * 86_400_000).toISOString(),
+    repliesCount: 0,
+    likesCount: 0,
+    liked: false,
+  };
   const rooms: Record<string, GroupChatRoom> = {
     garden: {
       id: 'group-garden',
@@ -303,9 +318,23 @@ async function openGroupChat(page: Page, options: FixtureOptions = {}) {
       return json(route, {
         success: true,
         data: {
-          conversations: [],
+          conversations:
+            state.activeProfile === 'business'
+              ? []
+              : [{ counterparty: bee, lastMessage: directMessage }],
           viewerActorId: currentViewer().id,
           localDomain: 'localhost',
+        },
+      });
+    if (path === '/api/social/messages/conversations/bee')
+      return json(route, {
+        success: true,
+        data: {
+          counterparty: bee,
+          messages: state.activeProfile === 'business' ? [] : [directMessage],
+          viewerActorId: currentViewer().id,
+          localDomain: 'localhost',
+          canSend: 'allow',
         },
       });
     if (path === '/api/social/dm-requests')
@@ -456,6 +485,8 @@ async function openGroupChat(page: Page, options: FixtureOptions = {}) {
           name: 'Hello by Fixture Artist (via GIPHY)',
         },
       });
+    if (path === '/api/notifications/unread-count')
+      return json(route, { success: true, data: { count: 0 } });
     if (path.startsWith('/api/notifications'))
       return json(route, {
         success: true,
@@ -507,8 +538,11 @@ test('opens a members-only group chat from Messages with real sender names and o
 }) => {
   const fixture = await openGroupChat(page);
   await expect(
-    page.getByRole('button', { name: 'Groups', exact: true, pressed: true })
+    page.getByRole('button', { name: 'Messages', exact: true, pressed: true })
   ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Groups', exact: true })
+  ).toHaveCount(0);
   await expect(
     log(page).getByRole('link', { name: 'Bee Maria', exact: true })
   ).toBeVisible();
@@ -552,17 +586,47 @@ test('keeps separate group and direct-message scopes and per-group text/GIF draf
   await compose(page, 'Print Workshop').fill(
     'Workshop gets a different draft.'
   );
-  await page.getByRole('button', { name: 'Messages', exact: true }).click();
-  await expect(page.getByRole('list', { name: 'Group chats' })).toBeHidden();
-  await page.getByRole('button', { name: 'Groups', exact: true }).click();
+  const individual = page
+    .getByRole('list', { name: 'Conversations', exact: true })
+    .getByRole('button', { name: /Bee Maria/ })
+    .and(page.locator('[data-conversation-kind="direct"]'));
+  await individual.click();
+  await compose(page, 'Bee Maria').fill('An individual draft.');
+  await groupRow(page, 'Print Workshop').click();
   await expect(compose(page, 'Print Workshop')).toHaveValue(
     'Workshop gets a different draft.'
   );
   await groupRow(page, 'Garden Crew').click();
   await expect(compose(page)).toHaveValue('Garden gets this caption.');
   await expect(page.getByRole('button', { name: 'Remove GIF' })).toBeVisible();
+  await individual.click();
+  await expect(compose(page, 'Bee Maria')).toHaveValue('An individual draft.');
   expect(fixture.posts).toHaveLength(0);
   expect(fixture.mailboxes).toHaveLength(1);
+});
+
+test('sends an uploaded photo only to its selected group without changing the DM delivery path', async ({
+  page,
+}) => {
+  const fixture = await openGroupChat(page);
+  const photos = await installChatPhotoFixtures(page);
+  await chooseChatPhoto(page, await chatPhotoFile(page));
+  await expect(
+    page.getByRole('button', { name: 'Send message', exact: true })
+  ).toBeEnabled();
+  await page.getByRole('button', { name: 'Send message', exact: true }).click();
+  await expect.poll(() => fixture.posts.length).toBe(1);
+  expect(fixture.posts[0].handle).toBe('garden');
+  expect(fixture.posts[0].input.content).toBe('');
+  expect(fixture.posts[0].input.attachments?.[0]).toMatchObject({
+    type: 'image',
+    mediaType: 'image/jpeg',
+    url: photos.uploads[0].url,
+  });
+  expect(fixture.posts[0].input).not.toHaveProperty('recipientActorIds');
+  await expect(
+    log(page).locator(`img[src="${photos.uploads[0].url}"]`)
+  ).toBeVisible();
 });
 
 test('retains failed group sends and retries the same nonce without duplicate messages', async ({
@@ -579,7 +643,7 @@ test('retains failed group sends and retries the same nonce without duplicate me
   ).toHaveCount(1);
   await expect(log(page).getByText('Not sent', { exact: true })).toHaveCount(0);
   await expect(compose(page)).toHaveValue('A newer draft must survive.');
-  expect(fixture.posts).toHaveLength(2);
+  await expect.poll(() => fixture.posts.length).toBe(2);
   expect(fixture.posts[1]).toEqual(fixture.posts[0]);
   expect(fixture.posts[0].input.clientId).toBeTruthy();
   expect(fixture.posts[0].input).not.toHaveProperty('visibility');
@@ -619,6 +683,41 @@ test('reconciles mailbox delivery before a delayed HTTP acknowledgement', async 
       (message) => message.clientId === fixture.posts[0].input.clientId
     )
   ).toHaveLength(1);
+});
+
+test('reconciles an accepted background group message in the unified inbox before its HTTP response', async ({
+  page,
+}) => {
+  let delayed: Route | null = null;
+  const fixture = await openGroupChat(page, {
+    send: async (route, _input, commit) => {
+      delayed = route;
+      commit();
+    },
+  });
+  await compose(page).fill('Delivered while another conversation is open.');
+  await compose(page).press('Enter');
+  await expect.poll(() => fixture.posts.length).toBe(1);
+  await groupRow(page, 'Print Workshop').click();
+  fixture.notify('garden');
+  await expect(groupRow(page, 'Garden Crew')).toContainText(
+    'You: Delivered while another conversation is open.'
+  );
+  await expect(groupRow(page, 'Garden Crew')).not.toContainText('Sending:');
+  await delayed!.fulfill({
+    status: 503,
+    json: { success: false, error: 'The HTTP acknowledgement was lost.' },
+  });
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Message to @garden sent.' })
+  ).toHaveText('Message to @garden sent.');
+  await expect(groupRow(page, 'Garden Crew')).not.toContainText('Not sent:');
+  await groupRow(page, 'Garden Crew').click();
+  await expect(
+    log(page).getByText('Delivered while another conversation is open.', {
+      exact: true,
+    })
+  ).toHaveCount(1);
 });
 
 test('keeps a late failure in its original group while another group sends successfully', async ({
@@ -758,6 +857,7 @@ test('loads older messages without counting them as incoming or moving the readi
   page,
 }) => {
   const fixture = await openGroupChat(page, { pageSize: 8 });
+  await page.setViewportSize({ width: 1440, height: 720 });
   fixture.messages.garden.splice(
     0,
     fixture.messages.garden.length,
@@ -774,6 +874,13 @@ test('loads older messages without counting them as incoming or moving the readi
   await expect(
     log(page).getByText('Garden history 23.', { exact: false })
   ).toBeVisible();
+  await expect
+    .poll(() =>
+      log(page).evaluate(
+        (element) => element.scrollHeight - element.clientHeight
+      )
+    )
+    .toBeGreaterThan(0);
   await log(page).evaluate((element) => {
     element.scrollTop = 0;
   });
@@ -836,35 +943,103 @@ test('does not request group content or open a mailbox while signed out', async 
   expect(fixture.mailboxes).toHaveLength(0);
 });
 
-test('fits group chat inside the native app chrome without covering its composer', async ({
-  page,
-}) => {
-  await openGroupChat(page, { native: true });
-  await page.setViewportSize({ width: 390, height: 844 });
-  const navigation = page.getByRole('navigation', { name: 'App navigation' });
-  await expect(navigation).toBeVisible();
-  await expect(compose(page)).toBeVisible();
-  const nav = await navigation.boundingBox();
-  const send = await page
-    .getByRole('button', { name: 'Send message', exact: true })
-    .boundingBox();
-  expect(send!.y + send!.height).toBeLessThanOrEqual(nav!.y);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
-    390
+for (const platform of ['android', 'ios'] as const) {
+  test(
+    `${platform} focuses native group chat without covering its composer and restores the group inbox`,
+    { tag: '@native' },
+    async ({ page }) => {
+      const fixture = await openGroupChat(page, { native: platform });
+      await page.setViewportSize({ width: 390, height: 844 });
+      const header = page.locator('[data-native-app] > header');
+      const navigation = page.getByRole('navigation', {
+        name: 'App navigation',
+      });
+      await expect(navigation).toHaveCount(0);
+      await expect(
+        header.getByRole('link', { name: 'Messages', exact: true })
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole('navigation', { name: 'Messaging legal links' })
+      ).toHaveCount(0);
+      await expect(compose(page)).toBeVisible();
+      const send = await page
+        .getByRole('button', { name: 'Send message', exact: true })
+        .boundingBox();
+      expect(send!.y + send!.height).toBeLessThanOrEqual(844);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth)
+      ).toBe(390);
+      await page.setViewportSize({ width: 390, height: 520 });
+      const draft =
+        'Saturday works.\nI can bring coffee.\nAnd a few prints.\nSee you there!';
+      await compose(page).fill(draft);
+      await page.getByRole('button', { name: 'Add a GIF' }).click();
+      await page
+        .getByRole('group', { name: 'GIF picker' })
+        .getByRole('button', { name: /A little celebration/ })
+        .click();
+      await expect(
+        page.getByRole('button', { name: 'Remove GIF' })
+      ).toBeVisible();
+      await expect
+        .poll(async () => {
+          const send = await page
+            .getByRole('button', { name: 'Send message', exact: true })
+            .boundingBox();
+          return send ? send.y + send.height : Infinity;
+        })
+        .toBeLessThanOrEqual(520);
+      await header
+        .getByRole('button', { name: 'Back to conversations', exact: true })
+        .click();
+      await expect(groupRow(page, 'Garden Crew')).toBeFocused();
+      await expect(navigation).toBeVisible();
+      await groupRow(page, 'Garden Crew').click();
+      await expect(compose(page)).toHaveValue(draft);
+      await expect(
+        page.getByRole('button', { name: 'Remove GIF' })
+      ).toBeVisible();
+      await expect(navigation).toHaveCount(0);
+      expect(fixture.posts).toHaveLength(0);
+      expect(fixture.errors).toEqual([]);
+    }
   );
-  await page.setViewportSize({ width: 390, height: 520 });
-  await compose(page).fill(
-    'Saturday works.\nI can bring coffee.\nAnd a few prints.\nSee you there!'
+
+  test(
+    `${platform} keeps standalone native group chat focused with its Back-to-group destination`,
+    { tag: '@native' },
+    async ({ page }) => {
+      await openGroupChat(page, {
+        native: platform,
+        url: '/g/garden/chat',
+      });
+      await page.setViewportSize({ width: 390, height: 844 });
+      const header = page.locator('[data-native-app] > header');
+      await expect(
+        header.getByRole('button', { name: 'Back to group', exact: true })
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Back to group', exact: true })
+      ).toHaveCount(1);
+      await expect(
+        page.getByRole('navigation', { name: 'App navigation' })
+      ).toHaveCount(0);
+      await expect(
+        header.getByRole('link', { name: 'Messages', exact: true })
+      ).toHaveCount(0);
+      await page
+        .getByRole('link', { name: 'Open this group chat in Messages' })
+        .click();
+      await expect(page).toHaveURL(/\/messages\?group=garden$/);
+      await expect(
+        header.getByRole('button', {
+          name: 'Back to conversations',
+          exact: true,
+        })
+      ).toBeVisible();
+      await expect(
+        header.getByRole('button', { name: 'Back to group', exact: true })
+      ).toHaveCount(0);
+    }
   );
-  await page.getByRole('button', { name: 'Add a GIF' }).click();
-  await page
-    .getByRole('group', { name: 'GIF picker' })
-    .getByRole('button', { name: /A little celebration/ })
-    .click();
-  await expect(page.getByRole('button', { name: 'Remove GIF' })).toBeVisible();
-  const shortNav = await navigation.boundingBox();
-  const shortSend = await page
-    .getByRole('button', { name: 'Send message', exact: true })
-    .boundingBox();
-  expect(shortSend!.y + shortSend!.height).toBeLessThanOrEqual(shortNav!.y);
-});
+}

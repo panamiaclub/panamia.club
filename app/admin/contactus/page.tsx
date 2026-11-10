@@ -194,7 +194,7 @@ export default function AdminContactUsPage() {
               item.userAgent ||
               item.viewport) && (
               <div className="space-y-3 rounded-md border bg-blue-50/50 p-4 text-sm">
-                <div className="font-semibold">Bug report context</div>
+                <div className="font-semibold">Report context</div>
                 {item.pageUrl && (
                   <div>
                     <span className="font-semibold">Page:</span>{' '}

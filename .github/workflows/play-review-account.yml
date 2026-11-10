@@ -1,0 +1,45 @@
+name: Play Review Account
+
+on:
+  workflow_dispatch:
+    inputs:
+      rotate_password:
+        description: Explicitly rotate the existing review password and revoke its sessions
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: play-review-account
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    if: github.repository == 'panamiaclub/panamia.club' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Enable Corepack
+        run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: yarn
+      - name: Install dependencies
+        run: yarn install --immutable
+      - name: Provision dedicated non-admin review account
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+          ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
+          PLAY_REVIEW_PASSWORD: ${{ secrets.PLAY_REVIEW_PASSWORD }}
+          ROTATE_PASSWORD: ${{ inputs.rotate_password }}
+        shell: bash
+        run: |
+          args=(--apply)
+          if [ "$ROTATE_PASSWORD" = "true" ]; then
+            args+=(--rotate)
+          fi
+          yarn node --import tsx scripts/provision-play-reviewer.ts "${args[@]}"

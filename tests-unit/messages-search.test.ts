@@ -16,8 +16,9 @@
  * offering a conversation with yourself looks perfectly reasonable in review
  * and dead-ends on a 404 the moment anyone clicks it.
  *
- * The markup, at source level, because no pure test can tell an <input> from
+ * The retained mock's markup, at source level, because no pure test can tell an <input> from
  * a <span> that looks like one, and that distinction was the entire bug.
+ * The production inbox intentionally no longer offers search or a compose button.
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -113,8 +114,7 @@ describe('newConversationCandidates', () => {
     /* The conversation endpoint compares viewerActorId to the counterparty
        and answers 404 before it looks anything up, so a row offering to
        message yourself opens nothing and reports nothing. The search
-       endpoint returns you on purpose -- voice memos may be sent to
-       yourself -- so this exclusion is the caller's to make. */
+       endpoint includes the viewer, so this exclusion is the caller's to make. */
     const found = newConversationCandidates([viewer, maria], {
       existing: [],
       viewerActorId: 'me',
@@ -158,10 +158,10 @@ describe('newConversationCandidates', () => {
   });
 });
 
-describe('the search control is really a control', () => {
+describe('the retained mock search control is really a control', () => {
   const code = readFileSync(
     new URL(
-      '../app/messages/_components/conversation-list.tsx',
+      '../app/mock/dm-chat/_components/conversation-list.tsx',
       import.meta.url
     ),
     'utf8'

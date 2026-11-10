@@ -12,13 +12,13 @@
  * real data is mechanical.
  *
  * Feature coverage is not decorative. Content warnings, attachments, location,
- * CC licenses, boosts, replies, and voice memos all already exist in
+ * CC licenses, boosts, and replies all already exist in
  * components/social — the redesign has to have an answer for each of them, so
  * each one appears at least once below.
  */
 
 /** The filter rail above the timeline. */
-export type FeedFilter = 'panas' | 'everyone' | 'groups' | 'voice';
+export type FeedFilter = 'panas' | 'everyone' | 'groups';
 
 /** Which fixture set the mock renders. `empty` is the state in production
  *  today — a new account with nothing to read — and is the state the redesign
@@ -41,19 +41,6 @@ export interface MockAttachment {
   src: string;
   /** socialAttachments.name — the alt text a poster typed. */
   alt: string;
-}
-
-/** socialAttachments with mediaType audio/*, rendered by WaveformPlayer. */
-export interface MockVoiceMemo {
-  /** Formatted mm:ss rather than a duration in seconds, since nothing here
-   *  does arithmetic on it. */
-  duration: string;
-  /** Peak heights 0–1. Sixteen samples is enough to read as a waveform at
-   *  card width without turning into noise. */
-  peaks: number[];
-  /** Voice memos between Panas are private by design, so the card has to say
-   *  so — this is the copy that appears beside the player. */
-  note: string;
 }
 
 /** An outbound link unfurled into a card. */
@@ -90,7 +77,6 @@ export interface MockPost {
    *  ActivityPub terms; renders as the attribution line above the card. */
   boostedBy?: string;
   attachments?: MockAttachment[];
-  voice?: MockVoiceMemo;
   link?: MockLinkPreview;
   /** The top reply, previewed under the post so a conversation is visible
    *  without a tap. Feeds that hide replies read as broadcast, not community. */
@@ -267,21 +253,13 @@ export const MOCK_POSTS: MockPost[] = [
     id: 'post-1',
     author: BEE,
     fromPana: true,
-    body: 'Recorded the canal at Davie Road at 6am before traffic picked up. Thirty seconds of water, birds, and one extremely opinionated frog. Headphones recommended.',
+    body: 'Walked by the canal at Davie Road at 6am before traffic picked up. Water, birds, and one extremely opinionated frog.',
     published: '18m',
     repliesCount: 9,
     likesCount: 64,
     announcesCount: 7,
     liked: true,
     location: 'Davie, Broward County',
-    voice: {
-      duration: '0:31',
-      peaks: [
-        0.2, 0.45, 0.7, 0.35, 0.85, 0.55, 0.95, 0.4, 0.65, 0.8, 0.3, 0.6, 0.9,
-        0.25, 0.5, 0.35,
-      ],
-      note: 'Voice memo · only Panas can hear this',
-    },
     topReply: {
       author: JDOWNS,
       body: 'The frog is the star. Put it on a 7 inch.',
@@ -602,11 +580,6 @@ export const FEED_FILTERS: { id: FeedFilter; label: string; hint: string }[] = [
     label: 'My groups',
     hint: 'Every new post from the communities you belong to, newest first.',
   },
-  {
-    id: 'voice',
-    label: 'Voice notes',
-    hint: 'Audio posts from your Panas. Headphones encouraged.',
-  },
 ];
 
 /** Single source of truth for which posts a filter shows. The counts in the
@@ -620,8 +593,6 @@ export function postsForFilter(filter: FeedFilter): MockPost[] {
       return MOCK_POSTS.filter((post) => post.fromPana || post.boostedBy);
     case 'groups':
       return MOCK_POSTS.filter((post) => post.group);
-    case 'voice':
-      return MOCK_POSTS.filter((post) => post.voice);
     case 'everyone':
       return MOCK_POSTS;
   }

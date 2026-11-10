@@ -2,10 +2,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { profiles } from '@/lib/schema';
+import { profiles, verification } from '@/lib/schema';
+import { listingInvitationIdentifier } from '@/lib/listing-invitation';
 import { eq } from 'drizzle-orm';
-import { getActiveProfile } from '@/lib/server/active-profile';
+import { getEditableProfile } from '@/lib/server/active-profile';
 import { describeDbError } from '@/lib/server/db-error';
+import { revalidatePublicListing } from '@/lib/server/profile';
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -23,22 +25,22 @@ export async function POST(request: NextRequest) {
 
   const { email, phone_number, pronouns } = body;
 
-  // The profile being acted as - their own, or a business listing they administer
-  const existingProfile = await getActiveProfile(session.user.id);
+  const listingId = request.nextUrl.searchParams.get('listingId');
+  const existingProfile = await getEditableProfile(session.user.id, listingId);
 
   if (!existingProfile) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Could not find profile',
+        error: 'You do not manage that profile.',
       },
-      { status: 404 }
+      { status: listingId !== null ? 403 : 404 }
     );
   }
 
   let contactEmail: string | undefined;
   if (email != null) {
-    if (existingProfile.userId === session.user.id) {
+    if (listingId === null && existingProfile.userId === session.user.id) {
       if (email !== existingProfile.email) {
         return NextResponse.json(
           {
@@ -77,16 +79,38 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const [updatedProfile] = await db
-      .update(profiles)
-      .set({
-        ...(contactEmail ? { email: contactEmail } : {}),
-        phoneNumber: phone_number || null,
-        pronouns: pronounsStr,
-      })
-      .where(eq(profiles.id, existingProfile.id))
-      .returning();
+    const updatedProfile = await db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({ email: profiles.email })
+        .from(profiles)
+        .where(eq(profiles.id, existingProfile.id))
+        .for('update');
+      if (!current) throw new Error('The edited profile no longer exists.');
+      const [updated] = await tx
+        .update(profiles)
+        .set({
+          ...(contactEmail ? { email: contactEmail } : {}),
+          ...('phone_number' in body
+            ? { phoneNumber: phone_number || null }
+            : {}),
+          ...('pronouns' in body ? { pronouns: pronounsStr } : {}),
+        })
+        .where(eq(profiles.id, existingProfile.id))
+        .returning();
+      if (contactEmail && contactEmail !== current.email.trim().toLowerCase()) {
+        await tx
+          .delete(verification)
+          .where(
+            eq(
+              verification.identifier,
+              listingInvitationIdentifier(existingProfile.id)
+            )
+          );
+      }
+      return updated;
+    });
 
+    revalidatePublicListing(existingProfile.id, existingProfile.screenname);
     return NextResponse.json(
       { success: true, data: updatedProfile },
       { status: 200 }

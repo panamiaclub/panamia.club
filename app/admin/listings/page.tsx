@@ -378,6 +378,14 @@ export default function AdminListingsPage() {
                     >
                       {row.name}
                     </Link>
+                    {row.decision === 'approved' && (
+                      <Link
+                        href={`/admin/listings/${encodeURIComponent(row.id)}/refresh`}
+                        className="mt-1 block text-xs font-bold underline"
+                      >
+                        Review renewal
+                      </Link>
+                    )}
                     {row.locality && (
                       <span className="text-pana-ink/60 font-normal">
                         {' '}

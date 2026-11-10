@@ -52,6 +52,12 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      name: 'ios-webkit',
+      testMatch: /(?:native-app-ios|mobile-auth|messages|group-chat)\.spec\.ts/,
+      grep: /(?:native-app-ios|mobile-auth)\.spec\.ts|@native/,
+      use: { ...devices['iPhone 13'] },
+    },
   ],
 
   /*

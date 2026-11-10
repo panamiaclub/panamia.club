@@ -25,6 +25,7 @@ import {
    note there. Importing it from this lazily-loaded module breaks the map. */
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { panaMapStyle } from '@/lib/map/pana-basemap';
+import type { MapBounds } from '@/lib/map/viewport';
 import type { MapFrame } from '../_lib/map-frame';
 
 /* maplibre-gl parses tiles in a web worker, and resolves that worker against
@@ -48,6 +49,9 @@ interface MapCanvasProps {
   pins: MapCanvasPin[];
   viewer: { lat: number; lng: number } | null;
   hasZipAreas?: boolean;
+  showZoomControls?: boolean;
+  cameraInsets?: { top: number; bottom: number };
+  onBoundsChange?: (bounds: MapBounds | null) => void;
 }
 
 /** Below this the two frames are the same view, and moving would be a jitter. */
@@ -60,12 +64,18 @@ export default function MapCanvas({
   pins,
   viewer,
   hasZipAreas = false,
+  showZoomControls = false,
+  cameraInsets,
+  onBoundsChange,
 }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const [map, setMap] = useState<MapLibreMap | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [camera, setCamera] = useState<
+    (MapFrame & { bounds: MapBounds }) | null
+  >(null);
 
   const viewRef = useRef(view);
   viewRef.current = view;
@@ -74,6 +84,8 @@ export default function MapCanvas({
   // `onViewChange` is a new function on every render of the parent.
   const onViewChangeRef = useRef(onViewChange);
   onViewChangeRef.current = onViewChange;
+  const onBoundsChangeRef = useRef(onBoundsChange);
+  onBoundsChangeRef.current = onBoundsChange;
 
   // Create the map once. The style is built here rather than imported as JSON
   // so the palette stays in TypeScript next to the rest of the design.
@@ -97,12 +109,15 @@ export default function MapCanvas({
         // only makes that harder to read, and makes the pins' maths harder too.
         pitchWithRotate: false,
         dragRotate: false,
-        touchZoomRotate: false,
+        touchZoomRotate: true,
+        touchPitch: false,
       });
+      instance.touchZoomRotate.disableRotation();
     } catch (error) {
       console.error('Could not create the directory map:', error);
       containerRef.current.replaceChildren();
       setFailed(true);
+      onBoundsChangeRef.current?.(null);
       return;
     }
 
@@ -113,24 +128,46 @@ export default function MapCanvas({
         reportedFailure = true;
       }
       setFailed(true);
+      onBoundsChangeRef.current?.(null);
     });
 
-    instance.addControl(
-      new NavigationControl({ showCompass: false }),
-      'top-left'
-    );
-
-    instance.on('moveend', (event) => {
-      if (!event.originalEvent) return;
+    const reportViewport = () => {
+      if (
+        !instance.getContainer().clientWidth ||
+        !instance.getContainer().clientHeight
+      )
+        return;
+      const bounds = instance.getBounds();
       const centre = instance.getCenter();
-      onViewChangeRef.current({
+      const measured = {
+        west: bounds.getWest(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        north: bounds.getNorth(),
+      };
+      setCamera({
         center: [centre.lat, centre.lng],
         zoom: instance.getZoom(),
+        bounds: measured,
       });
+      if (!reportedFailure) onBoundsChangeRef.current?.(measured);
+    };
+
+    instance.on('moveend', (event) => {
+      if (event.originalEvent) {
+        const centre = instance.getCenter();
+        onViewChangeRef.current({
+          center: [centre.lat, centre.lng],
+          zoom: instance.getZoom(),
+        });
+      }
+      reportViewport();
     });
+    instance.on('resize', reportViewport);
 
     mapRef.current = instance;
     setMap(instance);
+    reportViewport();
 
     return () => {
       instance.remove();
@@ -139,6 +176,25 @@ export default function MapCanvas({
     };
     // Recreate only on an explicit retry; later views use the effect below.
   }, [attempt]);
+
+  const insetTop = cameraInsets?.top ?? 0;
+  const insetBottom = cameraInsets?.bottom ?? 0;
+  useEffect(() => {
+    if (!map) return;
+    map.jumpTo({
+      padding: { top: insetTop, bottom: insetBottom, left: 0, right: 0 },
+    });
+  }, [map, insetTop, insetBottom]);
+
+  useEffect(() => {
+    if (!map || !showZoomControls) return;
+
+    const control = new NavigationControl({ showCompass: false });
+    map.addControl(control, 'top-left');
+    return () => {
+      if (map.hasControl(control)) map.removeControl(control);
+    };
+  }, [map, showZoomControls]);
 
   // Follow the parent's frame when it changes for a reason other than the user
   // having just moved the map themselves.
@@ -188,7 +244,12 @@ export default function MapCanvas({
   }, [map]);
 
   return (
-    <div className="dirsearch-mapcanvas">
+    <div
+      className="dirsearch-mapcanvas"
+      data-map-center={camera?.center.join(',')}
+      data-map-zoom={camera?.zoom}
+      data-map-bounds={camera ? JSON.stringify(camera.bounds) : undefined}
+    >
       <div ref={containerRef} className="h-full w-full" />
       {hasZipAreas && (
         <a

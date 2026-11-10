@@ -188,19 +188,29 @@ an ActivityPub-style actor/status model so posts can federate (see
 | `/api/social/statuses/[statusId]`         | GET/DELETE  | Get or delete a single status  |
 | `/api/social/statuses/[statusId]/like`    | POST/DELETE | Like / unlike a status         |
 | `/api/social/statuses/[statusId]/replies` | GET         | Get replies to a status        |
-| `/api/social/timeline`                    | GET         | Home / public timeline (paged) |
+| `/api/social/timeline`                    | GET         | Mixed community feed (paged)   |
+
+The authenticated mixed feed combines the existing mutual-Pana/own/joined-group
+audience with local public discovery, without duplicate posts. Mutual Panas receive
+a six-hour timestamp boost; older Pana posts cannot permanently outrank newer
+community posts. Ranking happens before the page limit, with a boosted-time/ID cursor.
+`limit` must be an integer from 1 to 50. Malformed cursors or limits return `400`.
+The feed rechecks privacy, group membership, blocks, mutes, and expiry on every page.
+The public-only `/api/social/statuses` feed and publishing audiences are unchanged.
 
 ### Media & Messages
 
 | Endpoint                     | Method | Description                        |
 | ---------------------------- | ------ | ---------------------------------- |
-| `/api/social/media`          | POST   | Register a media attachment        |
-| `/api/social/media/upload`   | POST   | Upload media (images, voice memos) |
+| `/api/social/media`          | POST   | Upload images or video (multipart) |
+| `/api/social/media/upload`   | POST   | Issue a direct video upload URL    |
 | `/api/social/messages/inbox` | GET    | Received direct messages           |
 | `/api/social/messages/sent`  | GET    | Sent direct messages               |
 
-> Voice memos (recorded via `components/social/VoiceMemoComposer`) post through
-> the media + status endpoints and surface on the `/updates` page.
+Audio uploads and audio attachment metadata are rejected by the upload, status,
+and group-chat write paths. Existing recordings are retained in storage but hidden
+from playback in posts, messages, profiles, and updates. Ordinary direct messages
+remain available at `/messages`.
 
 ## Federation (`/api/federation/*`)
 

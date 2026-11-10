@@ -60,7 +60,7 @@ Authenticated user pages for managing their own content:
 | `/account/profile/images`      | Manage profile images                                   |
 | `/account/profile/gentedepana` | Gente de Pana settings                                  |
 | `/account/articles`            | Manage your articles                                    |
-| `/updates`                     | View updates & send voice memos                         |
+| `/updates`                     | View messages, requests, and notifications               |
 | `/account/admin/*`             | Legacy admin paths; redirect to `/admin/*`              |
 
 ### Admin Pages (`/admin/*`)

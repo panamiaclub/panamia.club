@@ -30,7 +30,10 @@
 
 :global([data-native-app]:has([data-messages-workspace])) {
   bottom: auto;
-  height: var(--messages-viewport-height, 100dvh);
+  height: var(
+    --native-viewport-height,
+    var(--messages-viewport-height, 100dvh)
+  );
 }
 
 :global([data-native-app]:has([data-messages-workspace]) #layout-main) {
@@ -288,6 +291,10 @@
   font-weight: 800;
 }
 
+.inboxFolders {
+  margin-top: 12px;
+}
+
 .folders button[aria-pressed='true'] {
   background: white;
   color: var(--color-pana-indigo);
@@ -381,6 +388,14 @@
 }
 
 .backButton {
+  display: none;
+}
+
+.standaloneBackButton {
+  display: inline-flex;
+}
+
+:global([data-native-app][data-native-conversation]) .backButton {
   display: none;
 }
 
@@ -830,5 +845,232 @@
   }
   .gifArt > span {
     animation: none;
+  }
+}
+
+.composer.compactComposer {
+  padding: 8px 12px max(8px, env(safe-area-inset-bottom));
+  box-shadow: none;
+}
+
+:global(html[data-native-platform='ios'][data-native-keyboard])
+  .composer.compactComposer {
+  padding-bottom: 8px;
+}
+
+.composeRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.composeRow > .attachButton,
+.composeRow > .compactSendButton {
+  margin-bottom: 1px;
+}
+
+.composeField {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  min-width: 0;
+  border: 1px solid rgb(48 62 140 / 0.18);
+  border-radius: 24px;
+  background: white;
+}
+
+.composeField:focus-within {
+  border-color: var(--color-pana-indigo);
+  box-shadow: 0 0 0 2px rgb(48 62 140 / 0.09);
+}
+
+.compactInput {
+  display: block;
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  min-height: 44px;
+  max-height: 128px;
+  overflow-y: auto;
+  resize: none;
+  border: 0;
+  border-radius: inherit;
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--color-pana-ink);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.compactInput:focus-visible {
+  outline: none;
+}
+
+.attachButton,
+.compactGifButton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  color: var(--color-pana-indigo);
+}
+
+.compactGifButton {
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.attachButton:disabled,
+.compactGifButton:disabled {
+  opacity: 0.45;
+}
+
+.sendButton.compactSendButton {
+  flex: none;
+  border-radius: 50%;
+  box-shadow: none;
+}
+
+.compactAttachments {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.compactAttachments > * {
+  max-width: 88px;
+}
+
+.compactAttachments img {
+  width: 100%;
+  height: 72px;
+  object-fit: cover;
+}
+
+.compactAttachments button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.photoPreview {
+  position: relative;
+  width: 88px;
+  height: 72px;
+  overflow: hidden;
+  border: 1px solid rgb(48 62 140 / 0.18);
+  border-radius: 12px;
+  background: var(--color-pana-butter-2);
+}
+
+.photoPreview > span {
+  display: grid;
+  height: 100%;
+  place-items: center;
+}
+
+.photoPreview > button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.95);
+}
+
+.keyboardHint {
+  margin-top: 5px;
+  color: rgb(17 13 13 / 0.65);
+  font-size: 10px;
+}
+
+.messageLine {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.bubble.compactBubble {
+  min-width: 0;
+  border-radius: 14px 14px 14px 4px;
+  padding: 7px 10px;
+  line-height: 20px;
+  box-shadow: none;
+}
+
+.bubble.compactBubble[data-mine='true'] {
+  border-radius: 14px 14px 4px 14px;
+}
+
+.compactBody > :last-child,
+.compactBody :global(.chat-bubble-body) > :last-child {
+  margin-bottom: 0;
+}
+
+.compactMedia {
+  width: 16rem;
+  max-width: 100%;
+  margin-top: 4px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.compactMedia > div {
+  margin-top: 0;
+}
+
+.messageMeta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  color: rgb(17 13 13 / 0.65);
+}
+
+.messageMeta .messageTime,
+.messageMeta .deliveryMark,
+.messageMeta .expiryChip {
+  color: inherit;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.compactBubble[data-mine='true'] .messageMeta {
+  color: rgb(255 247 236 / 0.85);
+}
+
+.messageMeta .expiryChip[data-urgent='true'] {
+  color: var(--color-pana-ink);
+}
+
+.messageTools {
+  display: flex;
+  flex: none;
+}
+
+.conversationHeader {
+  min-height: 64px;
+  padding: 8px 16px;
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  .keyboardHint {
+    display: none;
+  }
+  .conversationHeader {
+    min-height: 60px;
+    padding: 8px 12px;
+  }
+  .composer.compactComposer {
+    padding-right: 8px;
+    padding-left: 8px;
   }
 }

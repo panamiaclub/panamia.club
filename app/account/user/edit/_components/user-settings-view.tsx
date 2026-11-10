@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useScreennameAvailability } from '@/hooks/use-screenname-availability';
 import { useTranslation } from 'react-i18next';
 import { getUserSession, saveUserSession } from '@/lib/user';
 import { UserInterface } from '@/lib/interfaces';
@@ -48,6 +49,7 @@ import { SETTINGS_SECTIONS, SettingsNav, type SectionId } from './settings-nav';
 import { AvatarEditor } from './avatar-editor';
 import { SmsSubscriptionCard } from './sms-subscription-card';
 import { ReferralCard } from './referral-card';
+import { BillingCard } from './billing-card';
 
 // Channels the app manages, spelled as GHL requires. Mirrors GHL_DND_CHANNELS
 // in lib/ghl.ts; kept local so this client component does not pull in the
@@ -139,7 +141,7 @@ function Section({ id, children }: { id: SectionId; children: ReactNode }) {
  * 2. "ADVANCED" IS NOT A CATEGORY. It describes how nervous we were about a
  *    control rather than what the control is for, which is how marketing
  *    consent ended up behind the same summary row as a key rotation. The
- *    accordion is gone; the page is six named sections a member can scan
+ *    accordion is gone; the page is named sections a member can scan
  *    without opening anything.
  *
  * 3. CONSEQUENCES ARRIVED TOO LATE. Changing a screenname deletes every post
@@ -191,10 +193,11 @@ export function UserSettingsView({
     });
   };
 
-  const [screennameStatus, setScreennameStatus] = useState<
-    'idle' | 'checking' | 'available' | 'taken' | 'invalid'
-  >('idle');
-  const [screennameError, setScreennameError] = useState('');
+  const { status: screennameStatus, error: screennameError } =
+    useScreennameAvailability(sessionScreenname, {
+      currentScreenname: userData?.screenname,
+      enabled: !!userData?._id,
+    });
 
   const setUserSession = async () => {
     try {
@@ -217,53 +220,6 @@ export function UserSettingsView({
       console.error('Could not load account settings:', error);
     }
   };
-
-  const checkScreennameAvailability = useCallback(async (name: string) => {
-    if (!name || name.length < 3) {
-      setScreennameStatus('idle');
-      setScreennameError('');
-      return;
-    }
-
-    setScreennameStatus('checking');
-    setScreennameError('');
-
-    try {
-      const response = await fetch(
-        `/api/user/screenname/check?name=${encodeURIComponent(name)}`
-      );
-      const data = await response.json();
-
-      if (data.available) {
-        setScreennameStatus('available');
-        setScreennameError('');
-      } else {
-        setScreennameStatus(
-          data.error?.includes('taken') ? 'taken' : 'invalid'
-        );
-        setScreennameError(data.error || 'Invalid screenname');
-      }
-    } catch {
-      setScreennameStatus('idle');
-      setScreennameError('Could not check availability');
-    }
-  }, []);
-
-  // Debounce screenname check
-  useEffect(() => {
-    // Skip check if screenname matches the current saved value
-    if (sessionScreenname === userData?.screenname) {
-      setScreennameStatus('idle');
-      setScreennameError('');
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      checkScreennameAvailability(sessionScreenname);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [sessionScreenname, userData?.screenname, checkScreennameAvailability]);
 
   const [showScreennameConfirmDialog, setShowScreennameConfirmDialog] =
     useState(false);
@@ -738,9 +694,8 @@ export function UserSettingsView({
             </div>
           </div>
           <p className="settings-note mt-4 max-w-2xl">
-            There is one of these for your whole account. Everything below
-            applies on Pana Mia and Pana Social alike — each section says so
-            individually, and means it.
+            There is one of these for your whole account. Everything below says
+            where it applies, whether that is Pana Mia, Pana Social, or both.
           </p>
         </header>
 
@@ -1003,6 +958,10 @@ export function UserSettingsView({
                   </div>
                 </SettingsRow>
               </SettingsCard>
+            </Section>
+
+            <Section id="billing">
+              <BillingCard userId={session.user.id} />
             </Section>
 
             {/* ---- Publishing -------------------------------------------- */}
@@ -1288,7 +1247,32 @@ export function UserSettingsView({
                 </>
               )}
 
+              <div className="mt-4">
+                <SettingsCard danger>
+                  <SettingsRow
+                    label="Delete your account"
+                    note="Review what will be removed, then permanently delete your account and private data. This is separate from deleting your marketing record."
+                    control={
+                      <Link
+                        href="/form/delete-account"
+                        className="settings-btn min-h-11"
+                        data-variant="danger"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        Delete account
+                      </Link>
+                    }
+                  />
+                </SettingsCard>
+              </div>
+
               <p className="settings-note mt-3">
+                <Link
+                  href="/account/privacy"
+                  className="text-pana-indigo mr-4 font-extrabold underline"
+                >
+                  Privacy settings
+                </Link>
                 <Link
                   href="/legal/privacy"
                   className="text-pana-indigo font-extrabold underline"

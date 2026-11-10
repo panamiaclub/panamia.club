@@ -77,9 +77,8 @@ export function filterConversations<T extends { actor: SearchableActor }>(
  * The viewer is dropped because the conversation endpoint answers 404 for a
  * thread with yourself (it compares viewerActorId to the counterparty before
  * it looks anything up), so the row would be a dead end that fails silently.
- * The actor-search endpoint returns you on purpose -- it was built for
- * voice-memo recipients, where messaging yourself is a legitimate thing to
- * want -- so this is the caller's exclusion to make rather than a bug there.
+ * The shared actor-search endpoint includes the viewer, so this is the
+ * caller's exclusion to make.
  */
 export function newConversationCandidates<T extends SearchableActor>(
   results: T[],

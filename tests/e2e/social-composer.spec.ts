@@ -1,5 +1,7 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import type { CalendarEntry } from '@/lib/query/social';
+import type { SocialStatusDisplay } from '@/lib/interfaces';
+import { calls, nativeBridge } from './fixtures/native-bridge';
 
 test.use({
   launchOptions: {
@@ -53,6 +55,9 @@ async function openComposer(
     upload?: (route: Route) => Promise<void>;
     post?: (route: Route) => Promise<void>;
     story?: (route: Route) => Promise<void>;
+    timeline?: (route: Route) => Promise<void>;
+    follows?: (route: Route) => Promise<void>;
+    storySummary?: (route: Route) => Promise<void>;
   } = {}
 ) {
   const posts: Record<string, unknown>[] = [];
@@ -116,9 +121,12 @@ async function openComposer(
       });
     }
     if (path === '/api/social/follows') {
-      return json({ success: true, data: { actors: [], nextCursor: null } });
+      return handlers.follows
+        ? handlers.follows(route)
+        : json({ success: true, data: { actors: [], nextCursor: null } });
     }
     if (path === '/api/social/stories/summary') {
+      if (handlers.storySummary) return handlers.storySummary(route);
       return json({
         success: true,
         data: {
@@ -166,6 +174,9 @@ async function openComposer(
       videoUploads.files.push(request.postDataBuffer()!);
       return route.fulfill({ status: 200, body: '' });
     }
+    if (path === '/api/social/timeline' && handlers.timeline) {
+      return handlers.timeline(route);
+    }
     if (path === '/api/social/timeline' || path === '/api/social/statuses') {
       return json({ success: true, data: { statuses: [], nextCursor: null } });
     }
@@ -195,6 +206,8 @@ interface CameraProbe {
   holdCamera: boolean;
   releaseCamera?: () => void;
   revokedUrls: string[];
+  forceLandscape: boolean;
+  recordings: MediaStream[];
 }
 
 type CameraTestWindow = typeof window & { storyCameraTest: CameraProbe };
@@ -209,6 +222,8 @@ async function observeCamera(page: Page) {
       microphoneError: '',
       holdCamera: false,
       revokedUrls: [],
+      forceLandscape: false,
+      recordings: [],
     };
     (window as CameraTestWindow).storyCameraTest = probe;
     const getUserMedia = navigator.mediaDevices.getUserMedia.bind(
@@ -220,7 +235,14 @@ async function observeCamera(page: Page) {
         ? probe.cameraError
         : probe.microphoneError;
       if (error) throw new DOMException('Device request failed', error);
-      const stream = await getUserMedia(constraints);
+      const stream = await getUserMedia(
+        constraints?.video && probe.forceLandscape
+          ? {
+              ...constraints,
+              video: { width: { exact: 1280 }, height: { exact: 720 } },
+            }
+          : constraints
+      );
       probe.streams.push(stream);
       if (constraints?.video && probe.holdCamera) {
         await new Promise<void>((resolve) => {
@@ -229,6 +251,15 @@ async function observeCamera(page: Page) {
       }
       return stream;
     };
+    const Recorder = window.MediaRecorder;
+    if (Recorder) {
+      window.MediaRecorder = new Proxy(Recorder, {
+        construct(target, args) {
+          if (args[0] instanceof MediaStream) probe.recordings.push(args[0]);
+          return Reflect.construct(target, args);
+        },
+      });
+    }
     const revokeObjectURL = URL.revokeObjectURL.bind(URL);
     URL.revokeObjectURL = (url) => {
       probe.revokedUrls.push(url);
@@ -239,10 +270,21 @@ async function observeCamera(page: Page) {
 
 async function openStory(
   page: Page,
-  handlers: Parameters<typeof openComposer>[1] = {}
+  handlers: Parameters<typeof openComposer>[1] = {},
+  cameraSetup: Partial<
+    Pick<CameraProbe, 'cameraError' | 'holdCamera' | 'forceLandscape'>
+  > = {}
 ) {
   await observeCamera(page);
   const fixture = await openComposer(page, handlers);
+  expect(
+    await page.evaluate(
+      () => (window as CameraTestWindow).storyCameraTest.constraints.length
+    )
+  ).toBe(0);
+  await page.evaluate((setup) => {
+    Object.assign((window as CameraTestWindow).storyCameraTest, setup);
+  }, cameraSetup);
   await page
     .getByRole('region', { name: 'Stories', exact: true })
     .getByRole('button', { name: 'Post a story' })
@@ -251,12 +293,13 @@ async function openStory(
     name: 'Post a story',
     exact: true,
   });
-  await expect(dialog).toBeVisible();
+  await expect(
+    page.getByRole('dialog', { name: 'Story camera', exact: true })
+  ).toBeVisible();
   return { ...fixture, dialog };
 }
 
 async function openStoryCamera(page: Page) {
-  await page.getByRole('button', { name: 'Open camera', exact: true }).click();
   const camera = page.getByRole('dialog', {
     name: 'Story camera',
     exact: true,
@@ -271,7 +314,10 @@ async function expectDevicesStopped(page: Page) {
   await expect
     .poll(() =>
       page.evaluate(() =>
-        (window as CameraTestWindow).storyCameraTest.streams.every((stream) =>
+        [
+          ...(window as CameraTestWindow).storyCameraTest.streams,
+          ...(window as CameraTestWindow).storyCameraTest.recordings,
+        ].every((stream) =>
           stream.getTracks().every((track) => track.readyState === 'ended')
         )
       )
@@ -284,23 +330,45 @@ test.describe('story camera', () => {
     viewport: { width: 390, height: 844 },
   });
 
-  test('photos are reviewed before upload, then captioned and explicitly posted', async ({
+  test('Your story opens the camera directly, then photos are reviewed, captioned and explicitly posted', async ({
     page,
   }) => {
     let imageRequest = '';
-    const { dialog, stories, uploads } = await openStory(page, {
-      upload: async (route) => {
-        imageRequest =
-          route.request().postDataBuffer()?.toString('latin1') ?? '';
-        await route.fulfill({ json: { success: true, data: uploadedPhoto } });
+    const { dialog, stories, uploads } = await openStory(
+      page,
+      {
+        upload: async (route) => {
+          imageRequest =
+            route.request().postDataBuffer()?.toString('latin1') ?? '';
+          await route.fulfill({ json: { success: true, data: uploadedPhoto } });
+        },
       },
-    });
+      { forceLandscape: true }
+    );
+    const camera = await openStoryCamera(page);
     expect(
       await page.evaluate(
-        () => (window as CameraTestWindow).storyCameraTest.constraints.length
+        () => (window as CameraTestWindow).storyCameraTest.constraints
       )
-    ).toBe(0);
-    const camera = await openStoryCamera(page);
+    ).toEqual([
+      expect.objectContaining({ audio: false, video: expect.any(Object) }),
+    ]);
+    await expect(dialog).toHaveCount(0);
+    await expect(
+      camera.getByLabel('Live camera preview', { exact: true })
+    ).toBeVisible();
+    expect(
+      await camera
+        .getByLabel('Live camera preview')
+        .evaluate(
+          (video: HTMLVideoElement) => video.videoWidth > video.videoHeight
+        )
+    ).toBe(true);
+    expect(uploads()).toBe(0);
+    expect(stories).toHaveLength(0);
+    await page.screenshot({
+      path: test.info().outputPath('story-camera-direct-entry.png'),
+    });
     for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 844 });
       const bounds = await camera.boundingBox();
@@ -310,6 +378,10 @@ test.describe('story camera', () => {
       expect(
         await camera.evaluate((node) => node.scrollWidth <= node.clientWidth)
       ).toBe(true);
+      const frame = await camera
+        .locator('[data-story-camera-frame]')
+        .boundingBox();
+      expect(frame!.width / frame!.height).toBeCloseTo(9 / 16, 2);
       for (const name of [
         'Back to story',
         'Take photo',
@@ -327,6 +399,14 @@ test.describe('story camera', () => {
     await expect(
       camera.getByRole('img', { name: 'Story photo preview' })
     ).toBeVisible();
+    expect(
+      await camera
+        .getByRole('img', { name: 'Story photo preview' })
+        .evaluate((image: HTMLImageElement) => ({
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        }))
+    ).toEqual({ width: 720, height: 1280 });
     await expectDevicesStopped(page);
     expect(uploads()).toBe(0);
     expect(stories).toHaveLength(0);
@@ -414,7 +494,11 @@ test.describe('story camera', () => {
   test('video asks for sound only on record and produces a playable local preview', async ({
     page,
   }) => {
-    const { uploads, stories } = await openStory(page);
+    const { uploads, stories } = await openStory(
+      page,
+      {},
+      { forceLandscape: true }
+    );
     const camera = await openStoryCamera(page);
     await camera.getByRole('button', { name: 'Video', exact: true }).click();
     expect(
@@ -442,6 +526,20 @@ test.describe('story camera', () => {
       )
       .toBeGreaterThanOrEqual(1);
     expect(
+      await preview.evaluate((video: HTMLVideoElement) => ({
+        width: video.videoWidth,
+        height: video.videoHeight,
+      }))
+    ).toEqual({ width: 720, height: 1280 });
+    expect(
+      await page.evaluate(() =>
+        (window as CameraTestWindow).storyCameraTest.recordings[0]
+          .getTracks()
+          .map((track) => track.kind)
+          .sort()
+      )
+    ).toEqual(['audio', 'video']);
+    expect(
       await preview.evaluate(async (video: HTMLVideoElement) => {
         const blob = await fetch(video.src).then((response) => response.blob());
         return { type: blob.type.startsWith('video/'), bytes: blob.size > 0 };
@@ -458,6 +556,28 @@ test.describe('story camera', () => {
         )
       )
       .toBe(1);
+  });
+
+  test('a portrait frame failure stops recording and releases every capture track', async ({
+    page,
+  }) => {
+    await openStory(page);
+    const camera = await openStoryCamera(page);
+    await camera.getByRole('button', { name: 'Video', exact: true }).click();
+    await camera.getByRole('button', { name: 'Record video' }).click();
+    await expect(camera.getByRole('timer')).toBeVisible();
+    await page.evaluate(() => {
+      CanvasRenderingContext2D.prototype.drawImage = () => {
+        throw new Error('The source frame could not be read.');
+      };
+    });
+    await expect(camera.getByRole('alert')).toContainText(
+      'portrait recording was interrupted'
+    );
+    await expectDevicesStopped(page);
+    await expect(
+      camera.getByLabel('Story video preview', { exact: true })
+    ).toHaveCount(0);
   });
 
   test('recording stops at the 60-second limit, not before it', async ({
@@ -552,6 +672,7 @@ test.describe('story camera', () => {
       }, Array.from(videoUploads.files[0]));
       expect(encoded.width).toBeGreaterThan(0);
       expect(encoded.height).toBeGreaterThan(0);
+      expect(encoded.width / encoded.height).toBeCloseTo(9 / 16, 2);
       expect(encoded.duration).toBeGreaterThan(0);
       expect(Number.isFinite(encoded.duration)).toBe(true);
       expect(stories).toHaveLength(0);
@@ -577,12 +698,13 @@ test.describe('story camera', () => {
   test('denied camera access explains recovery and keeps the gallery working', async ({
     page,
   }) => {
-    const { dialog } = await openStory(page);
-    await page.evaluate(() => {
-      (window as CameraTestWindow).storyCameraTest.cameraError =
-        'NotAllowedError';
-    });
-    await dialog.getByRole('button', { name: 'Open camera' }).click();
+    const { dialog } = await openStory(
+      page,
+      {},
+      {
+        cameraError: 'NotAllowedError',
+      }
+    );
     const camera = page.getByRole('dialog', {
       name: 'Story camera',
       exact: true,
@@ -598,6 +720,14 @@ test.describe('story camera', () => {
     );
     expect(await chooser.element().getAttribute('capture')).toBeNull();
     await chooser.setFiles(photo);
+    await expect(camera).toBeVisible();
+    await expect(dialog).toHaveCount(0);
+    await expect(
+      camera.getByRole('img', { name: 'Story photo preview' })
+    ).toBeVisible();
+    await camera
+      .getByRole('button', { name: 'Use photo', exact: true })
+      .click();
     await expect(
       dialog.getByRole('button', { name: 'Post story', exact: true })
     ).toBeEnabled();
@@ -626,14 +756,185 @@ test.describe('story camera', () => {
     await expectDevicesStopped(page);
   });
 
+  for (const platform of ['ios', 'android'] as const) {
+    test(`${platform} opens the photo/video library directly and reviews a selection without an intermediate menu`, async ({
+      page,
+    }) => {
+      await nativeBridge(page, { platform, mediaLibrary: true });
+      const { dialog, uploads, stories } = await openStory(page);
+      const camera = await openStoryCamera(page);
+      let fileChoosers = 0;
+      page.on('filechooser', () => fileChoosers++);
+      await page.evaluate(() => {
+        Reflect.set(
+          window,
+          'nativeMediaLibraryResult',
+          new Promise((resolve) => {
+            Reflect.set(window, 'finishNativeMediaLibrary', resolve);
+          })
+        );
+      });
+      await camera.getByRole('button', { name: 'Choose from gallery' }).click();
+      await expect(camera.getByRole('status')).toContainText(
+        'Opening photo library'
+      );
+      await expect(dialog).toHaveCount(0);
+      await expectDevicesStopped(page);
+      await page.evaluate(() => {
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          value: true,
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          value: false,
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await page.evaluate(
+        (file) => {
+          const resolve = Reflect.get(window, 'finishNativeMediaLibrary');
+          if (typeof resolve !== 'function')
+            throw new Error('The library did not open.');
+          resolve({ files: [file] });
+        },
+        {
+          name: 'library.png',
+          mimeType: 'image/png',
+          size: photo.buffer.length,
+          webPath: `data:image/png;base64,${photo.buffer.toString('base64')}`,
+        }
+      );
+      await expect(
+        camera.getByRole('img', { name: 'Story photo preview' })
+      ).toBeVisible();
+      await expect(camera.getByRole('alert')).toHaveCount(0);
+      const nativeCalls = await calls(page);
+      const picks = nativeCalls.filter((call) => call.plugin === 'FilePicker');
+      expect(picks).toEqual([
+        {
+          plugin: 'FilePicker',
+          method: 'pickMedia',
+          args: { limit: 1, readData: false, skipTranscoding: false },
+        },
+      ]);
+      expect(fileChoosers).toBe(0);
+      expect(uploads()).toBe(0);
+      expect(stories).toHaveLength(0);
+      await camera
+        .getByRole('button', { name: 'Use photo', exact: true })
+        .click();
+      await expect(dialog).toBeVisible();
+      expect(uploads()).toBe(1);
+      expect(stories).toHaveLength(0);
+      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await expectDevicesStopped(page);
+    });
+  }
+
+  test('native library cancellation resumes the camera and library errors remain recoverable', async ({
+    page,
+  }) => {
+    await nativeBridge(page, { platform: 'ios', mediaLibrary: true });
+    const { dialog, uploads } = await openStory(page);
+    const camera = await openStoryCamera(page);
+    await page.evaluate(() =>
+      Reflect.set(window, 'nativeMediaLibraryError', 'pickFiles canceled.')
+    );
+    await camera.getByRole('button', { name: 'Choose from gallery' }).click();
+    await expect(
+      camera.getByRole('button', { name: 'Take photo' })
+    ).toBeEnabled();
+    await expect(camera.getByRole('alert')).toHaveCount(0);
+    await expect(dialog).toHaveCount(0);
+    await page.evaluate(() =>
+      Reflect.set(
+        window,
+        'nativeMediaLibraryError',
+        'The photo library is unavailable.'
+      )
+    );
+    await camera.getByRole('button', { name: 'Choose from gallery' }).click();
+    await expect(camera.getByRole('alert')).toHaveText(
+      'The photo library is unavailable.'
+    );
+    await expectDevicesStopped(page);
+    expect(uploads()).toBe(0);
+    await camera.getByRole('button', { name: 'Try camera again' }).click();
+    await expect(
+      camera.getByRole('button', { name: 'Take photo' })
+    ).toBeEnabled();
+  });
+
+  test('a cancelled browser picker stays in the camera without returning to the editor', async ({
+    page,
+  }) => {
+    const { dialog, uploads } = await openStory(page);
+    const camera = await openStoryCamera(page);
+    const choosing = page.waitForEvent('filechooser');
+    await camera.getByRole('button', { name: 'Choose from gallery' }).click();
+    await choosing;
+    await expect(dialog).toHaveCount(0);
+    await expectDevicesStopped(page);
+    await page
+      .getByLabel('Choose story from gallery', { exact: true })
+      .dispatchEvent('cancel');
+    await expect(
+      camera.getByRole('button', { name: 'Take photo' })
+    ).toBeEnabled();
+    await expect(camera.getByRole('alert')).toHaveCount(0);
+    expect(uploads()).toBe(0);
+  });
+
+  test('older native builds explain why they still use a system picker', async ({
+    page,
+  }) => {
+    await nativeBridge(page, { platform: 'ios', mediaLibrary: false });
+    const { dialog } = await openStory(page);
+    const camera = await openStoryCamera(page);
+    const choosing = page.waitForEvent('filechooser');
+    await camera.getByRole('button', { name: 'Choose from gallery' }).click();
+    await choosing;
+    await expect(
+      page.getByText('App update needed', { exact: true })
+    ).toBeVisible();
+    await expect(dialog).toHaveCount(0);
+    await page
+      .getByLabel('Choose story from gallery', { exact: true })
+      .dispatchEvent('cancel');
+    await expect(
+      camera.getByRole('button', { name: 'Take photo' })
+    ).toBeEnabled();
+  });
+
+  test('a browser without canvas recording explains the limitation and still takes portrait photos', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(HTMLCanvasElement.prototype, 'captureStream', {
+        value: undefined,
+      });
+    });
+    await openStory(page);
+    const camera = await openStoryCamera(page);
+    await camera.getByRole('button', { name: 'Video', exact: true }).click();
+    await camera.getByRole('button', { name: 'Record video' }).click();
+    await expect(camera.getByRole('alert')).toContainText(
+      'Portrait video recording is not supported'
+    );
+    await camera.getByRole('button', { name: 'Photo', exact: true }).click();
+    await camera.getByRole('button', { name: 'Take photo' }).click();
+    await expect(
+      camera.getByRole('img', { name: 'Story photo preview' })
+    ).toBeVisible();
+    await expectDevicesStopped(page);
+  });
+
   test('closing during a pending camera request stops a late stream', async ({
     page,
   }) => {
-    const { dialog } = await openStory(page);
-    await page.evaluate(() => {
-      (window as CameraTestWindow).storyCameraTest.holdCamera = true;
-    });
-    await dialog.getByRole('button', { name: 'Open camera' }).click();
+    const { dialog } = await openStory(page, {}, { holdCamera: true });
     await expect
       .poll(() =>
         page.evaluate(() =>
@@ -738,22 +1039,139 @@ test.describe('story camera', () => {
   });
 });
 
-test('compact composer keeps media and Everyone/Panas visible at desktop, tablet and phone sizes', async ({
+test('story rail gives Your story a larger bubble and shows decorative empty circles at every size', async ({
+  page,
+}) => {
+  await openComposer(page);
+  const rail = page.getByRole('region', { name: 'Stories', exact: true });
+  const owner = rail.locator('[data-owner="true"]');
+  const ghosts = rail.locator('.stories-rail-placeholder');
+  await expect(ghosts).toHaveCount(4);
+  await expect(rail.getByRole('listitem')).toHaveCount(1);
+  await expect(
+    rail.getByRole('button', { name: 'Post a story' })
+  ).toBeVisible();
+  await expect(ghosts.locator('button, a, input, [tabindex]')).toHaveCount(0);
+  for (const ghost of await ghosts.all()) {
+    await expect(ghost).toHaveAttribute('aria-hidden', 'true');
+  }
+  for (const width of [320, 390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    const avatar = await owner.locator('.stories-rail-avatar').boundingBox();
+    expect(avatar!.width).toBe(64);
+    expect(avatar!.height).toBe(64);
+    const ghost = await ghosts
+      .first()
+      .locator('.stories-rail-ghost')
+      .boundingBox();
+    expect(ghost!.width).toBe(56);
+    expect(ghost!.height).toBe(56);
+    expect((await rail.boundingBox())!.height).toBeLessThanOrEqual(96);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(width);
+    const track = rail.locator('.stories-rail-track');
+    expect(
+      await track.evaluate((node) => node.scrollWidth > node.clientWidth)
+    ).toBe(width < 768);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: test.info().outputPath('story-rail-ghost-circles.png'),
+  });
+});
+
+for (const liveCount of [2, 5]) {
+  test(`${liveCount} real stories replace ghost slots without hiding people or changing unseen-first order`, async ({
+    page,
+  }) => {
+    const people = Array.from({ length: 5 }, (_, index) => ({
+      id: `pana-${index + 1}`,
+      username: `pana${index + 1}`,
+      name: `Pana ${index + 1}`,
+      domain: 'localhost',
+    }));
+    await openComposer(page, {
+      follows: (route) =>
+        route.fulfill({
+          json: { success: true, data: { actors: people, nextCursor: null } },
+        }),
+      storySummary: (route) => {
+        const usernames = new URL(route.request().url()).searchParams
+          .get('usernames')!
+          .split(',');
+        return route.fulfill({
+          json: {
+            success: true,
+            data: Object.fromEntries(
+              usernames.map((username) => {
+                const index = people.findIndex(
+                  (person) => person.username === username
+                );
+                return [
+                  username,
+                  {
+                    hasStories: index >= 0 && index < liveCount,
+                    hasUnseen: index >= 0 && index % 2 === 0,
+                    isOwner: username === 'fixture',
+                  },
+                ];
+              })
+            ),
+          },
+        });
+      },
+    });
+    const rail = page.getByRole('region', { name: 'Stories', exact: true });
+    const watch = rail.getByRole('button', { name: /^Watch stories from/ });
+    await expect(watch).toHaveCount(liveCount);
+    await expect(rail.getByRole('listitem')).toHaveCount(liveCount + 1);
+    await expect(rail.locator('.stories-rail-placeholder')).toHaveCount(
+      Math.max(0, 4 - liveCount)
+    );
+    const expected = people
+      .slice(0, liveCount)
+      .filter((_, index) => index % 2 === 0)
+      .concat(people.slice(0, liveCount).filter((_, index) => index % 2 !== 0))
+      .map((person) => `Watch stories from ${person.username}`);
+    expect(
+      await watch.evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute('aria-label'))
+      )
+    ).toEqual(expected);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await watch.last().scrollIntoViewIfNeeded();
+    await expect(watch.last()).toBeInViewport();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(320);
+  });
+}
+
+test('one mixed feed removes the reading switch but keeps Everyone/Panas publishing at every size', async ({
   page,
 }) => {
   const { composer } = await openComposer(page);
   await expect(
-    page.getByRole('tab', { name: 'Everyone', exact: true })
-  ).toHaveAttribute('aria-selected', 'true');
+    page.getByRole('region', { name: 'Community feed', exact: true })
+  ).toBeVisible();
+  await expect(page.getByRole('tablist', { name: 'Feed filters' })).toHaveCount(
+    0
+  );
+  await expect(page.getByRole('tab', { name: /Everyone|Panas/ })).toHaveCount(
+    0
+  );
   await expect(
     composer.getByRole('button', { name: 'Audience: Everyone' })
   ).toBeVisible();
   await expect(
     composer.getByRole('button', { name: 'Add photos or video', exact: false })
   ).toBeVisible();
-  await expect(
-    composer.getByRole('button', { name: 'Add audio' })
-  ).toBeVisible();
+  await expect(composer.getByRole('button', { name: 'Add audio' })).toHaveCount(
+    0
+  );
+  await expect(page.getByRole('tab', { name: 'Voice notes' })).toHaveCount(0);
+  await expect(composer.getByLabel('Choose audio')).toHaveCount(0);
   await composer.getByRole('button', { name: 'Audience: Everyone' }).click();
   await expect(page.getByRole('menuitemradio')).toHaveCount(2);
   await expect(
@@ -778,12 +1196,7 @@ test('compact composer keeps media and Everyone/Panas visible at desktop, tablet
     expect(
       await composer.evaluate((node) => node.scrollWidth <= node.clientWidth)
     ).toBe(true);
-    for (const name of [
-      'Add photos or video',
-      'Add audio',
-      'Audience: Everyone',
-      'Post',
-    ]) {
+    for (const name of ['Add photos or video', 'Audience: Everyone', 'Post']) {
       const action = composer.getByRole('button', { name, exact: true });
       const target = await action.boundingBox();
       expect(target!.height).toBeGreaterThanOrEqual(44);
@@ -794,7 +1207,7 @@ test('compact composer keeps media and Everyone/Panas visible at desktop, tablet
   await expect(
     stories.getByRole('button', { name: 'Post a story' })
   ).toBeVisible();
-  expect((await stories.boundingBox())!.height).toBeLessThanOrEqual(64);
+  expect((await stories.boundingBox())!.height).toBeLessThanOrEqual(96);
   const upcoming = page.getByRole('region', { name: 'Good things ahead.' });
   await expect(upcoming).toBeVisible();
   await expect(upcoming).toContainText('Saved posts');
@@ -806,6 +1219,83 @@ test('compact composer keeps media and Everyone/Panas visible at desktop, tablet
       .getByRole('region', { name: 'Coming up', exact: true })
       .getByRole('link', { name: /Community table/ })
   ).toHaveAttribute('href', '/e/community-table');
+});
+
+test('mixed-feed pagination preserves server order and loaded posts through retries without duplicate cards', async ({
+  page,
+}) => {
+  const status = (id: string, content: string): SocialStatusDisplay => ({
+    id,
+    uri: `https://localhost/p/fixture/${id}`,
+    content: `<p>${content}</p>`,
+    published: '2026-11-05T12:00:00Z',
+    actor: {
+      id: 'fixture-actor',
+      username: 'fixture',
+      name: 'Fixture Pana',
+      domain: 'localhost',
+    },
+    repliesCount: 0,
+    likesCount: 0,
+    liked: false,
+  });
+  const pana = status('pana-first', 'A recent Pana moment.');
+  const community = status('community', 'A fresh community moment.');
+  const older = status('older', 'An older community moment.');
+  let failNext = true;
+  const cursors: (string | null)[] = [];
+  await openComposer(page, {
+    timeline: (route) => {
+      const cursor = new URL(route.request().url()).searchParams.get('cursor');
+      cursors.push(cursor);
+      if (cursor && failNext) {
+        return route.fulfill({
+          status: 503,
+          json: { success: false, error: 'Try again later.' },
+        });
+      }
+      return route.fulfill({
+        json: {
+          success: true,
+          data: cursor
+            ? { statuses: [community, older], nextCursor: null }
+            : { statuses: [pana, community], nextCursor: 'next-page' },
+        },
+      });
+    },
+  });
+  const feed = page.getByRole('region', {
+    name: 'Community feed',
+    exact: true,
+  });
+  await expect(
+    feed.getByText('A recent Pana moment.', { exact: true })
+  ).toBeVisible();
+  await expect(feed.locator('.feed-end')).toHaveCount(0);
+  const cards = feed.locator('article');
+  await expect(cards.nth(0)).toContainText('A recent Pana moment.');
+  await expect(cards.nth(1)).toContainText('A fresh community moment.');
+  await feed.getByRole('button', { name: 'Load more posts' }).click();
+  await expect(feed.getByRole('alert')).toContainText(
+    'Could not load more posts.'
+  );
+  await expect(
+    feed.getByText('A recent Pana moment.', { exact: true })
+  ).toBeVisible();
+  failNext = false;
+  await feed.getByRole('button', { name: 'Try again', exact: true }).click();
+  await expect(
+    feed.getByText('An older community moment.', { exact: true })
+  ).toBeVisible();
+  await expect(
+    feed.getByText('A fresh community moment.', { exact: true })
+  ).toHaveCount(1);
+  await expect(feed.getByRole('alert')).toHaveCount(0);
+  await expect(
+    feed.getByRole('button', { name: 'Load more posts' })
+  ).toHaveCount(0);
+  await expect(feed.locator('.feed-end')).toBeVisible();
+  expect(cursors).toContain('next-page');
 });
 
 test('writing expands the card, Done collapses an empty draft, and labelled buttons open the real pickers', async ({
@@ -841,13 +1331,53 @@ test('writing expands the card, Done collapses an empty draft, and labelled butt
     /image\/.*video\/\*/
   );
   await photoChooser.setFiles([]);
-  const audio = page.waitForEvent('filechooser');
+  expect(await photoChooser.element().getAttribute('accept')).not.toContain(
+    'audio'
+  );
+});
+
+test('rejects dropped and pasted audio without uploading or losing the text draft', async ({
+  page,
+}) => {
+  const { composer, posts, uploads, videoUploads } = await openComposer(page);
   await composer
-    .getByRole('button', { name: 'Add audio', exact: true })
-    .click();
-  const audioChooser = await audio;
-  expect(await audioChooser.element().getAttribute('accept')).toBe('audio/*');
-  await audioChooser.setFiles([]);
+    .getByRole('textbox', { name: 'Write a post' })
+    .fill('Keep this text');
+  for (const kind of ['drop', 'paste'] as const) {
+    await composer.evaluate((node, kind) => {
+      const data = new DataTransfer();
+      data.items.add(
+        new File(['recording'], 'memo.ogg', { type: 'audio/ogg' })
+      );
+      node.dispatchEvent(
+        kind === 'drop'
+          ? new DragEvent('drop', {
+              dataTransfer: data,
+              bubbles: true,
+              cancelable: true,
+            })
+          : new ClipboardEvent('paste', {
+              clipboardData: data,
+              bubbles: true,
+              cancelable: true,
+            })
+      );
+    }, kind);
+    await expect(composer.getByRole('alert')).toContainText(
+      'Unsupported file: memo.ogg.'
+    );
+  }
+  await expect(
+    composer.getByRole('textbox', { name: 'Write a post' })
+  ).toHaveValue('Keep this text');
+  expect(uploads()).toBe(0);
+  expect(videoUploads.metadata).toHaveLength(0);
+  expect(posts).toHaveLength(0);
+  await expect(composer.locator('audio')).toHaveCount(0);
+  await composer.getByRole('button', { name: 'Post', exact: true }).click();
+  await expect.poll(() => posts.length).toBe(1);
+  expect(posts[0]).toMatchObject({ content: 'Keep this text' });
+  expect(posts[0]).not.toHaveProperty('attachments');
 });
 
 test('real image upload blocks early submission, then allows a public media-only post', async ({
