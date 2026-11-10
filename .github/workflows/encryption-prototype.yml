@@ -1,0 +1,45 @@
+name: Encryption prototype
+
+on:
+  pull_request:
+    paths:
+      - 'lib/e2ee/**'
+      - 'prototypes/e2ee/**'
+      - 'tests-e2ee/**'
+      - 'tests-unit/e2ee-*.test.ts'
+      - 'vite.e2ee.config.ts'
+      - 'playwright.e2ee.config.ts'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/encryption-prototype.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'lib/e2ee/**'
+      - 'prototypes/e2ee/**'
+      - 'tests-e2ee/**'
+      - 'tests-unit/e2ee-*.test.ts'
+      - 'vite.e2ee.config.ts'
+      - 'playwright.e2ee.config.ts'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/encryption-prototype.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  prototype:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: yarn
+      - run: yarn install --immutable
+      - run: yarn test:e2ee
+      - run: yarn playwright install --with-deps chromium webkit
+      - run: yarn test:e2ee:browser

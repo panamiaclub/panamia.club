@@ -85,6 +85,12 @@ out for group and event conversations.
 
 ## Current Messages workspace
 
+The E2EE effort has an isolated [protocol feasibility lab](../prototypes/e2ee/README.md).
+It exercises encrypted DMs/groups, media and user-key history recovery without
+touching production accounts or conversations. It is not a production E2EE
+rollout; live chat remains server-readable. The lab documents the independent
+review and integration gates before that claim can change.
+
 The production `/messages` workspace shares transcript/composer primitives and
 `components/messages/workspace.module.css` with `/mock/dm-chat`, but no mock data or
 simulated send controls. Its compact inbox intentionally omits the mock's heading,
