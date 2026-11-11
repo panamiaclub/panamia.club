@@ -203,6 +203,9 @@ async function startDatabase(state: StagingState) {
       'max_connections=40',
       '-c',
       'shared_buffers=64MB',
+      // Every client uses TCP; never create sockets in a shared system directory.
+      '-c',
+      'unix_socket_directories=',
       '-c',
       'log_statement=none',
       '-c',

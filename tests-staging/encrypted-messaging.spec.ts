@@ -244,6 +244,10 @@ test('real auth, PostgreSQL, Worker and private storage deliver only encrypted c
   const sql = await connectStaging(state);
   let primaryError: unknown;
   try {
+    const [network] = await sql<{ unix_socket_directories: string }[]>`
+      SHOW unix_socket_directories
+    `;
+    expect(network.unix_socket_directories).toBe('');
     const alice = await signedIn(
       browser,
       state,
@@ -803,6 +807,7 @@ test('real auth, PostgreSQL, Worker and private storage deliver only encrypted c
             .digest('hex'),
           realBetterAuthSessions: true,
           realPostgreSQL: true,
+          postgresNetwork: 'loopback-tcp-only',
           fullBuiltWorker: true,
           transportContainsPrivateTextOrRecoveryKeys: false,
           plaintextLegacyRows: 0,
