@@ -23,6 +23,11 @@ export class MlsDevice {
    * Only after explicit rejection of this attempt, never on a network timeout.
    */
   discardRejectedCommit(room: string): void;
+  /**
+   * Only after an explicit leave or a verified newer Welcome. The caller
+   * preserves retained history separately and never rolls this ratchet back.
+   */
+  discardRoom(room: string, expected_epoch: string): void;
   encryptMessage(room: string, content: Uint8Array | number[]): Uint8Array;
   joinRoom(room: string, welcome: Uint8Array | number[]): void;
   keyPackage(): Uint8Array;
@@ -35,11 +40,30 @@ export class MlsDevice {
    */
   static restoreLocal(bytes: Uint8Array | number[]): MlsDevice;
   roomInfo(room: string): string;
+  signStatement(purpose: string, payload: Uint8Array | number[]): Uint8Array;
   /**
    * Raw local secrets, never a cloud-backup or delivery format. The caller
    * must atomically encrypt these bytes with its device-local wrapping key.
    */
   snapshotLocal(): Uint8Array;
+}
+
+/**
+ * Separate profile authorization key. Never reuse an ActivityPub or live MLS
+ * ratchet as recovery material.
+ */
+export class ProfileSigningKey {
+  free(): void;
+  [Symbol.dispose](): void;
+  /**
+   * Portable Ed25519 seed || public key, only for authenticated local
+   * wrapping or a user-key-protected identity backup; never a server field.
+   */
+  exportSecret(): Uint8Array;
+  constructor();
+  publicKey(): Uint8Array;
+  static restoreSecret(bytes: Uint8Array | number[]): ProfileSigningKey;
+  signStatement(purpose: string, payload: Uint8Array | number[]): Uint8Array;
 }
 
 export type InitInput =
@@ -48,6 +72,7 @@ export type InitInput =
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_mlsdevice_free: (a: number, b: number) => void;
+  readonly __wbg_profilesigningkey_free: (a: number, b: number) => void;
   readonly mlsdevice_acknowledgeCommit: (
     a: number,
     b: number,
@@ -81,6 +106,13 @@ export interface InitOutput {
     a: number,
     b: number,
     c: number
+  ) => [number, number];
+  readonly mlsdevice_discardRoom: (
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    e: number
   ) => [number, number];
   readonly mlsdevice_encryptMessage: (
     a: number,
@@ -124,8 +156,29 @@ export interface InitOutput {
     b: number,
     c: number
   ) => [number, number, number, number];
+  readonly mlsdevice_signStatement: (
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    e: number
+  ) => [number, number, number, number];
   readonly mlsdevice_snapshotLocal: (
     a: number
+  ) => [number, number, number, number];
+  readonly profilesigningkey_exportSecret: (a: number) => [number, number];
+  readonly profilesigningkey_new: () => [number, number, number];
+  readonly profilesigningkey_publicKey: (a: number) => [number, number];
+  readonly profilesigningkey_restoreSecret: (
+    a: number,
+    b: number
+  ) => [number, number, number];
+  readonly profilesigningkey_signStatement: (
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    e: number
   ) => [number, number, number, number];
   readonly __wbindgen_exn_store: (a: number) => void;
   readonly __externref_table_alloc: () => number;

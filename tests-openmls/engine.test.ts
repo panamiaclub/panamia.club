@@ -3,7 +3,18 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { MlsDevice } from '../crypto/openmls/pkg/pana_openmls.js';
+import {
+  MlsDevice,
+  ProfileSigningKey,
+} from '../crypto/openmls/pkg/pana_openmls.js';
+import {
+  deviceCertificateSchema,
+  deviceCredential,
+  enrollmentSchema,
+  signStatement,
+  verifyStatement,
+  E2EE_DEVICE_MS,
+} from '../lib/e2ee/identity-contract';
 import {
   initializeOpenMLS,
   OpenMlsQualificationClient,
@@ -106,6 +117,86 @@ before(async () => {
 });
 
 describe('OpenMLS browser bindings and independent implementation interoperability', () => {
+  it('uses separate profile approval keys and device proofs interoperable with platform Ed25519 verification', async () => {
+    const root = new ProfileSigningKey();
+    const identity = {
+      version: 1 as const,
+      profileId: 'profile-alice',
+      actorId: 'alice',
+      deviceId: crypto.randomUUID(),
+    };
+    const device = new MlsDevice(deviceCredential(identity));
+    let restored: ProfileSigningKey | undefined;
+    try {
+      const challenge = {
+        ...identity,
+        userId: 'account-alice',
+        signingKey: toBase64(device.publicKey()),
+        requestId: crypto.randomUUID(),
+        nonce: toBase64(crypto.getRandomValues(new Uint8Array(32))),
+        expiresAt: Date.now() + 60_000,
+      };
+      const proof = await signStatement(
+        'enrollment',
+        challenge,
+        (purpose, payload) => device.signStatement(purpose, payload)
+      );
+      assert.deepEqual(
+        await verifyStatement(
+          'enrollment',
+          proof,
+          challenge.signingKey,
+          enrollmentSchema
+        ),
+        challenge
+      );
+      const issuedAt = Date.now();
+      const certificate = {
+        ...challenge,
+        rootVersion: 1,
+        issuedAt,
+        expiresAt: issuedAt + E2EE_DEVICE_MS,
+      };
+      const signed = await signStatement(
+        'device-certificate',
+        certificate,
+        (purpose, payload) => root.signStatement(purpose, payload)
+      );
+      assert.deepEqual(
+        await verifyStatement(
+          'device-certificate',
+          signed,
+          toBase64(root.publicKey()),
+          deviceCertificateSchema
+        ),
+        certificate
+      );
+      await assert.rejects(
+        verifyStatement(
+          'enrollment',
+          signed,
+          toBase64(root.publicKey()),
+          enrollmentSchema
+        )
+      );
+      assert.throws(() =>
+        device.signStatement('device-certificate', utf8.encode('not allowed'))
+      );
+      const secret = root.exportSecret();
+      try {
+        restored = ProfileSigningKey.restoreSecret(secret);
+      } finally {
+        secret.fill(0);
+      }
+      assert.deepEqual(restored.publicKey(), root.publicKey());
+      assert.notDeepEqual(root.publicKey(), device.publicKey());
+    } finally {
+      root.free();
+      device.free();
+      restored?.free();
+    }
+  });
+
   it('exchanges private MLS frames with a ts-mls peer using the mandatory standard suite', async () => {
     const rust = new MlsDevice('rust-peer');
     try {

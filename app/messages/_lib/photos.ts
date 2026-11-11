@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { DraftAttachment } from '@/lib/query/social';
+import type { LegacyChatMediaTarget } from '@/lib/chat';
 
 export const CHAT_PHOTO_MAX_BYTES = 10 * 1024 * 1024;
 export const CHAT_PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp';
@@ -19,7 +20,7 @@ export function chatPhotoError(
   return null;
 }
 
-export async function uploadChatPhoto(file: File): Promise<DraftAttachment> {
+export async function prepareChatPhoto(file: File): Promise<File> {
   const invalid = chatPhotoError(file);
   if (invalid) throw new Error(invalid);
   const source = URL.createObjectURL(file);
@@ -76,8 +77,18 @@ export async function uploadChatPhoto(file: File): Promise<DraftAttachment> {
   } finally {
     URL.revokeObjectURL(source);
   }
+  return photo;
+}
+
+export async function uploadChatPhoto(
+  file: File,
+  target?: LegacyChatMediaTarget
+): Promise<DraftAttachment> {
+  const photo = await prepareChatPhoto(file);
   const form = new FormData();
   form.append('file', photo);
+  form.append('purpose', 'legacy-chat');
+  if (target) form.append('chatTarget', JSON.stringify(target));
   const { data } = await axios.post<{
     success: boolean;
     data?: DraftAttachment;

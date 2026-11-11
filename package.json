@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
+    "build:encrypted": "CHAT_E2EE_ENABLED=1 vinext build",
     "start": "vinext start",
     "lint": "eslint .",
     "test": "playwright test",
@@ -17,6 +18,7 @@
     "test:unit": "node --import tsx --test tests-unit/*.test.ts",
     "test:db": "node --experimental-test-module-mocks --import tsx --test --test-concurrency=1 tests-db/*.test.ts",
     "e2ee:lab": "vite --config vite.e2ee.config.ts",
+    "e2ee:api-lab": "node --experimental-test-module-mocks --import tsx prototypes/e2ee/api-server.ts",
     "openmls:build": "node --import tsx scripts/openmls.ts build",
     "openmls:check": "node --import tsx scripts/openmls.ts check",
     "openmls:audit": "node --import tsx scripts/openmls.ts audit",

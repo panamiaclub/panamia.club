@@ -1425,6 +1425,7 @@ function invalidateAfterRequestTriage(
       queryKey: [socialQueryKey, 'dm-requests'],
     }),
     queryClient.invalidateQueries({ queryKey: [socialQueryKey, 'messages'] }),
+    queryClient.invalidateQueries({ queryKey: ['encrypted-messaging-rooms'] }),
   ]);
 }
 
@@ -1486,6 +1487,7 @@ export interface ConversationThread {
   viewerActorId: string;
   localDomain: string | null;
   canSend: 'allow' | 'refuse';
+  encryptionRequired?: boolean;
 }
 
 export const useConversations = (enabled: boolean = true) =>
@@ -1601,11 +1603,17 @@ export const useGifSearch = (term: string, enabled: boolean = true) =>
  */
 export const useMirrorGif = () =>
   useMutation({
-    mutationFn: async (gif: GifResult): Promise<DraftAttachment> => {
+    mutationFn: async (
+      gif: GifResult & {
+        chatTarget?: import('@/lib/chat').LegacyChatMediaTarget;
+      }
+    ): Promise<DraftAttachment> => {
       const { data } = await axios.post('/api/social/gifs/mirror', {
         url: gif.url,
         description: gif.description,
         creator: gif.creator,
+        purpose: 'legacy-chat',
+        chatTarget: gif.chatTarget,
       });
       if (!data?.success) {
         throw new Error(data?.error ?? 'Could not save that GIF');

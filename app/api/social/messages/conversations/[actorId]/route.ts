@@ -18,6 +18,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { db } from '@/lib/db';
+import { socialActors } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 import { getActiveProfileWithActor } from '@/lib/server/active-profile';
 import {
   getDirectConversation,
@@ -121,6 +124,13 @@ export async function GET(
     viewerActorId,
     counterpartyActorId
   );
+  const [peerPolicy] = await db
+    .select({
+      required: socialActors.encryptedChatRequired,
+    })
+    .from(socialActors)
+    .where(eq(socialActors.id, counterpartyActorId))
+    .limit(1);
 
   return NextResponse.json({
     success: true,
@@ -130,6 +140,9 @@ export async function GET(
       viewerActorId,
       localDomain: socialConfig.domain,
       canSend,
+      encryptionRequired:
+        profile.socialActor.encryptedChatRequired === true ||
+        peerPolicy?.required === true,
     },
   });
 }

@@ -2,6 +2,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { getActiveProfileWithActor } from '@/lib/server/active-profile';
 import { db } from '@/lib/db';
 import { deleteFile, uploadFile } from '@/lib/blob/api';
 import { contactSubmissions, users } from '@/lib/schema';
@@ -15,6 +16,7 @@ import {
   SAFETY_REPORT_REASONS,
   SAFETY_REPORT_TARGETS,
   safetyReportUrl,
+  encryptedReportDisclosureSchema,
 } from '@/lib/safety-report';
 
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
@@ -64,6 +66,39 @@ export async function POST(request: NextRequest) {
     );
   }
   const isSafetyReport = reportType === 'safety';
+  const encodedDisclosure = form.get('encryptedDisclosure');
+  let disclosure: ReturnType<
+    typeof encryptedReportDisclosureSchema.parse
+  > | null = null;
+  if (encodedDisclosure !== null) {
+    if (
+      !isSafetyReport ||
+      typeof encodedDisclosure !== 'string' ||
+      encodedDisclosure.length > 35_000
+    )
+      return NextResponse.json(
+        { error: 'Invalid encrypted-message disclosure.' },
+        { status: 400 }
+      );
+    let value: unknown;
+    try {
+      value = JSON.parse(encodedDisclosure);
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid encrypted-message disclosure.' },
+        { status: 400 }
+      );
+    }
+    const parsed = encryptedReportDisclosureSchema.safeParse(value);
+    if (!parsed.success)
+      return NextResponse.json(
+        {
+          error: 'A single bounded excerpt and explicit consent are required.',
+        },
+        { status: 400 }
+      );
+    disclosure = parsed.data;
+  }
   if (
     isSafetyReport &&
     (request.headers.get('sec-fetch-site') === 'cross-site' ||
@@ -184,6 +219,38 @@ export async function POST(request: NextRequest) {
       columns: { screenname: true },
     });
     screenname = account?.screenname ?? null;
+  }
+  if (disclosure) {
+    if (!userId || targetType !== 'content')
+      return NextResponse.json(
+        {
+          error:
+            'Sign in and select a content report to disclose an encrypted-message excerpt.',
+        },
+        { status: 403 }
+      );
+    const profile = await getActiveProfileWithActor(userId);
+    if (
+      !profile ||
+      profile.id !== disclosure.profileId ||
+      profile.socialActor?.id !== disclosure.actorId
+    )
+      return NextResponse.json(
+        {
+          error:
+            'The reporting profile changed. Open the selected message again.',
+        },
+        { status: 409 }
+      );
+    storedMessage += [
+      '',
+      'User-consented encrypted-message excerpt (an unverified quotation, not server-decrypted content):',
+      `Room: ${disclosure.roomId}`,
+      `Message: ${disclosure.eventId}`,
+      `Reporting profile: ${disclosure.profileId}`,
+      '',
+      disclosure.quote,
+    ].join('\n');
   }
 
   let screenshotUrl: string | null = null;

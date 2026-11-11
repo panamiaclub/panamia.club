@@ -290,6 +290,26 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
         data: { screenname: 'viewer', createdAt: '2020-01-01T00:00:00.000Z' },
       });
     }
+    if (path === '/api/social/encryption/context') {
+      const actor = currentViewer();
+      return json(route, {
+        success: true,
+        data: {
+          userId: 'fixture-user',
+          profileId: state.activeProfile,
+          actorId: actor.id,
+          enabled: false,
+          required: false,
+          actor: {
+            id: actor.id,
+            username: actor.username,
+            name: actor.name ?? null,
+            iconUrl: actor.iconUrl ?? null,
+            domain: 'localhost',
+          },
+        },
+      });
+    }
     if (path === '/api/config/turnstile')
       return json(route, { enabled: false });
     if (path === '/api/consent/check') return json(route, { consented: true });

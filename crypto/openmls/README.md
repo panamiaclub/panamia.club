@@ -1,12 +1,15 @@
 # OpenMLS engine qualification
 
-**Client-side, synthetic-data qualification code. Live Pana messages are still
-server-readable. This is not a production enrollment, delivery or recovery SDK.**
+**Pinned client-side engine and qualification boundary. Production activation
+remains disabled; live legacy Pana messages are still server-readable.**
 
 The Pana-owned architecture is defined in the
 [chat roadmap](../../docs/CHAT-ROADMAP.md#pana-owned-e2ee-implementation-plan).
-This crate implements its first engine boundary, not the remaining product
-integration. Nothing here is imported into live app routes or server handlers.
+This crate implements the cryptographic boundary. `lib/e2ee/chat-client.ts`
+now supplies the account-bound product integration and the existing Messages
+screens use it for enabled encrypted scopes. Server handlers store only public
+authority data, opaque frames/objects and routing metadata; they do not import
+the engine or acquire private device/recovery material.
 
 ## Reproducible inputs
 
@@ -70,6 +73,7 @@ yarn test:openmls
 yarn test:e2ee
 yarn playwright install chromium webkit
 yarn test:e2ee:browser
+yarn build:encrypted
 ```
 
 `scripts/openmls.ts` runs Cargo from this directory so the pinned toolchain
@@ -106,6 +110,11 @@ These checks do not replace review of unreported defects or source changes.
 - `createRoom`, `addMember`, `removeMember` and `joinRoom` maintain private-wire
   groups. Invitations are complete MLS Welcome messages. Existing members
   process private MLS commits, not the new member's Welcome.
+  Both created and joined groups retain the ratchet-tree extension so a joined
+  member can invite a replacement after the original founder leaves.
+- `ProfileSigningKey` signs purpose-bound owner approvals, revocations,
+  explicit identity resets and recovery/activation statements. Its recoverable
+  authorization seed is separate from all live MLS device/room state.
 - A locally staged membership change blocks application sends and additional
   membership changes until `acknowledgeCommit`. The caller must first verify
   durable acceptance of **that exact attempt** by its delivery service.
@@ -120,10 +129,13 @@ These checks do not replace review of unreported defects or source changes.
   Only authenticated, profile-bound local wrapping may store or restore it.
   It is never a relay payload, downloadable backup or replacement-device format.
   Incompatible state is rejected, not silently deleted.
+- `discardRoom` requires an exact epoch and no pending commit. The product
+  client uses it only for a verified newer Welcome/session transition; it is
+  not a ratchet-rewind or network-timeout recovery mechanism.
 
 Qualification limits are 1 MiB per frame, 512 KiB per application payload and
-64 MiB per raw native snapshot. These are harness bounds, not approved product
-quotas. Rust/WASM disposal is best-effort cleanup, not a guarantee of erasing
+64 MiB per raw native snapshot. Product limits and storage behavior are recorded
+in the chat roadmap. Rust/WASM disposal is best-effort cleanup, not a guarantee of erasing
 all JS strings, engine copies or OS memory.
 
 `lib/e2ee/openmls-qualification.ts` provides the synthetic lab adapter. Its
@@ -145,15 +157,16 @@ retained history onto a fresh device, not these native snapshots.
 
 Recorded software checkpoint for this change:
 
-| Surface                 | Evidence                                                                                                                     |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Native engine           | 9 Rust cases passed on Windows GNU                                                                                           |
-| WASM/independent peer   | 4 Node cases passed, with artifact/source consistency checks                                                                 |
-| Reference compatibility | 13 focused cases passed                                                                                                      |
-| Browser peers           | 26 scenarios passed across reference/OpenMLS Chromium and phone-WebKit; 2 duplicate cross-engine cases intentionally skipped |
-| Dependency graphs       | WASM, Windows GNU and Linux advisory checks passed without ignore entries; inactive model notice remains visible             |
-| Build boundary          | Production build passed; 1,650 compiled files inspected with no qualification engine/assets included                         |
-| Physical phones         | Not yet run; no Android/iOS or protected-keystore qualification claim                                                        |
+| Surface                 | Evidence                                                                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Native engine           | 11 Rust cases passed on Windows GNU, including invitations by a joined member after founder removal                                                                 |
+| WASM/independent peer   | Platform-signature and independent-peer cases with artifact/source consistency checks                                                                               |
+| Reference compatibility | 13 focused cases passed                                                                                                                                             |
+| Browser peers           | 26 scenarios passed across reference/OpenMLS Chromium and phone-WebKit; 2 duplicate cross-engine cases intentionally skipped                                        |
+| Dependency graphs       | WASM, Windows GNU and Linux advisory checks passed without ignore entries; inactive model notice remains visible                                                    |
+| Product integration     | Actual API handlers and independent product clients cover text/media, verification, reload, exact retries, identity loss/reset, fresh sessions and rollback refusal |
+| Native protection       | Android Keystore non-exportability, origin AAD, missing-key refusal and process-restart probes on a session-isolated emulator                                       |
+| Physical phones         | Still required; emulator/WebKit results are not physical Android/iPhone qualification                                                                               |
 
 The checked boundary exchanges standard private frames with an independent
 `ts-mls` peer in both group-founder directions. Native cases cover pins,
@@ -173,20 +186,20 @@ Still required before the P1 platform decision is complete:
    restart, backgrounding, storage pressure and OS/browser upgrades. The
    current Windows host has no authorized Android device connected and cannot
    perform an Xcode/iPhone build.
-2. Record physical-device capability/results and the native protected-key
-   storage contract. IndexedDB non-extractable keys are not Android Keystore
-   or iOS Keychain qualification. Specify OS-backup/device-migration boundaries
-   so live device keys and ratchets cannot be restored as a second live clone.
+2. Record physical-device capability/results for the implemented protected-key
+   contract. IndexedDB non-extractable keys are not Keystore/Keychain.
+   Android instrumentation does not qualify every Capacitor bridge/WebView
+   lifecycle, and this Windows host cannot compile or execute iOS.
+   Recheck OS-backup/migration exclusions and honest device capabilities.
 3. Review the pinned provider/source deltas, runtime delivery and binding
    threat model; revisit released dependency versions before a production pin.
 
-P2-P8 remain product work. Synthetic names and the global approved-key map
-are **not Pana profile ownership, device approval or per-room role authority**.
-The manual lab ACK is **not a server receipt**. Real authorization/membership
-intent must also prevent stale-epoch sends after removals, reconcile competing
-commits and preserve consent/blocks. New ciphertext delivery, private R2 media,
-native key protection, production backup UX, message/report integration and
-release review are not implemented by this crate.
+P2-P7 now exist outside this crate: account/profile-bound certificates and signed
+requests, authoritative ordered ciphertext delivery, membership freezes, private
+R2, device checkpoints, encrypted backups and the existing Messages/report UI.
+The original lab's synthetic pins and manual ACK remain deliberately isolated
+from that authority. Full release/platform qualification and independent review
+remain open; software checks do not make those gates disappear.
 
 E2EE does not hide routing metadata or protect against an unlocked/compromised
 endpoint, XSS, malicious same-origin client code, or a recipient sharing content.

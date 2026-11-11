@@ -1,9 +1,21 @@
-name: Encryption prototype
+name: Encrypted chat qualification
 
 on:
   pull_request:
     paths:
       - 'lib/e2ee/**'
+      - 'lib/server/encryption-*.ts'
+      - 'lib/server/chat-media-policy.ts'
+      - 'lib/jobs/purge-encrypted-chat.ts'
+      - 'lib/schema/index.ts'
+      - 'lib/chat.ts'
+      - 'lib/dm-stream.ts'
+      - 'app/api/social/encryption/**'
+      - 'app/messages/**'
+      - 'tests-db/encryption-devices.test.ts'
+      - 'drizzle/007[89]_chat_e2ee_*.sql'
+      - 'drizzle/008[0-3]_chat_e2ee_*.sql'
+      - 'scripts/vite-encryption.ts'
       - 'crypto/openmls/**'
       - 'scripts/openmls.ts'
       - 'tests-openmls/**'
@@ -19,6 +31,18 @@ on:
     branches: [main]
     paths:
       - 'lib/e2ee/**'
+      - 'lib/server/encryption-*.ts'
+      - 'lib/server/chat-media-policy.ts'
+      - 'lib/jobs/purge-encrypted-chat.ts'
+      - 'lib/schema/index.ts'
+      - 'lib/chat.ts'
+      - 'lib/dm-stream.ts'
+      - 'app/api/social/encryption/**'
+      - 'app/messages/**'
+      - 'tests-db/encryption-devices.test.ts'
+      - 'drizzle/007[89]_chat_e2ee_*.sql'
+      - 'drizzle/008[0-3]_chat_e2ee_*.sql'
+      - 'scripts/vite-encryption.ts'
       - 'crypto/openmls/**'
       - 'scripts/openmls.ts'
       - 'tests-openmls/**'
@@ -59,5 +83,13 @@ jobs:
       - run: yarn test:openmls:rust
       - run: yarn test:openmls
       - run: yarn test:e2ee
+      - name: Verify real account/profile, delivery, media, recovery and retention APIs
+        run: >-
+          node --experimental-test-module-mocks --import tsx --test --test-concurrency=1
+          tests-db/encryption-devices.test.ts tests-db/group-chat.test.ts
+          tests-db/social-media.test.ts tests-db/safety-reports.test.ts
+      - run: yarn tsc --noEmit --incremental false
       - run: yarn playwright install --with-deps chromium webkit
       - run: yarn test:e2ee:browser
+      - name: Verify the encryption-capable application build
+        run: yarn build:encrypted

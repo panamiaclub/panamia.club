@@ -12,7 +12,12 @@ import { ArrowUp, ImagePlus, LoaderCircle, X } from 'lucide-react';
 import styles from '@/components/messages/workspace.module.css';
 import { RefusedComposer } from './chat-primitives';
 import { GifPicker, GifPreview } from './gif-picker';
-import { useGifSearch, useMirrorGif, type GifResult } from '@/lib/query/social';
+import {
+  useGifSearch,
+  useMirrorGif,
+  type GifResult,
+  type DraftAttachment,
+} from '@/lib/query/social';
 import {
   messageDraftCanSend,
   composerEnterSends,
@@ -25,6 +30,7 @@ import {
   uploadChatPhoto,
 } from '../_lib/photos';
 import { useIsNativeApp } from '@/lib/mobile/use-native-app';
+import type { LegacyChatMediaTarget } from '@/lib/chat';
 
 export function Composer({
   canSend,
@@ -34,6 +40,8 @@ export function Composer({
   onSend,
   isSending,
   inputRef,
+  privateMedia,
+  legacyTarget,
 }: {
   canSend: 'allow' | 'refuse';
   counterpartyName: string;
@@ -42,6 +50,11 @@ export function Composer({
   onSend: () => void;
   isSending: boolean;
   inputRef: RefObject<HTMLTextAreaElement | null>;
+  privateMedia?: {
+    photo: (file: File) => Promise<DraftAttachment & { file: File }>;
+    gif: (gif: GifResult) => Promise<DraftAttachment & { file: File }>;
+  };
+  legacyTarget?: LegacyChatMediaTarget;
 }) {
   const native = useIsNativeApp();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -92,8 +105,20 @@ export function Composer({
     const input = inputRef.current;
     onChange({ isMirroring: true, gifError: null });
     try {
-      const attachment = await mirror.mutateAsync(chosen);
-      onChange({ gif: attachment, isMirroring: false });
+      if (privateMedia) {
+        const { file, ...attachment } = await privateMedia.gif(chosen);
+        onChange({
+          gif: attachment,
+          privateFiles: { ...draft.privateFiles, gif: file },
+          isMirroring: false,
+        });
+      } else {
+        const attachment = await mirror.mutateAsync({
+          ...chosen,
+          chatTarget: legacyTarget,
+        });
+        onChange({ gif: attachment, isMirroring: false });
+      }
       setPickerOpen(false);
       if (input?.isConnected && inputRef.current === input) input.focus();
     } catch (error) {
@@ -109,13 +134,24 @@ export function Composer({
     const input = inputRef.current;
     onChange({ photoFile: file, isUploadingPhoto: true, photoError: null });
     try {
-      const photo = await uploadChatPhoto(file);
-      onChange({
-        photo,
-        photoFile: null,
-        photoError: null,
-        isUploadingPhoto: false,
-      });
+      if (privateMedia) {
+        const { file: prepared, ...photo } = await privateMedia.photo(file);
+        onChange({
+          photo,
+          privateFiles: { ...draft.privateFiles, photo: prepared },
+          photoFile: null,
+          photoError: null,
+          isUploadingPhoto: false,
+        });
+      } else {
+        const photo = await uploadChatPhoto(file, legacyTarget);
+        onChange({
+          photo,
+          photoFile: null,
+          photoError: null,
+          isUploadingPhoto: false,
+        });
+      }
       if (input?.isConnected && inputRef.current === input) input.focus();
     } catch (error) {
       onChange({
@@ -194,7 +230,9 @@ export function Composer({
       )}
       {savingPhoto && (
         <p className="text-pana-ink/65 mb-2 text-xs" role="status">
-          Uploading photo...
+          {privateMedia
+            ? 'Preparing photo for encryption...'
+            : 'Uploading photo...'}
         </p>
       )}
       {previewFailed && !draft.photoError && (
@@ -266,13 +304,15 @@ export function Composer({
           <ImagePlus size={23} aria-hidden="true" />
         </button>
         <span id={photoHintId} className="sr-only">
-          One photo, up to 10 MB. Photos use shareable Pana media links, not
-          end-to-end encryption. See Conversation details for more information.
+          {privateMedia
+            ? 'One photo, up to 10 MB. Photos are encrypted on this device before upload.'
+            : 'One photo, up to 10 MB. Photos use shareable Pana media links, not end-to-end encryption. See Conversation details for more information.'}
         </span>
         <div className={styles.composeField}>
           <textarea
             ref={inputRef}
             value={draft.text}
+            data-private="true"
             onChange={(event) => onChange({ text: event.target.value })}
             onKeyDown={(event) => {
               const phone =

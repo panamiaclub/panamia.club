@@ -3,7 +3,7 @@
 use openmls::prelude::*;
 use openmls_basic_credential::SignatureKeyPair;
 use openmls_rust_crypto::OpenMlsRustCrypto;
-use openmls_traits::OpenMlsProvider;
+use openmls_traits::{crypto::OpenMlsCrypto, signatures::Signer, OpenMlsProvider};
 use serde::{Deserialize, Serialize as SerdeSerialize};
 use std::collections::BTreeMap;
 use tls_codec::{Deserialize as TlsDeserialize, Serialize};
@@ -102,6 +102,125 @@ fn decode_key_package(bytes: &[u8], provider: &OpenMlsRustCrypto) -> Result<KeyP
     Ok(key_package)
 }
 
+fn statement_message(purpose: &str, payload: &[u8]) -> Result<Vec<u8>, String> {
+    if !matches!(
+        purpose,
+        "enrollment"
+            | "device-certificate"
+            | "device-revocation"
+            | "device-request"
+            | "room-intent"
+            | "identity-reset"
+            | "identity-backup"
+            | "profile-activation"
+    ) || payload.is_empty()
+        || payload.len() > 16 * 1024
+    {
+        return Err("Invalid signing purpose or statement size.".into());
+    }
+    let mut message = format!("PANA-CHAT/1/{purpose}\0").into_bytes();
+    message.extend_from_slice(payload);
+    Ok(message)
+}
+
+/// Separate profile authorization key. Never reuse an ActivityPub or live MLS
+/// ratchet as recovery material.
+#[wasm_bindgen]
+pub struct ProfileSigningKey {
+    provider: OpenMlsRustCrypto,
+    private: Vec<u8>,
+    public: Vec<u8>,
+}
+
+impl Drop for ProfileSigningKey {
+    fn drop(&mut self) {
+        self.private.zeroize();
+    }
+}
+
+#[wasm_bindgen]
+impl ProfileSigningKey {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Result<ProfileSigningKey, String> {
+        let provider = OpenMlsRustCrypto::default();
+        let (mut private, public) = provider
+            .crypto()
+            .signature_key_gen(SUITE.signature_algorithm())
+            .map_err(|_| "Cannot generate a profile authorization key.")?;
+        if private.len() != 32 || public.len() != 32 {
+            private.zeroize();
+            return Err("Unsupported profile authorization key encoding.".into());
+        }
+        Ok(Self {
+            provider,
+            private,
+            public,
+        })
+    }
+
+    #[wasm_bindgen(js_name = publicKey)]
+    pub fn public_key(&self) -> Vec<u8> {
+        self.public.clone()
+    }
+
+    #[wasm_bindgen(js_name = signStatement)]
+    pub fn sign_statement(&self, purpose: &str, payload: &[u8]) -> Result<Vec<u8>, String> {
+        if !matches!(
+            purpose,
+            "device-certificate"
+                | "device-revocation"
+                | "identity-reset"
+                | "identity-backup"
+                | "profile-activation"
+        ) {
+            return Err("This statement requires an enrolled device key.".into());
+        }
+        self.provider
+            .crypto()
+            .sign(
+                SUITE.signature_algorithm(),
+                &statement_message(purpose, payload)?,
+                &self.private,
+            )
+            .map_err(|_| "Cannot sign the profile statement.".into())
+    }
+
+    /// Portable Ed25519 seed || public key, only for authenticated local
+    /// wrapping or a user-key-protected identity backup; never a server field.
+    #[wasm_bindgen(js_name = exportSecret)]
+    pub fn export_secret(&self) -> Vec<u8> {
+        [self.private.as_slice(), self.public.as_slice()].concat()
+    }
+
+    #[wasm_bindgen(js_name = restoreSecret)]
+    pub fn restore_secret(bytes: &[u8]) -> Result<ProfileSigningKey, String> {
+        if bytes.len() != 64 {
+            return Err("Invalid profile authorization key material.".into());
+        }
+        let key = Self {
+            provider: OpenMlsRustCrypto::default(),
+            private: bytes[..32].to_vec(),
+            public: bytes[32..].to_vec(),
+        };
+        let message = statement_message("identity-reset", b"key-binding-check")?;
+        let signature = key
+            .provider
+            .crypto()
+            .sign(SUITE.signature_algorithm(), &message, &key.private)
+            .map_err(|_| "Invalid profile signing key.")?;
+        key.provider
+            .crypto()
+            .verify_signature(
+                SUITE.signature_algorithm(),
+                &message,
+                &key.public,
+                &signature,
+            )
+            .map_err(|_| "Profile private and public keys do not match.")?;
+        Ok(key)
+    }
+}
+
 /// Client-only state. It must not be instantiated by a server message handler.
 #[wasm_bindgen]
 pub struct MlsDevice {
@@ -154,6 +273,16 @@ impl MlsDevice {
     #[wasm_bindgen(js_name = deviceIdentity)]
     pub fn device_identity(&self) -> String {
         self.identity.clone()
+    }
+
+    #[wasm_bindgen(js_name = signStatement)]
+    pub fn sign_statement(&self, purpose: &str, payload: &[u8]) -> Result<Vec<u8>, String> {
+        if !matches!(purpose, "enrollment" | "device-request" | "room-intent") {
+            return Err("This statement requires the profile authorization key.".into());
+        }
+        self.signer
+            .sign(&statement_message(purpose, payload)?)
+            .map_err(|_| "Cannot sign the device statement.".into())
     }
 
     /// Application identity approval is deliberately separate from MLS parsing.
@@ -334,6 +463,7 @@ impl MlsDevice {
             _ => return Err("Expected an MLS invitation.".into()),
         };
         let config = MlsGroupJoinConfig::builder()
+            .use_ratchet_tree_extension(true)
             .wire_format_policy(PURE_CIPHERTEXT_WIRE_FORMAT_POLICY)
             .build();
         let staged = StagedWelcome::new_from_welcome(&self.provider, &config, welcome, None)
@@ -468,6 +598,22 @@ impl MlsDevice {
         })
     }
 
+    /// Only after an explicit leave or a verified newer Welcome. The caller
+    /// preserves retained history separately and never rolls this ratchet back.
+    #[wasm_bindgen(js_name = discardRoom)]
+    pub fn discard_room(&mut self, room: &str, expected_epoch: &str) -> Result<(), String> {
+        let group = self.groups.get_mut(room).ok_or("Unknown encrypted room.")?;
+        if group.pending_commit().is_some() || group.epoch().as_u64().to_string() != expected_epoch
+        {
+            return Err("Resolve the exact current room state before discarding live keys.".into());
+        }
+        group
+            .delete(self.provider.storage())
+            .map_err(|_| "Cannot discard the old room state.")?;
+        self.groups.remove(room);
+        Ok(())
+    }
+
     /// Raw local secrets, never a cloud-backup or delivery format. The caller
     /// must atomically encrypt these bytes with its device-local wrapping key.
     #[wasm_bindgen(js_name = snapshotLocal)]
@@ -596,6 +742,31 @@ mod tests {
         assert!(client.create_room("synthetic-room").is_err());
     }
 
+    #[test]
+    fn profile_authorization_recovery_is_separate_from_live_device_state() {
+        let root = ProfileSigningKey::new().unwrap();
+        let mut secret = root.export_secret();
+        let recovered = ProfileSigningKey::restore_secret(&secret).unwrap();
+        assert_eq!(root.public_key(), recovered.public_key());
+        assert_eq!(
+            root.sign_statement("device-certificate", b"certificate")
+                .unwrap(),
+            recovered
+                .sign_statement("device-certificate", b"certificate")
+                .unwrap()
+        );
+        assert!(root.sign_statement("device-request", b"request").is_err());
+        secret[63] ^= 1;
+        assert!(ProfileSigningKey::restore_secret(&secret).is_err());
+        secret.zeroize();
+        let device = MlsDevice::new("new-device").unwrap();
+        assert_ne!(root.public_key(), device.public_key());
+        assert!(device.sign_statement("device-request", b"request").is_ok());
+        assert!(device
+            .sign_statement("device-certificate", b"certificate")
+            .is_err());
+    }
+
     fn approve(a: &mut MlsDevice, b: &MlsDevice) {
         a.approve_identity(&b.identity, &b.public_key()).unwrap();
     }
@@ -631,6 +802,28 @@ mod tests {
         assert_eq!(result.sender, "alice/device-1");
         let response = bob.encrypt_message("room", b"response").unwrap();
         assert!(alice.process_message("room", &response).is_ok());
+    }
+
+    #[test]
+    fn a_joined_member_can_invite_a_fresh_device_after_the_founder_is_removed() {
+        let (_alice, mut bob) = pair();
+        let removal = bob.remove_member("room", "alice/device-1").unwrap();
+        assert!(serde_json::from_str::<MembershipFrames>(&removal).is_ok());
+        bob.acknowledge_commit("room").unwrap();
+        let mut bob = MlsDevice::restore_local(&bob.snapshot_local().unwrap()).unwrap();
+        let mut replacement = MlsDevice::new("alice/device-fresh").unwrap();
+        approve(&mut bob, &replacement);
+        approve(&mut replacement, &bob);
+        let frames = invitation(
+            bob.add_member("room", &replacement.key_package().unwrap())
+                .unwrap(),
+        );
+        bob.acknowledge_commit("room").unwrap();
+        replacement
+            .join_room("room", &frames.welcome.unwrap())
+            .unwrap();
+        let message = bob.encrypt_message("room", b"new invitation").unwrap();
+        assert!(replacement.process_message("room", &message).is_ok());
     }
 
     #[test]

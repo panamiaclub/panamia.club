@@ -162,6 +162,14 @@ export function ConversationList({
               entry.kind === 'direct'
                 ? entry.lastMessage
                 : entry.group.lastMessage;
+            const encrypted =
+              entry.kind === 'direct'
+                ? !!entry.encryptedRoomId
+                : !!entry.group.encryptedRoomId;
+            const encryptedUpdatedAt =
+              entry.kind === 'direct'
+                ? entry.encryptedUpdatedAt
+                : entry.group.encryptedUpdatedAt;
             const draft =
               entry.kind === 'direct'
                 ? drafts[entry.actor.id]
@@ -213,7 +221,8 @@ export function ConversationList({
                       </span>
                       <span className="text-pana-ink/50 flex-none text-[10px] font-medium">
                         {lastActiveLabel(
-                          lastMessage?.published ??
+                          encryptedUpdatedAt ??
+                            lastMessage?.published ??
                             (entry.kind === 'direct'
                               ? (entry.requestedAt ?? entry.startedAt)
                               : null) ??
@@ -244,6 +253,8 @@ export function ConversationList({
                               : 'You: '}
                           {localMessage.content || 'GIF'}
                         </span>
+                      ) : encrypted ? (
+                        'End-to-end encrypted conversation'
                       ) : lastMessage ? (
                         <>
                           {entry.kind === 'group' &&

@@ -97,6 +97,15 @@ export const envConfig: Record<string, EnvVarConfig> = {
     required: true,
     defaultValue: 'http://localhost:3000',
   },
+  CHAT_E2EE_ENABLED: {
+    description:
+      'Enable staged encrypted-chat APIs and enrollment UI. Off by default. ' +
+      'Does not activate existing conversations or permit plaintext downgrade.',
+    location: 'VAR',
+    required: false,
+    defaultValue: '0',
+    example: '0',
+  },
 
   FEDERATION_DOMAIN: {
     description:

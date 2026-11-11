@@ -57,19 +57,24 @@
 
 ## Pana-owned E2EE implementation plan
 
-**Status: implementation plan, not implemented production encryption.**
+**Status: disabled-by-default product implementation; not activated in production.**
 The product owner selected this direction on 2026-11-10. It supersedes the
 earlier Matrix evaluation, not the existing plaintext chat implementation.
 No Matrix server, paid service, new cryptographic protocol, or production
-activation is part of this planning change.
+automatic activation is part of this implementation.
 
-**Implementation checkpoint:** P1 now has a pinned OpenMLS 0.9.2 Rust/WASM
-boundary, checked upstream provider snapshots, independent-peer
-interoperability and shared browser qualification scenarios. The
+**Implementation checkpoint:** P1 has a pinned OpenMLS 0.9.2 Rust/WASM
+boundary, checked upstream provider snapshots and independent-peer
+interoperability. P2-P7 now include account-bound devices, ciphertext
+delivery, membership, private media, recovery and the existing Messages UI.
+The real product client is exercised against actual API handlers with
+synthetic accounts, not just the original protocol lab. The
 [engine documentation](../crypto/openmls/README.md) records dependency/advisory
-decisions, wire/local-state boundaries and audit exclusions. Real Android/iOS
-WebView and protected-key checks remain open, so P1 is not fully qualified.
-P2-P8 and production activation remain unimplemented; live chat is unchanged.
+decisions, wire/local-state boundaries and audit exclusions. Android Keystore
+instrumentation includes a process restart on an isolated emulator. Actual
+supported Capacitor WebView/physical-device qualification, an iOS build/runtime
+on macOS, operational review and independent security review remain release
+gates. `CHAT_E2EE_ENABLED` stays `0`; no real messages have been migrated.
 
 ### Confirmed scope and boundaries
 
@@ -236,9 +241,99 @@ Do not introduce report media uploads, automatic server decryption or
 content-scanning bots as an encryption shortcut. Staff response, legal
 preservation and reporting procedures remain separate operational work.
 
+### Implemented product contract
+
+`lib/e2ee/chat-client.ts` is the account/profile-bound client. It uses the
+checked Rust/WASM engine, not the reference `ts-mls` lab. Device approval uses
+a separate owner-held authorization key, not the server's ActivityPub key.
+Requests bind the exact profile, actor, device, route, body and current
+device-state hash. A stale selection or restored/copied live snapshot fails
+closed. Local snapshots, exact outboxes, encrypted history and ciphertext
+files commit atomically before publication; server checkpoints contain hashes,
+never live private state.
+
+The existing DM workspace, inbox, standalone group chat, photo/GIF composer,
+transcript and profile/deep-link entrypoints share the encrypted path.
+Encrypted text renders as text, not untrusted HTML. File manifests and keys
+travel only inside authenticated encrypted messages; file objects use the
+separate private R2 binding. Photos are re-encoded locally before encryption;
+GIF discovery still contacts its public provider. Supported private files are
+at most 10 MiB each (four protocol attachments; the current composer retains
+its photo/GIF controls). The unrelated 200 MiB public-video path is not a
+private-video guarantee.
+
+Enabling a profile requires saving its personal key and an encrypted identity
+backup. **History backups are an explicit per-conversation action**, not a
+promise of automatic continuous recovery. Messages since the last saved
+backup cannot be recovered after device loss. An approved manager without an
+owner's authorization key gets a separate personal history key; approval does
+not disclose a colleague's key or history. Another device must enter the
+existing personal key to open that user's retained backups. Recovery restores
+history/media authorization, not old devices, counters, send queues or MLS
+ratchets. Backup indexing is paginated.
+
+Losing every key does not unlock old messages. An owner can explicitly
+acknowledge a last-resort identity reset, save a new key and revoke all old
+devices (at most once per 24 hours). This changes the public trust root,
+discards the resetting device's local live/cache state and forces peers to
+verify the changed identity. Old retained backups still require their old
+personal keys. Owner removal/demotion or personal ownership transfer freezes
+the identity until a current owner performs this visible reset; it does not
+silently promote an editor into cryptographic authority. A fresh signed room
+session is allowed only after every old approved cryptographic participant is
+gone, or an empty setup times out. It cannot replace a functioning participant
+just because another device is offline.
+
+Persistent actor/group latches reject plaintext private writes even when the
+rollout flag is paused. Legacy history remains separately labelled and
+server-readable. Public social upload callers mark `social-post`; legacy chat
+uploads name their target and are refused for encrypted scopes. Once any
+encrypted scope exists, old unmarked upload clients must update rather than
+publish a private file before their message is refused. Ordinary posts and
+stories remain outside E2EE. Compatible Pana clients are required; external
+ActivityPub DMs do not receive a plaintext downgrade.
+
+Mailbox broadcasts contain only room/type/timestamp invalidations. Held
+requests stay quiet, and encrypted mailbox delivery rechecks current profile
+users rather than sending to a removed manager's old socket. Cached history
+revalidates visibility without making temporary mutes permanently destroy it.
+Reports can include one bounded, explicitly consented text excerpt; that
+unverified quotation stays in the restricted safety record, never in email.
+No report attachment or file/recovery-key disclosure is introduced.
+
+### Retention, rollback and supported clients
+
+- Messages disappear after their authenticated 30-day deadline. Scheduled
+  maintenance removes expired/deleted application ciphertext while retaining
+  ordered tombstones and active MLS control data for offline catch-up.
+  Author deletion purges that author's application frames and media access;
+  deleting a DM participant closes the room.
+- Bound media expires with its message; unbound reservations expire after one
+  day. Private-object deletion work survives FK cascades and failed R2 deletes.
+  The scheduler runs even when encrypted sending is paused. Legacy plaintext
+  DM physical-deletion policy is unchanged.
+- History backup objects expire 30 days after backup creation (or when their
+  conversation/group is deleted), independently
+  of per-message visibility. Recovery never resurrects expired entries. Identity
+  backups persist until replacement or account/profile deletion. Reset versions
+  have separate history slots so a new key does not overwrite the old retained
+  copy before recovery.
+- HTTPS, Web Crypto, IndexedDB, Web Locks and bounded-request support are
+  required. Unsupported browsers/system WebViews show an update requirement.
+  Native apps additionally require the protected-storage plugin, an explicitly
+  trusted first-party origin and device-bound wrapping. There is no native-to-web
+  key fallback. Android excludes OS backup/transfer; iOS uses
+  `WhenUnlockedThisDeviceOnly` non-synchronizable Keychain material and excludes
+  WebKit live state from OS backup.
+- Rebuild the pinned engine with `yarn openmls:build`, then use
+  `yarn build:encrypted` for an encryption-capable deployment. Missing, partial
+  or stale artifacts cannot become another crypto implementation. Ordinary
+  non-E2EE builds can omit the engine and explicitly refuse encrypted operations.
+  A deployment rollback may pause sending, not clear the transport latches.
+
 ### Milestones, effort and release gate
 
-**First milestone: time-box P1 to 5-10 working days.** Deliver an evidence-based
+**Original first milestone: time-box P1 to 5-10 working days.** Deliver an evidence-based
 go/no-go on the MLS engine and target platforms, a pinned adapter/wire-state
 contract, and an updated estimate. Use synthetic accounts, not real chats.
 iOS native qualification requires macOS build access and real-device access;
@@ -314,10 +409,9 @@ out for group and event conversations.
 
 ## Current Messages workspace
 
-The E2EE effort has an isolated [protocol feasibility lab](../prototypes/e2ee/README.md).
-It exercises encrypted DMs/groups, media and user-key history recovery without
-touching production accounts or conversations. It is not a production E2EE
-rollout; live chat remains server-readable. The lab documents the independent
+The E2EE effort retains an isolated [protocol feasibility lab](../prototypes/e2ee/README.md)
+and a real-client/API qualification harness. The disabled product integration is
+described above; no live encryption rollout has occurred. The lab documents the independent
 review and integration gates before that claim can change.
 
 The production `/messages` workspace shares transcript/composer primitives and

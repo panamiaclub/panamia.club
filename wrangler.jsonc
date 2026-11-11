@@ -96,6 +96,11 @@
       "bucket_name": "panamia-media",
       "preview_bucket_name": "panamia-media-preview",
     },
+    {
+      "binding": "CHAT_E2EE_BUCKET",
+      "bucket_name": "panamia-chat-private",
+      "preview_bucket_name": "panamia-chat-private-preview",
+    },
   ],
   // Persistent Vinext data cache for ISR and cache-tag invalidation.
   "kv_namespaces": [
@@ -192,6 +197,7 @@
   // only enforces that the *keys* match envConfig, never the values.
   // See .env.local.example.
   "vars": {
+    "CHAT_E2EE_ENABLED": "0",
     "BETTER_AUTH_URL": "https://panamia.club",
     "EMAIL_ENV": "PROD",
     "EMAIL_SENDER_ADDRESS": "hola@panamia.club",

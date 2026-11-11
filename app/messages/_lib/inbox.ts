@@ -1,5 +1,6 @@
 import type { GroupChatConversation } from '@/lib/chat';
 import type { SocialActorDisplay, SocialStatusDisplay } from '@/lib/interfaces';
+import type { EncryptedRoomList } from '@/lib/e2ee/client-contract';
 
 export interface DirectInboxEntry {
   kind: 'direct';
@@ -10,6 +11,8 @@ export interface DirectInboxEntry {
   lastMessage: SocialStatusDisplay | null;
   requestedAt?: string;
   startedAt?: string;
+  encryptedRoomId?: string;
+  encryptedUpdatedAt?: string;
 }
 
 export type InboxEntry =
@@ -42,8 +45,12 @@ export function mergeInboxEntries(
   const activity = (entry: InboxEntry) => {
     const published =
       entry.kind === 'direct'
-        ? (entry.lastMessage?.published ?? entry.requestedAt ?? entry.startedAt)
-        : entry.group.lastMessage?.published;
+        ? (entry.encryptedUpdatedAt ??
+          entry.lastMessage?.published ??
+          entry.requestedAt ??
+          entry.startedAt)
+        : (entry.group.encryptedUpdatedAt ??
+          entry.group.lastMessage?.published);
     return published ? new Date(published).getTime() : 0;
   };
   return entries.sort(
@@ -55,4 +62,32 @@ export function mergeInboxEntries(
 
 export function directMessageHref(actorId: string): string {
   return `/messages?${new URLSearchParams({ to: actorId })}`;
+}
+
+export function mergeEncryptedDirectEntries(
+  entries: DirectInboxEntry[],
+  rooms: EncryptedRoomList,
+  folder: 'inbox' | 'requests'
+) {
+  const result = new Map(entries.map((entry) => [entry.actor.id, entry]));
+  for (const room of rooms) {
+    if (room.kind !== 'dm' || !room.peer) continue;
+    if (room.folder !== folder) {
+      result.delete(room.peer.id);
+      continue;
+    }
+    const previous = result.get(room.peer.id);
+    result.set(room.peer.id, {
+      ...previous,
+      kind: 'direct',
+      actor: room.peer,
+      lastMessage: previous?.lastMessage ?? null,
+      encryptedRoomId: room.id,
+      encryptedUpdatedAt: room.updatedAt,
+      ...(folder === 'requests'
+        ? { requestedAt: previous?.requestedAt ?? room.updatedAt }
+        : {}),
+    });
+  }
+  return [...result.values()];
 }

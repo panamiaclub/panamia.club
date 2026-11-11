@@ -41,6 +41,78 @@
           }
         },
         {
+          "name": "encrypted_private_messages",
+          "label": "Encrypted Private Messages",
+          "module": "social",
+          "data": [
+            "message_ciphertext",
+            "encrypted_media_references",
+            "encrypted_welcomes",
+            "participant_and_device_ids",
+            "delivery_order",
+            "signed_membership_changes"
+          ],
+          "source": "user_action",
+          "purpose": "private_encrypted_correspondence",
+          "retention": "30_day_message_visibility_with_protocol_state_while_room_active",
+          "display": {
+            "icon": "shield",
+            "source": "You send",
+            "purpose": "Private encrypted correspondence",
+            "retention": "30-day messages; protocol state while active",
+            "sharedWith": "Authorized conversation participants",
+            "prose": "Where encrypted chat is enabled, Pana stores ciphertext and routing/device/membership metadata, not normal readable message bodies or media keys. Messages are visible for 30 days; scheduled cleanup removes expired/deleted application ciphertext and private media while retaining ordered tombstones and active protocol-control records for offline devices. Legacy messages are separate and are not retroactively encrypted.",
+            "blurb": "Encrypted message delivery and the metadata needed to route it. Participants can keep copies; encrypted chat does not hide who is communicating."
+          }
+        },
+        {
+          "name": "encrypted_chat_identity",
+          "label": "Encrypted Chat Devices",
+          "module": "social",
+          "data": [
+            "profile_public_keys",
+            "device_public_keys",
+            "signed_device_approvals",
+            "single_use_key_packages",
+            "request_nonces",
+            "device_account_associations"
+          ],
+          "source": "user_action",
+          "purpose": "authorize_encrypted_messaging_devices",
+          "retention": "account_lifetime_with_short_lived_challenges",
+          "display": {
+            "icon": "shield",
+            "source": "You enable",
+            "purpose": "Authorize encrypted messaging devices",
+            "retention": "Account lifetime; short-lived challenges",
+            "sharedWith": "Authorized conversation participants",
+            "prose": "Where the encrypted-chat beta is enabled, public profile/device keys, signed approvals and revocations, one-time public key packages, explicit visible identity-reset metadata and short-lived replay-protection metadata. No private device or recovery keys. A future-only owner reset revokes old devices and requires peer verification; it cannot decrypt old history.",
+            "blurb": "The public keys and device approvals that let your conversations recognize your devices. Signing in alone does not recover old encrypted messages."
+          }
+        },
+        {
+          "name": "encrypted_chat_recovery",
+          "label": "Encrypted Chat Recovery Backups",
+          "module": "social",
+          "data": [
+            "user_key_encrypted_identity_backups",
+            "user_key_encrypted_history_backups",
+            "backup_ownership_and_retained_media_coverage"
+          ],
+          "source": "user_action",
+          "purpose": "personal_key_chat_recovery",
+          "retention": "identity_until_replaced_or_account_deletion_history_30_days_after_backup",
+          "display": {
+            "icon": "shield",
+            "source": "You save",
+            "purpose": "Recover your retained encrypted history",
+            "retention": "Identity until replacement/deletion; history backup objects 30 days",
+            "sharedWith": "Only your account/profile receives its opaque backup",
+            "prose": "When encrypted chat is enabled, identity recovery and manually saved conversation-history backups are encrypted on your device with your personal key. Pana stores only opaque backup objects and ownership/retained-media metadata. History backup objects expire 30 days after creation, but recovery still excludes messages whose original visibility deadline passed. Identity backups remain until replaced or account/profile deletion. Live MLS ratchets, counters and send queues are not recovery data.",
+            "blurb": "Signing in alone cannot open a backup. Keep your personal key safe; messages since your last saved history backup cannot be recovered after device loss."
+          }
+        },
+        {
           "name": "profile",
           "label": "Profile",
           "module": "profiles",
@@ -645,6 +717,7 @@
             "message",
             "category",
             "safety_reason",
+            "explicitly_consented_private_message_excerpt",
             "reported_user_or_content_url",
             "screenname",
             "user_id",
@@ -655,14 +728,14 @@
           "source": "user_action",
           "purpose": "support_history",
           "retention": "indefinite",
-          "note": "Messages sent through Contact Us, bug reports, or safety reports. A safety report includes a reason and reported user or content URL, and does not accept attachments. Bug reports may include the page URL, browser and screen details, and a screenshot the sender chooses to attach. Kept indefinitely and not tied to an account: most arrive from people who are not signed in, and the app remains the record of an inquiry even after eligible inquiries have been routed to our CRM, where the working copy may be removed at any time.",
+          "note": "Messages sent through Contact Us, bug reports, or safety reports. A safety report includes a reason and reported user or content URL, and does not accept attachments. A signed-in participant can explicitly consent to share one limited encrypted-message text excerpt as an unverified quotation; no file keys, recovery keys or automatic conversation copy are accepted, and report text stays out of email. Bug reports may include the page URL, browser and screen details, and a screenshot the sender chooses to attach. Kept indefinitely and not tied to an account: most arrive from people who are not signed in, and the app remains the record of an inquiry even after eligible inquiries have been routed to our CRM, where the working copy may be removed at any time.",
           "display": {
             "icon": "mail",
             "source": "You write to us",
             "purpose": "Support history",
             "retention": "Kept indefinitely",
             "sharedWith": "Site operators; GoHighLevel for general inquiries",
-            "prose": "Contact Us inquiries, bug reports, and safety reports — your name, email address, the message you wrote, and what it was about. A safety report includes a reason and the reported user or content link, and does not accept attachments. A bug report also includes the page where it happened and basic browser, language, and screen-size details; it can include a screenshot if you choose to attach one. Retained indefinitely as the support record. General inquiries may be routed to our CRM for follow-up; bug reports and safety reports are not automatically forwarded there. A CRM copy may be removed at any time, and the record here is the one that persists.",
+            "prose": "Contact Us inquiries, bug reports, and safety reports — your name, email address, the message you wrote, and what it was about. A safety report includes a reason and reported content link, and does not accept attachments. You may explicitly choose one limited encrypted-message text excerpt to disclose to the restricted safety team; no conversation, keys or files are automatically decrypted or copied into a report. A bug report includes its page and basic browser, language, and screen-size details, and an optional screenshot. Retained indefinitely as the support record. General inquiries may be routed to our CRM; bug reports, safety reports and disclosed private excerpts are not automatically forwarded there or quoted in email.",
             "blurb": "Contact messages, bug reports, and private safety reports, kept as the lasting support record. Only bug reports accept optional screenshots and device context."
           }
         }

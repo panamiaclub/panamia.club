@@ -1,4 +1,21 @@
+import { z } from 'zod';
+
 export const OPEN_SAFETY_REPORT_EVENT = 'pana-open-safety-report';
+export const encryptedReportMessageSchema = z
+  .object({
+    profileId: z.string().min(1).max(128),
+    actorId: z.string().min(1).max(128),
+    roomId: z.uuid(),
+    eventId: z.uuid(),
+    quote: z.string().min(1).max(5000),
+  })
+  .strict();
+export const encryptedReportDisclosureSchema = encryptedReportMessageSchema
+  .extend({ consent: z.literal(true) })
+  .strict();
+export type EncryptedReportMessage = z.infer<
+  typeof encryptedReportMessageSchema
+>;
 
 export const SAFETY_REPORT_TARGETS = {
   content: 'A post, story, message, or other content',
@@ -55,6 +72,7 @@ export function safetyReportUrl(value: string, base?: string): string | null {
 export function openSafetyReport(target: {
   type: SafetyReportTargetType;
   url: string;
+  encryptedMessage?: EncryptedReportMessage;
 }): void {
   window.dispatchEvent(
     new CustomEvent(OPEN_SAFETY_REPORT_EVENT, { detail: target })

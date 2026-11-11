@@ -262,6 +262,7 @@ export function StoryComposer({ onClose, onPosted }: StoryComposerProps) {
               imageUploadEndpoint="/api/social/media"
               presignEndpoint="/api/social/media/upload"
               pathPrefix="social/stories"
+              purpose="social-post"
               disabled={posting}
               showControls={false}
               onUploadingChange={setUploading}

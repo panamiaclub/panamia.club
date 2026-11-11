@@ -63,6 +63,7 @@ const config: CapacitorConfig = {
    * app carries both surfaces and Pana Mia is the front door — DEFAULT_SURFACE
    * in lib/panaverse/surfaces.ts. */
   appName: 'Pana Mia',
+  loggingBehavior: 'none',
 
   /* Capacitor requires a local web directory even when it is serving a remote
    * URL. Nothing here is the app: it holds the offline page named by
@@ -147,6 +148,13 @@ const config: CapacitorConfig = {
   },
 
   plugins: {
+    PanaProtectedStorage: {
+      trustedOrigins: [
+        new URL(SERVER_URL).origin,
+        `https://${DEFAULT_ROOT_DOMAIN}`,
+        `https://social.${DEFAULT_ROOT_DOMAIN}`,
+      ],
+    },
     SocialLogin: {
       providers: {
         google: true,

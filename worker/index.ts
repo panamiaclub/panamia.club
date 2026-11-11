@@ -14,12 +14,16 @@ import {
 import handler from 'vinext/server/app-router-entry';
 import { runWithDb } from '../lib/db';
 import { getEmail, type SendEmail } from '../lib/email';
-import { getStorage } from '../lib/r2';
+import { getStorage, getPrivateChatStorage, type R2Bucket } from '../lib/r2';
 import { getRelay } from '../lib/relay/crosspost-client';
 import { setInternalAuthToken } from '../lib/server/internal-auth';
 import { hostnameFor, resolveSurface } from '../lib/panaverse/surfaces';
 import { assertPanaverseConfigured } from '../lib/panaverse/boot';
 import { runExpiryPurge } from '../lib/jobs/purge-expired';
+import {
+  purgeEncryptedChat,
+  ENCRYPTED_CHAT_RETENTION_JOB,
+} from '../lib/jobs/purge-encrypted-chat';
 import { beginJobRun, completeJobRun, PURGE_JOB } from '../lib/jobs/ledger';
 import { recordSyntheticRun } from '../lib/jobs/synthetic-check';
 import {
@@ -57,6 +61,7 @@ interface Env {
       options?: { range?: { offset: number; length?: number } }
     ): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
   };
+  CHAT_E2EE_BUCKET?: R2Bucket;
   // Optional: the "images" binding in wrangler.jsonc is currently commented
   // out, so this is undefined at runtime. Typed optional so the call site is
   // forced to guard rather than throwing on every image request.
@@ -109,6 +114,7 @@ export default {
     // code runs. These hold plain binding objects, which are safe to reuse.
     getEmail(env);
     getStorage(env);
+    getPrivateChatStorage(env);
     getRelay(env);
     getDmStream(env);
     // Shared secret for app/api/internal/* — the bearer fallback for a caller
@@ -228,7 +234,10 @@ export default {
         }
 
         const id = env.DM_STREAM.idFromName(profile.socialActor.id);
-        return env.DM_STREAM.get(id).fetch(request);
+        const upgrade = new Request(request);
+        upgrade.headers.set('x-pana-mailbox-user', userId);
+        upgrade.headers.set('x-pana-mailbox-profile', profile.id);
+        return env.DM_STREAM.get(id).fetch(upgrade);
       }
 
       // WebSocket signaling for WebRTC — route /ws/signaling/:roomId to Durable Object
@@ -302,6 +311,7 @@ export default {
    */
   async scheduled(event: { cron: string }, env: Env): Promise<void> {
     getStorage(env);
+    getPrivateChatStorage(env);
     getEmail(env);
 
     // Awaited rather than handed to ctx.waitUntil, and errors are rethrown.
@@ -316,6 +326,26 @@ export default {
       // broken sweep also blinds the dashboard that reports on it, which is
       // exactly when somebody is looking.
       await recordSyntheticRun(event.cron);
+      const encryptedRun = await beginJobRun(
+        ENCRYPTED_CHAT_RETENTION_JOB,
+        event.cron
+      );
+      try {
+        const report = await purgeEncryptedChat();
+        console.log('[encrypted-chat-retention]', JSON.stringify(report));
+        if (report.objectsDeferred)
+          throw new Error(
+            `${report.objectsDeferred} private object deletions need retry.`
+          );
+        await completeJobRun(encryptedRun, { ok: true, report, errorCount: 0 });
+      } catch (error) {
+        await completeJobRun(encryptedRun, {
+          ok: false,
+          report: { failed: true },
+          errorCount: 1,
+        });
+        throw error;
+      }
 
       // Consent is saved locally before HighLevel is contacted, so a provider
       // outage leaves a visible pending row rather than losing the member's

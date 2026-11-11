@@ -66,11 +66,12 @@ export { DIRECT_THREAD_REFUSED } from '@/lib/dm-refusal';
  */
 export async function evaluateDirectThreads(
   senderActorId: string,
-  recipientActorIds: string[]
+  recipientActorIds: string[],
+  database: Pick<typeof db, 'select' | 'query'> = db
 ): Promise<DirectThreadGateResult[]> {
   if (recipientActorIds.length === 0) return [];
 
-  const recipients = await db
+  const recipients = await database
     .select({
       id: socialActors.id,
       domain: socialActors.domain,
@@ -84,7 +85,7 @@ export async function evaluateDirectThreads(
   // Mutual follows, both directions, in one query. "Pana" means accepted in
   // both directions — the same definition getFollowRelationship uses, which is
   // the canonical one.
-  const followRows = await db
+  const followRows = await database
     .select({
       actorId: socialFollows.actorId,
       targetActorId: socialFollows.targetActorId,
@@ -115,7 +116,7 @@ export async function evaluateDirectThreads(
 
   // Consent already on record, in the direction that matters: the recipient
   // accepted this sender.
-  const acceptedPairs = await db
+  const acceptedPairs = await database
     .select({ recipientActorId: socialDmRequests.recipientActorId })
     .from(socialDmRequests)
     .where(
@@ -147,7 +148,7 @@ export async function evaluateDirectThreads(
       continue;
     }
 
-    if (await isBlockedEitherWay(senderActorId, recipientActorId)) {
+    if (await isBlockedEitherWay(senderActorId, recipientActorId, database)) {
       results.push({ recipientActorId, decision: 'refuse' });
       continue;
     }
@@ -331,11 +332,12 @@ export async function deleteDirectThreadRequest(
  */
 export async function recordDirectThreadRequests(
   senderActorId: string,
-  recipientActorIds: string[]
+  recipientActorIds: string[],
+  database: Pick<typeof db, 'insert'> = db
 ): Promise<void> {
   if (recipientActorIds.length === 0) return;
 
-  await db
+  await database
     .insert(socialDmRequests)
     .values(
       recipientActorIds.map((recipientActorId) => ({

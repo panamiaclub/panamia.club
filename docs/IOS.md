@@ -103,6 +103,31 @@ the corresponding iPad screenshots.
 Browser-based iOS tests cover WebKit rendering and mocked bridge behavior. They
 do not replace an Xcode build, simulator run, or real-device permission/link tests.
 
+## Encrypted-chat native release gate
+
+The app-local `PanaProtectedStorage` plugin wraps only a random 32-byte data key.
+It uses CryptoKit AES-GCM with origin/handle authentication and
+non-synchronizable `WhenUnlockedThisDeviceOnly` Keychain material; it is not
+described as a Secure Enclave AES key. Live encrypted WebKit state is excluded
+from OS backup. Missing keys or plugins must require fresh-device recovery,
+never a browser-key fallback or copied live MLS ratchets.
+
+Only the explicit `trustedOrigins` list in `capacitor.config.ts` can use the
+vault; OAuth/payment pages admitted by navigation configuration cannot.
+Notifications remain metadata-only and do not require decrypting messages on
+a locked device. History backups use the personal recovery key, not iCloud
+copies of live WebView state.
+
+The Windows implementation environment cannot compile or execute this Swift
+code. The existing Mobile Build workflow supplies simulator and unsigned
+device compilation when this branch is submitted, but a successful run is not
+assumed. Before enabling encrypted chat, record an actual macOS build plus
+supported iPhone bridge/Keychain/IndexedDB cold restart, lock/background,
+backup/migration and app/OS-upgrade results. Modern Web Crypto, Web Locks,
+IndexedDB and bounded-request support are required; older supported iOS app
+installations may need a system update for encrypted chat. They cannot silently
+send plaintext after profile/group encryption is required.
+
 ## Apple account and website setup
 
 1. Enroll the nonprofit in the standard Apple Developer Program as an organization.

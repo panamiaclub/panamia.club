@@ -97,6 +97,7 @@ import { auth } from '@/auth';
 import { getActiveProfileWithActor } from '@/lib/server/active-profile';
 import { uploadFile } from '@/lib/blob/api';
 import { isGifMediaUrl } from '@/lib/gifs/giphy';
+import { chatMediaRefusal } from '@/lib/server/chat-media-policy';
 
 /* Comfortably clears GIPHY's downsized_medium and stays under the 10 MB
    ceiling the rest of the media pipeline is built around. */
@@ -122,7 +123,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  let body: { url?: unknown; description?: unknown; creator?: unknown };
+  let body: {
+    url?: unknown;
+    description?: unknown;
+    creator?: unknown;
+    purpose?: unknown;
+    chatTarget?: unknown;
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -133,6 +140,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const source = typeof body.url === 'string' ? body.url : '';
+  const refusal = await chatMediaRefusal(
+    profile.socialActor.id,
+    body.purpose,
+    body.chatTarget
+  );
+  if (refusal)
+    return NextResponse.json(
+      { success: false, error: refusal.error },
+      { status: refusal.status }
+    );
 
   /* The allowlist check, before anything is fetched. See isGifMediaUrl --
      without it this route is an open proxy that makes requests from inside

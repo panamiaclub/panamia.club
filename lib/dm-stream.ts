@@ -13,7 +13,7 @@
  * swallowed and logged, and `notifyDirectMessage` never rejects.
  */
 
-import type { GroupChatEvent } from '@/lib/chat';
+import type { EncryptedChatEvent, GroupChatEvent } from '@/lib/chat';
 
 interface DurableObjectStubLike {
   fetch(input: string, init?: RequestInit): Promise<Response>;
@@ -107,6 +107,24 @@ export async function notifyGroupChatEvent(
   return fanoutMailboxes(
     [...new Set(actorIds)].map((actorId) => ({ actorId, payload })),
     event.groupId
+  );
+}
+
+export async function notifyEncryptedChatEvent(
+  targets: Array<{ actorId: string; authorizedUserIds: string[] }>,
+  event: Omit<EncryptedChatEvent, 'type' | 'at'>
+) {
+  const payload: EncryptedChatEvent = {
+    type: 'encrypted',
+    ...event,
+    at: Date.now(),
+  };
+  return fanoutMailboxes(
+    targets.map(({ actorId, authorizedUserIds }) => ({
+      actorId,
+      payload: { ...payload, authorizedUserIds },
+    })),
+    event.roomId
   );
 }
 

@@ -129,6 +129,9 @@ jobs:
       - name: Build debug APK
         working-directory: mobile/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: Compile protected-storage runtime probes
+        working-directory: mobile/android
+        run: ./gradlew :app:compileDebugAndroidTestJavaWithJavac --no-daemon --stacktrace
 
       # Sideloadable on any device with developer mode on. This is the fastest
       # way for someone without an Android toolchain to try a branch.

@@ -72,12 +72,17 @@
 interface MailboxState {
   setWebSocketAutoResponse(pair: WebSocketRequestResponsePair): void;
   acceptWebSocket(socket: WebSocket): void;
-  getWebSockets(): { send(message: string): void }[];
+  getWebSockets(): {
+    send(message: string): void;
+    deserializeAttachment?(): unknown;
+  }[];
 }
 
 /** Pinned to each socket at accept time, readable after a wake. */
 interface SocketMeta {
   connectedAt: number;
+  userId: string | null;
+  profileId: string | null;
 }
 
 export class DmStream {
@@ -117,7 +122,11 @@ export class DmStream {
     const pair = new WebSocketPair();
     const [client, server] = [pair[0], pair[1]];
 
-    const meta: SocketMeta = { connectedAt: Date.now() };
+    const meta: SocketMeta = {
+      connectedAt: Date.now(),
+      userId: request.headers.get('x-pana-mailbox-user'),
+      profileId: request.headers.get('x-pana-mailbox-profile'),
+    };
     server.serializeAttachment(meta);
 
     this.state.acceptWebSocket(server);
@@ -171,7 +180,27 @@ export class DmStream {
         ? value.at
         : Date.now();
     let message: string;
-    if (value.type === 'group') {
+    let authorizedUserIds: Set<string> | null = null;
+    if (value.type === 'encrypted') {
+      if (
+        typeof value.roomId !== 'string' ||
+        !value.roomId ||
+        !['message', 'membership', 'delete'].includes(String(value.kind)) ||
+        !Array.isArray(value.authorizedUserIds) ||
+        !value.authorizedUserIds.every((id) => typeof id === 'string')
+      )
+        return Response.json(
+          { delivered: 0, error: 'Invalid encrypted notification' },
+          { status: 400 }
+        );
+      authorizedUserIds = new Set(value.authorizedUserIds);
+      message = JSON.stringify({
+        type: 'encrypted',
+        roomId: value.roomId,
+        kind: value.kind,
+        at,
+      });
+    } else if (value.type === 'group') {
       if (
         typeof value.groupId !== 'string' ||
         !value.groupId ||
@@ -212,6 +241,17 @@ export class DmStream {
 
     let delivered = 0;
     for (const ws of sockets) {
+      if (authorizedUserIds) {
+        const meta = ws.deserializeAttachment?.();
+        if (
+          !meta ||
+          typeof meta !== 'object' ||
+          !('userId' in meta) ||
+          typeof meta.userId !== 'string' ||
+          !authorizedUserIds.has(meta.userId)
+        )
+          continue;
+      }
       try {
         ws.send(message);
         delivered++;

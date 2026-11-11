@@ -72,6 +72,10 @@ export function Transcript<T extends PendingChatMessage>({
   showBack = false,
   showOpenInMessages = false,
   latestMessageIds,
+  encrypted = false,
+  legacyMessages = [],
+  onReportMessage,
+  onOpenAttachment,
 }: {
   counterparty: ChatActor;
   messages: ChatMessage[];
@@ -101,6 +105,10 @@ export function Transcript<T extends PendingChatMessage>({
   showBack?: boolean;
   showOpenInMessages?: boolean;
   latestMessageIds?: ReadonlySet<string>;
+  encrypted?: boolean;
+  legacyMessages?: ChatMessage[];
+  onReportMessage?: (message: ChatMessage) => void;
+  onOpenAttachment?: (messageId: string, attachmentId: string) => void;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [atBottom, setAtBottom] = useState(true);
@@ -299,15 +307,25 @@ export function Transcript<T extends PendingChatMessage>({
             read receipts or online indicators.
           </p>
           <p className="text-pana-ink/65">
-            Attach one photo per message, up to 10 MB. Photos use hosted Pana
-            media links, not end-to-end encryption. Someone with a copied image
-            link can view it outside this conversation.
+            {encrypted
+              ? 'New messages and attachments are end-to-end encrypted on approved participant devices. Pana retains routing metadata, not the message or file keys. An unlocked or compromised device can still expose what it reads.'
+              : 'Attach one photo per message, up to 10 MB. Photos use hosted Pana media links, not end-to-end encryption. Someone with a copied image link can view it outside this conversation.'}
           </p>
           {group && (
             <p className="text-pana-ink/65">
               Only active group members can read and post here. Admins and
               moderators can remove messages. Chat messages are separate from
               group posts and are not federated.
+            </p>
+          )}
+          {encrypted && (
+            <p
+              className="border-pana-ink/8 text-pana-ink/70 flex flex-none items-center gap-2 border-b px-5 py-2 text-xs"
+              role="status"
+            >
+              <ShieldCheck className="h-4 w-4 flex-none" aria-hidden="true" />
+              End-to-end encrypted. Keep your personal recovery key safe;
+              signing in alone cannot recover these messages.
             </p>
           )}
         </div>
@@ -346,6 +364,7 @@ export function Transcript<T extends PendingChatMessage>({
           ref={historyRef}
           className={styles.history}
           role="log"
+          data-private="true"
           aria-label={`Conversation with ${name}`}
           aria-live="off"
           tabIndex={0}
@@ -363,6 +382,25 @@ export function Transcript<T extends PendingChatMessage>({
           }}
         >
           <div ref={contentRef}>
+            {!!legacyMessages.length && (
+              <details className="border-pana-ink/15 mb-5 rounded-xl border p-3 text-xs">
+                <summary className="cursor-pointer font-bold">
+                  Legacy history (not end-to-end encrypted)
+                </summary>
+                <p className="text-pana-ink/65 my-3">
+                  These older messages remain server-readable. Enabling
+                  encryption does not convert them or make their old media links
+                  private.
+                </p>
+                {legacyMessages.map((message) => (
+                  <Bubble
+                    key={message.id}
+                    message={message}
+                    mine={message.actor.id === viewerActorId}
+                  />
+                ))}
+              </details>
+            )}
             {hasOlder && onLoadOlder && (
               <div className="pb-5 text-center">
                 <button
@@ -387,33 +425,35 @@ export function Transcript<T extends PendingChatMessage>({
                 )}
               </div>
             )}
-            {messages.length === 0 && outgoing.length === 0 && (
-              <div className="flex min-h-52 flex-col items-center justify-center px-4 py-8 text-center">
-                {group ? (
-                  <Users
-                    className="text-pana-indigo mb-4 h-8 w-8"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <MessageCircle
-                    className="text-pana-indigo mb-4 h-8 w-8"
-                    aria-hidden="true"
-                  />
-                )}
-                <p className="text-pana-ink text-xl font-black tracking-tight">
-                  {isInboundRequest
-                    ? 'A request is still waiting.'
-                    : 'Say a little hello.'}
-                </p>
-                <p className="text-pana-ink/60 mt-2 max-w-64 text-xs leading-relaxed">
-                  {isInboundRequest
-                    ? 'The messages in this request have left the 30-day window. You can still accept or delete it.'
-                    : group
-                      ? 'Say hello to the group. Only members can see this chat.'
-                      : `This is the start of your conversation with ${name.split(' ')[0]}.`}
-                </p>
-              </div>
-            )}
+            {messages.length === 0 &&
+              outgoing.length === 0 &&
+              legacyMessages.length === 0 && (
+                <div className="flex min-h-52 flex-col items-center justify-center px-4 py-8 text-center">
+                  {group ? (
+                    <Users
+                      className="text-pana-indigo mb-4 h-8 w-8"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <MessageCircle
+                      className="text-pana-indigo mb-4 h-8 w-8"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <p className="text-pana-ink text-xl font-black tracking-tight">
+                    {isInboundRequest
+                      ? 'A request is still waiting.'
+                      : 'Say a little hello.'}
+                  </p>
+                  <p className="text-pana-ink/60 mt-2 max-w-64 text-xs leading-relaxed">
+                    {isInboundRequest
+                      ? 'The messages in this request have left the 30-day window. You can still accept or delete it.'
+                      : group
+                        ? 'Say hello to the group. Only members can see this chat.'
+                        : `This is the start of your conversation with ${name.split(' ')[0]}.`}
+                  </p>
+                </div>
+              )}
             {groups.map((batch, groupIndex) => {
               const mine = batch[0].actor.id === viewerActorId;
               const prior = groups[groupIndex - 1];
@@ -452,6 +492,8 @@ export function Transcript<T extends PendingChatMessage>({
                           message={message}
                           mine={mine}
                           onRemove={onRemoveMessage}
+                          onReport={onReportMessage}
+                          onOpenAttachment={onOpenAttachment}
                         />
                       ))}
                     </div>
@@ -526,10 +568,14 @@ function Bubble({
   message,
   mine,
   onRemove,
+  onReport,
+  onOpenAttachment,
 }: {
   message: ChatMessage;
   mine: boolean;
   onRemove?: (message: ChatMessage) => void;
+  onReport?: (message: ChatMessage) => void;
+  onOpenAttachment?: (messageId: string, attachmentId: string) => void;
 }) {
   const expiresIn = expiresInLabel(message.expiresAt);
   return (
@@ -538,10 +584,38 @@ function Bubble({
       mine={mine}
       content={
         message.content?.trim() ? (
-          <SafeHtml html={message.content} className="chat-bubble-body" />
+          message.encrypted ? (
+            <p className="chat-bubble-body break-words whitespace-pre-wrap">
+              {message.content}
+            </p>
+          ) : (
+            <SafeHtml html={message.content} className="chat-bubble-body" />
+          )
         ) : null
       }
       attachments={message.attachments}
+      protectedMedia={message.encryptedAttachments?.map((file) =>
+        message.attachments?.some((loaded) => loaded.id === file.id) ? null : (
+          <div key={file.id} className="my-2 text-xs">
+            <button
+              type="button"
+              className="min-h-10 rounded-lg border px-3 py-2 font-bold"
+              disabled={
+                !onOpenAttachment ||
+                message.loadingAttachments?.includes(file.id)
+              }
+              onClick={() => onOpenAttachment?.(message.id, file.id)}
+            >
+              {message.loadingAttachments?.includes(file.id)
+                ? 'Decrypting attachment...'
+                : `Open encrypted attachment: ${file.name || file.mediaType}`}
+            </button>
+            {message.attachmentErrors?.[file.id] && (
+              <p role="alert">{message.attachmentErrors[file.id]}</p>
+            )}
+          </div>
+        )
+      )}
       published={message.published}
       expiresIn={expiresIn}
       actions={
@@ -552,10 +626,12 @@ function Bubble({
               className={styles.iconButton}
               aria-label="Report message"
               onClick={() =>
-                openSafetyReport({
-                  type: 'content',
-                  url: `${window.location.href.split('#')[0]}#message-${encodeURIComponent(message.id)}`,
-                })
+                onReport
+                  ? onReport(message)
+                  : openSafetyReport({
+                      type: 'content',
+                      url: `${window.location.href.split('#')[0]}#message-${encodeURIComponent(message.id)}`,
+                    })
               }
             >
               <Flag className="h-4 w-4" aria-hidden="true" />
@@ -587,6 +663,7 @@ function MessageFrame({
   expiresIn,
   delivery = 'sent',
   actions,
+  protectedMedia,
 }: {
   id: string;
   mine: boolean;
@@ -596,6 +673,7 @@ function MessageFrame({
   expiresIn?: string | null;
   delivery?: 'sent' | 'sending' | 'failed';
   actions?: ReactNode;
+  protectedMedia?: ReactNode;
 }) {
   return (
     <div
@@ -614,6 +692,7 @@ function MessageFrame({
             <AttachmentGrid attachments={attachments} />
           </div>
         )}
+        {protectedMedia}
         <div className={styles.messageMeta}>
           <span className={styles.messageTime}>{timeLabel(published)}</span>
           {expiresIn && <ExpiryChip expiresIn={expiresIn} compact />}

@@ -19,10 +19,18 @@ export default defineConfig({
     { name: 'openmls-chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'openmls-webkit-phone', use: { ...devices['iPhone 13'] } },
   ],
-  webServer: {
-    command: 'yarn e2ee:lab',
-    url: 'http://127.0.0.1:3147',
-    reuseExistingServer: false,
-    timeout: 60_000,
-  },
+  webServer: [
+    {
+      command: 'yarn e2ee:api-lab',
+      url: 'http://127.0.0.1:3148/__e2ee/health',
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+    {
+      command: 'yarn e2ee:lab',
+      url: 'http://127.0.0.1:3147',
+      reuseExistingServer: false,
+      timeout: 60_000,
+    },
+  ],
 });

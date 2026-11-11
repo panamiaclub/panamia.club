@@ -300,9 +300,6 @@ export async function createStatus(
     };
   }
 
-  // Convert markdown to HTML
-  const htmlContent = await renderStatusMarkdown(content.trim());
-
   // Resolved above, together with the group this reply inherits from it.
   const inReplyToUri: string | undefined = parentStatus?.uri;
 
@@ -340,7 +337,10 @@ export async function createStatus(
       };
     }
     const recipientActorsRows = await db
-      .select({ uri: socialActors.uri })
+      .select({
+        uri: socialActors.uri,
+        encryptedChatRequired: socialActors.encryptedChatRequired,
+      })
       .from(socialActors)
       .where(
         sql`${socialActors.id} = ANY(ARRAY[${sql.join(
@@ -361,6 +361,12 @@ export async function createStatus(
     // the sender believes all eight people saw it. This also matches how the
     // recipient-not-found case above already behaves.
     if (gate.some((g) => g.decision === 'refuse')) {
+      return { success: false, error: DIRECT_THREAD_REFUSED };
+    }
+    if (
+      actor.encryptedChatRequired ||
+      recipientActorsRows.some((recipient) => recipient.encryptedChatRequired)
+    ) {
       return { success: false, error: DIRECT_THREAD_REFUSED };
     }
 
@@ -398,6 +404,8 @@ export async function createStatus(
       }
     }
   }
+
+  const htmlContent = await renderStatusMarkdown(content.trim());
 
   /**
    * Generate the id before inserting so the row is never written with a

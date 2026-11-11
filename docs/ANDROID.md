@@ -3,6 +3,43 @@
 The Android app is a Capacitor shell for `https://panamia.club`. Its permanent
 Google Play package name is `social.pana.app`.
 
+## Encrypted-chat protected-storage qualification
+
+The new protected-storage plugin wraps only a random 32-byte local data key
+with a non-exportable Android Keystore key. MLS snapshots stay encrypted in
+IndexedDB, not in bridge arguments. Only explicitly configured first-party
+origins can call it; broad OAuth/payment navigation does not grant vault
+access. Missing native keys/plugins never fall back to browser key storage.
+Android OS backup and device transfer exclude live app/WebView state.
+The deployment encryption flag remains off until the separate release gates.
+
+`PanaProtectedStorageInstrumentedTest` exercises the real Keystore, origin-bound
+authenticated encryption, missing-key refusal and a split process restart.
+Run it on an authorized test device/emulator, never an arbitrary attached phone.
+`-Pe2eeQualification` produces the separate
+`social.pana.app.e2eequalification` application ID, so it does not overwrite
+someone's installed Pana app:
+
+```powershell
+& .\mobile\android\gradlew.bat -p .\mobile\android :app:assembleDebug :app:assembleDebugAndroidTest -Pe2eeQualification --no-daemon
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+# Set this to the authorized test device/emulator's explicit adb serial.
+$serial = 'emulator-5586'
+& $adb -s $serial install -r .\mobile\android\app\build\outputs\apk\debug\app-debug.apk
+& $adb -s $serial install -r .\mobile\android\app\build\outputs\apk\androidTest\debug\app-debug-androidTest.apk
+& $adb -s $serial shell am instrument -w -e class 'social.pana.app.PanaProtectedStorageInstrumentedTest#keyIsNonExportableOriginBoundAndExcludedFromBackup' social.pana.app.e2eequalification.test/androidx.test.runner.AndroidJUnitRunner
+& $adb -s $serial shell am instrument -w -e class 'social.pana.app.PanaProtectedStorageInstrumentedTest#missingKeyCannotBeSilentlyRegenerated' social.pana.app.e2eequalification.test/androidx.test.runner.AndroidJUnitRunner
+& $adb -s $serial shell am instrument -w -e class 'social.pana.app.PanaProtectedStorageInstrumentedTest#createColdStartCheckpoint' social.pana.app.e2eequalification.test/androidx.test.runner.AndroidJUnitRunner
+& $adb -s $serial shell am force-stop social.pana.app.e2eequalification
+& $adb -s $serial shell am instrument -w -e class 'social.pana.app.PanaProtectedStorageInstrumentedTest#openColdStartCheckpoint' social.pana.app.e2eequalification.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+The Windows qualification run used an isolated API-36 emulator and passed
+all four invocations. This is not a hardware-backed-key claim or complete
+Capacitor WebView qualification. Physical-device bridge calls, foreground/
+background/lock behavior, cold IndexedDB restart, storage pressure and OS/app
+upgrade still gate activation. Browser/phone-WebKit checks do not replace them.
+
 ## Test on a physical Android phone
 
 The JDK and Android SDK are the only computer-side prerequisites. Android

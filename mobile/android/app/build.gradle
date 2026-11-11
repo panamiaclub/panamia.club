@@ -17,6 +17,9 @@ if (hasReleaseSigning) {
 }
 
 android {
+    buildFeatures {
+        buildConfig true
+    }
     namespace = "social.pana.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
@@ -43,6 +46,11 @@ android {
         }
     }
     buildTypes {
+        debug {
+            if (providers.gradleProperty("e2eeQualification").isPresent()) {
+                applicationIdSuffix ".e2eequalification"
+            }
+        }
         release {
             if (hasReleaseSigning) {
                 signingConfig signingConfigs.release

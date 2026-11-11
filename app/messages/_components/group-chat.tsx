@@ -29,6 +29,9 @@ import {
 } from '@/lib/chat';
 import { Composer } from './composer';
 import { Transcript } from './transcript';
+import { EncryptedConversation } from './encrypted-conversation';
+import type { EncryptionConnection } from '../_lib/encryption';
+import { usePrivateDraftUrls } from '../_lib/private-drafts';
 import {
   mergeGroupChatPages,
   useDeleteGroupChatMessage,
@@ -50,6 +53,7 @@ export function useGroupChatState(
   onAnnounce?: (message: string) => void
 ) {
   const [drafts, setDrafts] = useState<Record<string, MessageDraft>>({});
+  usePrivateDraftUrls(drafts);
   const [outgoing, setOutgoing] = useState<GroupChatOutgoing[]>([]);
   const [sending, setSending] = useState<Set<string>>(new Set());
   const [announcement, setAnnouncement] = useState('');
@@ -211,6 +215,7 @@ export function GroupConversation({
   conversationRef,
   enabled = true,
   standalone = false,
+  encryption,
 }: {
   handle: string;
   viewerActorId: string | null;
@@ -221,6 +226,7 @@ export function GroupConversation({
   conversationRef: RefObject<HTMLElement | null>;
   enabled?: boolean;
   standalone?: boolean;
+  encryption: EncryptionConnection;
 }) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const deleteTriggerRef = useRef<HTMLElement | null>(null);
@@ -239,6 +245,8 @@ export function GroupConversation({
   const [deletionError, setDeletionError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const deletion = useDeleteGroupChatMessage();
+  const [enableEncrypted, setEnableEncrypted] = useState(false);
+  const [confirmEncryption, setConfirmEncryption] = useState(false);
 
   useEffect(() => {
     if (enabled && page && !unavailable && !mismatch)
@@ -275,6 +283,28 @@ export function GroupConversation({
     state.outgoing.filter((message) => message.handle === handle),
     messages
   );
+  if (room.encryptionRequired || enableEncrypted)
+    return (
+      <EncryptedConversation
+        key={`encrypted-${handle}`}
+        connection={encryption}
+        viewerActorId={viewerActorId ?? page.viewerActorId}
+        counterparty={{
+          id: room.actorId,
+          username: room.handle,
+          name: room.name,
+          iconUrl: room.iconUrl,
+          domain: page.localDomain,
+        }}
+        group={room}
+        legacyMessages={messages}
+        draft={draft}
+        onChange={(patch) => state.changeDraft(handle, patch)}
+        detailOpen={detailOpen}
+        onBack={onBack}
+        standalone={standalone}
+      />
+    );
   const remove = async () => {
     if (!selected || deletion.isPending) return;
     setDeletionError(null);
@@ -291,6 +321,17 @@ export function GroupConversation({
 
   return (
     <>
+      {encryption.context?.enabled &&
+        encryption.context.required &&
+        room.role === 'admin' && (
+          <button
+            type="button"
+            className="text-pana-indigo min-h-10 border-b px-4 py-2 text-xs font-bold"
+            onClick={() => setConfirmEncryption(true)}
+          >
+            Enable encrypted group chat
+          </button>
+        )}
       <Transcript
         key={handle}
         counterparty={{
@@ -350,6 +391,7 @@ export function GroupConversation({
         onSend={() => state.send(room)}
         isSending={state.sending.has(handle)}
         inputRef={inputRef}
+        legacyTarget={{ kind: 'group', groupId: room.id }}
       />
       <span className="sr-only" role="status">
         {announcement}
@@ -395,6 +437,30 @@ export function GroupConversation({
               }}
             >
               {deletion.isPending ? 'Removing...' : 'Remove message'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={confirmEncryption} onOpenChange={setConfirmEncryption}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Require encrypted group chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Future chat messages and files will require approved encrypted
+              devices for every member. New members and newly approved devices
+              receive future messages only. Legacy history stays
+              server-readable. This chat cannot be switched back to plaintext.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmEncryption(false);
+                setEnableEncrypted(true);
+              }}
+            >
+              Require encryption for new chat
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

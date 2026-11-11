@@ -16,6 +16,8 @@ import {
 } from './group-chat';
 import { useGroupChatThread } from '../_lib/group-chat-query';
 import { useDmSocket } from '../_lib/use-dm-socket';
+import { useEncryptionScope } from '../_lib/encryption';
+import { EncryptionSettings } from './encryption-controls';
 
 export function GroupChatPage({ handle }: { handle: string }) {
   const { data: session, status } = useSession();
@@ -79,6 +81,7 @@ function GroupChatOwner({
   const conversationRef = useRef<HTMLElement>(null);
   const state = useGroupChatState(viewerActorId);
   const thread = useGroupChatThread(handle, !!viewerActorId);
+  const encryption = useEncryptionScope(viewerActorId);
   useDmSocket(!!viewerActorId);
   const back = useCallback(
     () => router.push(`/g/${encodeURIComponent(handle)}`),
@@ -90,6 +93,9 @@ function GroupChatOwner({
       <h1 className="sr-only">
         {thread.data?.pages[0]?.group.name ?? 'Group chat'}
       </h1>
+      <div className="mb-2 flex justify-end">
+        <EncryptionSettings connection={encryption} />
+      </div>
       <div
         className={`profile-card ${styles.workspace}`}
         data-single-room="true"
@@ -110,6 +116,7 @@ function GroupChatOwner({
               onBack={back}
               conversationRef={conversationRef}
               standalone
+              encryption={encryption}
             />
           ) : (
             <>

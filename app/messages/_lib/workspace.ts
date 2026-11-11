@@ -11,6 +11,7 @@ export interface MessageDraft {
   photoFile: File | null;
   isUploadingPhoto: boolean;
   photoError: string | null;
+  privateFiles?: { photo?: File; gif?: File };
 }
 
 export const EMPTY_MESSAGE_DRAFT: MessageDraft = {
