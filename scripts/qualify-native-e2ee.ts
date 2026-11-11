@@ -34,11 +34,11 @@ const adb = path.join(
   process.platform === 'win32' ? 'adb.exe' : 'adb'
 );
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-function command(program: string, args: string[]) {
+function command(program: string, args: string[], timeout = 60_000) {
   return execFileSync(program, args, {
     cwd: root,
     encoding: 'utf8',
-    timeout: 60_000,
+    timeout,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 }
@@ -46,7 +46,11 @@ function android(...args: string[]) {
   return command(adb, ['-s', deviceId, ...args]);
 }
 function ios(...args: string[]) {
-  return command('xcrun', ['simctl', ...args]);
+  return command(
+    'xcrun',
+    ['simctl', ...args],
+    args[0] === 'launch' ? 180_000 : 60_000
+  );
 }
 function validateDevice() {
   if (platform === 'android') {
@@ -156,6 +160,7 @@ async function ready() {
   );
 }
 async function phase(name: 'create' | 'resume' | 'foreground') {
+  console.log(`Waiting for actual ${platform}/${name} bridge result.`);
   const until = Date.now() + 120_000;
   while (Date.now() < until) {
     healthy();
