@@ -44,6 +44,7 @@ on:
       - 'scripts/ios-bundle.ts'
       - 'scripts/ios-sideload.ts'
       - 'tests-unit/ios-release.test.ts'
+      - 'tests-unit/ios-age-assurance.test.ts'
       - 'tests-unit/ios-sideload.test.ts'
       - 'tests-unit/mobile-viewport.test.ts'
       - 'package.json'
@@ -61,6 +62,7 @@ on:
       - 'scripts/ios-bundle.ts'
       - 'scripts/ios-sideload.ts'
       - 'tests-unit/ios-release.test.ts'
+      - 'tests-unit/ios-age-assurance.test.ts'
       - 'tests-unit/ios-sideload.test.ts'
       - 'tests-unit/mobile-viewport.test.ts'
       - 'package.json'
@@ -175,7 +177,15 @@ jobs:
           tests-unit/story-camera.test.ts
           tests-unit/mobile-viewport.test.ts
           tests-unit/ios-release.test.ts
+          tests-unit/ios-age-assurance.test.ts
           tests-unit/ios-sideload.test.ts
+
+      - name: Verify the age-assurance SDK
+        run: |
+          xcodebuild -version
+          IOS_SDK_VERSION="$(xcrun --sdk iphoneos --show-sdk-version)" \
+            node --import tsx --input-type=module -e \
+            'import { assertIosAgeAssuranceSdk } from "./scripts/ios-bundle.ts"; assertIosAgeAssuranceSdk(process.env.IOS_SDK_VERSION)'
 
       # Capacitor 8 uses Swift Package Manager rather than CocoaPods, so there
       # is no `pod install` here and no Podfile in the repo. Dependencies
@@ -239,6 +249,41 @@ jobs:
             python3 -c 'import json, sys; assert json.load(sys.stdin) == [1], "Simulator must target iPhone only."'
           echo "Built $APP ($(du -sh "$APP" | cut -f1))"
 
+      - name: Test native age decisions and launch gating
+        working-directory: mobile/ios/App
+        run: |
+          SIMULATOR="$(
+            xcrun simctl list devices available --json |
+              python3 -c '
+          import json, re, sys
+          devices = json.load(sys.stdin)["devices"]
+          candidates = []
+          for runtime, entries in devices.items():
+              match = re.search(r"\.iOS-(\d+)-(\d+)", runtime)
+              if not match:
+                  continue
+              version = tuple(map(int, match.groups()))
+              if version < (26, 5):
+                  continue
+              for entry in entries:
+                  if entry.get("isAvailable") and entry["name"].startswith("iPhone"):
+                      candidates.append((version, entry["udid"]))
+          if not candidates:
+              raise SystemExit("Install an iOS 26.5 or newer iPhone simulator for native age tests.")
+          print(sorted(candidates, reverse=True)[0][1])
+          '
+          )"
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR" \
+            -derivedDataPath build \
+            -resultBundlePath build/AgeAssuranceTests.xcresult \
+            -quiet \
+            CODE_SIGNING_ALLOWED=NO \
+            test
+
       - name: Verify unsigned device release archive
         working-directory: mobile/ios/App
         run: |
@@ -259,6 +304,9 @@ jobs:
           APP="build/PanaMia.xcarchive/Products/Applications/App.app"
           test -d "$APP"
           test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist")" = social.pana.app
+          otool -l "$APP/App" |
+            node --import tsx --input-type=module -e \
+            'import { readFileSync } from "node:fs"; import { assertIosAgeFrameworkIsWeak } from "../../../scripts/ios-bundle.ts"; assertIosAgeFrameworkIsWeak(readFileSync(0, "utf8"))'
           plutil -extract UIDeviceFamily json -o - "$APP/Info.plist" |
             python3 -c 'import json, sys; assert json.load(sys.stdin) == [1], "Release archive must target iPhone only."'
           find "$APP" -name PrivacyInfo.xcprivacy -print > build/privacy-manifests.txt
@@ -310,5 +358,6 @@ jobs:
           path: |
             mobile/ios/App/build/Logs/**
             mobile/ios/App/build/native-e2ee-runtime.log
+            mobile/ios/App/build/AgeAssuranceTests.xcresult/**
           retention-days: 7
           if-no-files-found: ignore

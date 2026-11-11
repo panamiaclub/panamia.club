@@ -7,6 +7,7 @@ import {
   policyVersion,
   policyStatus,
   policyEffectiveDate,
+  nativeAgeAssurance,
 } from '@/lib/legal/privacy-policy';
 
 // Live web origin for this app — not a stale federation value to "correct".
@@ -66,11 +67,11 @@ export default function PrivacyPolicyPage() {
       </header>
 
       <p className="mb-8">
-        This policy applies to the Pana Mia Android app (social.pana.app) and
-        the services at panamia.club operated by Pana MIA Club, Corp. The app
-        loads our online services, so this policy covers those services as well
-        as native sign-in and the device permissions used by features you
-        choose.
+        This policy applies to the Pana Mia Android and iPhone apps
+        (social.pana.app) and the services at panamia.club operated by Pana MIA
+        Club, Corp. The app loads our online services, so this policy covers
+        those services as well as native sign-in and the device permissions used
+        by features you choose.
       </p>
 
       {/* Privacy at a Glance — scannable grid (Layer 1) */}
@@ -431,6 +432,15 @@ export default function PrivacyPolicyPage() {
             obligations. Contact us about a suspected minor&apos;s account. Our{' '}
             <Link href="/legal/terms#child-safety">child-safety standards</Link>{' '}
             apply to everyone using the service.
+          </p>
+          <p>
+            iPhone releases with native age-assurance support request an age
+            range from Apple, where required, before opening Pana Mia. The check
+            stays on the device: we do not send the range, your birth date,
+            identity documents, or Apple's verification method to our website or
+            analytics. A required check that cannot confirm an age of at least{' '}
+            {nativeAgeAssurance.minimumAge} prevents the native app from
+            opening; it does not automatically delete a Pana Mia account.
           </p>
         </section>
 

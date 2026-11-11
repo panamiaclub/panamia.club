@@ -33,6 +33,8 @@
 -->
 <plist version="1.0">
 <dict>
+	<key>com.apple.developer.declared-age-range</key>
+	<true/>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:panamia.club</string>

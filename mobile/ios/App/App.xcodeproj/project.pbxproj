@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A6E000000000000000000001 /* AgeAssurancePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6E000000000000000000010 /* AgeAssurancePolicy.swift */; };
+		A6E000000000000000000002 /* AgeAssuranceViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6E000000000000000000011 /* AgeAssuranceViewController.swift */; };
+		A6E000000000000000000003 /* DeclaredAgeRange.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A6E000000000000000000012 /* DeclaredAgeRange.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		A6E000000000000000000004 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = A6E000000000000000000050 /* Localizable.strings */; };
+		A6E000000000000000000005 /* AgeAssuranceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6E000000000000000000015 /* AgeAssuranceTests.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
@@ -18,7 +23,24 @@
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		A6E000000000000000000065 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 504EC3031FED79650016851F;
+			remoteInfo = App;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		A6E000000000000000000010 /* AgeAssurancePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgeAssurancePolicy.swift; sourceTree = "<group>"; };
+		A6E000000000000000000011 /* AgeAssuranceViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgeAssuranceViewController.swift; sourceTree = "<group>"; };
+		A6E000000000000000000012 /* DeclaredAgeRange.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeclaredAgeRange.framework; path = System/Library/Frameworks/DeclaredAgeRange.framework; sourceTree = SDKROOT; };
+		A6E000000000000000000013 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		A6E000000000000000000014 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
+		A6E000000000000000000015 /* AgeAssuranceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgeAssuranceTests.swift; sourceTree = "<group>"; };
+		A6E000000000000000000016 /* AppAgeAssuranceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AppAgeAssuranceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -37,8 +59,15 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A6E000000000000000000003 /* DeclaredAgeRange.framework in Frameworks */,
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A6E000000000000000000062 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -49,6 +78,8 @@
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
+				A6E000000000000000000040 /* AppAgeAssuranceTests */,
+				A6E000000000000000000012 /* DeclaredAgeRange.framework */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -57,6 +88,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				A6E000000000000000000016 /* AppAgeAssuranceTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -64,6 +96,9 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				A6E000000000000000000010 /* AgeAssurancePolicy.swift */,
+				A6E000000000000000000011 /* AgeAssuranceViewController.swift */,
+				A6E000000000000000000050 /* Localizable.strings */,
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
@@ -77,9 +112,30 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		A6E000000000000000000040 /* AppAgeAssuranceTests */ = {
+			isa = PBXGroup;
+			children = (A6E000000000000000000015 /* AgeAssuranceTests.swift */, );
+			path = AppAgeAssuranceTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A6E000000000000000000060 /* AppAgeAssuranceTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A6E000000000000000000070 /* Build configuration list for PBXNativeTarget "AppAgeAssuranceTests" */;
+			buildPhases = (
+				A6E000000000000000000061 /* Sources */,
+				A6E000000000000000000062 /* Frameworks */,
+				A6E000000000000000000063 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = (A6E000000000000000000064 /* PBXTargetDependency */, );
+			name = AppAgeAssuranceTests;
+			productName = AppAgeAssuranceTests;
+			productReference = A6E000000000000000000016 /* AppAgeAssuranceTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		504EC3031FED79650016851F /* App */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
@@ -109,6 +165,10 @@
 				LastSwiftUpdateCheck = 0920;
 				LastUpgradeCheck = 0920;
 				TargetAttributes = {
+					A6E000000000000000000060 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 504EC3031FED79650016851F;
+					};
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
 						LastSwiftMigration = 1100;
@@ -123,6 +183,7 @@
 			knownRegions = (
 				en,
 				Base,
+				es,
 			);
 			mainGroup = 504EC2FB1FED79650016851F;
 			packageReferences = (
@@ -133,6 +194,7 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				A6E000000000000000000060 /* AppAgeAssuranceTests */,
 			);
 		};
 /* End PBXProject section */
@@ -142,6 +204,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A6E000000000000000000004 /* Localizable.strings in Resources */,
 				504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */,
 				50B271D11FEDC1A000F3C39B /* public in Resources */,
 				504EC30F1FED79650016851F /* Assets.xcassets in Resources */,
@@ -151,6 +214,12 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A6E000000000000000000063 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -158,14 +227,39 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A6E000000000000000000001 /* AgeAssurancePolicy.swift in Sources */,
+				A6E000000000000000000002 /* AgeAssuranceViewController.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A6E000000000000000000061 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (A6E000000000000000000005 /* AgeAssuranceTests.swift in Sources */, );
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		A6E000000000000000000064 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 504EC3031FED79650016851F /* App */;
+			targetProxy = A6E000000000000000000065 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin PBXVariantGroup section */
+		A6E000000000000000000050 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A6E000000000000000000013 /* en */,
+				A6E000000000000000000014 /* es */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -185,6 +279,36 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		A6E000000000000000000071 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks", );
+				PRODUCT_BUNDLE_IDENTIFIER = social.pana.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/App";
+			};
+			name = Debug;
+		};
+		A6E000000000000000000072 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks", );
+				PRODUCT_BUNDLE_IDENTIFIER = social.pana.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/App";
+			};
+			name = Release;
+		};
 		504EC3141FED79650016851F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
@@ -343,6 +467,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A6E000000000000000000070 /* Build configuration list for PBXNativeTarget "AppAgeAssuranceTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A6E000000000000000000071 /* Debug */,
+				A6E000000000000000000072 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		504EC2FF1FED79650016851F /* Build configuration list for PBXProject "App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
