@@ -8,13 +8,16 @@ on:
       - 'lib/server/encryption-*.ts'
       - 'lib/server/chat-media-policy.ts'
       - 'lib/server/chat-write-errors.ts'
+      - 'lib/server/active-profile.ts'
+      - 'lib/server/profile-owners.ts'
+      - 'lib/federation/wrappers/group*.ts'
       - 'lib/jobs/purge-encrypted-chat.ts'
       - 'lib/schema/index.ts'
       - 'lib/chat.ts'
       - 'lib/dm-stream.ts'
       - 'app/api/social/encryption/**'
       - 'app/api/social/statuses/**'
-      - 'app/api/social/groups/**/chat/**'
+      - 'app/api/social/groups/**'
       - 'app/api/social/media/**'
       - 'app/api/social/gifs/mirror/**'
       - 'app/messages/**'
@@ -24,14 +27,21 @@ on:
       - 'drizzle/008[0-3]_chat_e2ee_*.sql'
       - 'scripts/vite-encryption.ts'
       - 'scripts/qualify-native-e2ee.ts'
+      - 'scripts/e2ee-staging*.ts'
       - 'crypto/openmls/**'
       - 'scripts/openmls.ts'
       - 'tests-openmls/**'
       - 'prototypes/e2ee/**'
       - 'tests-e2ee/**'
+      - 'tests-staging/**'
       - 'tests-unit/e2ee-*.test.ts'
       - 'vite.e2ee.config.ts'
       - 'playwright.e2ee.config.ts'
+      - 'playwright.encrypted-staging.config.ts'
+      - 'worker/index.ts'
+      - 'worker/dm-stream.ts'
+      - 'auth.ts'
+      - 'wrangler.jsonc'
       - 'package.json'
       - 'yarn.lock'
       - '.github/workflows/encryption-prototype.yml'
@@ -42,13 +52,16 @@ on:
       - 'lib/server/encryption-*.ts'
       - 'lib/server/chat-media-policy.ts'
       - 'lib/server/chat-write-errors.ts'
+      - 'lib/server/active-profile.ts'
+      - 'lib/server/profile-owners.ts'
+      - 'lib/federation/wrappers/group*.ts'
       - 'lib/jobs/purge-encrypted-chat.ts'
       - 'lib/schema/index.ts'
       - 'lib/chat.ts'
       - 'lib/dm-stream.ts'
       - 'app/api/social/encryption/**'
       - 'app/api/social/statuses/**'
-      - 'app/api/social/groups/**/chat/**'
+      - 'app/api/social/groups/**'
       - 'app/api/social/media/**'
       - 'app/api/social/gifs/mirror/**'
       - 'app/messages/**'
@@ -58,20 +71,31 @@ on:
       - 'drizzle/008[0-3]_chat_e2ee_*.sql'
       - 'scripts/vite-encryption.ts'
       - 'scripts/qualify-native-e2ee.ts'
+      - 'scripts/e2ee-staging*.ts'
       - 'crypto/openmls/**'
       - 'scripts/openmls.ts'
       - 'tests-openmls/**'
       - 'prototypes/e2ee/**'
       - 'tests-e2ee/**'
+      - 'tests-staging/**'
       - 'tests-unit/e2ee-*.test.ts'
       - 'vite.e2ee.config.ts'
       - 'playwright.e2ee.config.ts'
+      - 'playwright.encrypted-staging.config.ts'
+      - 'worker/index.ts'
+      - 'worker/dm-stream.ts'
+      - 'auth.ts'
+      - 'wrangler.jsonc'
       - 'package.json'
       - 'yarn.lock'
       - '.github/workflows/encryption-prototype.yml'
 
 permissions:
   contents: read
+
+concurrency:
+  group: encrypted-chat-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   prototype:
@@ -109,3 +133,45 @@ jobs:
       - run: yarn test:e2ee:browser
       - name: Verify the encryption-capable application build
         run: yarn build:encrypted
+      - name: Share only the qualified static engine with the isolated pilot
+        uses: actions/upload-artifact@v7
+        with:
+          name: qualified-openmls-engine
+          path: crypto/openmls/pkg/
+          retention-days: 7
+
+  worker-pilot:
+    needs: prototype
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: yarn
+      - run: yarn install --immutable
+      - uses: actions/download-artifact@v8
+        with:
+          name: qualified-openmls-engine
+          path: crypto/openmls/pkg/
+      - run: yarn playwright install --with-deps chromium
+      - name: Require runner-local PostgreSQL 16 binaries
+        run: test -x /usr/lib/postgresql/16/bin/initdb
+      - name: Prepare a private, disposable full-application pilot
+        run: |
+          node --import tsx scripts/e2ee-staging.ts setup \
+            --directory "$RUNNER_TEMP/e2ee-staging-$GITHUB_RUN_ID" \
+            --postgres-bin /usr/lib/postgresql/16/bin
+      - name: Verify real sessions, PostgreSQL, ciphertext and private media
+        run: |
+          node --import tsx scripts/e2ee-staging.ts check \
+            --directory "$RUNNER_TEMP/e2ee-staging-$GITHUB_RUN_ID"
+      - name: Upload metadata only, never sessions, keys, traces or private state
+        uses: actions/upload-artifact@v7
+        with:
+          name: isolated-encrypted-pilot-metadata
+          path: ${{ runner.temp }}/e2ee-staging-${{ github.run_id }}/pilot-results.json
+          retention-days: 7
+          if-no-files-found: error

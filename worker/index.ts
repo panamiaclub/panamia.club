@@ -32,7 +32,11 @@ import {
 } from '../lib/jobs/listing-refresh';
 import { getDmStream } from '../lib/dm-stream';
 import { resolveUserIdFromHeaders } from '../auth';
-import { getActiveProfileWithActor } from '../lib/server/active-profile';
+import { NextRequest } from 'next/server';
+import {
+  ACTIVE_PROFILE_COOKIE,
+  getActiveProfileWithActor,
+} from '../lib/server/active-profile';
 import { PATHNAME_HEADER, SEARCH_HEADER } from '../lib/panaverse/chrome';
 import { retryPendingSmsSubscriptions } from '../lib/sms-subscriptions';
 import {
@@ -224,7 +228,13 @@ export default {
           return new Response('Unauthorized', { status: 401 });
         }
 
-        const profile = await getActiveProfileWithActor(userId);
+        const selectedProfileId =
+          new NextRequest(request).cookies.get(ACTIVE_PROFILE_COOKIE)?.value ??
+          null;
+        const profile = await getActiveProfileWithActor(
+          userId,
+          selectedProfileId
+        );
         if (!profile?.socialActor) {
           // Signed in but onboarding is incomplete, so there is no mailbox to
           // open. 403 rather than 401: retrying with credentials will not help.

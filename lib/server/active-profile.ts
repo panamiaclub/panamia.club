@@ -45,13 +45,18 @@ export function selectActiveProfile(
  *
  * Order: validated cookie selection, else their own profile.
  * Returns null only when the user has no profile at all.
+ * Raw Worker entry points pass a cookie value (or null) before a framework
+ * request context exists; that selection receives the same ownership check.
  */
 export async function getActiveProfileId(
   userId: string,
-  database: ProfileReader = db
+  database: ProfileReader = db,
+  selectedProfileId?: string | null
 ): Promise<string | null> {
-  const store = await cookies();
-  const selected = store.get(ACTIVE_PROFILE_COOKIE)?.value;
+  const selected =
+    selectedProfileId === undefined
+      ? (await cookies()).get(ACTIVE_PROFILE_COOKIE)?.value
+      : selectedProfileId;
 
   if (selected && (await canAdministerProfile(userId, selected, database))) {
     return selected;
@@ -120,8 +125,11 @@ export async function getEditableProfile(
  * whoever the user is acting as, so a status created while switched to a
  * business listing is authored by the business's actor, not the person's.
  */
-export async function getActiveProfileWithActor(userId: string) {
-  const id = await getActiveProfileId(userId);
+export async function getActiveProfileWithActor(
+  userId: string,
+  selectedProfileId?: string | null
+) {
+  const id = await getActiveProfileId(userId, db, selectedProfileId);
   if (!id) return null;
 
   const loadProfile = () =>

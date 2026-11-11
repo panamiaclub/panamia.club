@@ -339,6 +339,60 @@ No report attachment or file/recovery-key disclosure is introduced.
   non-E2EE builds can omit the engine and explicitly refuse encrypted operations.
   A deployment rollback may pause sending, not clear the transport latches.
 
+### Isolated full-application pilot
+
+`yarn e2ee:staging` runs the built application, actual Better Auth magic-link
+sessions, a fresh PostgreSQL 16 cluster and local-only private R2/DO/KV bindings.
+It is **local staging, not a hosted/public beta**. Production remains disabled;
+production database credentials, Cloudflare accounts and email delivery are not
+needed. Use synthetic data only.
+
+Build the pinned engine as documented in `crypto/openmls/README.md` and supply
+an installed PostgreSQL 16 binary directory. A Windows example is:
+
+```powershell
+$pilot = Join-Path $env:TEMP 'e2ee-staging-196'
+yarn e2ee:staging setup --directory $pilot --postgres-bin 'C:\tools\pgsql\bin'
+yarn e2ee:staging check --directory $pilot
+yarn e2ee:staging serve --directory $pilot
+```
+
+`setup` refuses an existing output directory and snapshots the current source
+outside the worktree. Only the snapshot receives a generated allowlisted Worker
+config with encryption enabled. It reuses installed dependencies/qualified WASM
+and references the protected upstream checkout without inspecting or copying it;
+normal build output, `wrangler.jsonc`, `.env.local` and `.dev.vars` are untouched.
+Subprocesses receive generated auth/database credentials and a separate config
+home, not inherited production/provider secrets. The database is loopback-only,
+uses a fresh non-default port and must prove its per-run ownership marker before
+seeding, reset or login. Schema replay follows the migration journal and records
+the applied hashes. No shared cluster or production migration command is used.
+
+`check` resets only the labelled `check-*` synthetic accounts; manual `demo-*`
+accounts are separate. It blocks non-local browser HTTP/WebSocket requests,
+disables traces/screenshots/video and closes its own Worker/database processes.
+`pilot-results.json` contains metadata, not message bodies or keys. The private
+`pilot.json`, generated config, browser failure context and database/object
+directories must never be committed, published or uploaded as CI artifacts.
+The CI job publishes only the metadata report, not this private directory. Each
+check removes the previous report first; a failed check cannot leave a stale
+success report.
+
+`serve` starts the same isolated resources for manual checks; stop it with
+Ctrl+C. In another terminal, generate a five-minute, single-use synthetic login:
+
+```powershell
+yarn e2ee:staging login --directory $pilot --account demo-alice
+yarn e2ee:staging login --directory $pilot --account demo-bob
+```
+
+Open these in separate browser profiles, not tabs sharing a cookie jar.
+Enrollment and local recovery-key handling use the normal UI. Never use the
+production-oriented seed/sign-in scripts or a remote-database override to make
+this pilot work. Source changes require a fresh `setup` directory so the tested
+snapshot and schema remain explicit. A local sample is not a production
+throughput/billing estimate, physical-device proof or independent review.
+
 ### Milestones, effort and release gate
 
 **Original first milestone: time-box P1 to 5-10 working days.** Deliver an evidence-based
@@ -347,9 +401,10 @@ contract, and an updated estimate. Use synthetic accounts, not real chats.
 iOS native qualification requires macOS build access and real-device access;
 desktop WebKit emulation is not a substitute.
 
-Next, integrate P2-P4 into a disabled-by-default staging path with test accounts.
-Then complete media, recovery and product UX before an opt-in beta. Migration
-or activation of real conversations is a separate release action.
+The disabled-by-default implementation now includes media, recovery and the
+existing Messages/group UI. Qualify its isolated application pilot before an
+opt-in beta. Migration or activation of real conversations is a separate release
+action.
 
 A preliminary planning allowance is **12-20 engineer-weeks** for the complete
 Pana-owned path, assuming an experienced engineer, native-device access and

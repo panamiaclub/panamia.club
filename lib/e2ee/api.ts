@@ -25,10 +25,14 @@ const responseSchema = z.object({
   error: z.string().optional(),
 });
 export class EncryptedApi {
+  private readonly transport: typeof fetch;
+
   constructor(
     readonly scope: VaultScope,
-    private readonly transport: typeof fetch = fetch
-  ) {}
+    transport: typeof fetch = globalThis.fetch
+  ) {
+    this.transport = transport.bind(globalThis);
+  }
   private url(path: string, query: Record<string, string> = {}) {
     const url = new URL(
       path,

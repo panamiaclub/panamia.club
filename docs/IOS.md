@@ -138,6 +138,12 @@ capabilities; the ordinary unsigned device Release archive remains a separate,
 unmodified build. A browser mock or successful archive alone cannot stand in
 for this runtime result.
 
+That runtime record predates the native age-assurance startup gate. The merged
+app still constructs `PanaBridgeViewController` and registers protected storage
+only after an allowed age decision. Do not remove or bypass that gate to rerun
+encrypted-chat qualification; record the entitled Sandbox/physical-iPhone path
+separately before production activation.
+
 Before enabling encrypted chat, record supported physical
 iPhone bridge/Keychain/IndexedDB cold restart, lock/background,
 backup/migration and app/OS-upgrade results. Modern Web Crypto, Web Locks,
