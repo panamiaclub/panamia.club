@@ -2027,7 +2027,9 @@ for (const resize of ['visual-only', 'whole-WebView'] as const) {
         Object.assign(window.visualViewport!, { height: 844 });
         window.visualViewport!.dispatchEvent(new Event('resize'));
       });
+      await page.bringToFront();
       await row(page, 'J. Downs').click();
+      await expect(conversation(page)).toBeFocused();
       // Desktop WebKit has no hardware home indicator. Emulate its real 34px
       // inset, keeping the keyboard-specific production selector in control.
       await page.addStyleTag({
@@ -2071,6 +2073,7 @@ for (const resize of ['visual-only', 'whole-WebView'] as const) {
           };
         });
       await expect.poll(async () => (await geometry()).paddingBottom).toBe(34);
+      await input(page).click();
       await input(page).fill('An iOS keyboard draft.');
       await expect(input(page)).toBeFocused();
       if (resize === 'whole-WebView') {

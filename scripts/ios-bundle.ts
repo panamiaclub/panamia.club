@@ -87,6 +87,45 @@ export function assertIphoneOnlyDeviceFamily(value: unknown): void {
   }
 }
 
+export function assertIosAgeAssuranceSdk(value: unknown): void {
+  if (typeof value !== 'string' || !/^\d+\.\d+(?:\.\d+)?$/.test(value)) {
+    throw new Error('Could not determine the iOS SDK version.');
+  }
+  const [major, minor] = value.split('.').map(Number);
+  if (major < 26 || (major === 26 && minor < 5)) {
+    throw new Error('Native age assurance requires the iOS 26.5 SDK or newer.');
+  }
+}
+
+export function assertIosAgeAssuranceEntitlement(value: unknown): void {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('com.apple.developer.declared-age-range' in value) ||
+    value['com.apple.developer.declared-age-range'] !== true
+  ) {
+    throw new Error(
+      'The signed app must include the Declared Age Range entitlement.'
+    );
+  }
+}
+
+export function assertIosAgeFrameworkIsWeak(loadCommands: string): void {
+  const framework = loadCommands
+    .split(/(?=Load command \d+)/)
+    .filter((block) =>
+      /name .*DeclaredAgeRange\.framework\/DeclaredAgeRange/.test(block)
+    );
+  if (
+    framework.length === 0 ||
+    framework.some((block) => !/\bcmd LC_LOAD_WEAK_DYLIB\b/.test(block))
+  ) {
+    throw new Error(
+      'DeclaredAgeRange must be weak-linked so older supported iPhones can launch.'
+    );
+  }
+}
+
 function verifyIphoneOnlyBundle(infoPlist: string): void {
   const family: unknown = JSON.parse(
     execFileSync(
@@ -96,6 +135,24 @@ function verifyIphoneOnlyBundle(infoPlist: string): void {
     )
   );
   assertIphoneOnlyDeviceFamily(family);
+}
+
+function verifyAgeAssuranceBundle(app: string): void {
+  const signedEntitlements = execFileSync(
+    'codesign',
+    ['-d', '--entitlements', ':-', app],
+    { encoding: 'utf8' }
+  );
+  const entitlements: unknown = JSON.parse(
+    execFileSync('plutil', ['-convert', 'json', '-o', '-', '--', '-'], {
+      input: signedEntitlements,
+      encoding: 'utf8',
+    })
+  );
+  assertIosAgeAssuranceEntitlement(entitlements);
+  assertIosAgeFrameworkIsWeak(
+    execFileSync('otool', ['-l', join(app, 'App')], { encoding: 'utf8' })
+  );
 }
 
 export function hasAppleAppAssociation(
@@ -201,6 +258,11 @@ async function main(): Promise<void> {
       'iOS release builds require macOS with Xcode. From Windows, use the iOS Release GitHub Actions workflow.'
     );
   }
+  assertIosAgeAssuranceSdk(
+    execFileSync('xcrun', ['--sdk', 'iphoneos', '--show-sdk-version'], {
+      encoding: 'utf8',
+    }).trim()
+  );
   await checkUniversalLinks(options.teamId);
 
   const output = join(
@@ -259,6 +321,9 @@ async function main(): Promise<void> {
   verifyIphoneOnlyBundle(
     join(archive, 'Products', 'Applications', 'App.app', 'Info.plist')
   );
+  verifyAgeAssuranceBundle(
+    join(archive, 'Products', 'Applications', 'App.app')
+  );
   execFileSync(
     'xcodebuild',
     [
@@ -282,16 +347,11 @@ async function main(): Promise<void> {
       `Expected exactly one exported IPA in ${exported}; found ${packages.length}.`
     );
   const packagePath = join(exported, packages[0]);
-  const exportedInfo = join(output, 'Exported-Info.plist');
-  writeFileSync(
-    exportedInfo,
-    execFileSync('/usr/bin/unzip', [
-      '-p',
-      packagePath,
-      'Payload/App.app/Info.plist',
-    ])
-  );
-  verifyIphoneOnlyBundle(exportedInfo);
+  const extracted = join(output, 'ExportedBundle');
+  execFileSync('/usr/bin/unzip', ['-q', packagePath, '-d', extracted]);
+  const exportedApp = join(extracted, 'Payload', 'App.app');
+  verifyIphoneOnlyBundle(join(exportedApp, 'Info.plist'));
+  verifyAgeAssuranceBundle(exportedApp);
   console.log(`\nApp Store package: ${packagePath}`);
 }
 

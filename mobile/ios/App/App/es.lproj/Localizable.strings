@@ -1,0 +1,10 @@
+"age.checking.title" = "Abriendo Pana Mia";
+"age.checking.message" = "Comprobando si tu cuenta de Apple necesita confirmar la edad. La informaci\U00f3n del rango de edad permanece en este iPhone.";
+"age.blocked.title" = "Pana Mia es para personas de 18 a\U00f1os o m\U00e1s";
+"age.blocked.message" = "El rango de edad compartido por Apple no confirma que tengas al menos 18 a\U00f1os. Puedes revisar Rango de edad para apps en Informaci\U00f3n personal de tu cuenta de Apple en Ajustes del iPhone.";
+"age.declined.message" = "Esta cuenta de Apple requiere comprobar la edad. Comparte tu rango de edad en el aviso de Apple para continuar. Pana Mia no recibe tu fecha de nacimiento ni documentos de identidad.";
+"age.error.title" = "No se pudo completar la comprobaci\U00f3n de edad";
+"age.error.message" = "Pana Mia no puede abrirse hasta completar esta comprobaci\U00f3n. Revisa tu conexi\U00f3n e inicio de sesi\U00f3n de Apple en Ajustes del iPhone e int\U00e9ntalo de nuevo. Tu cuenta de Pana Mia no se ha eliminado.";
+"age.retry" = "Volver a comprobar la edad";
+"age.privacy" = "Pol\U00edtica de privacidad";
+"age.terms" = "T\U00e9rminos de servicio";

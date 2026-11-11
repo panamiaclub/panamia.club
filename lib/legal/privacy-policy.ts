@@ -159,6 +159,7 @@ export const allCategories: PrivacyCategory[] = tiers.flatMap((t) =>
 export const policyVersion: string = policy.version;
 export const policyStatus: string = policy.status;
 export const policyEffectiveDate: string = policy.effectiveDate;
+export const nativeAgeAssurance = policy.nativeAgeAssurance;
 
 /** Third-party vendor registry, keyed by the names categories reference. */
 export const providers = policy.persistentRetentionClasses.third_party_synced

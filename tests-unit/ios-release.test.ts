@@ -4,6 +4,9 @@ import { test } from 'node:test';
 import config from '../capacitor.config';
 import {
   assertIphoneOnlyDeviceFamily,
+  assertIosAgeAssuranceEntitlement,
+  assertIosAgeAssuranceSdk,
+  assertIosAgeFrameworkIsWeak,
   assertIosProductionServer,
   hasAppleAppAssociation,
   iosExportOptions,
@@ -189,8 +192,46 @@ test('the iOS shell includes only supported plugins and the matching native iden
     new URL('../mobile/ios/App/App/SceneDelegate.swift', import.meta.url),
     'utf8'
   );
-  assert.match(scene, /rootViewController = PanaBridgeViewController\(\)/);
+  assert.match(scene, /rootViewController = AgeAssuranceViewController\(\)/);
   assert.match(scene, /allowsBackForwardNavigationGestures = true/);
+});
+
+test('age assurance requires a current SDK and an actual signed entitlement', () => {
+  for (const sdk of ['26.5', '26.5.1', '27.0']) {
+    assert.doesNotThrow(() => assertIosAgeAssuranceSdk(sdk));
+  }
+  for (const sdk of [undefined, '', '26', '26.4', '25.9', '26.5 beta']) {
+    assert.throws(() => assertIosAgeAssuranceSdk(sdk));
+  }
+  assert.doesNotThrow(() =>
+    assertIosAgeAssuranceEntitlement({
+      'com.apple.developer.declared-age-range': true,
+    })
+  );
+  for (const value of [
+    null,
+    {},
+    { 'com.apple.developer.declared-age-range': false },
+    { 'com.apple.developer.declared-age-range': 'true' },
+  ]) {
+    assert.throws(() => assertIosAgeAssuranceEntitlement(value));
+  }
+});
+
+test('age framework loading cannot make iOS 15-25 unlaunchable', () => {
+  const weak = `Load command 1
+      cmd LC_LOAD_WEAK_DYLIB
+  cmdsize 96
+     name /System/Library/Frameworks/DeclaredAgeRange.framework/DeclaredAgeRange (offset 24)`;
+  assert.doesNotThrow(() => assertIosAgeFrameworkIsWeak(weak));
+  assert.throws(() =>
+    assertIosAgeFrameworkIsWeak(
+      weak.replace('LC_LOAD_WEAK_DYLIB', 'LC_LOAD_DYLIB')
+    )
+  );
+  assert.throws(() =>
+    assertIosAgeFrameworkIsWeak('Load command 1\n cmd LC_LOAD_DYLIB')
+  );
 });
 
 test('Universal Links and release checks claim only the active launch host', () => {
