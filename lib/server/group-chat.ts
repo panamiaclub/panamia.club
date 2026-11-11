@@ -31,6 +31,7 @@ import {
   GROUP_CHAT_MAX_CONTENT,
   GROUP_CHAT_PAGE_SIZE,
   GROUP_CHAT_UNAVAILABLE,
+  ENCRYPTED_GROUP_CHAT_REQUIRED,
   type ChatAttachment,
   type GroupChatInput,
   type GroupChatList,
@@ -450,11 +451,7 @@ export async function sendGroupChatMessage(
       .where(eq(socialGroups.id, group.id))
       .for('share');
     if (!policy) return fail();
-    if (policy.encrypted)
-      return fail(
-        'This group requires encrypted messaging. Update or set up an approved device.',
-        409
-      );
+    if (policy.encrypted) return fail(ENCRYPTED_GROUP_CHAT_REQUIRED, 409);
     const now = new Date();
     const [inserted] = await tx
       .insert(socialGroupChatMessages)

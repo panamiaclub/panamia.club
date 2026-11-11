@@ -7,13 +7,19 @@ on:
       - 'lib/e2ee/**'
       - 'lib/server/encryption-*.ts'
       - 'lib/server/chat-media-policy.ts'
+      - 'lib/server/chat-write-errors.ts'
       - 'lib/jobs/purge-encrypted-chat.ts'
       - 'lib/schema/index.ts'
       - 'lib/chat.ts'
       - 'lib/dm-stream.ts'
       - 'app/api/social/encryption/**'
+      - 'app/api/social/statuses/**'
+      - 'app/api/social/groups/**/chat/**'
+      - 'app/api/social/media/**'
+      - 'app/api/social/gifs/mirror/**'
       - 'app/messages/**'
       - 'tests-db/encryption-devices.test.ts'
+      - 'tests-db/chat-write-errors.test.ts'
       - 'drizzle/007[89]_chat_e2ee_*.sql'
       - 'drizzle/008[0-3]_chat_e2ee_*.sql'
       - 'scripts/vite-encryption.ts'
@@ -35,13 +41,19 @@ on:
       - 'lib/e2ee/**'
       - 'lib/server/encryption-*.ts'
       - 'lib/server/chat-media-policy.ts'
+      - 'lib/server/chat-write-errors.ts'
       - 'lib/jobs/purge-encrypted-chat.ts'
       - 'lib/schema/index.ts'
       - 'lib/chat.ts'
       - 'lib/dm-stream.ts'
       - 'app/api/social/encryption/**'
+      - 'app/api/social/statuses/**'
+      - 'app/api/social/groups/**/chat/**'
+      - 'app/api/social/media/**'
+      - 'app/api/social/gifs/mirror/**'
       - 'app/messages/**'
       - 'tests-db/encryption-devices.test.ts'
+      - 'tests-db/chat-write-errors.test.ts'
       - 'drizzle/007[89]_chat_e2ee_*.sql'
       - 'drizzle/008[0-3]_chat_e2ee_*.sql'
       - 'scripts/vite-encryption.ts'
@@ -91,6 +103,7 @@ jobs:
           node --experimental-test-module-mocks --import tsx --test --test-concurrency=1
           tests-db/encryption-devices.test.ts tests-db/group-chat.test.ts
           tests-db/social-media.test.ts tests-db/safety-reports.test.ts
+          tests-db/chat-write-errors.test.ts
       - run: yarn tsc --noEmit --incremental false
       - run: yarn playwright install --with-deps chromium webkit
       - run: yarn test:e2ee:browser

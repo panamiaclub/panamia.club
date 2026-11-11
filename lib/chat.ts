@@ -6,6 +6,8 @@ export const GROUP_CHAT_PAGE_SIZE = 40;
 export const GROUP_CHAT_MAX_CONTENT = 5_000;
 export const GROUP_CHAT_MAX_ATTACHMENTS = 4;
 export const GROUP_CHAT_UNAVAILABLE = 'This group chat is not available.';
+export const ENCRYPTED_GROUP_CHAT_REQUIRED =
+  'This group requires encrypted messaging. Update or set up an approved device.';
 export type LegacyChatMediaTarget =
   { kind: 'dm'; actorId: string } | { kind: 'group'; groupId: string };
 export const ENCRYPTED_CHAT_UPDATE_EVENT = 'pana-encrypted-chat-updated';

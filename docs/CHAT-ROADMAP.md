@@ -288,7 +288,10 @@ just because another device is offline.
 
 Persistent actor/group latches reject plaintext private writes even when the
 rollout flag is paused. Legacy history remains separately labelled and
-server-readable. Public social upload callers mark `social-post`; legacy chat
+server-readable. Rejected/failed legacy chat writes return bounded errors;
+SQL parameters containing rejected text or attachment details never go to
+the framework logger, including activation races caught by the database latch.
+Public social upload callers mark `social-post`; legacy chat
 uploads name their target and are refused for encrypted scopes. Once any
 encrypted scope exists, old unmarked upload clients must update rather than
 publish a private file before their message is refused. Ordinary posts and
