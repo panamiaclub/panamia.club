@@ -37,6 +37,8 @@ import {
   type SubmitRoomEvent,
 } from '@/lib/e2ee/room-contract';
 import { backupContext } from '@/lib/e2ee/recovery-contract';
+import { chatWriteFailure } from '@/lib/server/chat-write-errors';
+import { DIRECT_THREAD_REFUSED } from '@/lib/dm-refusal';
 
 const pg = new PGlite();
 const db = drizzle(pg, { schema });
@@ -1508,6 +1510,23 @@ async function plainStatus(
 }
 
 describe('persistent no-plaintext-downgrade and cross-scope controls', () => {
+  it('recognizes the actual Drizzle/Postgres latch error without returning rejected private text', async () => {
+    await ready();
+    const privateText =
+      'Synthetic rejected private text inside a real SQL parameter';
+    await assert.rejects(
+      plainStatus(personal.actorId, ['https://chat.invalid/p/manager-actor'], {
+        content: privateText,
+      }),
+      (error: unknown) => {
+        const failure = chatWriteFailure(error, 'status');
+        assert.equal(failure.status, 400);
+        assert.equal(failure.error, DIRECT_THREAD_REFUSED);
+        assert.equal(JSON.stringify(failure).includes(privateText), false);
+        return true;
+      }
+    );
+  });
   it('refuses incoming/outgoing direct plaintext but preserves public, followers, Panas and group posts', async () => {
     await plainStatus(personal.actorId, [
       'https://chat.invalid/p/manager-actor',

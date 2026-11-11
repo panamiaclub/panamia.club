@@ -162,18 +162,20 @@ retained history onto a fresh device, not these native snapshots.
 
 Recorded software checkpoint for this change:
 
-| Surface                 | Evidence                                                                                                                                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Native engine           | 12 Rust cases passed on Windows GNU, including joined-member invitations and provider-backed statement verification                                                                              |
-| WASM/independent peer   | 6 cases passed: independent platform signatures in both directions, peer interoperability and artifact/source consistency                                                                        |
-| Reference compatibility | 13 focused cases passed                                                                                                                                                                          |
-| Browser peers           | 26 scenarios passed across reference/OpenMLS Chromium and phone-WebKit; 2 duplicate cross-engine cases intentionally skipped                                                                     |
-| Dependency graphs       | WASM, Windows GNU and Linux advisory checks passed without ignore entries; inactive model notice remains visible                                                                                 |
-| Product integration     | Actual API handlers and independent product clients cover text/media, verification, reload, exact retries, identity loss/reset, fresh sessions and rollback refusal                              |
-| Native protection       | Android Keystore non-exportability, origin AAD, missing-key refusal and process-restart probes on a session-isolated emulator                                                                    |
-| Native WebView          | Actual Android 16/WebView 133 bridge passes encryption/media, native missing-key refusal, cold process restart and background/foreground delivery; emulator reports hardwareBacked=false         |
-| iOS compilation         | Simulator build and unsigned device Release archive passed in [Mobile Build](https://github.com/panamiaclub/panamia.club/actions/runs/42995295417); runtime qualification is separately recorded |
-| Physical phones         | Still required; emulator/WebKit results are not physical Android/iPhone qualification                                                                                                            |
+| Surface                 | Evidence                                                                                                                                                                                                                                                    |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Native engine           | 12 Rust cases passed on Windows GNU, including joined-member invitations and provider-backed statement verification                                                                                                                                         |
+| WASM/independent peer   | 6 cases passed: independent platform signatures in both directions, peer interoperability and artifact/source consistency                                                                                                                                   |
+| Reference compatibility | 13 focused cases passed                                                                                                                                                                                                                                     |
+| Browser peers           | 48 scenarios passed across reference/OpenMLS Chromium and phone-WebKit, including real product/API/UI flows; 24 intentionally inapplicable reference/duplicate cases skipped                                                                                |
+| Dependency graphs       | WASM, Windows GNU and Linux advisory checks passed without ignore entries; inactive model notice remains visible                                                                                                                                            |
+| Product integration     | Actual API handlers and independent product clients cover text/media, verification, reload, exact retries, identity loss/reset, fresh sessions and rollback refusal                                                                                         |
+| Backend/privacy         | 106 focused database/HTTP/compatibility cases pass, including permanent transport guards, closed-room cleanup and rejected private-write diagnostics                                                                                                        |
+| Existing Messages UI    | 56 legacy DM/group workspace and native-layout scenarios pass without replacing the existing composer or plaintext-history behavior                                                                                                                         |
+| Native protection       | Android Keystore non-exportability, origin AAD, missing-key refusal and process-restart probes on a session-isolated emulator                                                                                                                               |
+| Android WebView         | Actual Android 16/WebView 133 bridge passes encryption/media, native missing-key refusal, cold process restart and background/foreground delivery; emulator reports hardwareBacked=false                                                                    |
+| iOS native runtime      | [Source-verified Mobile Build](https://github.com/panamiaclub/panamia.club/actions/runs/43080471724) passes simulator compilation, unsigned device archive, actual Keychain/client setup, cold process restart and foreground delivery; hardwareBacked=null |
+| Physical phones         | Still required; emulator/WebKit results are not physical Android/iPhone qualification                                                                                                                                                                       |
 
 The checked boundary exchanges standard private frames with an independent
 `ts-mls` peer in both group-founder directions. Native cases cover pins,
@@ -187,12 +189,35 @@ This is interoperability and supported-flow coverage, **not a claim that every
 MLS feature or complete conformance suite has been qualified**.
 Chromium/phone-WebKit contexts are software checks, not physical phones.
 
+### Synthetic sizing baseline
+
+A bounded Windows Node/WASM experiment created 50 independent MLS devices.
+Every existing peer processed each membership commit, each new peer joined
+through its own Welcome, and every peer authenticated the application message.
+These are engine-only samples, not production throughput, phone latency,
+infrastructure bills, or qualification of the 512-device protocol limit:
+
+| Devices | Application payload | Private message frame | Add-member Welcome | Founder raw local snapshot |
+| ------- | ------------------- | --------------------- | ------------------ | -------------------------- |
+| 2       | 466 bytes           | 632 bytes             | 1,019 bytes        | 32,519 bytes               |
+| 10      | 466 bytes           | 632 bytes             | 3,471 bytes        | 81,633 bytes               |
+| 25      | 466 bytes           | 632 bytes             | 7,784 bytes        | 161,504 bytes              |
+| 50      | 466 bytes           | 632 bytes             | 14,927 bytes       | 285,295 bytes              |
+
+The application frame did not grow with this sample's group size; membership
+and local state did. The actual service also carries signed certificates,
+rosters, Base64/JSON encoding, state-checkpoint requests and private-file
+traffic, none included in those frame sizes. Production database contention,
+mailbox fan-out, polling, retention work and R2 transfer still require
+staging measurements. This baseline does not justify a free-plan promise.
+
 Still required before the P1 platform decision is complete:
 
 1. Complete supported physical Android/iPhone qualification, including
    lock/background behavior, storage pressure and OS/browser upgrades.
-   The actual Android emulator WebView result is recorded above. iOS builds
-   are verified through macOS CI, with optional simulator runtime checks;
+   Actual Android emulator and iOS simulator bridge results are recorded above.
+   The iOS runtime scenario uses the same product client and pinned engine,
+   not a JavaScript bridge mock. Both builds and runtime pass in macOS CI;
    this Windows host has no connected physical phone.
 2. Record physical-device capability/results for the implemented protected-key
    contract. IndexedDB non-extractable keys are not Keystore/Keychain.

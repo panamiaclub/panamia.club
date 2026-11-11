@@ -121,13 +121,22 @@ copies of live WebView state.
 The Windows implementation environment cannot compile or execute this Swift
 code locally. macOS CI has passed the simulator build and unsigned device
 Release archive for the implementation in
-[Mobile Build](https://github.com/panamiaclub/panamia.club/actions/runs/42995295417).
+[Mobile Build](https://github.com/panamiaclub/panamia.club/actions/runs/43080471724).
 The workflow's optional `e2ee_native_runtime` dispatch input additionally builds
 the pinned engine and runs the actual plugin/product client in a dedicated
 `pana-e2ee-qualification` simulator against loopback-only synthetic APIs.
 That scenario requires native Keychain protection, message/media delivery,
 cold process restart and native background/foreground events; a normal browser
 cannot pass it. Its results are distinct from a compile-only workflow.
+
+That source-verified run passed all three real native phases with
+`ios-keychain-this-device-only`: encrypted setup/media, cold process restart
+with the same protected device identities, and native background/foreground
+delivery. The simulator reported `hardwareBacked: null`, not a Secure Enclave
+claim. The runtime app is simulator-only, ad-hoc signed with no paid
+capabilities; the ordinary unsigned device Release archive remains a separate,
+unmodified build. A browser mock or successful archive alone cannot stand in
+for this runtime result.
 
 Before enabling encrypted chat, record supported physical
 iPhone bridge/Keychain/IndexedDB cold restart, lock/background,

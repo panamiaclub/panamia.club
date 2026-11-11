@@ -72,9 +72,10 @@ synthetic accounts, not just the original protocol lab. The
 [engine documentation](../crypto/openmls/README.md) records dependency/advisory
 decisions, wire/local-state boundaries and audit exclusions. Android Keystore
 instrumentation and the real Android 16/WebView 133 product client pass
-cold process restart and background/foreground checks. macOS CI has passed
-the iOS simulator build and unsigned device archive; simulator runtime evidence
-is a separate step. Supported physical-device qualification,
+cold process restart and background/foreground checks. [Source-verified macOS
+CI](https://github.com/panamiaclub/panamia.club/actions/runs/43080471724) also passes
+the iOS simulator build, unsigned device archive and actual Keychain/product-client
+setup, cold restart and foreground delivery. Supported physical-device qualification,
 operational review and independent security review remain release
 gates. `CHAT_E2EE_ENABLED` stays `0`; no real messages have been migrated.
 
