@@ -1,6 +1,7 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import type { CalendarEntry } from '@/lib/query/social';
 import type { SocialStatusDisplay } from '@/lib/interfaces';
+import { calls, nativeBridge } from './fixtures/native-bridge';
 
 test.use({
   launchOptions: {
@@ -205,6 +206,8 @@ interface CameraProbe {
   holdCamera: boolean;
   releaseCamera?: () => void;
   revokedUrls: string[];
+  forceLandscape: boolean;
+  recordings: MediaStream[];
 }
 
 type CameraTestWindow = typeof window & { storyCameraTest: CameraProbe };
@@ -219,6 +222,8 @@ async function observeCamera(page: Page) {
       microphoneError: '',
       holdCamera: false,
       revokedUrls: [],
+      forceLandscape: false,
+      recordings: [],
     };
     (window as CameraTestWindow).storyCameraTest = probe;
     const getUserMedia = navigator.mediaDevices.getUserMedia.bind(
@@ -230,7 +235,14 @@ async function observeCamera(page: Page) {
         ? probe.cameraError
         : probe.microphoneError;
       if (error) throw new DOMException('Device request failed', error);
-      const stream = await getUserMedia(constraints);
+      const stream = await getUserMedia(
+        constraints?.video && probe.forceLandscape
+          ? {
+              ...constraints,
+              video: { width: { exact: 1280 }, height: { exact: 720 } },
+            }
+          : constraints
+      );
       probe.streams.push(stream);
       if (constraints?.video && probe.holdCamera) {
         await new Promise<void>((resolve) => {
@@ -239,6 +251,15 @@ async function observeCamera(page: Page) {
       }
       return stream;
     };
+    const Recorder = window.MediaRecorder;
+    if (Recorder) {
+      window.MediaRecorder = new Proxy(Recorder, {
+        construct(target, args) {
+          if (args[0] instanceof MediaStream) probe.recordings.push(args[0]);
+          return Reflect.construct(target, args);
+        },
+      });
+    }
     const revokeObjectURL = URL.revokeObjectURL.bind(URL);
     URL.revokeObjectURL = (url) => {
       probe.revokedUrls.push(url);
@@ -250,7 +271,9 @@ async function observeCamera(page: Page) {
 async function openStory(
   page: Page,
   handlers: Parameters<typeof openComposer>[1] = {},
-  cameraSetup: Partial<Pick<CameraProbe, 'cameraError' | 'holdCamera'>> = {}
+  cameraSetup: Partial<
+    Pick<CameraProbe, 'cameraError' | 'holdCamera' | 'forceLandscape'>
+  > = {}
 ) {
   await observeCamera(page);
   const fixture = await openComposer(page, handlers);
@@ -291,7 +314,10 @@ async function expectDevicesStopped(page: Page) {
   await expect
     .poll(() =>
       page.evaluate(() =>
-        (window as CameraTestWindow).storyCameraTest.streams.every((stream) =>
+        [
+          ...(window as CameraTestWindow).storyCameraTest.streams,
+          ...(window as CameraTestWindow).storyCameraTest.recordings,
+        ].every((stream) =>
           stream.getTracks().every((track) => track.readyState === 'ended')
         )
       )
@@ -308,13 +334,17 @@ test.describe('story camera', () => {
     page,
   }) => {
     let imageRequest = '';
-    const { dialog, stories, uploads } = await openStory(page, {
-      upload: async (route) => {
-        imageRequest =
-          route.request().postDataBuffer()?.toString('latin1') ?? '';
-        await route.fulfill({ json: { success: true, data: uploadedPhoto } });
+    const { dialog, stories, uploads } = await openStory(
+      page,
+      {
+        upload: async (route) => {
+          imageRequest =
+            route.request().postDataBuffer()?.toString('latin1') ?? '';
+          await route.fulfill({ json: { success: true, data: uploadedPhoto } });
+        },
       },
-    });
+      { forceLandscape: true }
+    );
     const camera = await openStoryCamera(page);
     expect(
       await page.evaluate(
@@ -327,6 +357,13 @@ test.describe('story camera', () => {
     await expect(
       camera.getByLabel('Live camera preview', { exact: true })
     ).toBeVisible();
+    expect(
+      await camera
+        .getByLabel('Live camera preview')
+        .evaluate(
+          (video: HTMLVideoElement) => video.videoWidth > video.videoHeight
+        )
+    ).toBe(true);
     expect(uploads()).toBe(0);
     expect(stories).toHaveLength(0);
     await page.screenshot({
@@ -341,6 +378,10 @@ test.describe('story camera', () => {
       expect(
         await camera.evaluate((node) => node.scrollWidth <= node.clientWidth)
       ).toBe(true);
+      const frame = await camera
+        .locator('[data-story-camera-frame]')
+        .boundingBox();
+      expect(frame!.width / frame!.height).toBeCloseTo(9 / 16, 2);
       for (const name of [
         'Back to story',
         'Take photo',
@@ -358,6 +399,14 @@ test.describe('story camera', () => {
     await expect(
       camera.getByRole('img', { name: 'Story photo preview' })
     ).toBeVisible();
+    expect(
+      await camera
+        .getByRole('img', { name: 'Story photo preview' })
+        .evaluate((image: HTMLImageElement) => ({
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        }))
+    ).toEqual({ width: 720, height: 1280 });
     await expectDevicesStopped(page);
     expect(uploads()).toBe(0);
     expect(stories).toHaveLength(0);
@@ -445,7 +494,11 @@ test.describe('story camera', () => {
   test('video asks for sound only on record and produces a playable local preview', async ({
     page,
   }) => {
-    const { uploads, stories } = await openStory(page);
+    const { uploads, stories } = await openStory(
+      page,
+      {},
+      { forceLandscape: true }
+    );
     const camera = await openStoryCamera(page);
     await camera.getByRole('button', { name: 'Video', exact: true }).click();
     expect(
@@ -473,6 +526,20 @@ test.describe('story camera', () => {
       )
       .toBeGreaterThanOrEqual(1);
     expect(
+      await preview.evaluate((video: HTMLVideoElement) => ({
+        width: video.videoWidth,
+        height: video.videoHeight,
+      }))
+    ).toEqual({ width: 720, height: 1280 });
+    expect(
+      await page.evaluate(() =>
+        (window as CameraTestWindow).storyCameraTest.recordings[0]
+          .getTracks()
+          .map((track) => track.kind)
+          .sort()
+      )
+    ).toEqual(['audio', 'video']);
+    expect(
       await preview.evaluate(async (video: HTMLVideoElement) => {
         const blob = await fetch(video.src).then((response) => response.blob());
         return { type: blob.type.startsWith('video/'), bytes: blob.size > 0 };
@@ -489,6 +556,28 @@ test.describe('story camera', () => {
         )
       )
       .toBe(1);
+  });
+
+  test('a portrait frame failure stops recording and releases every capture track', async ({
+    page,
+  }) => {
+    await openStory(page);
+    const camera = await openStoryCamera(page);
+    await camera.getByRole('button', { name: 'Video', exact: true }).click();
+    await camera.getByRole('button', { name: 'Record video' }).click();
+    await expect(camera.getByRole('timer')).toBeVisible();
+    await page.evaluate(() => {
+      CanvasRenderingContext2D.prototype.drawImage = () => {
+        throw new Error('The source frame could not be read.');
+      };
+    });
+    await expect(camera.getByRole('alert')).toContainText(
+      'portrait recording was interrupted'
+    );
+    await expectDevicesStopped(page);
+    await expect(
+      camera.getByLabel('Story video preview', { exact: true })
+    ).toHaveCount(0);
   });
 
   test('recording stops at the 60-second limit, not before it', async ({
@@ -583,6 +672,7 @@ test.describe('story camera', () => {
       }, Array.from(videoUploads.files[0]));
       expect(encoded.width).toBeGreaterThan(0);
       expect(encoded.height).toBeGreaterThan(0);
+      expect(encoded.width / encoded.height).toBeCloseTo(9 / 16, 2);
       expect(encoded.duration).toBeGreaterThan(0);
       expect(Number.isFinite(encoded.duration)).toBe(true);
       expect(stories).toHaveLength(0);
@@ -630,6 +720,14 @@ test.describe('story camera', () => {
     );
     expect(await chooser.element().getAttribute('capture')).toBeNull();
     await chooser.setFiles(photo);
+    await expect(camera).toBeVisible();
+    await expect(dialog).toHaveCount(0);
+    await expect(
+      camera.getByRole('img', { name: 'Story photo preview' })
+    ).toBeVisible();
+    await camera
+      .getByRole('button', { name: 'Use photo', exact: true })
+      .click();
     await expect(
       dialog.getByRole('button', { name: 'Post story', exact: true })
     ).toBeEnabled();
@@ -649,6 +747,181 @@ test.describe('story camera', () => {
     await camera.getByRole('button', { name: 'Record video' }).click();
     await expect(camera.getByRole('alert')).toContainText(
       'Microphone access was denied'
+    );
+    await camera.getByRole('button', { name: 'Photo', exact: true }).click();
+    await camera.getByRole('button', { name: 'Take photo' }).click();
+    await expect(
+      camera.getByRole('img', { name: 'Story photo preview' })
+    ).toBeVisible();
+    await expectDevicesStopped(page);
+  });
+
+  for (const platform of ['ios', 'android'] as const) {
+    test(`${platform} opens the photo/video library directly and reviews a selection without an intermediate menu`, async ({
+      page,
+    }) => {
+      await nativeBridge(page, { platform, mediaLibrary: true });
+      const { dialog, uploads, stories } = await openStory(page);
+      const camera = await openStoryCamera(page);
+      let fileChoosers = 0;
+      page.on('filechooser', () => fileChoosers++);
+      await page.evaluate(() => {
+        Reflect.set(
+          window,
+          'nativeMediaLibraryResult',
+          new Promise((resolve) => {
+            Reflect.set(window, 'finishNativeMediaLibrary', resolve);
+          })
+        );
+      });
+      await camera.getByRole('button', { name: 'Choose from gallery' }).click();
+      await expect(camera.getByRole('status')).toContainText(
+        'Opening photo library'
+      );
+      await expect(dialog).toHaveCount(0);
+      await expectDevicesStopped(page);
+      await page.evaluate(() => {
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          value: true,
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          value: false,
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await page.evaluate(
+        (file) => {
+          const resolve = Reflect.get(window, 'finishNativeMediaLibrary');
+          if (typeof resolve !== 'function')
+            throw new Error('The library did not open.');
+          resolve({ files: [file] });
+        },
+        {
+          name: 'library.png',
+          mimeType: 'image/png',
+          size: photo.buffer.length,
+          webPath: `data:image/png;base64,${photo.buffer.toString('base64')}`,
+        }
+      );
+      await expect(
+        camera.getByRole('img', { name: 'Story photo preview' })
+      ).toBeVisible();
+      await expect(camera.getByRole('alert')).toHaveCount(0);
+      const nativeCalls = await calls(page);
+      const picks = nativeCalls.filter((call) => call.plugin === 'FilePicker');
+      expect(picks).toEqual([
+        {
+          plugin: 'FilePicker',
+          method: 'pickMedia',
+          args: { limit: 1, readData: false, skipTranscoding: false },
+        },
+      ]);
+      expect(fileChoosers).toBe(0);
+      expect(uploads()).toBe(0);
+      expect(stories).toHaveLength(0);
+      await camera
+        .getByRole('button', { name: 'Use photo', exact: true })
+        .click();
+      await expect(dialog).toBeVisible();
+      expect(uploads()).toBe(1);
+      expect(stories).toHaveLength(0);
+      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await expectDevicesStopped(page);
+    });
+  }
+
+  test('native library cancellation resumes the camera and library errors remain recoverable', async ({
+    page,
+  }) => {
+    await nativeBridge(page, { platform: 'ios', mediaLibrary: true });
+    const { dialog, uploads } = await openStory(page);
+    const camera = await openStoryCamera(page);
+    await page.evaluate(() =>
+      Reflect.set(window, 'nativeMediaLibraryError', 'pickFiles canceled.')
+    );
+    await camera.getByRole('button', { name: 'Choose from gallery' }).click();
+    await expect(
+      camera.getByRole('button', { name: 'Take photo' })
+    ).toBeEnabled();
+    await expect(camera.getByRole('alert')).toHaveCount(0);
+    await expect(dialog).toHaveCount(0);
+    await page.evaluate(() =>
+      Reflect.set(
+        window,
+        'nativeMediaLibraryError',
+        'The photo library is unavailable.'
+      )
+    );
+    await camera.getByRole('button', { name: 'Choose from gallery' }).click();
+    await expect(camera.getByRole('alert')).toHaveText(
+      'The photo library is unavailable.'
+    );
+    await expectDevicesStopped(page);
+    expect(uploads()).toBe(0);
+    await camera.getByRole('button', { name: 'Try camera again' }).click();
+    await expect(
+      camera.getByRole('button', { name: 'Take photo' })
+    ).toBeEnabled();
+  });
+
+  test('a cancelled browser picker stays in the camera without returning to the editor', async ({
+    page,
+  }) => {
+    const { dialog, uploads } = await openStory(page);
+    const camera = await openStoryCamera(page);
+    const choosing = page.waitForEvent('filechooser');
+    await camera.getByRole('button', { name: 'Choose from gallery' }).click();
+    await choosing;
+    await expect(dialog).toHaveCount(0);
+    await expectDevicesStopped(page);
+    await page
+      .getByLabel('Choose story from gallery', { exact: true })
+      .dispatchEvent('cancel');
+    await expect(
+      camera.getByRole('button', { name: 'Take photo' })
+    ).toBeEnabled();
+    await expect(camera.getByRole('alert')).toHaveCount(0);
+    expect(uploads()).toBe(0);
+  });
+
+  test('older native builds explain why they still use a system picker', async ({
+    page,
+  }) => {
+    await nativeBridge(page, { platform: 'ios', mediaLibrary: false });
+    const { dialog } = await openStory(page);
+    const camera = await openStoryCamera(page);
+    const choosing = page.waitForEvent('filechooser');
+    await camera.getByRole('button', { name: 'Choose from gallery' }).click();
+    await choosing;
+    await expect(
+      page.getByText('App update needed', { exact: true })
+    ).toBeVisible();
+    await expect(dialog).toHaveCount(0);
+    await page
+      .getByLabel('Choose story from gallery', { exact: true })
+      .dispatchEvent('cancel');
+    await expect(
+      camera.getByRole('button', { name: 'Take photo' })
+    ).toBeEnabled();
+  });
+
+  test('a browser without canvas recording explains the limitation and still takes portrait photos', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(HTMLCanvasElement.prototype, 'captureStream', {
+        value: undefined,
+      });
+    });
+    await openStory(page);
+    const camera = await openStoryCamera(page);
+    await camera.getByRole('button', { name: 'Video', exact: true }).click();
+    await camera.getByRole('button', { name: 'Record video' }).click();
+    await expect(camera.getByRole('alert')).toContainText(
+      'Portrait video recording is not supported'
     );
     await camera.getByRole('button', { name: 'Photo', exact: true }).click();
     await camera.getByRole('button', { name: 'Take photo' }).click();

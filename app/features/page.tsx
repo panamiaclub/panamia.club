@@ -3,7 +3,7 @@ import {
   CalendarDays,
   FileText,
   Users,
-  MessageCircle,
+  Newspaper,
   Search,
   Gift,
   Radio,
@@ -55,7 +55,7 @@ const features: {
     description:
       'Share updates, photos, and quick posts with the community in a social timeline feed.',
     href: '/timeline',
-    icon: MessageCircle,
+    icon: Newspaper,
   },
   {
     title: 'Directory',

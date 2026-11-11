@@ -7,6 +7,7 @@ export async function nativeBridge(
     googlePlugin?: boolean;
     cancelGoogle?: boolean;
     launchUrl?: string;
+    mediaLibrary?: boolean;
   } = {}
 ) {
   await page.addInitScript((config) => {
@@ -35,6 +36,14 @@ export async function nativeBridge(
         name: 'SplashScreen',
         methods: [{ name: 'hide', rtype: 'promise' }],
       },
+      ...(config.mediaLibrary
+        ? [
+            {
+              name: 'FilePicker',
+              methods: [{ name: 'pickMedia', rtype: 'promise' }],
+            },
+          ]
+        : []),
       ...(config.googlePlugin === false
         ? []
         : [
@@ -61,6 +70,13 @@ export async function nativeBridge(
           args: unknown
         ) => {
           record(plugin, method, args);
+          if (plugin === 'FilePicker' && method === 'pickMedia') {
+            const error = Reflect.get(window, 'nativeMediaLibraryError');
+            if (typeof error === 'string') throw new Error(error);
+            return (
+              Reflect.get(window, 'nativeMediaLibraryResult') ?? { files: [] }
+            );
+          }
           if (plugin === 'SocialLogin' && method === 'login') {
             if (config.cancelGoogle) {
               throw Object.assign(new Error('Cancelled'), {
@@ -120,6 +136,9 @@ export function calls(page: Page) {
           eventName?: string;
           google?: { webClientId: string; mode: string };
           options?: { nonce: string; scopes: string[] };
+          limit?: number;
+          readData?: boolean;
+          skipTranscoding?: boolean;
         };
       }[]
   );

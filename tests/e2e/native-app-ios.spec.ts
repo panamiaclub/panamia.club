@@ -5,7 +5,11 @@ import type { SearchResultsInterface } from '@/lib/query/directory';
 import type { SocialStatusDisplay } from '@/lib/interfaces';
 
 async function ios(page: Page) {
-  await nativeBridge(page, { platform: 'ios', googlePlugin: false });
+  await nativeBridge(page, {
+    platform: 'ios',
+    googlePlugin: false,
+    mediaLibrary: true,
+  });
   return installNativeApiFixtures(page);
 }
 
@@ -1116,17 +1120,24 @@ test('story captions stay inside the visible iOS viewport above the keyboard', a
     exact: true,
   });
   await expect(camera).toBeVisible();
-  const choosing = page.waitForEvent('filechooser');
-  await camera.getByRole('button', { name: 'Choose from gallery' }).click();
-  const chooser = await choosing;
-  await chooser.setFiles({
-    name: 'story.png',
-    mimeType: 'image/png',
-    buffer: Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
-      'base64'
-    ),
+  await page.evaluate(() => {
+    Reflect.set(window, 'nativeMediaLibraryResult', {
+      files: [
+        {
+          name: 'story.png',
+          mimeType: 'image/png',
+          size: 100,
+          webPath:
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
+        },
+      ],
+    });
   });
+  await camera.getByRole('button', { name: 'Choose from gallery' }).click();
+  await expect(
+    camera.getByRole('img', { name: 'Story photo preview' })
+  ).toBeVisible();
+  await camera.getByRole('button', { name: 'Use photo', exact: true }).click();
   await expect(
     page.getByRole('button', { name: 'Post story', exact: true })
   ).toBeEnabled();

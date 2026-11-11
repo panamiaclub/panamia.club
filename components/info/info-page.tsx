@@ -9,7 +9,7 @@ import {
   Heart,
   Mail,
   MapPin,
-  MessageCircle,
+  Newspaper,
   Search,
   Store,
   Users,
@@ -20,7 +20,7 @@ import styles from './info-page.module.css';
 
 const LINK_ICONS = {
   directory: Search,
-  social: MessageCircle,
+  social: Newspaper,
   events: CalendarDays,
   connectors: Users,
   listing: Store,
