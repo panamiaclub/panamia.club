@@ -1,6 +1,7 @@
 name: Encrypted chat qualification
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'lib/e2ee/**'
@@ -16,6 +17,7 @@ on:
       - 'drizzle/007[89]_chat_e2ee_*.sql'
       - 'drizzle/008[0-3]_chat_e2ee_*.sql'
       - 'scripts/vite-encryption.ts'
+      - 'scripts/qualify-native-e2ee.ts'
       - 'crypto/openmls/**'
       - 'scripts/openmls.ts'
       - 'tests-openmls/**'
@@ -43,6 +45,7 @@ on:
       - 'drizzle/007[89]_chat_e2ee_*.sql'
       - 'drizzle/008[0-3]_chat_e2ee_*.sql'
       - 'scripts/vite-encryption.ts'
+      - 'scripts/qualify-native-e2ee.ts'
       - 'crypto/openmls/**'
       - 'scripts/openmls.ts'
       - 'tests-openmls/**'

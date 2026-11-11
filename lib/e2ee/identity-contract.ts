@@ -32,6 +32,12 @@ export const statementPurposeSchema = z.enum([
   'profile-activation',
 ]);
 export type StatementPurpose = z.infer<typeof statementPurposeSchema>;
+export type StatementVerifier = (
+  purpose: StatementPurpose,
+  payload: Uint8Array,
+  publicKey: Uint8Array,
+  signature: Uint8Array
+) => boolean | Promise<boolean>;
 export const signedStatementSchema = z
   .object({
     version: z.literal(1),
@@ -138,7 +144,8 @@ export async function verifyStatement<T>(
   purpose: StatementPurpose,
   value: unknown,
   publicKey: string,
-  schema: z.ZodType<T>
+  schema: z.ZodType<T>,
+  verifier?: StatementVerifier
 ): Promise<T> {
   const parsed = signedStatementSchema.safeParse(value);
   if (!parsed.success || !publicKeySchema.safeParse(publicKey).success)
@@ -158,19 +165,24 @@ export async function verifyStatement<T>(
   const payload = decode(statement.payload, 16 * 1024);
   if (keyBytes.length !== 32 || signature.length !== 64)
     throw new StatementError('Invalid signed statement key or signature.');
-  const key = await crypto.subtle.importKey(
-    'raw',
-    Uint8Array.from(keyBytes).buffer,
-    'Ed25519',
-    false,
-    ['verify']
-  );
-  const valid = await crypto.subtle.verify(
-    'Ed25519',
-    key,
-    Uint8Array.from(signature).buffer,
-    Uint8Array.from(statementMessage(purpose, payload)).buffer
-  );
+  const message = statementMessage(purpose, payload);
+  let valid: boolean;
+  if (verifier) valid = await verifier(purpose, payload, keyBytes, signature);
+  else {
+    const key = await crypto.subtle.importKey(
+      'raw',
+      Uint8Array.from(keyBytes).buffer,
+      'Ed25519',
+      false,
+      ['verify']
+    );
+    valid = await crypto.subtle.verify(
+      'Ed25519',
+      key,
+      Uint8Array.from(signature).buffer,
+      Uint8Array.from(message).buffer
+    );
+  }
   if (!valid)
     throw new StatementError('The signed statement could not be verified.');
   let decoded: unknown;

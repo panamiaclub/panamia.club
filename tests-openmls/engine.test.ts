@@ -14,6 +14,7 @@ import {
   signStatement,
   verifyStatement,
   E2EE_DEVICE_MS,
+  statementMessage,
 } from '../lib/e2ee/identity-contract';
 import {
   initializeOpenMLS,
@@ -117,6 +118,64 @@ before(async () => {
 });
 
 describe('OpenMLS browser bindings and independent implementation interoperability', () => {
+  it('verifies independently generated platform statements through the pinned WASM provider', async () => {
+    const keys = await crypto.subtle.generateKey('Ed25519', true, [
+      'sign',
+      'verify',
+    ]);
+    if (!('privateKey' in keys))
+      throw new Error('Expected an independent Ed25519 key pair.');
+    const publicKey = toBase64(
+      new Uint8Array(await crypto.subtle.exportKey('raw', keys.publicKey))
+    );
+    const payload = { version: 1, check: 'independent-platform-statement' };
+    const statement = await signStatement(
+      'identity-reset',
+      payload,
+      async (purpose, bytes) =>
+        new Uint8Array(
+          await crypto.subtle.sign(
+            'Ed25519',
+            keys.privateKey,
+            Uint8Array.from(statementMessage(purpose, bytes)).buffer
+          )
+        )
+    );
+    const schema = z
+      .object({ version: z.literal(1), check: z.string() })
+      .strict();
+    const verifier: import('../lib/e2ee/identity-contract').StatementVerifier =
+      (purpose, bytes, key, signature) =>
+        ProfileSigningKey.verifyStatement(purpose, bytes, key, signature);
+    assert.deepEqual(
+      await verifyStatement(
+        'identity-reset',
+        statement,
+        publicKey,
+        schema,
+        verifier
+      ),
+      payload
+    );
+    await assert.rejects(
+      verifyStatement('identity-backup', statement, publicKey, schema, verifier)
+    );
+    const wrong = new ProfileSigningKey();
+    try {
+      await assert.rejects(
+        verifyStatement(
+          'identity-reset',
+          statement,
+          toBase64(wrong.publicKey()),
+          schema,
+          verifier
+        )
+      );
+    } finally {
+      wrong.free();
+    }
+  });
+
   it('uses separate profile approval keys and device proofs interoperable with platform Ed25519 verification', async () => {
     const root = new ProfileSigningKey();
     const identity = {

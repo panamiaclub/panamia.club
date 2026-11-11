@@ -64,6 +64,12 @@ export class ProfileSigningKey {
   publicKey(): Uint8Array;
   static restoreSecret(bytes: Uint8Array | number[]): ProfileSigningKey;
   signStatement(purpose: string, payload: Uint8Array | number[]): Uint8Array;
+  static verifyStatement(
+    purpose: string,
+    payload: Uint8Array | number[],
+    public_key: Uint8Array | number[],
+    signature: Uint8Array | number[]
+  ): boolean;
 }
 
 export type InitInput =
@@ -180,6 +186,16 @@ export interface InitOutput {
     d: number,
     e: number
   ) => [number, number, number, number];
+  readonly profilesigningkey_verifyStatement: (
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    e: number,
+    f: number,
+    g: number,
+    h: number
+  ) => [number, number, number];
   readonly __wbindgen_exn_store: (a: number) => void;
   readonly __externref_table_alloc: () => number;
   readonly __wbindgen_externrefs: WebAssembly.Table;

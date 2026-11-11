@@ -119,10 +119,18 @@ a locked device. History backups use the personal recovery key, not iCloud
 copies of live WebView state.
 
 The Windows implementation environment cannot compile or execute this Swift
-code. The existing Mobile Build workflow supplies simulator and unsigned
-device compilation when this branch is submitted, but a successful run is not
-assumed. Before enabling encrypted chat, record an actual macOS build plus
-supported iPhone bridge/Keychain/IndexedDB cold restart, lock/background,
+code locally. macOS CI has passed the simulator build and unsigned device
+Release archive for the implementation in
+[Mobile Build](https://github.com/panamiaclub/panamia.club/actions/runs/42995295417).
+The workflow's optional `e2ee_native_runtime` dispatch input additionally builds
+the pinned engine and runs the actual plugin/product client in a dedicated
+`pana-e2ee-qualification` simulator against loopback-only synthetic APIs.
+That scenario requires native Keychain protection, message/media delivery,
+cold process restart and native background/foreground events; a normal browser
+cannot pass it. Its results are distinct from a compile-only workflow.
+
+Before enabling encrypted chat, record supported physical
+iPhone bridge/Keychain/IndexedDB cold restart, lock/background,
 backup/migration and app/OS-upgrade results. Modern Web Crypto, Web Locks,
 IndexedDB and bounded-request support are required; older supported iOS app
 installations may need a system update for encrypted chat. They cannot silently

@@ -115,6 +115,11 @@ These checks do not replace review of unreported defects or source changes.
 - `ProfileSigningKey` signs purpose-bound owner approvals, revocations,
   explicit identity resets and recovery/activation statements. Its recoverable
   authorization seed is separate from all live MLS device/room state.
+  Its static `verifyStatement` uses the same pinned upstream provider for
+  client-side public statement verification. Android WebView 133 lacks
+  Web Crypto Ed25519; this is not grounds for a plaintext path or a different
+  cryptographic implementation. Server authorization remains independently
+  verified with its platform Ed25519 implementation.
 - A locally staged membership change blocks application sends and additional
   membership changes until `acknowledgeCommit`. The caller must first verify
   durable acceptance of **that exact attempt** by its delivery service.
@@ -157,16 +162,18 @@ retained history onto a fresh device, not these native snapshots.
 
 Recorded software checkpoint for this change:
 
-| Surface                 | Evidence                                                                                                                                                            |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Native engine           | 11 Rust cases passed on Windows GNU, including invitations by a joined member after founder removal                                                                 |
-| WASM/independent peer   | Platform-signature and independent-peer cases with artifact/source consistency checks                                                                               |
-| Reference compatibility | 13 focused cases passed                                                                                                                                             |
-| Browser peers           | 26 scenarios passed across reference/OpenMLS Chromium and phone-WebKit; 2 duplicate cross-engine cases intentionally skipped                                        |
-| Dependency graphs       | WASM, Windows GNU and Linux advisory checks passed without ignore entries; inactive model notice remains visible                                                    |
-| Product integration     | Actual API handlers and independent product clients cover text/media, verification, reload, exact retries, identity loss/reset, fresh sessions and rollback refusal |
-| Native protection       | Android Keystore non-exportability, origin AAD, missing-key refusal and process-restart probes on a session-isolated emulator                                       |
-| Physical phones         | Still required; emulator/WebKit results are not physical Android/iPhone qualification                                                                               |
+| Surface                 | Evidence                                                                                                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Native engine           | 12 Rust cases passed on Windows GNU, including joined-member invitations and provider-backed statement verification                                                                              |
+| WASM/independent peer   | 6 cases passed: independent platform signatures in both directions, peer interoperability and artifact/source consistency                                                                        |
+| Reference compatibility | 13 focused cases passed                                                                                                                                                                          |
+| Browser peers           | 26 scenarios passed across reference/OpenMLS Chromium and phone-WebKit; 2 duplicate cross-engine cases intentionally skipped                                                                     |
+| Dependency graphs       | WASM, Windows GNU and Linux advisory checks passed without ignore entries; inactive model notice remains visible                                                                                 |
+| Product integration     | Actual API handlers and independent product clients cover text/media, verification, reload, exact retries, identity loss/reset, fresh sessions and rollback refusal                              |
+| Native protection       | Android Keystore non-exportability, origin AAD, missing-key refusal and process-restart probes on a session-isolated emulator                                                                    |
+| Native WebView          | Actual Android 16/WebView 133 bridge passes encryption/media, native missing-key refusal, cold process restart and background/foreground delivery; emulator reports hardwareBacked=false         |
+| iOS compilation         | Simulator build and unsigned device Release archive passed in [Mobile Build](https://github.com/panamiaclub/panamia.club/actions/runs/42995295417); runtime qualification is separately recorded |
+| Physical phones         | Still required; emulator/WebKit results are not physical Android/iPhone qualification                                                                                                            |
 
 The checked boundary exchanges standard private frames with an independent
 `ts-mls` peer in both group-founder directions. Native cases cover pins,
@@ -182,14 +189,15 @@ Chromium/phone-WebKit contexts are software checks, not physical phones.
 
 Still required before the P1 platform decision is complete:
 
-1. Run in actual supported Android/iOS Capacitor WebViews, including cold
-   restart, backgrounding, storage pressure and OS/browser upgrades. The
-   current Windows host has no authorized Android device connected and cannot
-   perform an Xcode/iPhone build.
+1. Complete supported physical Android/iPhone qualification, including
+   lock/background behavior, storage pressure and OS/browser upgrades.
+   The actual Android emulator WebView result is recorded above. iOS builds
+   are verified through macOS CI, with optional simulator runtime checks;
+   this Windows host has no connected physical phone.
 2. Record physical-device capability/results for the implemented protected-key
    contract. IndexedDB non-extractable keys are not Keystore/Keychain.
-   Android instrumentation does not qualify every Capacitor bridge/WebView
-   lifecycle, and this Windows host cannot compile or execute iOS.
+   Android emulator bridge/instrumentation checks do not qualify physical
+   hardware or every WebView lifecycle. A simulator is not an iPhone.
    Recheck OS-backup/migration exclusions and honest device capabilities.
 3. Review the pinned provider/source deltas, runtime delivery and binding
    threat model; revisit released dependency versions before a production pin.

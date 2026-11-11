@@ -35,10 +35,37 @@ $serial = 'emulator-5586'
 ```
 
 The Windows qualification run used an isolated API-36 emulator and passed
-all four invocations. This is not a hardware-backed-key claim or complete
-Capacitor WebView qualification. Physical-device bridge calls, foreground/
-background/lock behavior, cold IndexedDB restart, storage pressure and OS/app
-upgrade still gate activation. Browser/phone-WebKit checks do not replace them.
+all four invocations. The real Capacitor Android 16/WebView 133 harness also
+passed native message/media encryption, cold process restart with the same
+protected devices, and background/foreground sending. The emulator honestly
+reports `hardwareBacked: false`; it is not evidence of physical hardware
+protection or device migration/upgrade behavior.
+
+The WebView initially exposed a real compatibility failure: its platform Web
+Crypto does not implement Ed25519. The product now verifies signed public
+statements through the already pinned OpenMLS provider, while server
+authorization keeps independent platform verification. No alternate crypto
+library or plaintext fallback was added.
+
+Run the real WebView scenario only on the dedicated AVD named
+`pana-e2ee-qualification`. The driver refuses other AVDs and clears only the
+separate qualification app. It starts/stops its own loopback API/Vite fixtures,
+never connects to real users/databases, and prints metadata-only phase results:
+
+```powershell
+yarn openmls:build
+$env:CAPACITOR_SERVER_URL = 'http://127.0.0.1:3147/native.html?platform=android'
+yarn cap sync android
+& .\mobile\android\gradlew.bat -p .\mobile\android :app:assembleDebug -Pe2eeQualification --no-daemon
+& $adb -s emulator-5586 install -r .\mobile\android\app\build\outputs\apk\debug\app-debug.apk
+yarn test:e2ee:native android emulator-5586
+Remove-Item Env:CAPACITOR_SERVER_URL
+yarn cap sync android
+```
+
+Physical-device bridge/lock behavior, storage pressure and OS/app upgrades
+still gate activation. Emulation and browser/phone-WebKit checks do not
+replace those release results.
 
 ## Test on a physical Android phone
 

@@ -38,6 +38,7 @@ import {
   sha256,
   signStatement,
   verifyStatement,
+  type StatementVerifier,
 } from './identity-contract';
 import {
   encryptedAttachmentSchema,
@@ -208,6 +209,17 @@ export class EncryptedChatClient {
   }
   private signer(runtime: Runtime, hash = runtime.committedHash) {
     return { device: runtime.native, stateHash: hash };
+  }
+  private verifier(runtime: Pick<Runtime, 'engine'>): StatementVerifier {
+    return (purpose, payload, publicKey, signature) =>
+      engineCall(() =>
+        runtime.engine.ProfileSigningKey.verifyStatement(
+          purpose,
+          payload,
+          publicKey,
+          signature
+        )
+      );
   }
   private root(runtime: Runtime) {
     if (!runtime.root)
@@ -485,7 +497,8 @@ export class EncryptedChatClient {
             'device-certificate',
             own.certificate,
             status.identity.rootPublicKey,
-            deviceCertificateSchema
+            deviceCertificateSchema,
+            this.verifier(runtime)
           );
           if (!state.certificate) {
             state.certificate = own.certificate;
@@ -656,7 +669,8 @@ export class EncryptedChatClient {
         'enrollment',
         pending.proof,
         pending.challenge.signingKey,
-        enrollmentSchema
+        enrollmentSchema,
+        this.verifier(runtime)
       );
       if (
         JSON.stringify(challenge) !==
@@ -848,7 +862,12 @@ export class EncryptedChatClient {
     const additions: LocalDeviceState['trustedRoots'] = [];
     const roomAdditions: LocalDeviceState['roomApprovals'] = [];
     for (const device of roster) {
-      await verifyDirectoryDevice(device, device.rootPublicKey, atTime);
+      await verifyDirectoryDevice(
+        device,
+        device.rootPublicKey,
+        atTime,
+        this.verifier(runtime)
+      );
       const known = runtime.state.trustedRoots.filter(
         (entry) => entry.actorId === device.actorId
       );
@@ -971,7 +990,8 @@ export class EncryptedChatClient {
       'room-intent',
       proof.intent,
       proof.author.signingKey,
-      roomRestartSchema
+      roomRestartSchema,
+      this.verifier(runtime)
     );
     if (
       intent.roomId !== metadata.id ||
@@ -1061,7 +1081,8 @@ export class EncryptedChatClient {
         'room-intent',
         invitation.intent,
         author.signingKey,
-        membershipIntentSchema
+        membershipIntentSchema,
+        this.verifier(runtime)
       );
       if (
         intent.roomId !== metadata.id ||
@@ -1452,7 +1473,8 @@ export class EncryptedChatClient {
               'room-intent',
               event.intent,
               sender.signingKey,
-              membershipIntentSchema
+              membershipIntentSchema,
+              this.verifier(runtime)
             );
             if (
               intent.roomId !== metadata.id ||

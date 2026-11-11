@@ -60,8 +60,8 @@
 **Status: disabled-by-default product implementation; not activated in production.**
 The product owner selected this direction on 2026-11-10. It supersedes the
 earlier Matrix evaluation, not the existing plaintext chat implementation.
-No Matrix server, paid service, new cryptographic protocol, or production
-automatic activation is part of this implementation.
+No Matrix server, paid service, new cryptographic protocol, or automatic
+production activation is part of this implementation.
 
 **Implementation checkpoint:** P1 has a pinned OpenMLS 0.9.2 Rust/WASM
 boundary, checked upstream provider snapshots and independent-peer
@@ -71,9 +71,11 @@ The real product client is exercised against actual API handlers with
 synthetic accounts, not just the original protocol lab. The
 [engine documentation](../crypto/openmls/README.md) records dependency/advisory
 decisions, wire/local-state boundaries and audit exclusions. Android Keystore
-instrumentation includes a process restart on an isolated emulator. Actual
-supported Capacitor WebView/physical-device qualification, an iOS build/runtime
-on macOS, operational review and independent security review remain release
+instrumentation and the real Android 16/WebView 133 product client pass
+cold process restart and background/foreground checks. macOS CI has passed
+the iOS simulator build and unsigned device archive; simulator runtime evidence
+is a separate step. Supported physical-device qualification,
+operational review and independent security review remain release
 gates. `CHAT_E2EE_ENABLED` stays `0`; no real messages have been migrated.
 
 ### Confirmed scope and boundaries

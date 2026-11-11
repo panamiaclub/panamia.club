@@ -26,6 +26,7 @@
     "test:openmls": "node --import tsx --test tests-openmls/*.test.ts",
     "test:e2ee": "node --import tsx --test tests-unit/e2ee-*.test.ts",
     "test:e2ee:browser": "playwright test --config playwright.e2ee.config.ts",
+    "test:e2ee:native": "node --import tsx scripts/qualify-native-e2ee.ts",
     "test:db:visibility": "node --experimental-test-module-mocks --import tsx --test tests-db/visibility.test.ts tests-db/mixed-feed.test.ts tests-db/feed-page.test.ts tests-db/post-composer.test.ts tests-db/local-actors.test.ts tests-db/social-activation.test.ts tests-db/group-chat.test.ts",
     "prepare": "husky && (git remote get-url activities-upstream 2>/dev/null || git remote add activities-upstream https://github.com/llun/activities.next.git)",
     "subtree:pull": "git subtree pull --prefix=external/activities.next activities-upstream main --squash",

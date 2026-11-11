@@ -8,6 +8,7 @@ import {
   sha256Schema,
   signedStatementSchema,
   verifyStatement,
+  type StatementVerifier,
 } from './identity-contract';
 
 export const E2EE_MESSAGE_MS = 30 * 86_400_000;
@@ -178,7 +179,8 @@ export async function rosterDigest(value: DirectoryDevice[]): Promise<string> {
 export async function verifyDirectoryDevice(
   value: unknown,
   trustedRoot: string,
-  atTime = Date.now()
+  atTime = Date.now(),
+  verifier?: StatementVerifier
 ): Promise<DirectoryDevice> {
   const device = directoryDeviceSchema.parse(value);
   if (device.rootPublicKey !== trustedRoot)
@@ -189,7 +191,8 @@ export async function verifyDirectoryDevice(
     'device-certificate',
     device.certificate,
     trustedRoot,
-    deviceCertificateSchema
+    deviceCertificateSchema,
+    verifier
   );
   if (
     certificate.deviceId !== device.deviceId ||

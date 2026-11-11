@@ -163,6 +163,23 @@ impl ProfileSigningKey {
         self.public.clone()
     }
 
+    #[wasm_bindgen(js_name = verifyStatement)]
+    pub fn verify_statement(
+        purpose: &str,
+        payload: &[u8],
+        public_key: &[u8],
+        signature: &[u8],
+    ) -> Result<bool, String> {
+        if public_key.len() != 32 || signature.len() != 64 {
+            return Err("Invalid statement verification key or signature.".into());
+        }
+        let message = statement_message(purpose, payload)?;
+        Ok(OpenMlsRustCrypto::default()
+            .crypto()
+            .verify_signature(SUITE.signature_algorithm(), &message, public_key, signature)
+            .is_ok())
+    }
+
     #[wasm_bindgen(js_name = signStatement)]
     pub fn sign_statement(&self, purpose: &str, payload: &[u8]) -> Result<Vec<u8>, String> {
         if !matches!(
@@ -765,6 +782,48 @@ mod tests {
         assert!(device
             .sign_statement("device-certificate", b"certificate")
             .is_err());
+    }
+
+    #[test]
+    fn statement_verification_uses_the_pinned_provider_without_platform_ed25519() {
+        let root = ProfileSigningKey::new().unwrap();
+        let payload = b"exact profile certificate";
+        let signature = root.sign_statement("device-certificate", payload).unwrap();
+        assert!(ProfileSigningKey::verify_statement(
+            "device-certificate",
+            payload,
+            &root.public_key(),
+            &signature
+        )
+        .unwrap());
+        assert!(!ProfileSigningKey::verify_statement(
+            "enrollment",
+            payload,
+            &root.public_key(),
+            &signature
+        )
+        .unwrap());
+        assert!(!ProfileSigningKey::verify_statement(
+            "device-certificate",
+            b"changed",
+            &root.public_key(),
+            &signature
+        )
+        .unwrap());
+        assert!(!ProfileSigningKey::verify_statement(
+            "device-certificate",
+            payload,
+            &ProfileSigningKey::new().unwrap().public_key(),
+            &signature
+        )
+        .unwrap());
+        assert!(ProfileSigningKey::verify_statement(
+            "device-certificate",
+            payload,
+            &[0; 31],
+            &signature
+        )
+        .is_err());
     }
 
     fn approve(a: &mut MlsDevice, b: &MlsDevice) {

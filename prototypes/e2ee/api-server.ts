@@ -2,12 +2,17 @@ import { createServer } from 'node:http';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { readFile } from 'node:fs/promises';
 import { mock } from 'node:test';
+import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { getTableConfig } from 'drizzle-orm/pg-core';
 import { eq } from 'drizzle-orm';
 import * as schema from '../../lib/schema';
 import { getPrivateChatStorage, type R2Bucket } from '../../lib/r2';
+import {
+  nativeQualificationResultSchema,
+  type NativeQualificationResult,
+} from './native-contract';
 
 if (process.env.NODE_ENV === 'production')
   throw new Error(
@@ -89,6 +94,8 @@ const bucket: R2Bucket = {
 };
 getPrivateChatStorage({ CHAT_E2EE_BUCKET: bucket });
 const audit: Array<{ method: string; path: string; body: string }> = [];
+const runId = process.env.PANA_E2EE_FIXTURE_RUN ?? randomUUID();
+const nativeResults: NativeQualificationResult[] = [];
 for (const table of [
   schema.users,
   schema.profiles,
@@ -135,6 +142,7 @@ async function reset() {
     social_statuses, social_group_chat_messages, chat_e2ee_rooms, chat_e2ee_object_deletions CASCADE`);
   objects.clear();
   audit.length = 0;
+  nativeResults.length = 0;
   for (const name of ['alice', 'bob', 'carol']) {
     await db
       .insert(schema.users)
@@ -282,7 +290,28 @@ const server = createServer(async (incoming, outgoing) => {
     const url = new URL(incoming.url ?? '/', 'http://127.0.0.1:3147');
     let response: Response;
     if (url.pathname === '/__e2ee/health') {
-      response = Response.json({ synthetic: true });
+      response = Response.json({ synthetic: true, runId });
+    } else if (url.pathname === `/__e2ee/native-result/${runId}`) {
+      if (incoming.method === 'POST') {
+        const chunks: Buffer[] = [];
+        let length = 0;
+        for await (const chunk of incoming) {
+          const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+          length += bytes.length;
+          if (length > 4096)
+            throw new Error(
+              'The native result exceeds its metadata-only bound.'
+            );
+          chunks.push(bytes);
+        }
+        const result = nativeQualificationResultSchema.parse(
+          JSON.parse(Buffer.concat(chunks).toString('utf8'))
+        );
+        if (nativeResults.length >= 20)
+          throw new Error('The native qualification result limit was reached.');
+        nativeResults.push(result);
+        response = Response.json({ recorded: true });
+      } else response = Response.json({ runId, results: nativeResults });
     } else if (url.pathname === '/__e2ee/reset') {
       await reset();
       response = Response.json({ reset: true });

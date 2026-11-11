@@ -72,6 +72,12 @@ on:
   # build without pushing a commit is how you tell "we broke it" from "the
   # runner image changed underneath us."
   workflow_dispatch:
+    inputs:
+      e2ee_native_runtime:
+        description: Run the synthetic encrypted-chat bridge, cold-restart and background/resume checks in an iOS simulator
+        required: false
+        default: false
+        type: boolean
 
 # One build per ref. A force-push while a build is running makes the earlier
 # run irrelevant, and unlike the Playwright workflow there is no shared
@@ -258,6 +264,35 @@ jobs:
           find "$APP" -name PrivacyInfo.xcprivacy -print > build/privacy-manifests.txt
           test -s build/privacy-manifests.txt || { echo "::error::SDK privacy manifests are missing from the release archive."; exit 1; }
 
+      - name: Build pinned engine for optional native encryption qualification
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.e2ee_native_runtime }}
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal --target wasm32-unknown-unknown
+          cargo +1.99.1 install wasm-bindgen-cli --version 0.2.130 --locked
+          yarn openmls:build
+
+      - name: Qualify real iOS bridge and encrypted state across cold restart
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.e2ee_native_runtime }}
+        run: |
+          CAPACITOR_SERVER_URL='http://127.0.0.1:3147/native.html?platform=ios' yarn cap sync ios
+          xcodebuild \
+            -project mobile/ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath mobile/ios/App/build/NativeE2EE \
+            -quiet \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+          RUNTIME="$(xcrun simctl list runtimes --json | python3 -c 'import json,sys; print([r["identifier"] for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable") and r["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS-")][-1])')"
+          DEVICE_TYPE="$(xcrun simctl list devicetypes --json | python3 -c 'import json,sys; print([d["identifier"] for d in json.load(sys.stdin)["devicetypes"] if d["name"].startswith("iPhone")][-1])')"
+          SIMULATOR_ID="$(xcrun simctl create pana-e2ee-qualification "$DEVICE_TYPE" "$RUNTIME")"
+          trap 'xcrun simctl delete "$SIMULATOR_ID"' EXIT
+          xcrun simctl boot "$SIMULATOR_ID"
+          xcrun simctl bootstatus "$SIMULATOR_ID" -b
+          xcrun simctl install "$SIMULATOR_ID" mobile/ios/App/build/NativeE2EE/Build/Products/Debug-iphonesimulator/App.app
+          yarn test:e2ee:native ios "$SIMULATOR_ID" | tee mobile/ios/App/build/native-e2ee-runtime.log
+
       # xcodebuild's own failure output is buried in thousands of lines of
       # compiler invocations. When a build breaks, this is the file worth
       # reading, so keep it -- but only on failure, since a successful build's
@@ -267,6 +302,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ios-build-log
-          path: mobile/ios/App/build/Logs/**
+          path: |
+            mobile/ios/App/build/Logs/**
+            mobile/ios/App/build/native-e2ee-runtime.log
           retention-days: 7
           if-no-files-found: ignore
