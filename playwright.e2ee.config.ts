@@ -16,6 +16,8 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'webkit-phone', use: { ...devices['iPhone 13'] } },
+    { name: 'openmls-chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'openmls-webkit-phone', use: { ...devices['iPhone 13'] } },
   ],
   webServer: {
     command: 'yarn e2ee:lab',

@@ -1,9 +1,12 @@
+import { createRecoveryKey } from '../../lib/e2ee/prototype';
 import {
-  PrototypeClient,
-  createRecoveryKey,
-  describeContact,
-} from '../../lib/e2ee/prototype';
-import { PrototypeStore } from '../../lib/e2ee/prototype-store';
+  PrototypeStore,
+  referenceFactory,
+} from '../../lib/e2ee/prototype-store';
+import type {
+  QualificationClient,
+  QualificationFactory,
+} from '../../lib/e2ee/qualification-contract';
 import {
   decryptAttachment,
   encryptAttachment,
@@ -24,39 +27,68 @@ const json = (id: string): unknown => JSON.parse(area(id).value);
 let store: PrototypeStore | undefined;
 let activeActor: string | undefined;
 let download: { bytes: Uint8Array; name: string } | undefined;
+const selectedEngine = new URLSearchParams(window.location.search).get(
+  'engine'
+);
+let factory: Promise<QualificationFactory> | undefined;
+
+function getFactory(): Promise<QualificationFactory> {
+  factory ??= (async () => {
+    if (selectedEngine === null || selectedEngine === 'reference')
+      return referenceFactory;
+    if (selectedEngine === 'openmls') {
+      return (await import('../../lib/e2ee/openmls-qualification'))
+        .openMlsQualificationFactory;
+    }
+    throw new Error(
+      'Unsupported qualification engine; no fallback is permitted.'
+    );
+  })();
+  return factory;
+}
+output(
+  'engine',
+  selectedEngine === 'openmls'
+    ? 'OpenMLS 0.9.2 candidate - binding and app qualification pending'
+    : 'Unaudited ts-mls reference - not a production choice'
+);
+element('ack', HTMLButtonElement).hidden = selectedEngine !== 'openmls';
 
 async function operation<T>(
-  fn: (client: PrototypeClient) => Promise<T>
+  fn: (client: QualificationClient) => Promise<T>
 ): Promise<T> {
   if (!store || !activeActor) throw new Error('Open a lab device first.');
   return store.withDevice(activeActor, fn);
 }
 
 async function render() {
-  await operation(async (client) => {
-    output('device', await describeContact(client.contact));
-    area('contact').value = JSON.stringify(client.contact);
-    output('room', { room: client.room, members: client.members });
-    output(
-      'history',
-      client.history.entries.map((entry) => ({
-        room: entry.room,
-        id: entry.message.id,
-        content: entry.message.content,
-        attachments: entry.message.attachments.length,
-        expiresAt: entry.message.expiresAt,
-      }))
-    );
-    const select = element('member', HTMLSelectElement);
-    select.replaceChildren();
-    for (const member of client.members) {
-      if (member.device === client.identity.device) continue;
-      const option = document.createElement('option');
-      option.value = member.device;
-      option.textContent = `${member.actor} / ${member.device}`;
-      select.append(option);
-    }
-  });
+  const view = await operation(async (client) => ({
+    device: await (await getFactory()).describe(client.contact),
+    contact: client.contact,
+    room: client.room,
+    members: client.members,
+    identity: client.identity,
+    history: client.history.entries.map((entry) => ({
+      room: entry.room,
+      id: entry.message.id,
+      content: entry.message.content,
+      attachments: entry.message.attachments.length,
+      expiresAt: entry.message.expiresAt,
+    })),
+  }));
+  output('device', view.device);
+  area('contact').value = JSON.stringify(view.contact);
+  output('room', { room: view.room, members: view.members });
+  output('history', view.history);
+  const select = element('member', HTMLSelectElement);
+  select.replaceChildren();
+  for (const member of view.members) {
+    if (member.device === view.identity.device) continue;
+    const option = document.createElement('option');
+    option.value = member.device;
+    option.textContent = `${member.actor} / ${member.device}`;
+    select.append(option);
+  }
 }
 
 function action(id: string, fn: () => Promise<void>) {
@@ -92,7 +124,7 @@ function action(id: string, fn: () => Promise<void>) {
 }
 
 action('open', async () => {
-  store ??= await PrototypeStore.open();
+  store ??= await PrototypeStore.open(await getFactory());
   const actor = input('actor').value;
   await store.withDevice(actor, async () => {});
   activeActor = actor;
@@ -110,7 +142,7 @@ action('forget', async () => {
     area(id).value = '';
 });
 action('inspect', async () =>
-  output('fingerprint', await describeContact(json('peer')))
+  output('fingerprint', await (await getFactory()).describe(json('peer')))
 );
 action('trust', async () => {
   await operation((client) => client.trust(json('peer')));
@@ -128,6 +160,13 @@ action('join', async () => {
 });
 action('apply', async () => {
   await operation((client) => client.receive(json('commit')));
+});
+action('ack', async () => {
+  await operation(async (client) => {
+    if (!client.acknowledgeCommit)
+      throw new Error('This engine has no pending-commit acknowledgement API.');
+    await client.acknowledgeCommit();
+  });
 });
 action('remove', async () => {
   const envelope = await operation((client) =>
@@ -157,9 +196,8 @@ action('send', async () => {
   input('file').value = '';
 });
 action('receive', async () => {
-  await operation(async (client) => {
+  const received = await operation(async (client) => {
     const message = await client.receive(json('incoming'));
-    download = undefined;
     if (message?.attachments.length) {
       const entry = client.history.entries.find(
         (entry) => entry.message.id === message.id
@@ -169,13 +207,14 @@ action('receive', async () => {
         (item) => item.id === reference.id
       );
       if (!attachment) throw new Error('Encrypted attachment is missing.');
-      download = await decryptAttachment(
+      return decryptAttachment(
         attachment.object,
         reference.id,
         reference.secret
       );
     }
   });
+  download = received;
 });
 action('download', async () => {
   if (!download) throw new Error('Decrypt a message with an attachment first.');

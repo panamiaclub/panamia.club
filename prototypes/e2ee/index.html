@@ -82,8 +82,13 @@
   </head>
   <body>
     <h1>Pana E2EE protocol lab</h1>
+    <nav aria-label="Qualification engine">
+      <a href="/">ts-mls reference</a> |
+      <a href="/?engine=openmls">OpenMLS candidate</a>
+    </nav>
+    <p id="engine" role="status"></p>
     <p class="warning">
-      Non-production prototype using an unaudited MLS implementation. Use
+      Non-production engine qualification with an unaudited integration. Use
       invented messages only. This is not connected to Pana accounts, DMs,
       groups, or storage. Live Pana messages are not end-to-end encrypted by
       this lab.
@@ -126,6 +131,9 @@
       <button id="join">Join using invitation</button>
       <label for="commit">Membership commit for existing members</label>
       <textarea id="commit" autocomplete="off"></textarea>
+      <button id="ack" hidden>
+        Confirm my membership commit was accepted (lab relay only)
+      </button>
       <button id="apply">Apply membership commit</button>
       <label for="member">Member device to remove</label>
       <select id="member"></select>

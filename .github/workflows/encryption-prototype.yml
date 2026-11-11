@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - 'lib/e2ee/**'
+      - 'crypto/openmls/**'
+      - 'scripts/openmls.ts'
+      - 'tests-openmls/**'
       - 'prototypes/e2ee/**'
       - 'tests-e2ee/**'
       - 'tests-unit/e2ee-*.test.ts'
@@ -16,6 +19,9 @@ on:
     branches: [main]
     paths:
       - 'lib/e2ee/**'
+      - 'crypto/openmls/**'
+      - 'scripts/openmls.ts'
+      - 'tests-openmls/**'
       - 'prototypes/e2ee/**'
       - 'tests-e2ee/**'
       - 'tests-unit/e2ee-*.test.ts'
@@ -31,7 +37,7 @@ permissions:
 jobs:
   prototype:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - run: corepack enable
@@ -40,6 +46,18 @@ jobs:
           node-version: '24'
           cache: yarn
       - run: yarn install --immutable
+      - name: Install pinned Rust toolchain and binding generator
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy --target wasm32-unknown-unknown
+          cargo +1.99.1 install wasm-bindgen-cli --version 0.2.130 --locked
+          cargo +1.99.1 install cargo-audit --version 0.23.0 --locked
+          cargo +1.99.1 install cargo-deny --version 0.20.2 --locked
+      - run: yarn openmls:check
+      - run: yarn openmls:audit
+      - run: yarn openmls:build
+      - run: git diff --exit-code -- crypto/openmls/pkg/pana_openmls.d.ts
+      - run: yarn test:openmls:rust
+      - run: yarn test:openmls
       - run: yarn test:e2ee
       - run: yarn playwright install --with-deps chromium webkit
       - run: yarn test:e2ee:browser

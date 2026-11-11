@@ -13,7 +13,23 @@ export default defineConfig(() => {
       host: '127.0.0.1',
       port: 3147,
       strictPort: true,
-      fs: { allow: [path.resolve('.')] },
+      fs: {
+        strict: true,
+        allow: [
+          path.resolve('prototypes/e2ee'),
+          path.resolve('lib/e2ee'),
+          path.resolve('crypto/openmls/pkg'),
+          path.resolve('node_modules'),
+        ],
+        deny: [
+          '.env',
+          '.env.*',
+          '.dev.vars',
+          '.dev.vars.*',
+          '*.{crt,pem}',
+          '**/.git/**',
+        ],
+      },
     },
   };
 });

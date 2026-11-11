@@ -63,6 +63,14 @@ earlier Matrix evaluation, not the existing plaintext chat implementation.
 No Matrix server, paid service, new cryptographic protocol, or production
 activation is part of this planning change.
 
+**Implementation checkpoint:** P1 now has a pinned OpenMLS 0.9.2 Rust/WASM
+boundary, checked upstream provider snapshots, independent-peer
+interoperability and shared browser qualification scenarios. The
+[engine documentation](../crypto/openmls/README.md) records dependency/advisory
+decisions, wire/local-state boundaries and audit exclusions. Real Android/iOS
+WebView and protected-key checks remain open, so P1 is not fully qualified.
+P2-P8 and production activation remain unimplemented; live chat is unchanged.
+
 ### Confirmed scope and boundaries
 
 - Encrypt private DMs and members-only group chats, including message media.
@@ -454,13 +462,13 @@ for things that have nothing to do with the inbox UI.
 
 A DM today is a `socialStatuses` row with `visibility: 'direct'`. Retiring that row type breaks:
 
-| What breaks                | Where                                         | Why it matters                                                         |
-| -------------------------- | --------------------------------------------- | ---------------------------------------------------------------------- |
-| **Federation**             | ActivityPub direct addressing                 | A DM to a Mastodon account works today. Chat does not federate at all. |
-| **The DM consent gate**    | `lib/federation/wrappers/dm-gate.ts`          | `allow`/`hold`/`refuse`, the Requests folder, the no-notify property   |
-| **Block / mute semantics** | `isBlockedEitherWay`, `filterHiddenActorIds`  | Already audited against the status read path                           |
-| **Moderation**             | A DM is a status, so status tooling applies   | A chat transcript is not a status; nothing we built would apply        |
-| **Test coverage**          | `tests-db/social-dm-requests.test.ts`         | 12 assertions on hold/accept/delete/block/policy behaviour             |
+| What breaks                | Where                                        | Why it matters                                                         |
+| -------------------------- | -------------------------------------------- | ---------------------------------------------------------------------- |
+| **Federation**             | ActivityPub direct addressing                | A DM to a Mastodon account works today. Chat does not federate at all. |
+| **The DM consent gate**    | `lib/federation/wrappers/dm-gate.ts`         | `allow`/`hold`/`refuse`, the Requests folder, the no-notify property   |
+| **Block / mute semantics** | `isBlockedEitherWay`, `filterHiddenActorIds` | Already audited against the status read path                           |
+| **Moderation**             | A DM is a status, so status tooling applies  | A chat transcript is not a status; nothing we built would apply        |
+| **Test coverage**          | `tests-db/social-dm-requests.test.ts`        | 12 assertions on hold/accept/delete/block/policy behaviour             |
 
 The consent gate is the one to be most careful with. `docs/SOCIAL-GRAPH.md` §C1 calls ungated DMs
 _"the largest open safety gap"_, and `dm-gate.ts` is the thing that closed it. It is not a filter

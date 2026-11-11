@@ -26,15 +26,30 @@ import { defaultClientConfig } from 'ts-mls/clientConfig.js';
 import { verifyKeyPackage } from 'ts-mls/keyPackage.js';
 import { toLeafIndex } from 'ts-mls/treemath.js';
 import { z } from 'zod';
+import { fromBase64, toBase64, type SealedObject } from './sealed-object';
 import {
-  fromBase64,
-  importSecret,
-  seal,
-  sealedObjectSchema,
-  toBase64,
-  unseal,
-  type SealedObject,
-} from './sealed-object';
+  encodedSchema as encoded,
+  identitySchema,
+  referenceContactSchema as contactSchema,
+  messageSchema,
+  envelopeSchema,
+  archiveSchema,
+  type Contact,
+  type Envelope,
+  type HistoryArchive,
+  type PrototypeMessage,
+} from './qualification-contract';
+export type {
+  Contact,
+  Envelope,
+  HistoryArchive,
+  PrototypeMessage,
+} from './qualification-contract';
+import {
+  retainedHistory,
+  restoreRetainedHistory,
+  sealHistory,
+} from './qualification-history';
 
 // Prototype only: no production messaging module imports this unaudited SDK.
 const cipherSuite = () =>
@@ -43,57 +58,6 @@ const cipherSuite = () =>
   );
 const utf8 = new TextEncoder();
 const text = new TextDecoder('utf-8', { fatal: true });
-const encoded = z.string().max(1024 * 1024);
-const identitySchema = z
-  .object({
-    actor: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/),
-    device: z.uuid(),
-  })
-  .strict();
-const contactSchema = z
-  .object({
-    version: z.literal(1),
-    keyPackage: encoded,
-  })
-  .strict();
-export type Contact = z.infer<typeof contactSchema>;
-const attachmentReference = z
-  .object({ id: z.uuid(), secret: z.string().max(44) })
-  .strict();
-const messageSchema = z
-  .object({
-    id: z.uuid(),
-    content: z.string().max(5000),
-    attachments: z.array(attachmentReference).max(4),
-    expiresAt: z.iso.datetime(),
-  })
-  .strict();
-export type PrototypeMessage = z.infer<typeof messageSchema>;
-const envelopeSchema = z
-  .object({
-    version: z.literal(1),
-    frame: encoded,
-    objects: z
-      .array(z.object({ id: z.uuid(), object: sealedObjectSchema }).strict())
-      .max(4),
-  })
-  .strict();
-export type Envelope = z.infer<typeof envelopeSchema>;
-const archiveEntrySchema = z
-  .object({
-    room: z.string().max(128),
-    message: messageSchema,
-    objects: envelopeSchema.shape.objects,
-  })
-  .strict();
-const archiveSchema = z
-  .object({
-    version: z.literal(1),
-    actor: identitySchema.shape.actor,
-    entries: z.array(archiveEntrySchema).max(500),
-  })
-  .strict();
-export type HistoryArchive = z.infer<typeof archiveSchema>;
 const localSnapshotSchema = z
   .object({
     version: z.literal(1),
@@ -338,12 +302,7 @@ export class PrototypeClient {
   }
 
   get history(): HistoryArchive {
-    return structuredClone({
-      ...this.archive,
-      entries: this.archive.entries.filter(
-        (entry) => Date.parse(entry.message.expiresAt) > Date.now()
-      ),
-    });
+    return retainedHistory(this.archive);
   }
 
   private async createRoomOnce(): Promise<void> {
@@ -621,53 +580,15 @@ export class PrototypeClient {
     value: unknown,
     recoveryKey: string
   ): Promise<void> {
-    const secret = fromBase64(recoveryKey, 32);
-    try {
-      const decrypted = await unseal(
-        value,
-        await importSecret(secret),
-        'history-backup',
-        this.identity.actor
-      );
-      try {
-        const archive = archiveSchema.parse(JSON.parse(text.decode(decrypted)));
-        if (archive.actor !== this.identity.actor)
-          throw new Error('Backup belongs to another profile.');
-        const entries = new Map(
-          this.history.entries.map((entry) => [entry.message.id, entry])
-        );
-        for (const entry of archive.entries) {
-          if (Date.parse(entry.message.expiresAt) > Date.now())
-            entries.set(entry.message.id, entry);
-        }
-        if (entries.size > 500)
-          throw new Error('Prototype history limit reached.');
-        this.archive = {
-          version: 1,
-          actor: archive.actor,
-          entries: [...entries.values()],
-        };
-      } finally {
-        decrypted.fill(0);
-      }
-    } finally {
-      secret.fill(0);
-    }
+    this.archive = await restoreRetainedHistory(
+      this.archive,
+      value,
+      recoveryKey
+    );
   }
 
   async backupHistory(recoveryKey: string): Promise<SealedObject> {
-    const secret = fromBase64(recoveryKey, 32);
-    try {
-      // History only: restoring a backup must not clone live ratchet/device state.
-      return await seal(
-        utf8.encode(JSON.stringify(this.history)),
-        await importSecret(secret),
-        'history-backup',
-        this.identity.actor
-      );
-    } finally {
-      secret.fill(0);
-    }
+    return sealHistory(this.archive, recoveryKey);
   }
 }
 

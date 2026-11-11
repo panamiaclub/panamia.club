@@ -6,18 +6,33 @@ and are not end-to-end encrypted by this work. Use invented content only.**
 The owner selected **Pana-owned messaging on the existing backend**, not Matrix,
 on 2026-11-10. The next steps are documented in the
 [implementation plan](../../docs/CHAT-ROADMAP.md#pana-owned-e2ee-implementation-plan).
-This lab remains a behavior/compatibility reference, not the production engine.
+The lab now has two isolated engine modes: the original unaudited reference
+and a pinned OpenMLS Rust/WASM qualification candidate. Neither is production
+chat. The [engine boundary documentation](../../crypto/openmls/README.md)
+records the exact pins, audit exclusions and remaining native-device gates.
 
 ## Run
 
 ```powershell
 yarn install --immutable
+yarn openmls:build
 yarn e2ee:lab
 ```
 
-Open `http://127.0.0.1:3147` in separate browser profiles. The separate lab server
-binds to loopback, refuses production mode, has no Pana account/session access,
-and does not implement a message upload or relay API. Neither the prototype nor
+Install the pinned Rust/linker and wasm-bindgen prerequisites from the engine
+documentation before building. Generated JS/WASM is intentionally not committed.
+
+Open `http://127.0.0.1:3147` for the reference engine or
+`http://127.0.0.1:3147/?engine=openmls` for the candidate, in separate browser
+profiles. Use the same mode for every participant in a room; the two modes
+use different suites/contact formats and separate encrypted local stores.
+An unsupported or failed engine selection never falls back to the reference.
+The separate lab server
+binds to loopback, refuses production mode, does not integrate with Pana
+authentication or its mailbox/chat APIs, and does not implement a message
+upload or relay API. Its filesystem allowlist
+is limited to lab modules, generated crypto artifacts and dependencies, not
+the whole workspace; local environment and Git files are denied. Neither the prototype nor
 its development dependency is imported by production app routes.
 
 Each profile is an independent device. Two devices exercise DMs; three or more
@@ -26,6 +41,12 @@ through a trusted channel, and explicitly trust every current device before
 joining. Create a room, invite a peer, and copy the invitation to that peer.
 Later additions/removals produce a commit that existing members must process.
 New members receive only the new invitation, not past room secrets.
+
+In OpenMLS mode, explicitly accept the pending commit on its author after
+simulating durable relay acceptance, then relay it to existing members.
+Application sending is blocked before that acknowledgement. The button is a
+lab simulation, not production delivery authorization or a real server receipt.
+Do not treat a timeout as acceptance or rejection.
 
 Copy outbound ciphertext into another device's inbound field. An attachment's
 opaque object can be relayed with the envelope, but its key and filename are
@@ -37,9 +58,10 @@ authentication**. Do not equate an entered lab name with a verified Pana actor.
 
 ## What this implements
 
-- RFC 9420 MLS using pinned MIT-licensed `ts-mls@1.6.4`, not a custom messaging
-  protocol. The P-256/AES-128-GCM/SHA-256/P-256 suite avoids requiring WebCrypto
-  Ed25519/X25519 support in older WebViews.
+- RFC 9420 MLS, not a custom cryptographic protocol. The reference uses
+  MIT-licensed `ts-mls@1.6.4` with P-256/AES-128-GCM/SHA-256/P-256. The OpenMLS
+  candidate uses the mandatory X25519/AES-128-GCM/SHA-256/Ed25519 suite in WASM,
+  without requiring WebCrypto's Ed25519/X25519 implementation.
 - Explicit credential/signing-key pinning instead of the library's allow-all
   authentication default. Unknown credentials and changed pinned keys fail.
 - Group additions and removals, private commits, authenticated messages, replay
@@ -84,6 +106,11 @@ Copies already downloaded by another member cannot be recalled.
 ## Verification
 
 ```powershell
+yarn openmls:check
+yarn openmls:audit
+yarn test:openmls:rust
+yarn openmls:build
+yarn test:openmls
 yarn test:e2ee
 yarn playwright install chromium webkit
 yarn test:e2ee:browser
@@ -92,25 +119,32 @@ yarn test:e2ee:browser
 Browser coverage uses isolated contexts (not several simulated users sharing
 one key store), reloads IndexedDB state, exercises concurrent tabs, transfers
 encrypted files and restores a backup. The phone project uses WebKit's iPhone
-browser configuration, and a cross-engine pair exchanges messages between
-desktop Chromium and phone WebKit. This is **not physical iOS/Android or Capacitor Keychain/
+browser configuration, and each engine exchanges messages between
+desktop Chromium and phone WebKit. Failure injection verifies that aborted
+local saves publish neither new outbound ciphertext nor decrypted attachments,
+and exact receive retries remain usable. Known plaintext, filenames and
+recovery keys are checked against HTTP URLs/bodies and outbound WebSocket
+frames, not just against non-GET traffic.
+This is **not physical iOS/Android or Capacitor Keychain/
 Keystore validation**. CI requires no production database, account or secrets.
 
 ## Production gate and remaining work
 
-The selected MLS implementation explicitly states it has **not undergone a
-formal security audit**. This milestone is a compatibility prototype, not an
-approval to adopt it for security-critical production use. A reviewed
-implementation/integration and independent specialist review remain required.
+The reference library explicitly states it has **not undergone a formal
+security audit**. Do not select it for security-critical production use merely
+because it passes the shared scenarios. The OpenMLS candidate has separate,
+component-specific audit evidence and a pinned upstream provider snapshot;
+neither our bindings nor the whole current dependency stack inherit a blanket
+audit approval. Independent integration review remains a release checkpoint.
 Its optional `@noble/curves` peer targets 2.0.1; the exercised P-256 path uses the
 repository's existing 2.4.0 without downgrading that dependency. The peer/version
 compatibility warning is another item to resolve in a production selection.
 Signal's supported Node/native bindings are not a drop-in browser SDK;
 OpenMLS's WASM/iOS/Android targets are built but not tested by its upstream CI.
 Matrix's Rust/WASM stack was evaluated, but the owner selected the Pana-owned
-MLS architecture instead. Qualify OpenMLS first; this does not automatically
-select its current release or bindings for production. The lab does not
-settle that engine qualification.
+MLS architecture instead. Software compatibility now has executable OpenMLS
+evidence; physical-device qualification and the production engine decision
+remain open. The lab does not enable E2EE in the app.
 
 Before any live rollout:
 

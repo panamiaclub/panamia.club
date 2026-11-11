@@ -54,6 +54,9 @@ next-env.d.ts
 test-results/
 test-results-e2ee/
 prototypes/e2ee/dist/
+crypto/openmls/target/
+crypto/openmls/pkg/*
+!crypto/openmls/pkg/pana_openmls.d.ts
 playwright-report/
 playwright/.cache/
 
