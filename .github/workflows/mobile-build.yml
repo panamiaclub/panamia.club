@@ -273,6 +273,7 @@ jobs:
 
       - name: Qualify real iOS bridge and encrypted state across cold restart
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.e2ee_native_runtime }}
+        shell: bash
         run: |
           CAPACITOR_SERVER_URL='http://127.0.0.1:3147/native.html?platform=ios' yarn cap sync ios
           xcodebuild \
@@ -284,8 +285,7 @@ jobs:
             -quiet \
             CODE_SIGNING_ALLOWED=NO \
             build
-          RUNTIME="$(xcrun simctl list runtimes --json | python3 -c 'import json,sys; print([r["identifier"] for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable") and r["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS-")][-1])')"
-          DEVICE_TYPE="$(xcrun simctl list devicetypes --json | python3 -c 'import json,sys; print([d["identifier"] for d in json.load(sys.stdin)["devicetypes"] if d["name"].startswith("iPhone")][-1])')"
+          read -r RUNTIME DEVICE_TYPE < <(xcrun simctl list devices available --json | python3 -c 'import json,sys; pairs = [(r, d["deviceTypeIdentifier"]) for r, devices in json.load(sys.stdin)["devices"].items() if r.startswith("com.apple.CoreSimulator.SimRuntime.iOS-") for d in devices if d.get("isAvailable") and d["name"].startswith("iPhone")]; assert pairs, "No compatible installed iPhone simulator/runtime pair"; print(*pairs[0])')
           SIMULATOR_ID="$(xcrun simctl create pana-e2ee-qualification "$DEVICE_TYPE" "$RUNTIME")"
           trap 'xcrun simctl delete "$SIMULATOR_ID"' EXIT
           xcrun simctl boot "$SIMULATOR_ID"
