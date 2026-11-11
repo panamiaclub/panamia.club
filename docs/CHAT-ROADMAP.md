@@ -5,6 +5,12 @@
 > Both use the authenticated actor mailbox at `/ws/dm`. Apply migration `0074_social_group_chat`
 > before deploying group chat. Event chat and the generic room/socket design below remain proposals.
 >
+> **E2EE direction selected (2026-11-10):** build Pana-owned encrypted messaging
+> on the existing backend, using a standard protocol and a maintained implementation.
+> Matrix is not the selected architecture. Production chat is still server-readable;
+> the existing encryption lab is not a rollout. See the
+> [Pana-owned E2EE implementation plan](#pana-owned-e2ee-implementation-plan).
+>
 > **Decided (2026-10), by the product owner:** chat replaces the mail experience, and it is scoped
 > to **three** room types — direct messages between panas, rooms inside **groups**, and rooms inside
 > **events**. That answers the question this document previously called _"blocks everything else"_.
@@ -27,6 +33,7 @@
 
 ## Table of Contents
 
+- [Pana-owned E2EE implementation plan](#pana-owned-e2ee-implementation-plan)
 - [Overview](#overview)
 - [Current Messages workspace](#current-messages-workspace)
 - [Current group chats](#current-group-chats)
@@ -45,6 +52,220 @@
 - [Do Not Copy The Signaling Auth Model](#do-not-copy-the-signaling-auth-model)
 - [Roadmap](#roadmap)
 - [Risks & Open Questions](#risks--open-questions)
+
+---
+
+## Pana-owned E2EE implementation plan
+
+**Status: implementation plan, not implemented production encryption.**
+The product owner selected this direction on 2026-11-10. It supersedes the
+earlier Matrix evaluation, not the existing plaintext chat implementation.
+No Matrix server, paid service, new cryptographic protocol, or production
+activation is part of this planning change.
+
+### Confirmed scope and boundaries
+
+- Encrypt private DMs and members-only group chats, including message media.
+  Preserve the current text/photo/GIF experience and supported media formats.
+  Audio/voice content must not get a plaintext bypass; bringing back a retired
+  recorder or adding live calls is not part of this work.
+- New group members get messages sent after joining, not automatic access to
+  earlier history. A person's own verified replacement device is a different
+  case and can restore retained history.
+- Provide encrypted backups protected by a user-held personal recovery key.
+  Account sign-in alone must not decrypt old conversations. Pana gets no
+  administrator master decryption key.
+- Reuse Workers, Postgres, R2 and the authenticated actor mailbox. Keep the Pana
+  interface, existing account system, profile identities, consent requests,
+  blocking, group roles and membership authorization.
+- Public posts, stories, directory content and their ActivityPub behavior remain
+  outside this encryption change. Event rooms and new messaging features are
+  outside the initial encrypted release.
+
+**Proposed rollout defaults:** start with compatible Pana clients only.
+Do not silently fall back to plaintext for an external or outdated client.
+Label existing server-readable history as legacy and keep it separate; do not
+delete it, call it retroactively encrypted, or revive expired messages.
+Preserve the current 30-day visibility rule while explicitly specifying new
+ciphertext, media, backup and legal-preservation retention before launch.
+Changing legacy deletion policy requires a separate product decision.
+
+### Architecture
+
+The client owns encryption, decryption, secret state and recovery secrets.
+The backend owns authentication, access policy, public device/key-package
+distribution, ordered opaque delivery, encrypted-object storage and quotas.
+Cryptography does not replace authorization on any read or write.
+
+Use MLS (RFC 9420) for asynchronous two-person and group conversations.
+**Qualify OpenMLS first**, including the exact release, crypto provider,
+storage format and browser/native bindings. Its
+[published SRLabs audit](https://blog.openmls.tech/posts/2026-05-27-independent-audit/)
+is evidence for the audited scope, not automatic approval of every later release
+or a new WASM bridge. Upstream
+[platform coverage](https://github.com/openmls/openmls#supported-platforms)
+lists WASM/iOS/Android as built but not tested. Prove our target configurations.
+Use a supported standard cipher suite with experimental features disabled.
+
+The [existing lab](../prototypes/e2ee/README.md) supplies useful behavior scenarios,
+not the production engine, identity authority or approved device state.
+Do not promote its unaudited `ts-mls` dependency or manual trust model into
+production. If OpenMLS does not qualify, evaluate another maintained MLS
+implementation; do not invent cryptography or switch to Matrix without a new
+architecture decision.
+
+Add versioned, chat-only encrypted storage for device credentials, single-use
+key packages, room/event metadata, opaque messages, private media ownership
+and encrypted backups. Reference existing actors/groups instead of creating a
+second authoritative social membership system. Final schemas follow engine
+qualification. Use journaled Drizzle migrations, server-only database access,
+RLS and the privacy data inventory.
+
+This is not a plaintext mirror into a second store. The existing
+`socialStatuses` and `social_group_chat_messages` remain legacy data paths;
+new encrypted messages must never also be written there as readable text.
+The "Storage" and mail-substrate sections below describe the current system,
+not an instruction to dual-write encrypted conversations into that system.
+
+### Work packages and dependencies
+
+| Phase                                      | Deliverable                                                                                                                       | Completion evidence                                                                                                                                                                                                                            | Prerequisites  |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| P1. Engine and platform qualification      | Pin and wrap a reviewed MLS implementation; specify threat model, wire versions and local state contract.                         | Independent peers exchange private messages/commits; conformance, tamper, replay, join/removal and persistence cases work in browser engines, with real Android/iOS capability probes. Record native build prerequisites and remaining limits. | None           |
+| P2. Profile identities and devices         | Account/profile-bound credentials, approved devices, key-package lifecycle, verification, revocation and ownership rules.         | Forged/stale identity selections cannot register or send as another profile. Login alone cannot substitute a trusted device key. Personal/business identities and manager revocations stay isolated.                                           | P1             |
+| P3. Ciphertext delivery backend            | Private room/event APIs, ordered log, idempotency, device authorization, quotas and mailbox invalidations.                        | Independent authorized clients deliver only opaque frames. Unauthorized reads/writes fail; simultaneous commits cannot create competing accepted room epochs; retries return the accepted envelope without duplicate messages.                 | P1, P2         |
+| P4. Membership and consent synchronization | Connect MLS membership to Pana DM gates, group roles, joins, removals, blocks and device revocations.                             | New members cannot decrypt earlier messages; removed/revoked devices cannot decrypt future ones, even when they ignore removal. Offline membership changes never permit sends under stale access.                                              | P2, P3         |
+| P5. Encrypted media                        | Encrypt files and sensitive metadata before upload; private R2 binding and authorized delivery.                                   | Relay/storage objects reveal neither file contents nor decryption keys. Wrong-room access, tampering, copied URLs, exact upload limits and cleanup behave correctly.                                                                           | P3             |
+| P6. Durable state and recovery             | Atomic local state/outbox, cross-tab coordination, native key protection, encrypted backup and fresh-device recovery.             | Crash/retry/upgrade cases do not reuse message keys. Recovery restores retained history without cloning live device/ratchet state or reactivating a revoked device. Expired history stays expired.                                             | P2, P4, P5     |
+| P7. Product integration and reporting      | Wire all private-message entrypoints, inbox/threads, media, device/recovery UX, explicit report disclosure and legacy boundaries. | The actual web/native apps handle success, missing keys, pending membership, failures and profile switches explicitly, without plaintext fallback or content leaks. Existing consent/block/delete behavior is preserved.                       | P3, P4, P5, P6 |
+| P8. Release qualification                  | Adversarial integration coverage, performance/usage measurement, independent review, fixes and staged activation.                 | Release criteria below pass; affected users/clients have explicit supported states; production claims match what is actually enabled.                                                                                                          | P7             |
+
+P4 and P5 can proceed independently once their prerequisites are ready.
+Validation belongs in every package, not only P8. Independent review is a
+**production release checkpoint**, not a requirement to stop all development
+while looking for a reviewer.
+
+### Security-critical implementation rules
+
+**Bind identities explicitly.** Reuse `requireProfileAccess` and existing
+ownership/membership rules, but encrypted requests must name and validate
+their profile, actor and device consistently. A stale active-profile cookie
+must not redirect a queued encrypted send to the personal-profile fallback.
+Do not change unrelated editors' existing fallback behavior. Do not reuse the
+server-held ActivityPub signing private keys as E2EE device keys.
+
+**Approval is not just login.** Specify the profile trust root, device
+approval/delegation, visible key-change verification, recovery authorization,
+and ownership-transfer rules before enrollment ships. Define business-manager
+history delegation explicitly; a server-side role change must not silently
+export personal keys or install a trusted device. A lost-key identity reset
+must be visible to peers, not an administrative way to unlock old messages.
+
+**Order membership changes safely.** Persist room revisions and expected MLS
+epochs transactionally. A removal/revocation must put affected rooms into a
+rekey-required state until a remaining authorized client commits the new
+membership. Reject new application frames under the old access state,
+including offline queued frames. Show "secure membership update pending"
+instead of falling back. Process authorized protocol-control events even
+when the UI hides a blocked author's ordinary messages. No server private
+room key is introduced to make offline changes easier.
+
+**Persist before publish.** Serialize all operations touching a device's
+ratchet, across tabs/processes as applicable. Commit changed crypto state and
+the exact outgoing envelope atomically before transmission. Network retries
+reuse that envelope, not the old key. If a stale-epoch attempt is rejected,
+process the new state and create a fresh encryption attempt without rewinding
+the ratchet. Bind retries and room/profile identifiers to the authenticated
+payload. Version local storage migrations; never silently wipe keys after an
+upgrade or clone live state onto a replacement device.
+
+Bind roster changes to authorized membership intent and approved profile/device
+credentials. Receiving clients must validate that binding rather than accept
+every cryptographically valid MLS proposal. A server-supplied device list is
+not, by itself, permission to insert an unseen participant. Define initial
+trust, peer verification and identity-reset limits explicitly.
+
+**Keep media private throughout.** The current photo upload and GIF mirroring
+paths deliver readable media and must not be used unchanged for encrypted
+messages. Keep public-post uploads separate. Use a private R2 bucket/binding,
+not a supposedly private prefix in the existing public bucket. Encrypt media
+and its sensitive manifest on-device; carry its key only inside the encrypted
+message. Enforce server-side ownership, ciphertext limits, quotas and expiry
+as well as client-side file validation. Public GIF discovery is not made
+anonymous by encrypting the selected file.
+
+**Recovery is a separate format.** Document exactly which retained history,
+media keys and identity-authorization material a backup contains. Protect it
+with a user-held high-entropy secret, authenticated version/profile context
+and a reviewed encryption format. Do not restore an old live MLS state,
+device identity, message counter or send queue as if it were the replacement
+device. Re-enroll with fresh device keys and current room authorization.
+Account recovery without the recovery secret cannot become a hidden
+message-decryption backdoor. Keep backup expiry and legal holds consistent
+with the declared retention policy.
+
+**Cover every write path.** Updating `/messages` alone is insufficient.
+Audit standalone group chat, profile/deep-link entrypoints, media hooks,
+generic direct-status creation, multi-recipient API sends and any legacy
+reply paths. After encrypted activation, server-side guards must refuse
+plaintext private writes for that scope, including from old clients.
+Preserve ambiguous DM refusals and quiet held requests. Do not add a new
+composer or revive a removed feature merely to exercise encryption.
+
+**Avoid secondary plaintext copies.** Render and sanitize decrypted content
+on-device. Keep previews/search local. Exclude message bodies, recovery
+secrets and private keys from SSR, logs, analytics, crash reports, server
+notifications and shared caches. Maintain strict profile cache/draft
+boundaries. Metadata such as participants, device IDs, timestamps and sizes
+remains observable; do not promise anonymity or protection against a
+compromised endpoint or malicious client code.
+
+**Reporting is an explicit exception.** Extend the existing safety workflow
+with a participant-approved, limited readable message selection and context.
+Do not disclose full conversations or private keys. Keep report access
+restricted and audited, and report text out of notification emails.
+Do not introduce report media uploads, automatic server decryption or
+content-scanning bots as an encryption shortcut. Staff response, legal
+preservation and reporting procedures remain separate operational work.
+
+### Milestones, effort and release gate
+
+**First milestone: time-box P1 to 5-10 working days.** Deliver an evidence-based
+go/no-go on the MLS engine and target platforms, a pinned adapter/wire-state
+contract, and an updated estimate. Use synthetic accounts, not real chats.
+iOS native qualification requires macOS build access and real-device access;
+desktop WebKit emulation is not a substitute.
+
+Next, integrate P2-P4 into a disabled-by-default staging path with test accounts.
+Then complete media, recovery and product UX before an opt-in beta. Migration
+or activation of real conversations is a separate release action.
+
+A preliminary planning allowance is **12-20 engineer-weeks** for the complete
+Pana-owned path, assuming an experienced engineer, native-device access and
+reuse of current UI/auth/transport infrastructure. This is not a quote or a
+deadline and must be revised after P1. The earlier Matrix-based 8-14 week range
+does not apply unchanged. No Matrix hosting bill is added, but Workers, DB,
+R2, maintenance, support and review still have costs; measure actual usage
+instead of promising the existing free-plan budget will suffice.
+
+Before production activation, demonstrate all of the following:
+
+- Database/object-store/relay captures contain no normal message plaintext,
+  usable private device keys or recovery secrets. Explicit reports are the
+  documented exception, not an always-on copy.
+- Identity substitution, wrong-profile access, stale manager access, replay,
+  malformed frames, duplicate sends and concurrent/offline membership changes
+  fail safely. Group joins/removals hold cryptographically, not merely in UI filters.
+- Physical Android/iOS, browser reloads, multiple tabs, app backgrounding,
+  upgrades, lost devices and backup restoration preserve the stated guarantees.
+- Private text, photos, GIFs and supported media cannot bypass the encrypted
+  path. Legacy history, expiration, content rendering, notifications and
+  existing public feeds behave as documented.
+- The pinned engine/bindings and integration receive the planned security
+  review; findings and release-affecting audit/version differences are resolved.
+- Rollout flags, diagnostics and rollback procedures preserve ciphertext and
+  keys. An emergency rollback may pause encrypted sending or require a client
+  update; it must never switch an encrypted conversation to plaintext.
 
 ---
 

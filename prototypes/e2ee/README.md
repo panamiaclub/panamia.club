@@ -3,6 +3,11 @@
 **Non-production first milestone. Live Pana DMs and group chats are unchanged
 and are not end-to-end encrypted by this work. Use invented content only.**
 
+The owner selected **Pana-owned messaging on the existing backend**, not Matrix,
+on 2026-11-10. The next steps are documented in the
+[implementation plan](../../docs/CHAT-ROADMAP.md#pana-owned-e2ee-implementation-plan).
+This lab remains a behavior/compatibility reference, not the production engine.
+
 ## Run
 
 ```powershell
@@ -102,14 +107,17 @@ repository's existing 2.4.0 without downgrading that dependency. The peer/versio
 compatibility warning is another item to resolve in a production selection.
 Signal's supported Node/native bindings are not a drop-in browser SDK;
 OpenMLS's WASM/iOS/Android targets are built but not tested by its upstream CI.
-Matrix's Rust/WASM crypto stack is another candidate, but it expects Matrix
-device/key distribution and has different group-security tradeoffs. The lab
-does not settle that production architecture choice.
+Matrix's Rust/WASM stack was evaluated, but the owner selected the Pana-owned
+MLS architecture instead. Qualify OpenMLS first; this does not automatically
+select its current release or bindings for production. The lab does not
+settle that engine qualification.
 
 Before any live rollout:
 
-1. Select and independently review the production protocol implementation and
-   integration, including browser-delivered-code and key-directory threats.
+1. Qualify and pin the production MLS implementation/bindings. Plan independent
+   review of the engine/integration, including browser-delivered-code and
+   key-directory threats, as a release checkpoint rather than a reason to stop
+   preparatory engineering.
 2. Implement account/profile-authorized enrollment, signed device membership,
    verification, revocation, key rotation, offline sequencing, lost-device
    recovery, and native secure storage. Do not copy the manual lab trust model.
