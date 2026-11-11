@@ -125,6 +125,8 @@ The app masks its existing WebView when it backgrounds and checks again before
 allowing interaction on foreground. It discards stale asynchronous results and
 removes the WebView when a new decision no longer permits access. Capacitor's
 launch-URL cache preserves an email link received before the WebView exists.
+An unfinished native picker is dismissed before a foreground recheck presents
+Apple's age sheet; otherwise it could obscure the check or prevent presentation.
 Browser and Android behavior is unchanged.
 
 Build with the iOS 26.5 SDK or newer. Enable **Declared Age Range** for App ID

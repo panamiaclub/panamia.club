@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 @testable import App
 
 final class AgeAssuranceTests: XCTestCase {
@@ -31,7 +32,7 @@ final class AgeAssuranceTests: XCTestCase {
     @MainActor
     private func element(_ identifier: String, in view: UIView) -> UIView? {
         if view.accessibilityIdentifier == identifier { return view }
-        return view.subviews.lazy.compactMap { element(identifier, in: $0) }.first
+        return view.subviews.lazy.compactMap { self.element(identifier, in: $0) }.first
     }
 
     func testPolicyRequiresAnUnambiguousAdultLowerBound() {
@@ -168,5 +169,32 @@ final class AgeAssuranceTests: XCTestCase {
         XCTAssertEqual(attempts, 2)
         XCTAssertEqual(creations, 0)
         XCTAssertTrue(controller.children.isEmpty)
+    }
+
+    @MainActor
+    func testForegroundDismissesAnOldNativePickerBeforeCheckingAgain() async throws {
+        let opened = expectation(description: "Initial app opened")
+        let presented = expectation(description: "Native picker presented")
+        let rechecked = expectation(description: "Foreground age recheck ran")
+        var attempts = 0
+        let controller = try host(check: { _ in
+            attempts += 1
+            if attempts > 1 { rechecked.fulfill() }
+            return .allowed
+        }, makeApp: {
+            opened.fulfill()
+            return UIViewController()
+        })
+        defer { finish(controller) }
+        await fulfillment(of: [opened], timeout: 5)
+        let app = try XCTUnwrap(controller.children.first)
+        app.present(UIViewController(), animated: false) { presented.fulfill() }
+        await fulfillment(of: [presented], timeout: 5)
+        controller.prepareForBackground()
+        controller.becameActive()
+        await fulfillment(of: [rechecked], timeout: 5)
+        XCTAssertNil(controller.presentedViewController)
+        XCTAssertNil(app.presentedViewController)
+        XCTAssertEqual(controller.children.count, 1)
     }
 }

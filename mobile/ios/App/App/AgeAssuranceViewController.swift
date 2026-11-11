@@ -41,6 +41,7 @@ final class AgeAssuranceViewController: UIViewController {
     private var generation = 0
     private var active = false
     private var needsCheck = true
+    private var dismissingPresentation = false
     private let gate = UIView()
     private let titleLabel = UILabel()
     private let messageLabel = UILabel()
@@ -152,7 +153,24 @@ final class AgeAssuranceViewController: UIViewController {
     }
 
     private func checkIfNeeded() {
-        guard active, needsCheck, isViewLoaded, view.window != nil, checkTask == nil else { return }
+        guard active, needsCheck, isViewLoaded, view.window != nil,
+              checkTask == nil, !dismissingPresentation else { return }
+        let presenter: UIViewController?
+        if presentedViewController != nil {
+            presenter = self
+        } else if let appController, appController.presentedViewController != nil {
+            presenter = appController
+        } else {
+            presenter = nil
+        }
+        if let presenter {
+            dismissingPresentation = true
+            presenter.dismiss(animated: false) { [weak self] in
+                self?.dismissingPresentation = false
+                self?.checkIfNeeded()
+            }
+            return
+        }
         needsCheck = false
         let requestGeneration = generation
         showChecking()
