@@ -1,8 +1,9 @@
-import { spawn, execFileSync, type ChildProcess } from 'node:child_process';
+import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { z } from 'zod';
 import { nativeQualificationResultSchema } from '../prototypes/e2ee/native-contract';
 
@@ -18,6 +19,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const runId = randomUUID();
 const origin = 'http://127.0.0.1:3147';
 const processes: ChildProcess[] = [];
+const failures: unknown[] = [];
 let reversed = false;
 let launched = false;
 const appId =
@@ -34,13 +36,14 @@ const adb = path.join(
   process.platform === 'win32' ? 'adb.exe' : 'adb'
 );
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-function command(program: string, args: string[], timeout = 60_000) {
-  return execFileSync(program, args, {
+const execute = promisify(execFile);
+async function command(program: string, args: string[], timeout = 60_000) {
+  const { stdout } = await execute(program, args, {
     cwd: root,
     encoding: 'utf8',
     timeout,
-    stdio: ['ignore', 'pipe', 'pipe'],
   });
+  return stdout;
 }
 function android(...args: string[]) {
   return command(adb, ['-s', deviceId, ...args]);
@@ -52,11 +55,11 @@ function ios(...args: string[]) {
     args[0] === 'launch' ? 180_000 : 60_000
   );
 }
-function validateDevice() {
+async function validateDevice() {
   if (platform === 'android') {
     if (
       !/^emulator-\d+$/.test(deviceId) ||
-      !android('emu', 'avd', 'name')
+      !(await android('emu', 'avd', 'name'))
         .split('\n')
         .some((name) => name.trim() === 'pana-e2ee-qualification')
     )
@@ -79,7 +82,7 @@ function validateDevice() {
           )
         ),
       })
-      .parse(JSON.parse(ios('list', 'devices', 'booted', '--json')));
+      .parse(JSON.parse(await ios('list', 'devices', 'booted', '--json')));
     const device = Object.values(data.devices)
       .flat()
       .find((entry) => entry.udid === deviceId);
@@ -122,7 +125,7 @@ function start(args: string[]) {
   return child;
 }
 async function readJson(url: string) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+  const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
   if (!response.ok)
     throw new Error(
       `Synthetic qualification endpoint failed (${response.status}).`
@@ -162,21 +165,37 @@ async function ready() {
 async function phase(name: 'create' | 'resume' | 'foreground') {
   console.log(`Waiting for actual ${platform}/${name} bridge result.`);
   const until = Date.now() + 120_000;
+  let lastReadFailure: unknown;
   while (Date.now() < until) {
     healthy();
+    let value: unknown;
+    try {
+      value = await readJson(`${origin}/__e2ee/native-result/${runId}`);
+    } catch (failure) {
+      if (!(failure instanceof TypeError || failure instanceof DOMException))
+        throw failure;
+      lastReadFailure = failure;
+      console.error(
+        `The ${platform}/${name} recorder is temporarily unreachable (${failure.name}); the native phase deadline is unchanged.`
+      );
+      await delay(500);
+      continue;
+    }
     const recording = z
       .object({
         runId: z.uuid(),
         results: z.array(nativeQualificationResultSchema),
       })
-      .parse(await readJson(`${origin}/__e2ee/native-result/${runId}`));
+      .parse(value);
     if (recording.runId !== runId)
       throw new Error('The native result came from another fixture run.');
     const failed = recording.results.find((entry) => !entry.ok);
-    if (failed)
+    if (failed) {
+      console.error(JSON.stringify(failed));
       throw new Error(
         `${failed.platform}/${failed.phase}: ${failed.error ?? 'Native runtime failed.'}`
       );
+    }
     const result = recording.results.find((entry) => entry.phase === name);
     if (result) {
       if (
@@ -195,35 +214,36 @@ async function phase(name: 'create' | 'resume' | 'foreground') {
     await delay(500);
   }
   throw new Error(
-    `The real native WebView did not complete its ${name} phase. No runtime qualification is claimed.`
+    `The real native WebView did not complete its ${name} phase. No runtime qualification is claimed.`,
+    { cause: lastReadFailure }
   );
 }
-function launch() {
+async function launch() {
+  launched = true;
   if (platform === 'android')
-    android(
+    await android(
       'shell',
       'am',
       'start',
       '-n',
       `${appId}/social.pana.app.MainActivity`
     );
-  else ios('launch', deviceId, appId);
-  launched = true;
+  else await ios('launch', deviceId, appId);
 }
-function terminate() {
-  if (platform === 'android') android('shell', 'am', 'force-stop', appId);
-  else ios('terminate', deviceId, appId);
+async function terminate() {
   launched = false;
+  if (platform === 'android') await android('shell', 'am', 'force-stop', appId);
+  else await ios('terminate', deviceId, appId);
 }
 try {
-  validateDevice();
+  await validateDevice();
   await Promise.all([
     ensureFree(`${origin}/__e2ee/health`),
     ensureFree('http://127.0.0.1:3148/__e2ee/health'),
   ]);
   if (
     platform === 'android' &&
-    !android('shell', 'pm', 'clear', appId).includes('Success')
+    !(await android('shell', 'pm', 'clear', appId)).includes('Success')
   )
     throw new Error('Could not clear the isolated native fixture app.');
   start([
@@ -239,40 +259,57 @@ try {
   ]);
   await ready();
   if (platform === 'android') {
-    android('reverse', 'tcp:3147', 'tcp:3147');
+    await android('reverse', 'tcp:3147', 'tcp:3147');
     reversed = true;
   }
-  launch();
+  await launch();
   await phase('create');
-  terminate();
-  launch();
+  await terminate();
+  await launch();
   await phase('resume');
   if (platform === 'android')
-    android('shell', 'input', 'keyevent', 'KEYCODE_HOME');
-  else ios('launch', deviceId, 'com.apple.mobilesafari');
+    await android('shell', 'input', 'keyevent', 'KEYCODE_HOME');
+  else await ios('launch', deviceId, 'com.apple.mobilesafari');
   await delay(2000);
-  launch();
+  await launch();
   await phase('foreground');
-  terminate();
+  await terminate();
   console.log(
     'Real native bridge, cold restart and foreground encrypted-delivery qualification passed. This is not a physical-device result.'
   );
+} catch (failure) {
+  failures.push(failure);
 } finally {
-  try {
-    if (launched) terminate();
-  } finally {
+  if (launched) {
     try {
-      for (const child of processes) {
-        if (child.exitCode === null && child.signalCode === null) {
-          const exited = once(child, 'exit');
-          child.kill();
-          await Promise.race([exited, delay(5000)]);
-          if (child.exitCode === null && child.signalCode === null)
-            child.kill('SIGKILL');
-        }
+      await terminate();
+    } catch (failure) {
+      failures.push(failure);
+    }
+  }
+  try {
+    for (const child of processes) {
+      if (child.exitCode === null && child.signalCode === null) {
+        const exited = once(child, 'exit');
+        child.kill();
+        await Promise.race([exited, delay(5000)]);
+        if (child.exitCode === null && child.signalCode === null)
+          child.kill('SIGKILL');
       }
-    } finally {
-      if (reversed) android('reverse', '--remove', 'tcp:3147');
+    }
+  } catch (failure) {
+    failures.push(failure);
+  }
+  if (reversed) {
+    try {
+      await android('reverse', '--remove', 'tcp:3147');
+    } catch (failure) {
+      failures.push(failure);
     }
   }
 }
+if (failures.length)
+  throw new AggregateError(
+    failures,
+    'Native qualification failed; runtime and cleanup errors are retained.'
+  );
