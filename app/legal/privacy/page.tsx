@@ -434,13 +434,13 @@ export default function PrivacyPolicyPage() {
             apply to everyone using the service.
           </p>
           <p>
-            On supported iPhones where Apple requires age assurance, the native
-            app requests an age range from Apple before opening Pana Mia. The
-            check stays on the device: we do not send the range, your birth
-            date, identity documents, or Apple's verification method to our
-            website or analytics. A required check that cannot confirm an age of
-            at least {nativeAgeAssurance.minimumAge} prevents the native app
-            from opening; it does not automatically delete a Pana Mia account.
+            iPhone releases with native age-assurance support request an age
+            range from Apple, where required, before opening Pana Mia. The check
+            stays on the device: we do not send the range, your birth date,
+            identity documents, or Apple's verification method to our website or
+            analytics. A required check that cannot confirm an age of at least{' '}
+            {nativeAgeAssurance.minimumAge} prevents the native app from
+            opening; it does not automatically delete a Pana Mia account.
           </p>
         </section>
 

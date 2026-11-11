@@ -69,6 +69,7 @@ final class AgeAssuranceViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = UIColor(red: 1, green: 247.0 / 255.0, blue: 236.0 / 255.0, alpha: 1)
         gate.backgroundColor = view.backgroundColor
+        gate.overrideUserInterfaceStyle = .light
         gate.translatesAutoresizingMaskIntoConstraints = false
         gate.accessibilityIdentifier = "age-assurance.gate"
         view.addSubview(gate)

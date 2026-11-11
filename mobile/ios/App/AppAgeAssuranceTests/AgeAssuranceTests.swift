@@ -2,6 +2,15 @@ import XCTest
 import UIKit
 @testable import App
 
+private final class AppearanceController: UIViewController {
+    var onAppear: (() -> Void)?
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        onAppear?()
+    }
+}
+
 final class AgeAssuranceTests: XCTestCase {
     @MainActor private var testWindow: UIWindow?
 
@@ -50,6 +59,7 @@ final class AgeAssuranceTests: XCTestCase {
     func testWebViewIsNotConstructedBeforeAnAllowedDecision() async throws {
         let requested = expectation(description: "Age request started")
         let opened = expectation(description: "Allowed app constructed")
+        let appeared = expectation(description: "Allowed app receives UIKit appearance")
         var resolve: CheckedContinuation<AgeAssuranceDecision, Never>?
         var creations = 0
         let controller = try host(check: { _ in
@@ -58,7 +68,9 @@ final class AgeAssuranceTests: XCTestCase {
         }, makeApp: {
             creations += 1
             opened.fulfill()
-            return UIViewController()
+            let app = AppearanceController()
+            app.onAppear = { appeared.fulfill() }
+            return app
         })
         defer { finish(controller) }
         await fulfillment(of: [requested], timeout: 5)
@@ -66,7 +78,7 @@ final class AgeAssuranceTests: XCTestCase {
         XCTAssertTrue(controller.children.isEmpty)
         XCTAssertFalse(try XCTUnwrap(element("age-assurance.gate", in: controller.view)).isHidden)
         resolve?.resume(returning: .allowed)
-        await fulfillment(of: [opened], timeout: 5)
+        await fulfillment(of: [opened, appeared], timeout: 5)
         XCTAssertEqual(creations, 1)
         XCTAssertEqual(controller.children.count, 1)
     }
@@ -86,7 +98,10 @@ final class AgeAssuranceTests: XCTestCase {
             await fulfillment(of: [checked], timeout: 5)
             XCTAssertEqual(creations, 0)
             XCTAssertTrue(controller.children.isEmpty)
-            XCTAssertFalse(try XCTUnwrap(element("age-assurance.gate", in: controller.view)).isHidden)
+            let gate = try XCTUnwrap(element("age-assurance.gate", in: controller.view))
+            XCTAssertFalse(gate.isHidden)
+            XCTAssertEqual(gate.overrideUserInterfaceStyle, .light)
+            XCTAssertEqual(controller.overrideUserInterfaceStyle, .unspecified)
             finish(controller)
         }
     }
