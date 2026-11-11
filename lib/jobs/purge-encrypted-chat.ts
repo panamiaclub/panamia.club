@@ -19,6 +19,7 @@ import {
   chatE2eeMedia,
   chatE2eeObjectDeletions,
   chatE2eeRequestNonces,
+  chatE2eeRooms,
   chatE2eeWelcomes,
 } from '@/lib/schema';
 import { privateBucket } from '@/lib/server/encryption-media';
@@ -33,6 +34,27 @@ export async function purgeEncryptedChat(limit = BATCH) {
     throw new Error('Invalid encrypted-chat retention batch.');
   const now = new Date();
   const report = await db.transaction(async (tx) => {
+    const closed = await tx
+      .select({ id: chatE2eeRooms.id })
+      .from(chatE2eeRooms)
+      .where(eq(chatE2eeRooms.state, 'closed'))
+      .orderBy(asc(chatE2eeRooms.closedAt), asc(chatE2eeRooms.id))
+      .limit(limit)
+      .for('update', { skipLocked: true });
+    const removedRooms = closed.length
+      ? await tx
+          .delete(chatE2eeRooms)
+          .where(
+            and(
+              eq(chatE2eeRooms.state, 'closed'),
+              inArray(
+                chatE2eeRooms.id,
+                closed.map((row) => row.id)
+              )
+            )
+          )
+          .returning({ id: chatE2eeRooms.id })
+      : [];
     const expiredDevices = await tx
       .select({ id: chatE2eeDevices.id })
       .from(chatE2eeDevices)
@@ -165,6 +187,7 @@ export async function purgeEncryptedChat(limit = BATCH) {
         )
       );
     return {
+      closedRoomsDeleted: removedRooms.length,
       devicesExpired: expiredDevices.length,
       applicationFramesPurged: frames.length,
       mediaExpired: media.length,

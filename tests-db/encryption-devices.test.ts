@@ -2451,6 +2451,61 @@ describe('personal-key recovery and explicit activation', () => {
 });
 
 describe('current private display policy and bounded retention', () => {
+  it('removes permanently closed DM protocol data and private objects while preserving active rooms and their order', async () => {
+    const { alice, room } = await directPair();
+    const media = await storedMedia(room, alice, personal);
+    const message = await messageInput(room);
+    message.mediaIds = [media.manifest.id];
+    await publish(room, alice, personal, message);
+    const backup = await uploadBackup(
+      alice,
+      personal,
+      await backupInput(alice, personal, room.id)
+    );
+    const active = await rooms.openEncryptedRoom(
+      await transport(alice, personal),
+      { kind: 'dm', peerActorId: 'alice' }
+    );
+    const activeMessage = await messageInput(active);
+    await publish(active, alice, personal, activeMessage);
+    await db
+      .delete(schema.socialActors)
+      .where(eq(schema.socialActors.id, bob.actorId));
+    assert.equal(
+      (
+        await db
+          .select()
+          .from(schema.chatE2eeRooms)
+          .where(eq(schema.chatE2eeRooms.id, room.id))
+      )[0].state,
+      'closed'
+    );
+    await assert.rejects(
+      rooms.readEncryptedRoom(await transport(alice, personal, 'GET'), room.id),
+      fails('ROOM_UNAVAILABLE')
+    );
+    process.env.CHAT_E2EE_ENABLED = '0';
+    const report = await retention.purgeEncryptedChat();
+    assert.equal(report.closedRoomsDeleted, 1);
+    assert.equal(report.objectsDeleted, 2);
+    assert.equal((await db.select().from(schema.chatE2eeRooms)).length, 1);
+    assert.equal(
+      (await db.select().from(schema.chatE2eeEvents))[0].id,
+      activeMessage.id
+    );
+    assert.equal((await db.select().from(schema.chatE2eeWelcomes)).length, 0);
+    assert.equal(
+      (
+        await db
+          .select()
+          .from(schema.chatE2eeBackups)
+          .where(eq(schema.chatE2eeBackups.id, backup.id))
+      ).length,
+      0
+    );
+    assert.equal(privateObjects.size, 0);
+    assert.equal((await retention.purgeEncryptedChat()).closedRoomsDeleted, 0);
+  });
   it('rechecks already-cached message IDs after a mute or deletion without releasing plaintext', async () => {
     const { alice, recipient, room } = await groupPair();
     const event = await messageInput(room);

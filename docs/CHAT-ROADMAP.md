@@ -309,7 +309,9 @@ No report attachment or file/recovery-key disclosure is introduced.
   maintenance removes expired/deleted application ciphertext while retaining
   ordered tombstones and active MLS control data for offline catch-up.
   Author deletion purges that author's application frames and media access;
-  deleting a DM participant closes the room.
+  deleting a DM participant closes the room immediately. Scheduled cleanup
+  deletes permanently closed rooms and their remaining protocol records,
+  encrypted files and room backups; active-room ordering/control data stays intact.
 - Bound media expires with its message; unbound reservations expire after one
   day. Private-object deletion work survives FK cascades and failed R2 deletes.
   The scheduler runs even when encrypted sending is paused. Legacy plaintext
