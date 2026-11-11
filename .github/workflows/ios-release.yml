@@ -48,6 +48,9 @@ jobs:
         run: |
           xcodebuild -version
           xcodebuild -showsdks
+          IOS_SDK_VERSION="$(xcrun --sdk iphoneos --show-sdk-version)" \
+            node --import tsx --input-type=module -e \
+            'import { assertIosAgeAssuranceSdk } from "./scripts/ios-bundle.ts"; assertIosAgeAssuranceSdk(process.env.IOS_SDK_VERSION)'
 
       - name: Configure release signing
         env:
@@ -86,6 +89,8 @@ jobs:
               requested_domains = set(plistlib.load(source).get("com.apple.developer.associated-domains", []))
           if not requested_domains or ("*" not in domains and not requested_domains.issubset(domains)):
               raise SystemExit("The distribution profile must allow the Associated Domains declared by this app.")
+          if entitlements.get("com.apple.developer.declared-age-range") is not True:
+              raise SystemExit("Enable Declared Age Range for the App ID and regenerate the distribution profile.")
           identifier = profile["UUID"]
           if str(uuid.UUID(identifier)).lower() != identifier.lower():
               raise SystemExit("The provisioning profile UUID is not in canonical form.")

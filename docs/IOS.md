@@ -103,12 +103,58 @@ the corresponding iPad screenshots.
 Browser-based iOS tests cover WebKit rendering and mocked bridge behavior. They
 do not replace an Xcode build, simulator run, or real-device permission/link tests.
 
+## Native age assurance
+
+The terms require an age of at least 18. The iPhone launch controller checks
+Apple's regional age-assurance eligibility before it creates the Capacitor
+WebView. On iOS 26.4 and newer it also reads the required regulatory features;
+on iOS 26.2-26.3 it uses eligibility directly. Users for whom Apple does not
+require an age check continue to the existing app. Older supported iOS versions
+do not have the regional APIs and retain the existing terms-based eligibility.
+This is not a claim that an App Store 18+ rating verifies everyone's age.
+
+When Apple requires a range, only a lower bound of at least 18 allows the app
+to load. A minor/ambiguous range, declined sharing, unknown response or service
+failure cannot silently open the WebView. The native screen offers retry and
+external Terms/Privacy links in English and Spanish, with Dynamic Type and
+VoiceOver support. No range, birth date, verification method or identity
+document is passed to JavaScript, the website, persistent app storage or
+analytics. Rejecting a device age range does not delete a Pana Mia account.
+
+The app masks its existing WebView when it backgrounds and checks again before
+allowing interaction on foreground. It discards stale asynchronous results and
+removes the WebView when a new decision no longer permits access. Capacitor's
+launch-URL cache preserves an email link received before the WebView exists.
+Browser and Android behavior is unchanged.
+
+Build with the iOS 26.5 SDK or newer. Enable **Declared Age Range** for App ID
+`social.pana.app`, regenerate its App Store distribution profile, and update the
+protected `ios-release` profile secret without changing the existing certificate.
+Signed archives and exported IPAs must include
+`com.apple.developer.declared-age-range = true`. The framework is weak-linked so
+the iOS 15 minimum deployment target remains valid. Personal Team signing does
+not grant this capability; testing age-assurance behavior requires an entitled
+organization build rather than assuming the free-team sideload is equivalent.
+
+Mobile Build runs native simulator tests for adult/minor/unknown/declined/error
+decisions, retry, first-load protection, foreground revocation and stale result
+handling, as well as an unsigned device archive. Before submission, also use
+[Apple's age-assurance Sandbox guidance](https://developer.apple.com/documentation/storekit/testing-age-assurance-in-sandbox)
+to exercise actual regional/age responses and verify the newly signed build on
+an iPhone. Mocked decisions and a successful archive are not Sandbox proof.
+Future significant changes require a separate PermissionKit/adult-notification
+assessment; the initial-release gate is not a blanket legal-compliance audit.
+See [Apple's framework FAQ](https://developer.apple.com/support/age-assurance/)
+and [Texas update](https://developer.apple.com/news/?id=sg176nne), and obtain
+appropriate guidance on applicable legal obligations.
+
 ## Apple account and website setup
 
 1. Enroll the nonprofit in the standard Apple Developer Program as an organization.
    Request a nonprofit fee waiver if eligible. Use the organization's account,
    not a contractor's personal publishing account.
-2. Register an explicit App ID for `social.pana.app` and enable **Associated Domains**.
+2. Register an explicit App ID for `social.pana.app` and enable **Associated Domains**
+   and **Declared Age Range**.
    Create an iOS app record with this identifier in App Store Connect.
 3. Find the Apple Team ID in Membership details. Set **`APPLE_APP_TEAM_ID`** to
    that value in the website's deployment environment, then deploy the website.

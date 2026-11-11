@@ -15,7 +15,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = PanaBridgeViewController()
+        window?.rootViewController = AgeAssuranceViewController()
         window?.makeKeyAndVisible()
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
@@ -27,5 +27,21 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
         SceneDelegateProxy.shared.scene(scene, continue: userActivity)
+    }
+
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        (window?.rootViewController as? AgeAssuranceViewController)?.becameActive()
+    }
+
+    func sceneDidEnterBackground(_ scene: UIScene) {
+        (window?.rootViewController as? AgeAssuranceViewController)?.prepareForBackground()
+    }
+
+    func sceneWillEnterForeground(_ scene: UIScene) {
+        (window?.rootViewController as? AgeAssuranceViewController)?.prepareForBackground()
+    }
+
+    func sceneDidDisconnect(_ scene: UIScene) {
+        (window?.rootViewController as? AgeAssuranceViewController)?.disconnect()
     }
 }
