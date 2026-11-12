@@ -58,16 +58,18 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { socialQueryKey } from '@/lib/query/social';
+import { ENCRYPTED_CHAT_UPDATE_EVENT } from '@/lib/chat';
 
 /** Metadata-only DM and group mailbox broadcasts. */
 interface DmSocketMessage {
-  type: 'dm' | 'group' | 'ready' | 'error';
+  type: 'dm' | 'group' | 'encrypted' | 'ready' | 'error';
+  roomId?: string;
   conversationActorId?: string | null;
   statusId?: string;
   at?: number;
   message?: string;
   groupId?: string;
-  kind?: 'message' | 'membership';
+  kind?: 'message' | 'membership' | 'delete';
 }
 
 /**
@@ -200,12 +202,41 @@ export function useDmSocket(enabled: boolean) {
           return;
         }
 
+        if (payload.type === 'encrypted') {
+          if (typeof payload.roomId !== 'string' || !payload.roomId) return;
+          void queryClient.invalidateQueries({
+            queryKey: ['encrypted-messaging-rooms'],
+          });
+          void queryClient.invalidateQueries({
+            queryKey: ['encrypted-messaging-device'],
+          });
+          void queryClient.invalidateQueries({
+            queryKey: [socialQueryKey, 'dm-requests'],
+          });
+          window.dispatchEvent(
+            new CustomEvent(ENCRYPTED_CHAT_UPDATE_EVENT, {
+              detail: { roomId: payload.roomId },
+            })
+          );
+          return;
+        }
         if (payload.type === 'group') {
           if (typeof payload.groupId !== 'string' || !payload.groupId) return;
           queryClient.invalidateQueries({
             queryKey: [socialQueryKey, 'messages', 'groups'],
           });
           if (payload.kind === 'membership') {
+            void queryClient.invalidateQueries({
+              queryKey: ['encrypted-messaging-rooms'],
+            });
+            void queryClient.invalidateQueries({
+              queryKey: ['encrypted-messaging-device'],
+            });
+            window.dispatchEvent(
+              new CustomEvent(ENCRYPTED_CHAT_UPDATE_EVENT, {
+                detail: { groupId: payload.groupId },
+              })
+            );
             queryClient.invalidateQueries({
               queryKey: [socialQueryKey, 'group'],
             });
@@ -264,6 +295,12 @@ export function useDmSocket(enabled: boolean) {
         reconnectRef.current = setTimeout(() => {
           queryClient.invalidateQueries({
             queryKey: [socialQueryKey, 'messages'],
+          });
+          void queryClient.invalidateQueries({
+            queryKey: ['encrypted-messaging-rooms'],
+          });
+          void queryClient.invalidateQueries({
+            queryKey: ['encrypted-messaging-device'],
           });
           connect();
         }, delay);

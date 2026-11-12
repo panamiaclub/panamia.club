@@ -6,6 +6,17 @@ export const GROUP_CHAT_PAGE_SIZE = 40;
 export const GROUP_CHAT_MAX_CONTENT = 5_000;
 export const GROUP_CHAT_MAX_ATTACHMENTS = 4;
 export const GROUP_CHAT_UNAVAILABLE = 'This group chat is not available.';
+export const ENCRYPTED_GROUP_CHAT_REQUIRED =
+  'This group requires encrypted messaging. Update or set up an approved device.';
+export type LegacyChatMediaTarget =
+  { kind: 'dm'; actorId: string } | { kind: 'group'; groupId: string };
+export const ENCRYPTED_CHAT_UPDATE_EVENT = 'pana-encrypted-chat-updated';
+export interface EncryptedChatEvent {
+  type: 'encrypted';
+  roomId: string;
+  kind: 'message' | 'membership' | 'delete';
+  at: number;
+}
 
 export interface ChatAttachment {
   type: string;
@@ -22,6 +33,10 @@ export type ChatMessage = Pick<
 > & {
   clientId?: string | null;
   canDelete?: boolean;
+  encrypted?: boolean;
+  encryptedAttachments?: Array<{ id: string; name: string; mediaType: string }>;
+  attachmentErrors?: Record<string, string>;
+  loadingAttachments?: string[];
 };
 
 export interface PendingChatMessage {
@@ -44,6 +59,7 @@ export interface GroupChatRoom {
   memberCount: number;
   visibility: SocialGroupVisibility;
   role: SocialGroupRole;
+  encryptionRequired?: boolean;
 }
 
 export interface GroupChatMessage extends ChatMessage {
@@ -56,6 +72,8 @@ export interface GroupChatMessage extends ChatMessage {
 
 export interface GroupChatConversation extends GroupChatRoom {
   lastMessage: GroupChatMessage | null;
+  encryptedRoomId?: string;
+  encryptedUpdatedAt?: string;
 }
 
 export interface GroupChatList {

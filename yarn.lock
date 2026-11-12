@@ -2002,6 +2002,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@hpke/common@npm:^1.10.0":
+  version: 1.13.0
+  resolution: "@hpke/common@npm:1.13.0"
+  checksum: 10c0/7f1b2c43505c8e9f1984a7eda2643dae371b5943cca06477fe3ebf312186804bc831b4ccc97028427b4b40489c5fb39a934f89b8910233f9bb102af3081da8b9
+  languageName: node
+  linkType: hard
+
+"@hpke/core@npm:1.9.0":
+  version: 1.9.0
+  resolution: "@hpke/core@npm:1.9.0"
+  dependencies:
+    "@hpke/common": "npm:^1.10.0"
+  checksum: 10c0/184d8c6a0e72e25362a8e5d559349cacf20f161df12ff31cbcdaf32b1a5ad08ebf4e44c512c52212e22c634449b7689a716b1753a565003a70a7cb430c7a1c76
+  languageName: node
+  linkType: hard
+
 "@humanfs/core@npm:^0.19.2":
   version: 0.19.2
   resolution: "@humanfs/core@npm:0.19.2"
@@ -2638,6 +2654,13 @@ __metadata:
     "@emnapi/core": ^1.7.1 || 2.0.0-beta.2 || 2.0.0-beta.3
     "@emnapi/runtime": ^1.7.1 || 2.0.0-beta.2 || 2.0.0-beta.3
   checksum: 10c0/aab492b488fd86563eacda3fe356db68d273d11ec0e999793445d964dc7bbbf9e9a4b80f9c2e243d084393ee53434e668ac1e7308deb44b87b9c18926667a801
+  languageName: node
+  linkType: hard
+
+"@noble/ciphers@npm:2.1.1":
+  version: 2.1.1
+  resolution: "@noble/ciphers@npm:2.1.1"
+  checksum: 10c0/f02662723475a9785a2f7bcd6e8e12d4b5f77537154f5e21edb0fed398051fb1ae5057eb444987e1c65342f8632474f0143ea612a2dad49593d3358eb730a079
   languageName: node
   linkType: hard
 
@@ -9112,6 +9135,7 @@ __metadata:
     "@ffmpeg/util": "npm:^0.12.2"
     "@hookform/resolvers": "npm:^5.9.1"
     "@kartore/glyphore": "npm:^0.2.0"
+    "@noble/ciphers": "npm:2.1.1"
     "@noble/curves": "npm:^2.4.0"
     "@noble/hashes": "npm:^2.4.0"
     "@paralleldrive/cuid2": "npm:^3.3.0"
@@ -9183,9 +9207,11 @@ __metadata:
     react-server-dom-webpack: "npm:^19.3.1"
     recharts: "npm:3.10.1"
     sanitize-html: "npm:^2.18.1"
+    smol-toml: "npm:1.9.1"
     stripe: "npm:22.6.2"
     tailwind-merge: "npm:^3.7.0"
     tailwindcss: "npm:4.3.4"
+    ts-mls: "npm:1.6.4"
     tsx: "npm:^4.23.15"
     typescript: "npm:^6.0.3"
     vinext: "npm:1.4.4"
@@ -10465,6 +10491,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"smol-toml@npm:1.9.1":
+  version: 1.9.1
+  resolution: "smol-toml@npm:1.9.1"
+  checksum: 10c0/8acccf7bbc063f29405f58f5014ab39bf4eb9d7f0e000e5e3f140f7d4d6ead5696681a7c15260d1f2910213012c0af43b31a05bf94f704b0bdf39989fba08c02
+  languageName: node
+  linkType: hard
+
 "socks-proxy-agent@npm:^8.0.3":
   version: 8.0.5
   resolution: "socks-proxy-agent@npm:8.0.5"
@@ -10965,6 +10998,36 @@ __metadata:
   peerDependencies:
     typescript: ">=4.8.4"
   checksum: 10c0/767849383c114e7f1971fa976b20e73ac28fd0c70d8d65c0004790bf4d8f89888c7e4cf6d5949f9c1beae9bc3c64835bef77bbe27fddf45a3c7b60cebcf85c8c
+  languageName: node
+  linkType: hard
+
+"ts-mls@npm:1.6.4":
+  version: 1.6.4
+  resolution: "ts-mls@npm:1.6.4"
+  dependencies:
+    "@hpke/core": "npm:1.9.0"
+  peerDependencies:
+    "@hpke/chacha20poly1305": 1.8.0
+    "@hpke/dhkem-x448": 1.8.0
+    "@hpke/hybridkem-x-wing": 0.7.0
+    "@hpke/ml-kem": 0.3.0
+    "@noble/ciphers": 2.1.1
+    "@noble/curves": 2.0.1
+    "@noble/post-quantum": 0.5.2
+  peerDependenciesMeta:
+    "@hpke/chacha20poly1305":
+      optional: true
+    "@hpke/dhkem-x448":
+      optional: true
+    "@hpke/hybridkem-x-wing":
+      optional: true
+    "@hpke/ml-kem":
+      optional: true
+    "@noble/curves":
+      optional: true
+    "@noble/post-quantum":
+      optional: true
+  checksum: 10c0/0dabd10e21ee3d804604c7a92d560e6c32de817212d4ea4fe66fd1e98e0a2c3640c7665b14e98cce7bc9d11f426d50e06df0c8a6d22e604ee06dd76529c51f40
   languageName: node
   linkType: hard
 

@@ -26,6 +26,14 @@ mock.module(import.meta.resolve('../auth.ts'), {
     auth: async () => (reporterId ? { user: { id: reporterId } } : null),
   },
 });
+mock.module(import.meta.resolve('../lib/server/active-profile.ts'), {
+  exports: {
+    getActiveProfileWithActor: async () =>
+      reporterId
+        ? { id: 'reporter-profile', socialActor: { id: 'reporter-actor' } }
+        : null,
+  },
+});
 mock.module(import.meta.resolve('../lib/blob/api.ts'), {
   exports: { uploadFile: upload, deleteFile: removeUpload },
 });
@@ -154,6 +162,67 @@ test('persists an attachment-free safety report in the private, filterable suppo
     /post-one|no real incident/
   );
   assert.equal(upload.mock.callCount(), 0);
+});
+
+test('stores only an explicitly consented bounded encrypted-message excerpt and excludes it from both notification channels', async () => {
+  await db.insert(schema.users).values({
+    id: 'encrypted-reporter',
+    email: 'member@example.com',
+    screenname: 'member',
+  });
+  reporterId = 'encrypted-reporter';
+  const disclosure = {
+    profileId: 'reporter-profile',
+    actorId: 'reporter-actor',
+    roomId: crypto.randomUUID(),
+    eventId: crypto.randomUUID(),
+    quote: 'An explicitly selected private test quotation.',
+    consent: true,
+  };
+  const response = await POST(
+    request(report({ encryptedDisclosure: JSON.stringify(disclosure) }))
+  );
+  assert.equal(response.status, 200);
+  const row = await db.query.contactSubmissions.findFirst();
+  assert.ok(row);
+  assert.ok(row.message);
+  assert.ok(row.message.includes(disclosure.quote));
+  assert.ok(row.message.includes('unverified quotation'));
+  assert.equal(JSON.stringify(receipts).includes(disclosure.quote), false);
+  assert.equal(JSON.stringify(notifications).includes(disclosure.quote), false);
+  assert.equal(upload.mock.callCount(), 0);
+});
+
+test('refuses missing consent, unbounded excerpts and private-key fields instead of collecting an entire encrypted conversation', async () => {
+  const base = {
+    profileId: 'reporter-profile',
+    actorId: 'reporter-actor',
+    roomId: crypto.randomUUID(),
+    eventId: crypto.randomUUID(),
+    quote: 'Synthetic private quote',
+    consent: true,
+  };
+  for (const disclosure of [
+    { ...base, consent: false },
+    { ...base, quote: 'x'.repeat(5001) },
+    { ...base, recoveryKey: 'not-an-allowed-field' },
+    { ...base, attachments: [] },
+  ]) {
+    assert.equal(
+      (
+        await POST(
+          request(report({ encryptedDisclosure: JSON.stringify(disclosure) }))
+        )
+      ).status,
+      400
+    );
+  }
+  assert.equal(
+    (await POST(request(report({ encryptedDisclosure: JSON.stringify(base) }))))
+      .status,
+    403
+  );
+  assert.equal((await db.select().from(schema.contactSubmissions)).length, 0);
 });
 
 test('uses server-side reporter identity and preserves the exact reported message reference', async () => {

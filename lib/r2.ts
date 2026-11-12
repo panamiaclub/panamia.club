@@ -40,9 +40,17 @@ export interface R2Bucket {
 
 export interface CloudflareEnv {
   R2_BUCKET?: R2Bucket;
+  CHAT_E2EE_BUCKET?: R2Bucket;
 }
 
 let cachedBucket: R2Bucket | null = null;
+let cachedPrivateBucket: R2Bucket | null = null;
+
+/** Separate binding only: private chat must never fall back to public media. */
+export function getPrivateChatStorage(env?: CloudflareEnv): R2Bucket | null {
+  if (env) cachedPrivateBucket = env.CHAT_E2EE_BUCKET ?? null;
+  return cachedPrivateBucket;
+}
 
 export function getStorage(env?: CloudflareEnv): R2Bucket | null {
   if (env?.R2_BUCKET) {

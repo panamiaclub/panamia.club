@@ -143,7 +143,11 @@ export const inventory: Record<TableExport, Classification> = {
   articles: ['articles', 'article_reviews', 'co_author_content'],
 
   // --- Social / ActivityPub ---
-  socialActors: ['activitypub_federated_content', 'visible_profile_info'],
+  socialActors: [
+    'activitypub_federated_content',
+    'visible_profile_info',
+    'encrypted_chat_identity',
+  ],
   socialStatuses: ['social_posts', 'activitypub_federated_content'],
   socialFollows: ['social_graph'],
   // Who someone has blocked or muted. Social graph data, but the most
@@ -176,6 +180,19 @@ export const inventory: Record<TableExport, Classification> = {
   // Native, member-only correspondence and media metadata. Never federated.
   // Author/group deletion cascades; expiry is a 30-day visibility window.
   socialGroupChatMessages: ['social_posts', 'social_graph', 'uploads'],
+  chatE2eeIdentities: ['encrypted_chat_identity'],
+  chatE2eeDevices: ['encrypted_chat_identity'],
+  chatE2eeEnrollments: ['encrypted_chat_identity'],
+  chatE2eeKeyPackages: ['encrypted_chat_identity'],
+  chatE2eeRequestNonces: ['encrypted_chat_identity'],
+  chatE2eeRooms: ['encrypted_private_messages'],
+  chatE2eeDmParticipants: ['encrypted_private_messages'],
+  chatE2eeEvents: ['encrypted_private_messages'],
+  chatE2eeWelcomes: ['encrypted_private_messages'],
+  chatE2eeMedia: ['encrypted_private_messages'],
+  chatE2eeObjectDeletions: ['encrypted_private_messages'],
+  chatE2eeBackups: ['encrypted_chat_recovery'],
+  chatE2eeBackupMedia: ['encrypted_chat_recovery'],
   socialAttachments: ['uploads', 'social_posts'],
   // Who watched whose story. An interaction record between two actors, same
   // shape as a like, and surfaced to the story's author as a viewer list --

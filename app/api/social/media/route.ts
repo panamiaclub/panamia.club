@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getActiveProfileWithActor } from '@/lib/server/active-profile';
 import { uploadFile } from '@/lib/blob/api';
+import { chatMediaRefusal } from '@/lib/server/chat-media-policy';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -118,6 +119,28 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+  let target: unknown = null;
+  const encodedTarget = formData.get('chatTarget');
+  if (typeof encodedTarget === 'string') {
+    try {
+      target = JSON.parse(encodedTarget);
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Invalid conversation target.' },
+        { status: 400 }
+      );
+    }
+  }
+  const refusal = await chatMediaRefusal(
+    profile.socialActor.id,
+    formData.get('purpose'),
+    target
+  );
+  if (refusal)
+    return NextResponse.json(
+      { success: false, error: refusal.error },
+      { status: refusal.status }
+    );
 
   try {
     const arrayBuffer = await file.arrayBuffer();

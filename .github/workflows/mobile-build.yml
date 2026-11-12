@@ -74,6 +74,12 @@ on:
   # build without pushing a commit is how you tell "we broke it" from "the
   # runner image changed underneath us."
   workflow_dispatch:
+    inputs:
+      e2ee_native_runtime:
+        description: Run the synthetic encrypted-chat bridge, cold-restart and background/resume checks in an iOS simulator
+        required: false
+        default: false
+        type: boolean
 
 # One build per ref. A force-push while a build is running makes the earlier
 # run irrelevant, and unlike the Playwright workflow there is no shared
@@ -131,6 +137,9 @@ jobs:
       - name: Build debug APK
         working-directory: mobile/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: Compile protected-storage runtime probes
+        working-directory: mobile/android
+        run: ./gradlew :app:compileDebugAndroidTestJavaWithJavac --no-daemon --stacktrace
 
       # Sideloadable on any device with developer mode on. This is the fastest
       # way for someone without an Android toolchain to try a branch.
@@ -303,6 +312,40 @@ jobs:
           find "$APP" -name PrivacyInfo.xcprivacy -print > build/privacy-manifests.txt
           test -s build/privacy-manifests.txt || { echo "::error::SDK privacy manifests are missing from the release archive."; exit 1; }
 
+      - name: Build pinned engine for optional native encryption qualification
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.e2ee_native_runtime }}
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal --target wasm32-unknown-unknown
+          cargo +1.99.1 install wasm-bindgen-cli --version 0.2.130 --locked
+          yarn openmls:build
+
+      - name: Qualify real iOS bridge and encrypted state across cold restart
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.e2ee_native_runtime }}
+        shell: bash
+        timeout-minutes: 16
+        run: |
+          CAPACITOR_SERVER_URL='http://127.0.0.1:3147/native.html?platform=ios' yarn cap sync ios
+          xcodebuild \
+            -project mobile/ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath mobile/ios/App/build/NativeE2EE \
+            -quiet \
+            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_IDENTITY=- \
+            CODE_SIGN_ENTITLEMENTS="$PWD/mobile/ios/App/App/Personal.entitlements" \
+            build
+          read -r RUNTIME DEVICE_TYPE < <(xcrun simctl list devices available --json | python3 -c 'import json,sys; pairs = [(r, d["deviceTypeIdentifier"]) for r, devices in json.load(sys.stdin)["devices"].items() if r.startswith("com.apple.CoreSimulator.SimRuntime.iOS-") for d in devices if d.get("isAvailable") and d["name"].startswith("iPhone")]; assert pairs, "No compatible installed iPhone simulator/runtime pair"; print(*pairs[0])')
+          SIMULATOR_ID="$(xcrun simctl create pana-e2ee-qualification "$DEVICE_TYPE" "$RUNTIME")"
+          echo "Isolated simulator: $SIMULATOR_ID ($DEVICE_TYPE / $RUNTIME)"
+          trap 'xcrun simctl delete "$SIMULATOR_ID"' EXIT
+          xcrun simctl boot "$SIMULATOR_ID"
+          open -a Simulator --args -CurrentDeviceUDID "$SIMULATOR_ID"
+          xcrun simctl bootstatus "$SIMULATOR_ID" -b
+          xcrun simctl install "$SIMULATOR_ID" mobile/ios/App/build/NativeE2EE/Build/Products/Debug-iphonesimulator/App.app
+          yarn test:e2ee:native ios "$SIMULATOR_ID" | tee mobile/ios/App/build/native-e2ee-runtime.log
+
       # xcodebuild's own failure output is buried in thousands of lines of
       # compiler invocations. When a build breaks, this is the file worth
       # reading, so keep it -- but only on failure, since a successful build's
@@ -314,6 +357,7 @@ jobs:
           name: ios-build-log
           path: |
             mobile/ios/App/build/Logs/**
+            mobile/ios/App/build/native-e2ee-runtime.log
             mobile/ios/App/build/AgeAssuranceTests.xcresult/**
           retention-days: 7
           if-no-files-found: ignore

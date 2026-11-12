@@ -87,6 +87,27 @@ for (const platform of ['android', 'ios'] as const) {
       googlePlugin: platform === 'android',
     });
     await installNativeApiFixtures(page);
+    await page.route('**/api/social/encryption/context', (route) =>
+      route.fulfill({
+        json: {
+          success: true,
+          data: {
+            userId: 'native-test-user',
+            profileId: 'personal',
+            actorId: 'actor-personal',
+            enabled: false,
+            required: false,
+            actor: {
+              id: 'actor-personal',
+              username: 'native-viewer',
+              name: 'Native Viewer',
+              iconUrl: null,
+              domain: 'example.invalid',
+            },
+          },
+        },
+      })
+    );
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/d');
     const app = page.locator('[data-native-app]');

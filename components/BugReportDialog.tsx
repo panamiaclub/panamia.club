@@ -29,6 +29,8 @@ import {
   SAFETY_REPORT_REASONS,
   SAFETY_REPORT_TARGETS,
   safetyReportUrl,
+  encryptedReportMessageSchema,
+  type EncryptedReportMessage,
 } from '@/lib/safety-report';
 
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
@@ -54,6 +56,9 @@ export default function BugReportDialog() {
   const [message, setMessage] = useState('');
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [encryptedMessage, setEncryptedMessage] =
+    useState<EncryptedReportMessage | null>(null);
+  const [shareExcerpt, setShareExcerpt] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const reportReturnFocus = useRef<HTMLElement | null>(null);
   const { data: session } = useSession();
@@ -84,6 +89,8 @@ export default function BugReportDialog() {
         setScreenshot(null);
       }
       setReportType('bug');
+      setEncryptedMessage(null);
+      setShareExcerpt(false);
       resetTurnstile();
       setOpen(true);
     };
@@ -113,6 +120,21 @@ export default function BugReportDialog() {
       }
       rememberFocus();
       setReportType('safety');
+      const selected =
+        'encryptedMessage' in target && target.encryptedMessage !== undefined
+          ? encryptedReportMessageSchema.safeParse(target.encryptedMessage)
+          : null;
+      if (selected && !selected.success) {
+        toast({
+          variant: 'destructive',
+          title: 'Could not select the encrypted message',
+          description:
+            'Refresh the conversation and select a single message again.',
+        });
+        return;
+      }
+      setEncryptedMessage(selected?.success ? selected.data : null);
+      setShareExcerpt(false);
       setTargetType(target.type);
       setTargetUrl(url);
       setReason('');
@@ -181,6 +203,8 @@ export default function BugReportDialog() {
     setScreenshot(null);
     setReason('');
     setTargetUrl('');
+    setEncryptedMessage(null);
+    setShareExcerpt(false);
     if (fileRef.current) fileRef.current.value = '';
     resetTurnstile();
   }
@@ -236,6 +260,11 @@ export default function BugReportDialog() {
         form.set('targetType', targetType);
         form.set('targetUrl', targetUrl.trim());
         form.set('reason', reason);
+        if (encryptedMessage && shareExcerpt)
+          form.set(
+            'encryptedDisclosure',
+            JSON.stringify({ ...encryptedMessage, consent: true })
+          );
       } else {
         form.set(
           'viewport',
@@ -295,6 +324,10 @@ export default function BugReportDialog() {
           return;
         }
         setOpen(next);
+        if (!next) {
+          setEncryptedMessage(null);
+          setShareExcerpt(false);
+        }
       }}
     >
       {!native && !appPreview && (
@@ -331,6 +364,8 @@ export default function BugReportDialog() {
                   setScreenshot(null);
                 }
                 setReportType('bug');
+                setEncryptedMessage(null);
+                setShareExcerpt(false);
                 resetTurnstile();
               }}
             >
@@ -469,6 +504,46 @@ export default function BugReportDialog() {
               disabled={submitting}
             />
           </div>
+          {safety && encryptedMessage && (
+            <section
+              className="space-y-3 rounded-xl border p-3"
+              data-private="true"
+            >
+              <Label htmlFor="encrypted-report-excerpt">
+                Optional encrypted-message excerpt
+              </Label>
+              <p className="text-muted-foreground text-xs">
+                Pana cannot read this encrypted message unless you deliberately
+                share text here. Edit this to the smallest relevant excerpt. No
+                attachments, file keys, other messages or recovery keys are
+                included.
+              </p>
+              <Textarea
+                id="encrypted-report-excerpt"
+                maxLength={5000}
+                value={encryptedMessage.quote}
+                onChange={(event) => {
+                  setEncryptedMessage({
+                    ...encryptedMessage,
+                    quote: event.target.value,
+                  });
+                  setShareExcerpt(false);
+                }}
+                disabled={submitting}
+              />
+              <label className="flex items-start gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={shareExcerpt}
+                  onChange={(event) => setShareExcerpt(event.target.checked)}
+                  disabled={submitting || !encryptedMessage.quote.trim()}
+                />
+                I explicitly want the safety team to read this selected text. It
+                will be stored as part of this restricted report, not sent in
+                emails.
+              </label>
+            </section>
+          )}
 
           {!safety && (
             <div className="space-y-2">

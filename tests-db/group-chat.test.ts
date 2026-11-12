@@ -128,6 +128,9 @@ before(async () => {
       'utf8'
     )
   );
+  await pg.exec(
+    'ALTER TABLE social_groups ADD COLUMN encrypted_chat_required boolean NOT NULL DEFAULT false'
+  );
   await db.insert(schema.socialActors).values([
     ...[
       'alice',

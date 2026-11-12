@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/pana_chat_backup_rules"
+        android:dataExtractionRules="@xml/pana_chat_data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -57,7 +59,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="social.pana.app"
+                    android:scheme="${panaAuthScheme}"
                     android:host="auth"
                     android:path="/magic-link" />
             </intent-filter>

@@ -112,6 +112,7 @@ interface MultiMediaUploadProps {
   presignEndpoint: string;
   /** R2 key prefix, e.g. "social/media". */
   pathPrefix: string;
+  purpose?: 'social-post';
   disabled?: boolean;
   /** Class for the outer wrapper, replacing the default stack. Pass a
    *  `display: contents` class to let a caller lay the trigger out inline in
@@ -136,6 +137,7 @@ export default function MultiMediaUpload({
   imageUploadEndpoint,
   presignEndpoint,
   pathPrefix,
+  purpose,
   disabled,
   wrapperClassName = 'space-y-2',
   triggerClassName,
@@ -164,7 +166,7 @@ export default function MultiMediaUpload({
     const { presignedUrl, publicUrl } = await fetch(presignEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename, contentType, size: blob.size }),
+      body: JSON.stringify({ filename, contentType, size: blob.size, purpose }),
     }).then(async (r) => {
       if (!r.ok) {
         throw new Error((await r.json()).error ?? 'Upload token failed');
@@ -240,6 +242,7 @@ export default function MultiMediaUpload({
           } else {
             const formData = new FormData();
             formData.append('file', file);
+            if (purpose) formData.append('purpose', purpose);
             const res = await axios.post<{
               success: boolean;
               data?: UploadedMedia;

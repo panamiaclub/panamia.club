@@ -1,0 +1,23 @@
+{
+  "engine": "openmls-0.9.2",
+  "crateVersion": "0.9.2",
+  "crateSha256": "ce4173f914cbc2dd28d9499f19e92f3e1bfebd9eea1607889924a77ca63d3ffc",
+  "sourceRevision": "8a8f83b4b61fc45f28facec25e914992b3465de6",
+  "providerRevision": "6100df3fb1d8c3eeab53e349fcbd621f98c44fe2",
+  "rustVersion": "1.99.1",
+  "wasmBindgenVersion": "0.2.130",
+  "cargoAuditVersion": "0.23.0",
+  "cargoDenyVersion": "0.20.2",
+  "audit": {
+    "url": "https://blog.openmls.tech/SRL-OpenMLS_security_assurance_assessment.pdf",
+    "sha256": "791eec15208055ac8b7f7268c606a3ee0b974eb184f6a7a181b2f1d854c38647",
+    "reportDate": "2026-03-11",
+    "reviewedRevision": "a3402f2",
+    "exclusions": [
+      "cryptography providers",
+      "storage providers",
+      "application and delivery-service examples",
+      "Pana bindings, enrollment, recovery and integration"
+    ]
+  }
+}

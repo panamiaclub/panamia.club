@@ -12,6 +12,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AwsClient } from 'aws4fetch';
 import { auth } from '@/auth';
+import { getActiveProfileWithActor } from '@/lib/server/active-profile';
+import { chatMediaRefusal } from '@/lib/server/chat-media-policy';
 
 // video/webm is still accepted so an upload already in flight when this
 // deployed does not 400; new uploads are all video/mp4.
@@ -46,6 +48,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     filename?: string;
     contentType?: string;
     size?: number;
+    purpose?: unknown;
+    chatTarget?: unknown;
   };
 
   const { filename, contentType, size } = body;
@@ -70,6 +74,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 400 }
     );
   }
+  const profile = await getActiveProfileWithActor(session.user.id);
+  if (!profile?.socialActor)
+    return NextResponse.json(
+      { error: 'Social features are unavailable for this profile' },
+      { status: 403 }
+    );
+  const refusal = await chatMediaRefusal(
+    profile.socialActor.id,
+    body.purpose,
+    body.chatTarget
+  );
+  if (refusal)
+    return NextResponse.json(
+      { error: refusal.error },
+      { status: refusal.status }
+    );
 
   try {
     const client = getR2Client();

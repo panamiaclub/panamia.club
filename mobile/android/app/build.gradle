@@ -17,6 +17,9 @@ if (hasReleaseSigning) {
 }
 
 android {
+    buildFeatures {
+        buildConfig true
+    }
     namespace = "social.pana.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
@@ -26,6 +29,7 @@ android {
         versionCode releaseVersionCode
         versionName releaseVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders = [panaAuthScheme: "social.pana.app"]
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -43,6 +47,18 @@ android {
         }
     }
     buildTypes {
+        debug {
+            if (providers.gradleProperty("hostedStaging").isPresent()) {
+                if (providers.gradleProperty("e2eeQualification").isPresent()) {
+                    throw new GradleException("Choose either hosted staging or isolated runtime qualification.")
+                }
+                applicationIdSuffix ".staging"
+                manifestPlaceholders = [panaAuthScheme: "social.pana.app.staging"]
+            }
+            if (providers.gradleProperty("e2eeQualification").isPresent()) {
+                applicationIdSuffix ".e2eequalification"
+            }
+        }
         release {
             if (hasReleaseSigning) {
                 signingConfig signingConfigs.release

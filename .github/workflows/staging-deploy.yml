@@ -1,0 +1,100 @@
+name: Guarded Staging Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact trusted repository commit to deploy
+        required: true
+        type: string
+      qualification_run:
+        description: Successful encrypted qualification run for that exact commit
+        required: true
+        type: string
+      resume_test_access:
+        description: Resume admitted synthetic test accounts after the verified staging deployment
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: guarded-hosted-staging
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    if: github.repository == 'panamiaclub/panamia.club'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: Staging
+    env:
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      QUALIFICATION_RUN: ${{ inputs.qualification_run }}
+      GH_TOKEN: ${{ github.token }}
+      STAGING_POSTGRES_URL: ${{ secrets.STAGING_POSTGRES_URL }}
+      STAGING_BETTER_AUTH_SECRET: ${{ secrets.STAGING_BETTER_AUTH_SECRET }}
+      STAGING_CLOUDFLARE_API_TOKEN: ${{ secrets.STAGING_CLOUDFLARE_API_TOKEN }}
+      STAGING_RESOURCES_JSON: ${{ vars.STAGING_RESOURCES_JSON }}
+      PG_BIN_DIR: /usr/lib/postgresql/16/bin
+    steps:
+      - name: Verify explicit source, successful qualification and staging-only secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "An exact source commit is required."; exit 1; }
+          [[ "$QUALIFICATION_RUN" =~ ^[0-9]+$ ]] || { echo "A qualification run ID is required."; exit 1; }
+          for name in STAGING_POSTGRES_URL STAGING_BETTER_AUTH_SECRET STAGING_CLOUDFLARE_API_TOKEN STAGING_RESOURCES_JSON; do
+            [[ -n "${!name}" ]] || { echo "Missing staging-only setting: $name"; exit 1; }
+          done
+          gh api "repos/$GITHUB_REPOSITORY/environments/Staging" > "$RUNNER_TEMP/staging-environment.json"
+          jq --exit-status \
+            '.protection_rules | any(.type == "required_reviewers")' \
+            "$RUNNER_TEMP/staging-environment.json" > /dev/null
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$QUALIFICATION_RUN" > "$RUNNER_TEMP/staging-qualification.json"
+          jq --exit-status --arg sha "$SOURCE_SHA" \
+            '.head_sha == $sha and .conclusion == "success" and .name == "Encrypted chat qualification"' \
+            "$RUNNER_TEMP/staging-qualification.json" > /dev/null
+          printf '%s' "$STAGING_RESOURCES_JSON" > "$RUNNER_TEMP/staging-resources.json"
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_sha }}
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: yarn
+      - run: yarn install --immutable
+      - uses: actions/download-artifact@v8
+        with:
+          name: qualified-openmls-engine
+          path: crypto/openmls/pkg/
+          run-id: ${{ inputs.qualification_run }}
+          github-token: ${{ github.token }}
+      - name: Validate the separate staging resource and database identities
+        run: node --import tsx scripts/hosted-staging.ts validate --resources "$RUNNER_TEMP/staging-resources.json"
+      - name: Initialize only the verified staging database
+        run: node --import tsx scripts/hosted-staging.ts init --resources "$RUNNER_TEMP/staging-resources.json"
+      - name: Build the isolated hosted artifact
+        run: |
+          node --import tsx scripts/hosted-staging.ts build \
+            --resources "$RUNNER_TEMP/staging-resources.json" \
+            --directory "$RUNNER_TEMP/hosted-staging-$GITHUB_RUN_ID"
+      - name: Deploy only the staging Worker and verify its health
+        run: |
+          node --import tsx scripts/hosted-staging.ts deploy \
+            --resources "$RUNNER_TEMP/staging-resources.json" \
+            --directory "$RUNNER_TEMP/hosted-staging-$GITHUB_RUN_ID"
+      - name: Resume only the source-verified staging test environment
+        if: inputs.resume_test_access
+        run: node --import tsx scripts/hosted-staging.ts resume --resources "$RUNNER_TEMP/staging-resources.json"
+      - name: Remove private deployment files
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$RUNNER_TEMP/staging-resources.json" "$RUNNER_TEMP/staging-qualification.json" "$RUNNER_TEMP/staging-environment.json"
+          rm -f "$RUNNER_TEMP/hosted-staging-$GITHUB_RUN_ID/runtime-secrets.json"

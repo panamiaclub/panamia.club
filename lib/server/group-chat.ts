@@ -31,6 +31,7 @@ import {
   GROUP_CHAT_MAX_CONTENT,
   GROUP_CHAT_PAGE_SIZE,
   GROUP_CHAT_UNAVAILABLE,
+  ENCRYPTED_GROUP_CHAT_REQUIRED,
   type ChatAttachment,
   type GroupChatInput,
   type GroupChatList,
@@ -62,6 +63,7 @@ const roomColumns = {
   memberCount: socialGroups.memberCount,
   visibility: socialGroups.visibility,
   role: socialGroupMembers.role,
+  encryptionRequired: socialGroups.encryptedChatRequired,
 };
 
 async function lockWriter(actorId: string, reader: Reader): Promise<boolean> {
@@ -90,6 +92,7 @@ async function roomFor(
       iconUrl: groupActor.iconUrl,
       memberCount: socialGroups.memberCount,
       visibility: socialGroups.visibility,
+      encryptionRequired: socialGroups.encryptedChatRequired,
     })
     .from(socialGroups)
     .innerJoin(groupActor, eq(groupActor.id, socialGroups.actorId))
@@ -442,6 +445,13 @@ export async function sendGroupChatMessage(
     if (!(await lockWriter(actorId, tx))) return fail();
     const group = await roomFor(handle, actorId, tx);
     if (!group) return fail();
+    const [policy] = await tx
+      .select({ encrypted: socialGroups.encryptedChatRequired })
+      .from(socialGroups)
+      .where(eq(socialGroups.id, group.id))
+      .for('share');
+    if (!policy) return fail();
+    if (policy.encrypted) return fail(ENCRYPTED_GROUP_CHAT_REQUIRED, 409);
     const now = new Date();
     const [inserted] = await tx
       .insert(socialGroupChatMessages)

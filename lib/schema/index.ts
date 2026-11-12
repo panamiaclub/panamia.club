@@ -26,6 +26,12 @@ import { relations, sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import type { ChatAttachment } from '@/lib/chat';
 import type { ListingRefreshState } from '@/lib/listing-refresh';
+import type { Enrollment, SignedStatement } from '@/lib/e2ee/identity-contract';
+import type {
+  DirectoryDevice,
+  EncryptedRoomState,
+  RoomRestartProof,
+} from '@/lib/e2ee/room-contract';
 
 // =============================================================================
 // Enums
@@ -1793,6 +1799,9 @@ export const socialActors = pgTable(
     manuallyApprovesFollowers: boolean('manually_approves_followers')
       .notNull()
       .default(false),
+    encryptedChatRequired: boolean('encrypted_chat_required')
+      .notNull()
+      .default(false),
     dmPolicy: socialDmPolicy('dm_policy').notNull().default('everyone'),
   },
   (table) => ({
@@ -2233,6 +2242,9 @@ export const socialGroups = pgTable('social_groups', {
    * for that would put a query on the hottest path in the app.
    */
   memberCount: integer('member_count').notNull().default(0),
+  encryptedChatRequired: boolean('encrypted_chat_required')
+    .notNull()
+    .default(false),
 });
 
 /**
@@ -2352,6 +2364,439 @@ export const socialGroupChatMessages = pgTable(
       'social_group_chat_not_empty',
       sql`char_length(btrim(${table.body})) > 0 OR jsonb_array_length(${table.attachments}) > 0`
     ),
+  })
+).enableRLS();
+
+export const chatE2eeIdentities = pgTable(
+  'chat_e2ee_identities',
+  {
+    profileId: text('profile_id')
+      .primaryKey()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    actorId: text('actor_id')
+      .notNull()
+      .unique()
+      .references(() => socialActors.id, { onDelete: 'cascade' }),
+    rootPublicKey: text('root_public_key').notNull().unique(),
+    rootVersion: integer('root_version').notNull().default(1),
+    encryptionRequired: boolean('encryption_required').notNull().default(false),
+    rotationRequired: boolean('rotation_required').notNull().default(false),
+    lastResetId: text('last_reset_id'),
+    lastResetAt: timestamp('last_reset_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    rootLength: check(
+      'chat_e2ee_root_key_length',
+      sql`char_length(${table.rootPublicKey}) = 44`
+    ),
+    rootVersion: check(
+      'chat_e2ee_root_version',
+      sql`${table.rootVersion} >= 1`
+    ),
+  })
+).enableRLS();
+
+export const chatE2eeDevices = pgTable(
+  'chat_e2ee_devices',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => chatE2eeIdentities.profileId, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    signingKey: text('signing_key').notNull().unique(),
+    credential: text('credential').notNull(),
+    certificate: jsonb('certificate').$type<SignedStatement>().notNull(),
+    stateHash: text('state_hash'),
+    checkpointId: text('checkpoint_id'),
+    rootVersion: integer('root_version').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    readyAt: timestamp('ready_at', { withTimezone: true }),
+    revocation: jsonb('revocation').$type<SignedStatement>(),
+  },
+  (table) => ({
+    profileIdx: index('chat_e2ee_devices_profile_idx').on(table.profileId),
+    userIdx: index('chat_e2ee_devices_user_idx').on(table.userId),
+    expiryIdx: index('chat_e2ee_devices_expiry_idx').on(table.expiresAt),
+    signingKeyLength: check(
+      'chat_e2ee_device_key_length',
+      sql`char_length(${table.signingKey}) = 44`
+    ),
+    credentialLength: check(
+      'chat_e2ee_credential_length',
+      sql`octet_length(${table.credential}) BETWEEN 1 AND 512`
+    ),
+  })
+).enableRLS();
+
+export const chatE2eeEnrollments = pgTable(
+  'chat_e2ee_enrollments',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    deviceId: text('device_id').notNull(),
+    challenge: jsonb('challenge').$type<Enrollment>().notNull(),
+    proof: jsonb('proof').$type<SignedStatement>(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+  },
+  (table) => ({
+    profileDevice: uniqueIndex('chat_e2ee_enrollment_device_unique').on(
+      table.profileId,
+      table.deviceId
+    ),
+    expiryIdx: index('chat_e2ee_enrollments_expiry_idx').on(table.expiresAt),
+    userIdx: index('chat_e2ee_enrollments_user_idx').on(table.userId),
+  })
+).enableRLS();
+
+export const chatE2eeKeyPackages = pgTable(
+  'chat_e2ee_key_packages',
+  {
+    id: text('id').primaryKey(),
+    deviceId: text('device_id')
+      .notNull()
+      .references(() => chatE2eeDevices.id, { onDelete: 'cascade' }),
+    bytes: text('bytes').notNull(),
+    sha256: text('sha256').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    claimedRoomId: text('claimed_room_id'),
+    claimedByDeviceId: text('claimed_by_device_id'),
+  },
+  (table) => ({
+    packageUnique: uniqueIndex('chat_e2ee_key_package_hash_unique').on(
+      table.deviceId,
+      table.sha256
+    ),
+    deviceIdx: index('chat_e2ee_key_packages_device_idx').on(table.deviceId),
+    expiryIdx: index('chat_e2ee_key_packages_expiry_idx').on(table.expiresAt),
+    length: check(
+      'chat_e2ee_key_package_length',
+      sql`char_length(${table.bytes}) BETWEEN 4 AND 87384`
+    ),
+    hash: check(
+      'chat_e2ee_key_package_hash',
+      sql`${table.sha256} ~ '^[0-9a-f]{64}$'`
+    ),
+  })
+).enableRLS();
+
+export const chatE2eeRequestNonces = pgTable(
+  'chat_e2ee_request_nonces',
+  {
+    id: text('id').primaryKey(),
+    deviceId: text('device_id')
+      .notNull()
+      .references(() => chatE2eeDevices.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => ({
+    expiryIdx: index('chat_e2ee_request_nonces_expiry_idx').on(table.expiresAt),
+    deviceIdx: index('chat_e2ee_request_nonces_device_idx').on(table.deviceId),
+  })
+).enableRLS();
+
+export const chatE2eeRooms = pgTable(
+  'chat_e2ee_rooms',
+  {
+    id: text('id').primaryKey(),
+    cryptoGroupId: text('crypto_group_id').notNull(),
+    kind: text('kind').$type<'dm' | 'group'>().notNull(),
+    groupId: text('group_id')
+      .unique()
+      .references(() => socialGroups.id, { onDelete: 'cascade' }),
+    pairKey: text('pair_key').unique(),
+    founderDeviceId: text('founder_device_id').notNull(),
+    state: text('state')
+      .$type<EncryptedRoomState>()
+      .notNull()
+      .default('initializing'),
+    epoch: text('epoch').notNull().default('0'),
+    revision: integer('revision').notNull().default(0),
+    sequence: integer('sequence').notNull().default(0),
+    roster: jsonb('roster').$type<DirectoryDevice[]>().notNull(),
+    rosterDigest: text('roster_digest').notNull(),
+    bootstrapExpiresAt: timestamp('bootstrap_expires_at', {
+      withTimezone: true,
+    }).notNull(),
+    restart: jsonb('restart').$type<RoomRestartProof>(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+  },
+  (table) => ({
+    groupIdx: index('chat_e2ee_rooms_group_idx').on(table.groupId),
+    epochFormat: check(
+      'chat_e2ee_room_epoch',
+      sql`${table.epoch} ~ '^(0|[1-9][0-9]{0,19})$'`
+    ),
+    kindCheck: check(
+      'chat_e2ee_room_kind',
+      sql`${table.kind} IN ('dm', 'group')`
+    ),
+    stateCheck: check(
+      'chat_e2ee_room_state',
+      sql`${table.state} IN ('initializing', 'active', 'rekey_required', 'closed')`
+    ),
+    scopeCheck: check(
+      'chat_e2ee_room_scope',
+      sql`(${table.kind} = 'dm' AND ${table.pairKey} IS NOT NULL AND ${table.groupId} IS NULL) OR (${table.kind} = 'group' AND ${table.groupId} IS NOT NULL AND ${table.pairKey} IS NULL)`
+    ),
+  })
+).enableRLS();
+
+export const chatE2eeDmParticipants = pgTable(
+  'chat_e2ee_dm_participants',
+  {
+    id: text('id').primaryKey(),
+    roomId: text('room_id')
+      .notNull()
+      .references(() => chatE2eeRooms.id, { onDelete: 'cascade' }),
+    actorId: text('actor_id')
+      .notNull()
+      .references(() => socialActors.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    hiddenBeforeSequence: integer('hidden_before_sequence')
+      .notNull()
+      .default(0),
+  },
+  (table) => ({
+    roomActor: uniqueIndex('chat_e2ee_dm_participant_unique').on(
+      table.roomId,
+      table.actorId
+    ),
+    actorIdx: index('chat_e2ee_dm_participants_actor_idx').on(table.actorId),
+    profileIdx: index('chat_e2ee_dm_participants_profile_idx').on(
+      table.profileId
+    ),
+  })
+).enableRLS();
+
+export const chatE2eeEvents = pgTable(
+  'chat_e2ee_events',
+  {
+    id: text('id').primaryKey(),
+    roomId: text('room_id')
+      .notNull()
+      .references(() => chatE2eeRooms.id, { onDelete: 'cascade' }),
+    cryptoGroupId: text('crypto_group_id').notNull(),
+    sequence: integer('sequence').notNull(),
+    epoch: text('epoch').notNull(),
+    revision: integer('revision').notNull(),
+    clientId: text('client_id').notNull(),
+    kind: text('kind').$type<'message' | 'commit'>().notNull(),
+    senderDeviceId: text('sender_device_id').notNull(),
+    senderActorId: text('sender_actor_id').notNull(),
+    frame: text('frame'),
+    frameSha256: text('frame_sha256').notNull(),
+    envelopeSha256: text('envelope_sha256').notNull(),
+    intent: jsonb('intent').$type<SignedStatement>(),
+    nextRoster: jsonb('next_roster').$type<DirectoryDevice[]>(),
+    mediaIds: jsonb('media_ids').$type<string[]>().notNull().default([]),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => ({
+    orderUnique: uniqueIndex('chat_e2ee_events_order_unique').on(
+      table.roomId,
+      table.sequence
+    ),
+    logicalUnique: uniqueIndex('chat_e2ee_events_client_unique').on(
+      table.roomId,
+      table.senderDeviceId,
+      table.clientId
+    ),
+    expiryIdx: index('chat_e2ee_events_expiry_idx').on(table.expiresAt),
+    senderIdx: index('chat_e2ee_events_sender_idx').on(table.senderActorId),
+    frameLength: check(
+      'chat_e2ee_event_frame_length',
+      sql`char_length(${table.frame}) BETWEEN 4 AND 1398104`
+    ),
+    kindCheck: check(
+      'chat_e2ee_event_kind',
+      sql`${table.kind} IN ('message', 'commit')`
+    ),
+    retainedControl: check(
+      'chat_e2ee_control_frame_retained',
+      sql`${table.kind} <> 'commit' OR ${table.frame} IS NOT NULL`
+    ),
+  })
+).enableRLS();
+
+export const chatE2eeWelcomes = pgTable(
+  'chat_e2ee_welcomes',
+  {
+    id: text('id').primaryKey(),
+    roomId: text('room_id')
+      .notNull()
+      .references(() => chatE2eeRooms.id, { onDelete: 'cascade' }),
+    cryptoGroupId: text('crypto_group_id').notNull(),
+    eventId: text('event_id')
+      .notNull()
+      .references(() => chatE2eeEvents.id, { onDelete: 'cascade' }),
+    deviceId: text('device_id').notNull(),
+    keyPackageId: text('key_package_id').notNull(),
+    joinedSequence: integer('joined_sequence').notNull(),
+    frame: text('frame').notNull(),
+  },
+  (table) => ({
+    targetIdx: index('chat_e2ee_welcomes_target_idx').on(
+      table.deviceId,
+      table.roomId
+    ),
+    eventDevice: uniqueIndex('chat_e2ee_welcomes_event_device_unique').on(
+      table.eventId,
+      table.deviceId
+    ),
+    packageUnique: uniqueIndex('chat_e2ee_welcomes_package_unique').on(
+      table.keyPackageId
+    ),
+  })
+).enableRLS();
+
+export const chatE2eeMedia = pgTable(
+  'chat_e2ee_media',
+  {
+    id: text('id').primaryKey(),
+    roomId: text('room_id')
+      .notNull()
+      .references(() => chatE2eeRooms.id, { onDelete: 'cascade' }),
+    uploaderDeviceId: text('uploader_device_id').notNull(),
+    objectKey: text('object_key').notNull().unique(),
+    byteLength: integer('byte_length').notNull(),
+    sha256: text('sha256').notNull(),
+    state: text('state')
+      .$type<'reserved' | 'stored' | 'bound' | 'deleting'>()
+      .notNull()
+      .default('reserved'),
+    messageId: text('message_id').references(() => chatE2eeEvents.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => ({
+    roomIdx: index('chat_e2ee_media_room_idx').on(table.roomId),
+    uploaderIdx: index('chat_e2ee_media_uploader_idx').on(
+      table.uploaderDeviceId
+    ),
+    messageIdx: index('chat_e2ee_media_message_idx').on(table.messageId),
+    expiryIdx: index('chat_e2ee_media_expiry_idx').on(table.expiresAt),
+    length: check(
+      'chat_e2ee_media_length',
+      sql`${table.byteLength} BETWEEN 17 AND 10485776`
+    ),
+    stateCheck: check(
+      'chat_e2ee_media_state',
+      sql`${table.state} IN ('reserved', 'stored', 'bound', 'deleting')`
+    ),
+  })
+).enableRLS();
+
+export const chatE2eeObjectDeletions = pgTable('chat_e2ee_object_deletions', {
+  objectKey: text('object_key').primaryKey(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  attempts: integer('attempts').notNull().default(0),
+}).enableRLS();
+
+export const chatE2eeBackups = pgTable(
+  'chat_e2ee_backups',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    uploaderDeviceId: text('uploader_device_id').notNull(),
+    rootVersion: integer('root_version').notNull(),
+    kind: text('kind').$type<'identity' | 'history'>().notNull(),
+    slot: text('slot').notNull(),
+    roomId: text('room_id').references(() => chatE2eeRooms.id, {
+      onDelete: 'cascade',
+    }),
+    objectKey: text('object_key').notNull().unique(),
+    byteLength: integer('byte_length').notNull(),
+    sha256: text('sha256').notNull(),
+    state: text('state')
+      .$type<'reserved' | 'stored'>()
+      .notNull()
+      .default('reserved'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+  },
+  (table) => ({
+    ownerIdx: index('chat_e2ee_backups_owner_idx').on(
+      table.userId,
+      table.profileId
+    ),
+    slotIdx: index('chat_e2ee_backups_slot_idx').on(
+      table.userId,
+      table.profileId,
+      table.slot
+    ),
+    roomIdx: index('chat_e2ee_backups_room_idx').on(table.roomId),
+    expiryIdx: index('chat_e2ee_backups_expiry_idx').on(table.expiresAt),
+  })
+).enableRLS();
+
+export const chatE2eeBackupMedia = pgTable(
+  'chat_e2ee_backup_media',
+  {
+    id: text('id').primaryKey(),
+    backupId: text('backup_id')
+      .notNull()
+      .references(() => chatE2eeBackups.id, { onDelete: 'cascade' }),
+    mediaId: text('media_id')
+      .notNull()
+      .references(() => chatE2eeMedia.id, { onDelete: 'cascade' }),
+  },
+  (table) => ({
+    coverageUnique: uniqueIndex('chat_e2ee_backup_media_unique').on(
+      table.backupId,
+      table.mediaId
+    ),
+    mediaIdx: index('chat_e2ee_backup_media_media_idx').on(table.mediaId),
   })
 ).enableRLS();
 
@@ -4065,7 +4510,10 @@ export type SocialActor = typeof socialActors.$inferSelect;
  * adding the column to the table alone would have quietly widened every
  * public response, and the type is what caught it.
  */
-export type PublicSocialActor = Omit<SocialActor, 'privateKey' | 'dmPolicy'>;
+export type PublicSocialActor = Omit<
+  SocialActor,
+  'privateKey' | 'dmPolicy' | 'encryptedChatRequired'
+>;
 
 /**
  * Strip the signing key off an actor row.
@@ -4074,12 +4522,20 @@ export type PublicSocialActor = Omit<SocialActor, 'privateKey' | 'dmPolicy'>;
  * whole row first -- creating an actor returns the key it just generated --
  * call this before the value reaches a response.
  */
-export function toPublicActor<T extends { privateKey?: string | null }>(
-  actor: T
-): Omit<T, 'privateKey'> {
-  const rest = { ...actor };
-  delete (rest as { privateKey?: string | null }).privateKey;
-  return rest;
+export function toPublicActor<
+  T extends {
+    privateKey?: string | null;
+    dmPolicy?: unknown;
+    encryptedChatRequired?: boolean | null;
+  },
+>(actor: T): Omit<T, 'privateKey' | 'dmPolicy' | 'encryptedChatRequired'> {
+  const {
+    privateKey: _privateKey,
+    dmPolicy: _dmPolicy,
+    encryptedChatRequired: _encrypted,
+    ...publicActor
+  } = actor;
+  return publicActor;
 }
 export type SocialStatus = typeof socialStatuses.$inferSelect;
 export type ArticleAnnouncement = typeof articleAnnouncements.$inferSelect;

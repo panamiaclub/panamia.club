@@ -31,9 +31,10 @@ import { and, eq, or, inArray } from 'drizzle-orm';
  * list is tens of rows, not thousands.
  */
 export async function getHiddenActorIds(
-  viewerActorId: string
+  viewerActorId: string,
+  database: Pick<typeof db, 'select'> = db
 ): Promise<string[]> {
-  const rows = await db
+  const rows = await database
     .select({
       actorId: socialBlocks.actorId,
       targetActorId: socialBlocks.targetActorId,
@@ -71,11 +72,12 @@ export async function getHiddenActorIds(
  */
 export async function isBlockedEitherWay(
   actorId: string,
-  otherActorId: string
+  otherActorId: string,
+  database: Pick<typeof db, 'query'> = db
 ): Promise<boolean> {
   if (actorId === otherActorId) return false;
 
-  const row = await db.query.socialBlocks.findFirst({
+  const row = await database.query.socialBlocks.findFirst({
     where: and(
       eq(socialBlocks.kind, 'block'),
       or(

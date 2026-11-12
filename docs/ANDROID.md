@@ -3,6 +3,70 @@
 The Android app is a Capacitor shell for `https://panamia.club`. Its permanent
 Google Play package name is `social.pana.app`.
 
+## Encrypted-chat protected-storage qualification
+
+The new protected-storage plugin wraps only a random 32-byte local data key
+with a non-exportable Android Keystore key. MLS snapshots stay encrypted in
+IndexedDB, not in bridge arguments. Only explicitly configured first-party
+origins can call it; broad OAuth/payment navigation does not grant vault
+access. Missing native keys/plugins never fall back to browser key storage.
+Android OS backup and device transfer exclude live app/WebView state.
+The deployment encryption flag remains off until the separate release gates.
+
+`PanaProtectedStorageInstrumentedTest` exercises the real Keystore, origin-bound
+authenticated encryption, missing-key refusal and a split process restart.
+Run it on an authorized test device/emulator, never an arbitrary attached phone.
+`-Pe2eeQualification` produces the separate
+`social.pana.app.e2eequalification` application ID, so it does not overwrite
+someone's installed Pana app:
+
+```powershell
+& .\mobile\android\gradlew.bat -p .\mobile\android :app:assembleDebug :app:assembleDebugAndroidTest -Pe2eeQualification --no-daemon
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+# Set this to the authorized test device/emulator's explicit adb serial.
+$serial = 'emulator-5586'
+& $adb -s $serial install -r .\mobile\android\app\build\outputs\apk\debug\app-debug.apk
+& $adb -s $serial install -r .\mobile\android\app\build\outputs\apk\androidTest\debug\app-debug-androidTest.apk
+& $adb -s $serial shell am instrument -w -e class 'social.pana.app.PanaProtectedStorageInstrumentedTest#keyIsNonExportableOriginBoundAndExcludedFromBackup' social.pana.app.e2eequalification.test/androidx.test.runner.AndroidJUnitRunner
+& $adb -s $serial shell am instrument -w -e class 'social.pana.app.PanaProtectedStorageInstrumentedTest#missingKeyCannotBeSilentlyRegenerated' social.pana.app.e2eequalification.test/androidx.test.runner.AndroidJUnitRunner
+& $adb -s $serial shell am instrument -w -e class 'social.pana.app.PanaProtectedStorageInstrumentedTest#createColdStartCheckpoint' social.pana.app.e2eequalification.test/androidx.test.runner.AndroidJUnitRunner
+& $adb -s $serial shell am force-stop social.pana.app.e2eequalification
+& $adb -s $serial shell am instrument -w -e class 'social.pana.app.PanaProtectedStorageInstrumentedTest#openColdStartCheckpoint' social.pana.app.e2eequalification.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+The Windows qualification run used an isolated API-36 emulator and passed
+all four invocations. The real Capacitor Android 16/WebView 133 harness also
+passed native message/media encryption, cold process restart with the same
+protected devices, and background/foreground sending. The emulator honestly
+reports `hardwareBacked: false`; it is not evidence of physical hardware
+protection or device migration/upgrade behavior.
+
+The WebView initially exposed a real compatibility failure: its platform Web
+Crypto does not implement Ed25519. The product now verifies signed public
+statements through the already pinned OpenMLS provider, while server
+authorization keeps independent platform verification. No alternate crypto
+library or plaintext fallback was added.
+
+Run the real WebView scenario only on the dedicated AVD named
+`pana-e2ee-qualification`. The driver refuses other AVDs and clears only the
+separate qualification app. It starts/stops its own loopback API/Vite fixtures,
+never connects to real users/databases, and prints metadata-only phase results:
+
+```powershell
+yarn openmls:build
+$env:CAPACITOR_SERVER_URL = 'http://127.0.0.1:3147/native.html?platform=android'
+yarn cap sync android
+& .\mobile\android\gradlew.bat -p .\mobile\android :app:assembleDebug -Pe2eeQualification --no-daemon
+& $adb -s emulator-5586 install -r .\mobile\android\app\build\outputs\apk\debug\app-debug.apk
+yarn test:e2ee:native android emulator-5586
+Remove-Item Env:CAPACITOR_SERVER_URL
+yarn cap sync android
+```
+
+Physical-device bridge/lock behavior, storage pressure and OS/app upgrades
+still gate activation. Emulation and browser/phone-WebKit checks do not
+replace those release results.
+
 ## Test on a physical Android phone
 
 The JDK and Android SDK are the only computer-side prerequisites. Android

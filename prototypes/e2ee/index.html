@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Pana E2EE protocol lab - not production chat</title>
+    <style>
+      body {
+        font:
+          16px system-ui,
+          sans-serif;
+        color: #24233b;
+        background: #fff8ed;
+        max-width: 64rem;
+        margin: auto;
+        padding: 1.5rem;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      h2 {
+        font-size: 1.2rem;
+      }
+      section {
+        border: 1px solid #ccc;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 0.5rem;
+        background: white;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin-top: 0.75rem;
+      }
+      input,
+      textarea,
+      select,
+      button {
+        font: inherit;
+        padding: 0.6rem;
+        margin: 0.3rem 0;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      textarea {
+        display: block;
+        width: 100%;
+        min-height: 5rem;
+      }
+      button {
+        min-height: 44px;
+        cursor: pointer;
+        margin-right: 0.4rem;
+      }
+      button:disabled {
+        cursor: wait;
+      }
+      input[type='text'] {
+        width: 100%;
+      }
+      pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        max-height: 18rem;
+        overflow: auto;
+      }
+      .warning {
+        border-left: 5px solid #a34a00;
+        padding: 1rem;
+        background: #fff0cf;
+      }
+      #error {
+        color: #a00000;
+        white-space: pre-wrap;
+      }
+      #status {
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Pana E2EE protocol lab</h1>
+    <nav aria-label="Qualification engine">
+      <a href="/">ts-mls reference</a> |
+      <a href="/?engine=openmls">OpenMLS candidate</a>
+    </nav>
+    <p id="engine" role="status"></p>
+    <p class="warning">
+      Non-production engine qualification with an unaudited integration. Use
+      invented messages only. This is not connected to Pana accounts, DMs,
+      groups, or storage. Live Pana messages are not end-to-end encrypted by
+      this lab.
+    </p>
+    <p>
+      Open this address in separate browser profiles/devices. Each keeps its own
+      keys. Exchange only public contacts, invitations, commits and encrypted
+      envelopes. Manually compare fingerprints before trusting another device.
+      No account identity verification or network relay is implemented here.
+    </p>
+    <p id="status" role="status">Open a lab device to begin.</p>
+    <p id="error" role="alert"></p>
+    <section>
+      <h2>1. Local device</h2>
+      <label for="actor">Lab identity (not a Pana account)</label>
+      <input
+        id="actor"
+        type="text"
+        value="alice"
+        maxlength="64"
+        autocomplete="off"
+      />
+      <button id="open">Open device</button>
+      <button id="forget">Forget this lab device</button>
+      <pre id="device"></pre>
+      <label for="contact">My public device contact</label>
+      <textarea id="contact" readonly></textarea>
+      <label for="peer">Other device's public contact</label>
+      <textarea id="peer" autocomplete="off"></textarea>
+      <button id="inspect">Show peer fingerprint</button>
+      <pre id="fingerprint"></pre>
+      <button id="trust">Trust this manually verified lab device</button>
+    </section>
+    <section>
+      <h2>2. Encrypted room (two or more devices)</h2>
+      <button id="create">Create room</button>
+      <button id="invite">Invite the trusted device above</button>
+      <label for="welcome">Invitation for the new member</label>
+      <textarea id="welcome" autocomplete="off"></textarea>
+      <button id="join">Join using invitation</button>
+      <label for="commit">Membership commit for existing members</label>
+      <textarea id="commit" autocomplete="off"></textarea>
+      <button id="ack" hidden>
+        Confirm my membership commit was accepted (lab relay only)
+      </button>
+      <button id="apply">Apply membership commit</button>
+      <label for="member">Member device to remove</label>
+      <select id="member"></select>
+      <button id="remove">Remove member and rotate keys</button>
+      <pre id="room"></pre>
+    </section>
+    <section>
+      <h2>3. Text and encrypted attachment</h2>
+      <label for="message">Invented message</label>
+      <textarea id="message" maxlength="5000"></textarea>
+      <label for="file">Optional invented attachment (10 MB maximum)</label>
+      <input id="file" type="file" />
+      <button id="send">Encrypt message</button>
+      <label for="outgoing"
+        >Outbound ciphertext (copy to the other device)</label
+      >
+      <textarea id="outgoing" readonly></textarea>
+      <label for="incoming">Inbound ciphertext</label>
+      <textarea id="incoming" autocomplete="off"></textarea>
+      <button id="receive">Decrypt message</button>
+      <pre id="history"></pre>
+      <button id="download">Download last decrypted attachment</button>
+    </section>
+    <section>
+      <h2>4. History backup and replacement device</h2>
+      <p>
+        Backups contain retained history, not live device keys or ratchet state.
+        Recovery does not let a revoked device resume messaging. A replacement
+        needs a fresh invitation. Messages already downloaded cannot be
+        recalled.
+      </p>
+      <button id="key">Generate personal recovery key</button>
+      <label for="recovery">Personal recovery key - keep this private</label>
+      <input id="recovery" type="text" autocomplete="off" spellcheck="false" />
+      <button id="backup">Encrypt history backup</button>
+      <label for="archive"
+        >Encrypted backup (safe to relay, not the recovery key)</label
+      >
+      <textarea id="archive" autocomplete="off"></textarea>
+      <button id="restore">Restore history onto this device</button>
+      <button id="stored">Show encrypted local storage record</button>
+      <pre id="storage"></pre>
+    </section>
+    <script type="module" src="/lab.ts"></script>
+  </body>
+</html>

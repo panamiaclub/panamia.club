@@ -1,0 +1,241 @@
+name: Encrypted chat qualification
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'lib/e2ee/**'
+      - 'lib/server/encryption-*.ts'
+      - 'lib/server/chat-media-policy.ts'
+      - 'lib/server/chat-write-errors.ts'
+      - 'lib/server/active-profile.ts'
+      - 'lib/server/profile-owners.ts'
+      - 'lib/federation/wrappers/group*.ts'
+      - 'lib/jobs/purge-encrypted-chat.ts'
+      - 'lib/schema/index.ts'
+      - 'lib/chat.ts'
+      - 'lib/dm-stream.ts'
+      - 'app/api/social/encryption/**'
+      - 'app/api/social/statuses/**'
+      - 'app/api/social/groups/**'
+      - 'app/api/social/media/**'
+      - 'app/api/social/gifs/mirror/**'
+      - 'app/messages/**'
+      - 'tests-db/encryption-devices.test.ts'
+      - 'tests-db/chat-write-errors.test.ts'
+      - 'drizzle/007[89]_chat_e2ee_*.sql'
+      - 'drizzle/008[0-3]_chat_e2ee_*.sql'
+      - 'scripts/vite-encryption.ts'
+      - 'scripts/qualify-native-e2ee.ts'
+      - 'scripts/e2ee-staging*.ts'
+      - 'scripts/hosted-staging*.ts'
+      - 'scripts/staging-snapshot.ts'
+      - 'lib/staging-contract.ts'
+      - 'worker/staging.ts'
+      - 'crypto/openmls/**'
+      - 'scripts/openmls.ts'
+      - 'tests-openmls/**'
+      - 'prototypes/e2ee/**'
+      - 'tests-e2ee/**'
+      - 'tests-staging/**'
+      - 'tests-unit/e2ee-*.test.ts'
+      - 'tests-unit/hosted-staging.test.ts'
+      - 'tests-unit/hosted-staging-worker.test.mjs'
+      - 'tests-unit/hosted-staging-operator.test.mjs'
+      - 'tests-unit/hosted-staging-effects.test.ts'
+      - 'vite.e2ee.config.ts'
+      - 'playwright.e2ee.config.ts'
+      - 'playwright.encrypted-staging.config.ts'
+      - 'worker/index.ts'
+      - 'worker/dm-stream.ts'
+      - 'auth.ts'
+      - 'wrangler.jsonc'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/encryption-prototype.yml'
+      - '.github/workflows/staging-deploy.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'lib/e2ee/**'
+      - 'lib/server/encryption-*.ts'
+      - 'lib/server/chat-media-policy.ts'
+      - 'lib/server/chat-write-errors.ts'
+      - 'lib/server/active-profile.ts'
+      - 'lib/server/profile-owners.ts'
+      - 'lib/federation/wrappers/group*.ts'
+      - 'lib/jobs/purge-encrypted-chat.ts'
+      - 'lib/schema/index.ts'
+      - 'lib/chat.ts'
+      - 'lib/dm-stream.ts'
+      - 'app/api/social/encryption/**'
+      - 'app/api/social/statuses/**'
+      - 'app/api/social/groups/**'
+      - 'app/api/social/media/**'
+      - 'app/api/social/gifs/mirror/**'
+      - 'app/messages/**'
+      - 'tests-db/encryption-devices.test.ts'
+      - 'tests-db/chat-write-errors.test.ts'
+      - 'drizzle/007[89]_chat_e2ee_*.sql'
+      - 'drizzle/008[0-3]_chat_e2ee_*.sql'
+      - 'scripts/vite-encryption.ts'
+      - 'scripts/qualify-native-e2ee.ts'
+      - 'scripts/e2ee-staging*.ts'
+      - 'scripts/hosted-staging*.ts'
+      - 'scripts/staging-snapshot.ts'
+      - 'lib/staging-contract.ts'
+      - 'worker/staging.ts'
+      - 'crypto/openmls/**'
+      - 'scripts/openmls.ts'
+      - 'tests-openmls/**'
+      - 'prototypes/e2ee/**'
+      - 'tests-e2ee/**'
+      - 'tests-staging/**'
+      - 'tests-unit/e2ee-*.test.ts'
+      - 'tests-unit/hosted-staging.test.ts'
+      - 'tests-unit/hosted-staging-worker.test.mjs'
+      - 'tests-unit/hosted-staging-operator.test.mjs'
+      - 'tests-unit/hosted-staging-effects.test.ts'
+      - 'vite.e2ee.config.ts'
+      - 'playwright.e2ee.config.ts'
+      - 'playwright.encrypted-staging.config.ts'
+      - 'worker/index.ts'
+      - 'worker/dm-stream.ts'
+      - 'auth.ts'
+      - 'wrangler.jsonc'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/encryption-prototype.yml'
+      - '.github/workflows/staging-deploy.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: encrypted-chat-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prototype:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: yarn
+      - run: yarn install --immutable
+      - name: Install pinned Rust toolchain and binding generator
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy --target wasm32-unknown-unknown
+          cargo +1.99.1 install wasm-bindgen-cli --version 0.2.130 --locked
+          cargo +1.99.1 install cargo-audit --version 0.23.0 --locked
+          cargo +1.99.1 install cargo-deny --version 0.20.2 --locked
+      - run: yarn openmls:check
+      - run: yarn openmls:audit
+      - run: yarn openmls:build
+      - run: git diff --exit-code -- crypto/openmls/pkg/pana_openmls.d.ts
+      - run: yarn test:openmls:rust
+      - run: yarn test:openmls
+      - run: yarn test:e2ee
+      - run: node --import tsx --test tests-unit/hosted-staging.test.ts tests-unit/hosted-staging-effects.test.ts
+      - run: node --experimental-test-module-mocks --import tsx --test tests-unit/hosted-staging-worker.test.mjs tests-unit/hosted-staging-operator.test.mjs
+      - name: Verify real account/profile, delivery, media, recovery and retention APIs
+        run: >-
+          node --experimental-test-module-mocks --import tsx --test --test-concurrency=1
+          tests-db/encryption-devices.test.ts tests-db/group-chat.test.ts
+          tests-db/social-media.test.ts tests-db/safety-reports.test.ts
+          tests-db/chat-write-errors.test.ts
+      - run: yarn tsc --noEmit --incremental false
+      - run: yarn playwright install --with-deps chromium webkit
+      - run: yarn test:e2ee:browser
+      - name: Verify the encryption-capable application build
+        run: yarn build:encrypted
+      - name: Build the hosted gateway with synthetic credentials and no deployment
+        run: |
+          node --import tsx --input-type=module <<'JS'
+          import { execFile } from 'node:child_process';
+          import { mkdir, readFile } from 'node:fs/promises';
+          import path from 'node:path';
+          import { promisify } from 'node:util';
+          import ts from 'typescript';
+          import { hostedStagingResourcesSchema } from './lib/staging-contract.ts';
+          import { assertBuiltStagingConfig, hostedStagingConfig, hostedStagingProcessEnv } from './scripts/hosted-staging-config.ts';
+          import { createStagingSnapshot } from './scripts/staging-snapshot.ts';
+          const exec = promisify(execFile);
+          const source = await readFile('wrangler.jsonc', 'utf8');
+          const resources = hostedStagingResourcesSchema.parse({
+            version: 1, environment: 'staging', worker: 'panamia-staging',
+            accountId: ts.parseConfigFileTextToJson('wrangler.jsonc', source).config.account_id,
+            origin: 'https://staging.panamia.club', databaseProjectRef: 's'.repeat(20),
+            productionDatabaseProjectRef: 'p'.repeat(20), kvNamespaceId: 'b'.repeat(32),
+            publicBucket: 'panamia-staging-media', privateBucket: 'panamia-staging-chat-private',
+          });
+          const { stdout } = await exec('git', ['rev-parse', 'HEAD']);
+          const commit = stdout.trim();
+          const directory = path.join(process.env.RUNNER_TEMP, `hosted-staging-build-${process.env.GITHUB_RUN_ID}`);
+          await mkdir(directory);
+          const home = path.join(directory, 'home');
+          await mkdir(home);
+          const config = hostedStagingConfig(source, resources, commit);
+          const snapshot = await createStagingSnapshot(process.cwd(), directory, config);
+          const pkg = JSON.parse(await readFile(path.join(snapshot, 'node_modules', 'vinext', 'package.json'), 'utf8'));
+          const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin.vinext;
+          await exec(process.execPath, [path.join(snapshot, 'node_modules', 'vinext', bin), 'build'], {
+            cwd: snapshot,
+            env: hostedStagingProcessEnv(config, {
+              databaseUrl: 'postgres://synthetic:synthetic@127.0.0.1:55489/postgres',
+              authSecret: 'synthetic-only-'.repeat(4),
+            }, home),
+            maxBuffer: 16 * 1024 * 1024,
+          });
+          assertBuiltStagingConfig(
+            JSON.parse(await readFile(path.join(snapshot, 'dist', 'server', 'wrangler.json'), 'utf8')),
+            resources, commit
+          );
+          console.log('Hosted gateway compiled with staging-only bindings; no deployment occurred.');
+          JS
+      - name: Share only the qualified static engine with the isolated pilot
+        uses: actions/upload-artifact@v7
+        with:
+          name: qualified-openmls-engine
+          path: crypto/openmls/pkg/
+          retention-days: 7
+
+  worker-pilot:
+    needs: prototype
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: yarn
+      - run: yarn install --immutable
+      - uses: actions/download-artifact@v8
+        with:
+          name: qualified-openmls-engine
+          path: crypto/openmls/pkg/
+      - run: yarn playwright install --with-deps chromium
+      - name: Require runner-local PostgreSQL 16 binaries
+        run: test -x /usr/lib/postgresql/16/bin/initdb
+      - name: Prepare a private, disposable full-application pilot
+        run: |
+          node --import tsx scripts/e2ee-staging.ts setup \
+            --directory "$RUNNER_TEMP/e2ee-staging-$GITHUB_RUN_ID" \
+            --postgres-bin /usr/lib/postgresql/16/bin
+      - name: Verify real sessions, PostgreSQL, ciphertext and private media
+        run: |
+          node --import tsx scripts/e2ee-staging.ts check \
+            --directory "$RUNNER_TEMP/e2ee-staging-$GITHUB_RUN_ID"
+      - name: Upload metadata only, never sessions, keys, traces or private state
+        uses: actions/upload-artifact@v7
+        with:
+          name: isolated-encrypted-pilot-metadata
+          path: ${{ runner.temp }}/e2ee-staging-${{ github.run_id }}/pilot-results.json
+          retention-days: 7
+          if-no-files-found: error

@@ -4,6 +4,7 @@ import {
   groupChatResponse,
 } from '@/lib/server/group-chat-request';
 import { readGroupChat, sendGroupChatMessage } from '@/lib/server/group-chat';
+import { chatWriteFailure } from '@/lib/server/chat-write-errors';
 
 export async function GET(
   request: NextRequest,
@@ -37,7 +38,13 @@ export async function POST(
   } catch {
     return groupChatResponse({ success: false, error: 'Invalid JSON' }, 400);
   }
-  const result = await sendGroupChatMessage(handle, viewer.actorId, body);
+  let result: Awaited<ReturnType<typeof sendGroupChatMessage>>;
+  try {
+    result = await sendGroupChatMessage(handle, viewer.actorId, body);
+  } catch (error) {
+    const { status, ...failure } = chatWriteFailure(error, 'group');
+    return groupChatResponse(failure, status);
+  }
   return groupChatResponse(
     result.success ? result : { success: false, error: result.error },
     result.success ? 201 : result.status

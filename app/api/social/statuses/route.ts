@@ -12,6 +12,7 @@ import { getActiveProfileWithActor } from '@/lib/server/active-profile';
 import { createStatus, getPublicTimeline } from '@/lib/federation';
 import { parseCcLicense, parseStatusLocation } from '@/lib/social/status-input';
 import { createNotification } from '@/lib/notifications';
+import { chatWriteFailure } from '@/lib/server/chat-write-errors';
 
 export async function GET(request: NextRequest) {
   // Get viewer's actor if authenticated
@@ -149,21 +150,30 @@ export async function POST(request: NextRequest) {
   // Validate location if provided
   const validatedLocation = parseStatusLocation(location);
 
-  const result = await createStatus(
-    profile.socialActor.id,
-    // `text`, not `content`: an attachment-only status arrives with content
-    // absent, and createStatus expects a string to run through the markdown
-    // and sanitiser pipeline.
-    text,
-    contentWarning,
-    inReplyTo,
-    resolvedVisibility,
-    Array.isArray(attachments) ? attachments : undefined,
-    resolvedVisibility === 'direct' ? recipientActorIds : undefined,
-    validatedLocation,
-    resolvedLicense,
-    audience === 'panas' ? { audience: 'panas' } : undefined
-  );
+  let result: Awaited<ReturnType<typeof createStatus>>;
+  try {
+    result = await createStatus(
+      profile.socialActor.id,
+      // `text`, not `content`: an attachment-only status arrives with content
+      // absent, and createStatus expects a string to run through the markdown
+      // and sanitiser pipeline.
+      text,
+      contentWarning,
+      inReplyTo,
+      resolvedVisibility,
+      Array.isArray(attachments) ? attachments : undefined,
+      resolvedVisibility === 'direct' ? recipientActorIds : undefined,
+      validatedLocation,
+      resolvedLicense,
+      audience === 'panas' ? { audience: 'panas' } : undefined
+    );
+  } catch (error) {
+    const { status, ...body } = chatWriteFailure(error, 'status');
+    return NextResponse.json(body, {
+      status,
+      headers: { 'Cache-Control': 'private, no-store' },
+    });
+  }
 
   if (!result.success) {
     return NextResponse.json(

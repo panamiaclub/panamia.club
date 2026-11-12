@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState } from 'react';
 import axios from 'axios';
+import Link from 'next/link';
 import { useModuleConsent } from '@/hooks/use-module-consent';
 import { useToast } from '@/hooks/use-toast';
 import { ConsentModal } from '@/components/legal/ConsentModal';
@@ -129,9 +130,17 @@ export function PostComposer({
   );
   const isExpanded = isReply || expanded || hasDraft || uploading;
   const mediaDisabled =
-    isPending || uploading || attachments.length >= MAX_ATTACHMENTS;
+    effectiveVisibility === 'direct' ||
+    isPending ||
+    uploading ||
+    attachments.length >= MAX_ATTACHMENTS;
   const isDisabled =
-    isEmpty || isOverLimit || isPending || uploading || unresolvedAudience;
+    effectiveVisibility === 'direct' ||
+    isEmpty ||
+    isOverLimit ||
+    isPending ||
+    uploading ||
+    unresolvedAudience;
   const displayName =
     avatarName || me?.actor?.name || me?.actor?.username || 'You';
   const displayAvatar = avatarUrl ?? me?.actor?.iconUrl;
@@ -386,6 +395,18 @@ export function PostComposer({
     </Button>
   );
 
+  if (effectiveVisibility === 'direct')
+    return (
+      <div className="space-y-2 rounded-xl border p-4 text-sm">
+        <p>
+          Continue private replies in Messages so device approval, encryption
+          and private attachments stay together.
+        </p>
+        <Link href="/messages" className="text-pana-indigo font-bold underline">
+          Open Messages
+        </Link>
+      </div>
+    );
   return (
     <div className="min-w-0">
       <form
@@ -456,6 +477,7 @@ export function PostComposer({
             imageUploadEndpoint="/api/social/media"
             presignEndpoint="/api/social/media/upload"
             pathPrefix="social/media"
+            purpose="social-post"
             wrapperClassName="min-w-0 space-y-3"
             presentation="compact"
             showControls={isReply}

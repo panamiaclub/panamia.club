@@ -58,6 +58,7 @@ const audioTypes = [
 function multipart(contentType: string) {
   const body = new FormData();
   body.set('file', new File(['fixture'], 'fixture', { type: contentType }));
+  body.set('purpose', 'social-post');
   return new NextRequest('https://social.invalid/api/social/media', {
     method: 'POST',
     body,
@@ -72,6 +73,7 @@ function uploadToken(contentType: string) {
       filename: 'social/media/fixture.mp4',
       contentType,
       size: 7,
+      purpose: 'social-post',
     }),
   });
 }

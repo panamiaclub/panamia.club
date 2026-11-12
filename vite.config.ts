@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import vinext from 'vinext';
 import { defineConfig, type Plugin } from 'vite';
+import { encryptionEnginePlugin } from './scripts/vite-encryption';
 
 // Workaround for vinext 0.0.32+ regression: toViteAliasReplacement() returns "/"
 // for the project root, so "@/foo" → alias "@"→"/" → "/" + "/foo" = "//foo".
@@ -177,6 +178,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    encryptionEnginePlugin(),
     fixAtAliasPlugin,
     fixNextExtensionImportsPlugin,
     fixNoonDateLibPlugin,

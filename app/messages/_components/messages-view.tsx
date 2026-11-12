@@ -21,12 +21,21 @@ import {
 import { ChatAvatar, ChatName, type ChatActor } from './chat-primitives';
 import { Transcript } from './transcript';
 import { Composer } from './composer';
+import { EncryptedConversation } from './encrypted-conversation';
+import { EncryptionSettings } from './encryption-controls';
+import {
+  useEncryptedRooms,
+  useEncryptionDevice,
+  useEncryptionScope,
+} from '../_lib/encryption';
+import { usePrivateDraftUrls } from '../_lib/private-drafts';
 import { GroupConversation, useGroupChatState } from './group-chat';
 import { useGroupChats, useGroupChatThread } from '../_lib/group-chat-query';
 import {
   inboxKey,
   inboxSelection,
   mergeInboxEntries,
+  mergeEncryptedDirectEntries,
   type DirectInboxEntry,
   type InboxEntry,
   type InboxSelection,
@@ -116,22 +125,39 @@ function MessagesWorkspace({
   const acceptRequest = useAcceptDmRequest();
   const deleteRequest = useDeleteDmRequest();
   const send = useSendDirectMessage();
+  const encryption = useEncryptionScope(viewerActorId);
+  const encryptionDevice = useEncryptionDevice(encryption);
+  const encryptedRooms = useEncryptedRooms(
+    encryption,
+    encryptionDevice.data?.approved === true &&
+      encryptionDevice.data.status.identity?.encryptionRequired === true
+  );
+  usePrivateDraftUrls(drafts);
   useDmSocket(!!viewerActorId);
 
   const requestList = requests.data ?? [];
-  const requestEntries: DirectInboxEntry[] = requestList.map((entry) => ({
+  const legacyRequestEntries: DirectInboxEntry[] = requestList.map((entry) => ({
     kind: 'direct',
     actor: entry.sender,
     lastMessage: entry.messages[entry.messages.length - 1] ?? null,
     requestedAt: entry.requestedAt,
   }));
-  const inboxEntries: DirectInboxEntry[] = (
-    conversations.data?.conversations ?? []
-  ).map((entry) => ({
-    kind: 'direct',
-    actor: entry.counterparty,
-    lastMessage: entry.lastMessage,
-  }));
+  const requestEntries = mergeEncryptedDirectEntries(
+    legacyRequestEntries,
+    encryptedRooms.data ?? [],
+    'requests'
+  );
+  const inboxEntries = mergeEncryptedDirectEntries(
+    (conversations.data?.conversations ?? []).map(
+      (entry): DirectInboxEntry => ({
+        kind: 'direct',
+        actor: entry.counterparty,
+        lastMessage: entry.lastMessage,
+      })
+    ),
+    encryptedRooms.data ?? [],
+    'inbox'
+  );
   const existingIds = new Set(inboxEntries.map((entry) => entry.actor.id));
   const allInbox: DirectInboxEntry[] = [
     ...newConversations.filter((entry) => !existingIds.has(entry.actor.id)),
@@ -142,7 +168,18 @@ function MessagesWorkspace({
   const groupEntries =
     groupMismatch || conversationUnavailable(groups.error)
       ? []
-      : (groups.data?.groups ?? []);
+      : (groups.data?.groups ?? []).map((group) => {
+          const room = encryptedRooms.data?.find(
+            (room) => room.kind === 'group' && room.group?.id === group.id
+          );
+          return room
+            ? {
+                ...group,
+                encryptedRoomId: room.id,
+                encryptedUpdatedAt: room.updatedAt,
+              }
+            : group;
+        });
   useEffect(() => {
     if (
       !groups.data ||
@@ -165,8 +202,8 @@ function MessagesWorkspace({
       [...allInbox, ...requestEntries].map((entry) => [entry.actor.id, entry])
     ).values(),
   ];
-  const isInboundRequest = requestList.some(
-    (entry) => entry.sender.id === activeActorId
+  const isInboundRequest = requestEntries.some(
+    (entry) => entry.actor.id === activeActorId
   );
   const isSending = outgoing.some(
     (message) =>
@@ -190,11 +227,30 @@ function MessagesWorkspace({
     (entry) => entry.actor.id === activeActorId
   )?.actor;
   const unavailable = conversationUnavailable(thread.error);
+  const activeEncryptedRoom = encryptedRooms.data?.find(
+    (room) => room.kind === 'dm' && room.peer?.id === activeActorId
+  );
+  const encryptedDirect = !!(
+    encryption.context?.required ||
+    thread.data?.encryptionRequired ||
+    activeEncryptedRoom
+  );
   const isListLoading =
     view === 'requests'
       ? requests.isLoading
       : conversations.isLoading || (!!viewerActorId && groups.isLoading);
   const issues: InboxIssue[] = [];
+  if (encryptedRooms.isError || encryption.error)
+    issues.push({
+      id: 'encrypted',
+      message:
+        encryption.error ??
+        'Could not refresh encrypted conversations. No plaintext fallback is allowed.',
+      onRetry: () => {
+        void encryption.refresh();
+        if (encryption.client) void encryptedRooms.refetch();
+      },
+    });
   if (view === 'requests' ? requests.isError : conversations.isError) {
     issues.push({
       id: 'direct',
@@ -251,11 +307,11 @@ function MessagesWorkspace({
     if (
       activeSelection.current?.kind === 'direct' &&
       activeSelection.current.id === actorId &&
-      requestList.some((entry) => entry.sender.id === actorId)
+      requestEntries.some((entry) => entry.actor.id === actorId)
     ) {
       setView('requests');
     }
-  }, [requestList, requestsReady]);
+  }, [requestEntries, requestsReady]);
 
   const rememberActor = useCallback((actor: ChatActor) => {
     const entry: DirectInboxEntry = {
@@ -489,6 +545,9 @@ function MessagesWorkspace({
 
   return (
     <>
+      <div className="mb-2 flex justify-end">
+        <EncryptionSettings connection={encryption} />
+      </div>
       <div className={`profile-card ${styles.workspace}`}>
         <ConversationList
           entries={entries}
@@ -526,16 +585,29 @@ function MessagesWorkspace({
               detailOpen={detailOpen}
               onBack={backToList}
               conversationRef={conversationRef}
+              encryption={encryption}
             />
           ) : thread.data && !unavailable ? (
-            <>
-              <Transcript
-                key={activeActorId}
-                counterparty={thread.data.counterparty}
-                messages={thread.data.messages}
+            encryptedDirect ? (
+              <EncryptedConversation
+                key={`encrypted-${activeActorId}`}
+                connection={encryption}
                 viewerActorId={thread.data.viewerActorId}
-                localDomain={thread.data.localDomain}
-                outgoing={visibleOutgoing}
+                counterparty={thread.data.counterparty}
+                initialRoomId={activeEncryptedRoom?.id}
+                legacyMessages={thread.data.messages}
+                draft={draft}
+                onChange={(patch) => {
+                  if (!activeActorId) return;
+                  setDrafts((current) => ({
+                    ...current,
+                    [activeActorId]: {
+                      ...(current[activeActorId] ?? EMPTY_MESSAGE_DRAFT),
+                      ...patch,
+                    },
+                  }));
+                }}
+                canSend={canReply ? 'allow' : 'refuse'}
                 detailOpen={detailOpen}
                 onBack={backToList}
                 request={
@@ -556,69 +628,104 @@ function MessagesWorkspace({
                       }
                     : undefined
                 }
-                onRetry={handleRetry}
-                canRetry={canReply}
-                isSending={isSending}
-                refreshError={
-                  thread.isError
-                    ? 'Could not refresh this conversation. Showing the last update.'
-                    : null
-                }
-                onRefresh={() => {
-                  void thread.refetch();
-                }}
               />
-              {isInboundRequest ? (
-                <footer className="border-pana-ink/8 text-pana-ink/60 flex flex-none items-center justify-center gap-2 border-t px-5 py-5 text-xs">
-                  <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                  Accept this request to reply.
-                </footer>
-              ) : !requestsReady ? (
-                <footer
-                  className="border-pana-ink/8 text-pana-ink/65 flex-none border-t px-5 py-4 text-xs"
-                  role="status"
-                >
-                  {requests.isError ? (
-                    <>
-                      Could not check message requests.{' '}
-                      <button
-                        type="button"
-                        className="font-bold underline"
-                        onClick={() => requests.refetch()}
-                      >
-                        Try again
-                      </button>{' '}
-                      before replying.
-                    </>
-                  ) : (
-                    'Checking message requests...'
-                  )}
-                </footer>
-              ) : (
-                <Composer
-                  key={`composer-${activeActorId}`}
-                  canSend={thread.data.canSend}
-                  counterpartyName={
-                    thread.data.counterparty.name ||
-                    thread.data.counterparty.username
+            ) : (
+              <>
+                <Transcript
+                  key={activeActorId}
+                  counterparty={thread.data.counterparty}
+                  messages={thread.data.messages}
+                  viewerActorId={thread.data.viewerActorId}
+                  localDomain={thread.data.localDomain}
+                  outgoing={visibleOutgoing}
+                  detailOpen={detailOpen}
+                  onBack={backToList}
+                  request={
+                    isInboundRequest
+                      ? {
+                          onAccept: () => {
+                            if (thread.data)
+                              void handleAccept(thread.data.counterparty);
+                          },
+                          onDelete: () => {
+                            if (activeActorId) void handleDelete(activeActorId);
+                          },
+                          isTriaging:
+                            acceptRequest.isPending || deleteRequest.isPending,
+                          error: activeActorId
+                            ? (triageErrors[activeActorId] ?? null)
+                            : null,
+                        }
+                      : undefined
                   }
-                  draft={draft}
-                  onChange={(patch) => {
-                    if (!activeActorId) return;
-                    setDrafts((current) => ({
-                      ...current,
-                      [activeActorId]: {
-                        ...(current[activeActorId] ?? EMPTY_MESSAGE_DRAFT),
-                        ...patch,
-                      },
-                    }));
-                  }}
-                  onSend={handleSend}
+                  onRetry={handleRetry}
+                  canRetry={canReply}
                   isSending={isSending}
-                  inputRef={inputRef}
+                  refreshError={
+                    thread.isError
+                      ? 'Could not refresh this conversation. Showing the last update.'
+                      : null
+                  }
+                  onRefresh={() => {
+                    void thread.refetch();
+                  }}
                 />
-              )}
-            </>
+                {isInboundRequest ? (
+                  <footer className="border-pana-ink/8 text-pana-ink/60 flex flex-none items-center justify-center gap-2 border-t px-5 py-5 text-xs">
+                    <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                    Accept this request to reply.
+                  </footer>
+                ) : !requestsReady ? (
+                  <footer
+                    className="border-pana-ink/8 text-pana-ink/65 flex-none border-t px-5 py-4 text-xs"
+                    role="status"
+                  >
+                    {requests.isError ? (
+                      <>
+                        Could not check message requests.{' '}
+                        <button
+                          type="button"
+                          className="font-bold underline"
+                          onClick={() => requests.refetch()}
+                        >
+                          Try again
+                        </button>{' '}
+                        before replying.
+                      </>
+                    ) : (
+                      'Checking message requests...'
+                    )}
+                  </footer>
+                ) : (
+                  <Composer
+                    key={`composer-${activeActorId}`}
+                    canSend={thread.data.canSend}
+                    counterpartyName={
+                      thread.data.counterparty.name ||
+                      thread.data.counterparty.username
+                    }
+                    draft={draft}
+                    onChange={(patch) => {
+                      if (!activeActorId) return;
+                      setDrafts((current) => ({
+                        ...current,
+                        [activeActorId]: {
+                          ...(current[activeActorId] ?? EMPTY_MESSAGE_DRAFT),
+                          ...patch,
+                        },
+                      }));
+                    }}
+                    onSend={handleSend}
+                    isSending={isSending}
+                    inputRef={inputRef}
+                    legacyTarget={{
+                      kind: 'dm',
+                      actorId: thread.data.counterparty.id,
+                    }}
+                  />
+                )}
+              </>
+            )
           ) : (
             <EmptyState
               actor={selectedActor}

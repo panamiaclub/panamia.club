@@ -5,6 +5,12 @@
 > Both use the authenticated actor mailbox at `/ws/dm`. Apply migration `0074_social_group_chat`
 > before deploying group chat. Event chat and the generic room/socket design below remain proposals.
 >
+> **E2EE direction selected (2026-11-10):** build Pana-owned encrypted messaging
+> on the existing backend, using a standard protocol and a maintained implementation.
+> Matrix is not the selected architecture. Production chat is still server-readable;
+> the existing encryption lab is not a rollout. See the
+> [Pana-owned E2EE implementation plan](#pana-owned-e2ee-implementation-plan).
+>
 > **Decided (2026-10), by the product owner:** chat replaces the mail experience, and it is scoped
 > to **three** room types — direct messages between panas, rooms inside **groups**, and rooms inside
 > **events**. That answers the question this document previously called _"blocks everything else"_.
@@ -27,6 +33,8 @@
 
 ## Table of Contents
 
+- [Pana-owned E2EE implementation plan](#pana-owned-e2ee-implementation-plan)
+- [Hosted staging environment plan](#hosted-staging-environment-plan)
 - [Overview](#overview)
 - [Current Messages workspace](#current-messages-workspace)
 - [Current group chats](#current-group-chats)
@@ -45,6 +53,564 @@
 - [Do Not Copy The Signaling Auth Model](#do-not-copy-the-signaling-auth-model)
 - [Roadmap](#roadmap)
 - [Risks & Open Questions](#risks--open-questions)
+
+---
+
+## Pana-owned E2EE implementation plan
+
+**Status: disabled-by-default product implementation; not activated in production.**
+The product owner selected this direction on 2026-11-10. It supersedes the
+earlier Matrix evaluation, not the existing plaintext chat implementation.
+No Matrix server, paid service, new cryptographic protocol, or automatic
+production activation is part of this implementation.
+
+**Implementation checkpoint:** P1 has a pinned OpenMLS 0.9.2 Rust/WASM
+boundary, checked upstream provider snapshots and independent-peer
+interoperability. P2-P7 now include account-bound devices, ciphertext
+delivery, membership, private media, recovery and the existing Messages UI.
+The real product client is exercised against actual API handlers with
+synthetic accounts, not just the original protocol lab. The
+[engine documentation](../crypto/openmls/README.md) records dependency/advisory
+decisions, wire/local-state boundaries and audit exclusions. Android Keystore
+instrumentation and the real Android 16/WebView 133 product client pass
+cold process restart and background/foreground checks. [Source-verified macOS
+CI](https://github.com/panamiaclub/panamia.club/actions/runs/43080471724) also passes
+the iOS simulator build, unsigned device archive and actual Keychain/product-client
+setup, cold restart and foreground delivery. Supported physical-device qualification,
+operational review and independent security review remain release
+gates. `CHAT_E2EE_ENABLED` stays `0`; no real messages have been migrated.
+
+### Confirmed scope and boundaries
+
+- Encrypt private DMs and members-only group chats, including message media.
+  Preserve the current text/photo/GIF experience and supported media formats.
+  Audio/voice content must not get a plaintext bypass; bringing back a retired
+  recorder or adding live calls is not part of this work.
+- New group members get messages sent after joining, not automatic access to
+  earlier history. A person's own verified replacement device is a different
+  case and can restore retained history.
+- Provide encrypted backups protected by a user-held personal recovery key.
+  Account sign-in alone must not decrypt old conversations. Pana gets no
+  administrator master decryption key.
+- Reuse Workers, Postgres, R2 and the authenticated actor mailbox. Keep the Pana
+  interface, existing account system, profile identities, consent requests,
+  blocking, group roles and membership authorization.
+- Public posts, stories, directory content and their ActivityPub behavior remain
+  outside this encryption change. Event rooms and new messaging features are
+  outside the initial encrypted release.
+
+**Proposed rollout defaults:** start with compatible Pana clients only.
+Do not silently fall back to plaintext for an external or outdated client.
+Label existing server-readable history as legacy and keep it separate; do not
+delete it, call it retroactively encrypted, or revive expired messages.
+Preserve the current 30-day visibility rule while explicitly specifying new
+ciphertext, media, backup and legal-preservation retention before launch.
+Changing legacy deletion policy requires a separate product decision.
+
+### Architecture
+
+The client owns encryption, decryption, secret state and recovery secrets.
+The backend owns authentication, access policy, public device/key-package
+distribution, ordered opaque delivery, encrypted-object storage and quotas.
+Cryptography does not replace authorization on any read or write.
+
+Use MLS (RFC 9420) for asynchronous two-person and group conversations.
+**Qualify OpenMLS first**, including the exact release, crypto provider,
+storage format and browser/native bindings. Its
+[published SRLabs audit](https://blog.openmls.tech/posts/2026-05-27-independent-audit/)
+is evidence for the audited scope, not automatic approval of every later release
+or a new WASM bridge. Upstream
+[platform coverage](https://github.com/openmls/openmls#supported-platforms)
+lists WASM/iOS/Android as built but not tested. Prove our target configurations.
+Use a supported standard cipher suite with experimental features disabled.
+
+The [existing lab](../prototypes/e2ee/README.md) supplies useful behavior scenarios,
+not the production engine, identity authority or approved device state.
+Do not promote its unaudited `ts-mls` dependency or manual trust model into
+production. If OpenMLS does not qualify, evaluate another maintained MLS
+implementation; do not invent cryptography or switch to Matrix without a new
+architecture decision.
+
+Add versioned, chat-only encrypted storage for device credentials, single-use
+key packages, room/event metadata, opaque messages, private media ownership
+and encrypted backups. Reference existing actors/groups instead of creating a
+second authoritative social membership system. Final schemas follow engine
+qualification. Use journaled Drizzle migrations, server-only database access,
+RLS and the privacy data inventory.
+
+This is not a plaintext mirror into a second store. The existing
+`socialStatuses` and `social_group_chat_messages` remain legacy data paths;
+new encrypted messages must never also be written there as readable text.
+The "Storage" and mail-substrate sections below describe the current system,
+not an instruction to dual-write encrypted conversations into that system.
+
+### Work packages and dependencies
+
+| Phase                                      | Deliverable                                                                                                                       | Completion evidence                                                                                                                                                                                                                            | Prerequisites  |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| P1. Engine and platform qualification      | Pin and wrap a reviewed MLS implementation; specify threat model, wire versions and local state contract.                         | Independent peers exchange private messages/commits; conformance, tamper, replay, join/removal and persistence cases work in browser engines, with real Android/iOS capability probes. Record native build prerequisites and remaining limits. | None           |
+| P2. Profile identities and devices         | Account/profile-bound credentials, approved devices, key-package lifecycle, verification, revocation and ownership rules.         | Forged/stale identity selections cannot register or send as another profile. Login alone cannot substitute a trusted device key. Personal/business identities and manager revocations stay isolated.                                           | P1             |
+| P3. Ciphertext delivery backend            | Private room/event APIs, ordered log, idempotency, device authorization, quotas and mailbox invalidations.                        | Independent authorized clients deliver only opaque frames. Unauthorized reads/writes fail; simultaneous commits cannot create competing accepted room epochs; retries return the accepted envelope without duplicate messages.                 | P1, P2         |
+| P4. Membership and consent synchronization | Connect MLS membership to Pana DM gates, group roles, joins, removals, blocks and device revocations.                             | New members cannot decrypt earlier messages; removed/revoked devices cannot decrypt future ones, even when they ignore removal. Offline membership changes never permit sends under stale access.                                              | P2, P3         |
+| P5. Encrypted media                        | Encrypt files and sensitive metadata before upload; private R2 binding and authorized delivery.                                   | Relay/storage objects reveal neither file contents nor decryption keys. Wrong-room access, tampering, copied URLs, exact upload limits and cleanup behave correctly.                                                                           | P3             |
+| P6. Durable state and recovery             | Atomic local state/outbox, cross-tab coordination, native key protection, encrypted backup and fresh-device recovery.             | Crash/retry/upgrade cases do not reuse message keys. Recovery restores retained history without cloning live device/ratchet state or reactivating a revoked device. Expired history stays expired.                                             | P2, P4, P5     |
+| P7. Product integration and reporting      | Wire all private-message entrypoints, inbox/threads, media, device/recovery UX, explicit report disclosure and legacy boundaries. | The actual web/native apps handle success, missing keys, pending membership, failures and profile switches explicitly, without plaintext fallback or content leaks. Existing consent/block/delete behavior is preserved.                       | P3, P4, P5, P6 |
+| P8. Release qualification                  | Adversarial integration coverage, performance/usage measurement, independent review, fixes and staged activation.                 | Release criteria below pass; affected users/clients have explicit supported states; production claims match what is actually enabled.                                                                                                          | P7             |
+
+P4 and P5 can proceed independently once their prerequisites are ready.
+Validation belongs in every package, not only P8. Independent review is a
+**production release checkpoint**, not a requirement to stop all development
+while looking for a reviewer.
+
+### Security-critical implementation rules
+
+**Bind identities explicitly.** Reuse `requireProfileAccess` and existing
+ownership/membership rules, but encrypted requests must name and validate
+their profile, actor and device consistently. A stale active-profile cookie
+must not redirect a queued encrypted send to the personal-profile fallback.
+Do not change unrelated editors' existing fallback behavior. Do not reuse the
+server-held ActivityPub signing private keys as E2EE device keys.
+
+**Approval is not just login.** Specify the profile trust root, device
+approval/delegation, visible key-change verification, recovery authorization,
+and ownership-transfer rules before enrollment ships. Define business-manager
+history delegation explicitly; a server-side role change must not silently
+export personal keys or install a trusted device. A lost-key identity reset
+must be visible to peers, not an administrative way to unlock old messages.
+
+**Order membership changes safely.** Persist room revisions and expected MLS
+epochs transactionally. A removal/revocation must put affected rooms into a
+rekey-required state until a remaining authorized client commits the new
+membership. Reject new application frames under the old access state,
+including offline queued frames. Show "secure membership update pending"
+instead of falling back. Process authorized protocol-control events even
+when the UI hides a blocked author's ordinary messages. No server private
+room key is introduced to make offline changes easier.
+
+**Persist before publish.** Serialize all operations touching a device's
+ratchet, across tabs/processes as applicable. Commit changed crypto state and
+the exact outgoing envelope atomically before transmission. Network retries
+reuse that envelope, not the old key. If a stale-epoch attempt is rejected,
+process the new state and create a fresh encryption attempt without rewinding
+the ratchet. Bind retries and room/profile identifiers to the authenticated
+payload. Version local storage migrations; never silently wipe keys after an
+upgrade or clone live state onto a replacement device.
+
+Bind roster changes to authorized membership intent and approved profile/device
+credentials. Receiving clients must validate that binding rather than accept
+every cryptographically valid MLS proposal. A server-supplied device list is
+not, by itself, permission to insert an unseen participant. Define initial
+trust, peer verification and identity-reset limits explicitly.
+
+**Keep media private throughout.** The current photo upload and GIF mirroring
+paths deliver readable media and must not be used unchanged for encrypted
+messages. Keep public-post uploads separate. Use a private R2 bucket/binding,
+not a supposedly private prefix in the existing public bucket. Encrypt media
+and its sensitive manifest on-device; carry its key only inside the encrypted
+message. Enforce server-side ownership, ciphertext limits, quotas and expiry
+as well as client-side file validation. Public GIF discovery is not made
+anonymous by encrypting the selected file.
+
+**Recovery is a separate format.** Document exactly which retained history,
+media keys and identity-authorization material a backup contains. Protect it
+with a user-held high-entropy secret, authenticated version/profile context
+and a reviewed encryption format. Do not restore an old live MLS state,
+device identity, message counter or send queue as if it were the replacement
+device. Re-enroll with fresh device keys and current room authorization.
+Account recovery without the recovery secret cannot become a hidden
+message-decryption backdoor. Keep backup expiry and legal holds consistent
+with the declared retention policy.
+
+**Cover every write path.** Updating `/messages` alone is insufficient.
+Audit standalone group chat, profile/deep-link entrypoints, media hooks,
+generic direct-status creation, multi-recipient API sends and any legacy
+reply paths. After encrypted activation, server-side guards must refuse
+plaintext private writes for that scope, including from old clients.
+Preserve ambiguous DM refusals and quiet held requests. Do not add a new
+composer or revive a removed feature merely to exercise encryption.
+
+**Avoid secondary plaintext copies.** Render and sanitize decrypted content
+on-device. Keep previews/search local. Exclude message bodies, recovery
+secrets and private keys from SSR, logs, analytics, crash reports, server
+notifications and shared caches. Maintain strict profile cache/draft
+boundaries. Metadata such as participants, device IDs, timestamps and sizes
+remains observable; do not promise anonymity or protection against a
+compromised endpoint or malicious client code.
+
+**Reporting is an explicit exception.** Extend the existing safety workflow
+with a participant-approved, limited readable message selection and context.
+Do not disclose full conversations or private keys. Keep report access
+restricted and audited, and report text out of notification emails.
+Do not introduce report media uploads, automatic server decryption or
+content-scanning bots as an encryption shortcut. Staff response, legal
+preservation and reporting procedures remain separate operational work.
+
+### Implemented product contract
+
+`lib/e2ee/chat-client.ts` is the account/profile-bound client. It uses the
+checked Rust/WASM engine, not the reference `ts-mls` lab. Device approval uses
+a separate owner-held authorization key, not the server's ActivityPub key.
+Requests bind the exact profile, actor, device, route, body and current
+device-state hash. A stale selection or restored/copied live snapshot fails
+closed. Local snapshots, exact outboxes, encrypted history and ciphertext
+files commit atomically before publication; server checkpoints contain hashes,
+never live private state.
+
+The existing DM workspace, inbox, standalone group chat, photo/GIF composer,
+transcript and profile/deep-link entrypoints share the encrypted path.
+Encrypted text renders as text, not untrusted HTML. File manifests and keys
+travel only inside authenticated encrypted messages; file objects use the
+separate private R2 binding. Photos are re-encoded locally before encryption;
+GIF discovery still contacts its public provider. Supported private files are
+at most 10 MiB each (four protocol attachments; the current composer retains
+its photo/GIF controls). The unrelated 200 MiB public-video path is not a
+private-video guarantee.
+
+Enabling a profile requires saving its personal key and an encrypted identity
+backup. **History backups are an explicit per-conversation action**, not a
+promise of automatic continuous recovery. Messages since the last saved
+backup cannot be recovered after device loss. An approved manager without an
+owner's authorization key gets a separate personal history key; approval does
+not disclose a colleague's key or history. Another device must enter the
+existing personal key to open that user's retained backups. Recovery restores
+history/media authorization, not old devices, counters, send queues or MLS
+ratchets. Backup indexing is paginated.
+
+Losing every key does not unlock old messages. An owner can explicitly
+acknowledge a last-resort identity reset, save a new key and revoke all old
+devices (at most once per 24 hours). This changes the public trust root,
+discards the resetting device's local live/cache state and forces peers to
+verify the changed identity. Old retained backups still require their old
+personal keys. Owner removal/demotion or personal ownership transfer freezes
+the identity until a current owner performs this visible reset; it does not
+silently promote an editor into cryptographic authority. A fresh signed room
+session is allowed only after every old approved cryptographic participant is
+gone, or an empty setup times out. It cannot replace a functioning participant
+just because another device is offline.
+
+Persistent actor/group latches reject plaintext private writes even when the
+rollout flag is paused. Legacy history remains separately labelled and
+server-readable. Rejected/failed legacy chat writes return bounded errors;
+SQL parameters containing rejected text or attachment details never go to
+the framework logger, including activation races caught by the database latch.
+Public social upload callers mark `social-post`; legacy chat
+uploads name their target and are refused for encrypted scopes. Once any
+encrypted scope exists, old unmarked upload clients must update rather than
+publish a private file before their message is refused. Ordinary posts and
+stories remain outside E2EE. Compatible Pana clients are required; external
+ActivityPub DMs do not receive a plaintext downgrade.
+
+Mailbox broadcasts contain only room/type/timestamp invalidations. Held
+requests stay quiet, and encrypted mailbox delivery rechecks current profile
+users rather than sending to a removed manager's old socket. Cached history
+revalidates visibility without making temporary mutes permanently destroy it.
+Reports can include one bounded, explicitly consented text excerpt; that
+unverified quotation stays in the restricted safety record, never in email.
+No report attachment or file/recovery-key disclosure is introduced.
+
+### Retention, rollback and supported clients
+
+- Messages disappear after their authenticated 30-day deadline. Scheduled
+  maintenance removes expired/deleted application ciphertext while retaining
+  ordered tombstones and active MLS control data for offline catch-up.
+  Author deletion purges that author's application frames and media access;
+  deleting a DM participant closes the room immediately. Scheduled cleanup
+  deletes permanently closed rooms and their remaining protocol records,
+  encrypted files and room backups; active-room ordering/control data stays intact.
+- Bound media expires with its message; unbound reservations expire after one
+  day. Private-object deletion work survives FK cascades and failed R2 deletes.
+  The scheduler runs even when encrypted sending is paused. Legacy plaintext
+  DM physical-deletion policy is unchanged.
+- History backup objects expire 30 days after backup creation (or when their
+  conversation/group is deleted), independently
+  of per-message visibility. Recovery never resurrects expired entries. Identity
+  backups persist until replacement or account/profile deletion. Reset versions
+  have separate history slots so a new key does not overwrite the old retained
+  copy before recovery.
+- HTTPS, Web Crypto, IndexedDB, Web Locks and bounded-request support are
+  required. Unsupported browsers/system WebViews show an update requirement.
+  Native apps additionally require the protected-storage plugin, an explicitly
+  trusted first-party origin and device-bound wrapping. There is no native-to-web
+  key fallback. Android excludes OS backup/transfer; iOS uses
+  `WhenUnlockedThisDeviceOnly` non-synchronizable Keychain material and excludes
+  WebKit live state from OS backup.
+- Rebuild the pinned engine with `yarn openmls:build`, then use
+  `yarn build:encrypted` for an encryption-capable deployment. Missing, partial
+  or stale artifacts cannot become another crypto implementation. Ordinary
+  non-E2EE builds can omit the engine and explicitly refuse encrypted operations.
+  A deployment rollback may pause sending, not clear the transport latches.
+
+### Isolated full-application pilot
+
+`yarn e2ee:staging` runs the built application, actual Better Auth magic-link
+sessions, a fresh PostgreSQL 16 cluster and local-only private R2/DO/KV bindings.
+It is **local staging, not a hosted/public beta**. Production remains disabled;
+production database credentials, Cloudflare accounts and email delivery are not
+needed. Use synthetic data only.
+
+Build the pinned engine as documented in `crypto/openmls/README.md` and supply
+an installed PostgreSQL 16 binary directory. A Windows example is:
+
+```powershell
+$pilot = Join-Path $env:TEMP 'e2ee-staging-196'
+yarn e2ee:staging setup --directory $pilot --postgres-bin 'C:\tools\pgsql\bin'
+yarn e2ee:staging check --directory $pilot
+yarn e2ee:staging serve --directory $pilot
+```
+
+`setup` refuses an existing output directory and snapshots the current source
+outside the worktree. Only the snapshot receives a generated allowlisted Worker
+config with encryption enabled. It reuses installed dependencies/qualified WASM
+and references the protected upstream checkout without inspecting or copying it;
+normal build output, `wrangler.jsonc`, `.env.local` and `.dev.vars` are untouched.
+Subprocesses receive generated auth/database credentials and a separate config
+home, not inherited production/provider secrets. The database is loopback-only,
+uses a fresh non-default port and must prove its per-run ownership marker before
+seeding, reset or login. Schema replay follows the migration journal and records
+the applied hashes. No shared cluster or production migration command is used.
+
+`check` resets only the labelled `check-*` synthetic accounts; manual `demo-*`
+accounts are separate. It blocks non-local browser HTTP/WebSocket requests,
+disables traces/screenshots/video and closes its own Worker/database processes.
+`pilot-results.json` contains metadata, not message bodies or keys. The private
+`pilot.json`, generated config, browser failure context and database/object
+directories must never be committed, published or uploaded as CI artifacts.
+The CI job publishes only the metadata report, not this private directory. Each
+check removes the previous report first; a failed check cannot leave a stale
+success report.
+
+`serve` starts the same isolated resources for manual checks; stop it with
+Ctrl+C. In another terminal, generate a five-minute, single-use synthetic login:
+
+```powershell
+yarn e2ee:staging login --directory $pilot --account demo-alice
+yarn e2ee:staging login --directory $pilot --account demo-bob
+```
+
+Open these in separate browser profiles, not tabs sharing a cookie jar.
+Enrollment and local recovery-key handling use the normal UI. Never use the
+production-oriented seed/sign-in scripts or a remote-database override to make
+this pilot work. Source changes require a fresh `setup` directory so the tested
+snapshot and schema remain explicit. A local sample is not a production
+throughput/billing estimate, physical-device proof or independent review.
+
+### Hosted staging environment plan
+
+**Status: deployment wiring implemented; hosted provisioning is blocked on
+verified isolated Supabase access. Nothing is deployed.** Build one temporary,
+restricted HTTPS environment using the existing Cloudflare/Supabase accounts.
+This is not a second production stack or approval to activate real chats.
+Keep production `CHAT_E2EE_ENABLED` at `"0"` and the implementation PR unmerged.
+
+Read-only inventory confirmed `panamia-media`, `panamia-media-preview`,
+`panamia-chat-private` and `panamia-chat-private-preview` already exist. Public
+`r2.dev` access is disabled on the private preview bucket. The visible KV
+namespace is the existing `VINEXT_KV_CACHE`; do not reuse it for staging.
+GitHub already has `Preview`, `Production` and `ios-release` environments, but
+`Preview` currently has no environment secrets or protection rules. A preview
+label, a `preview_bucket_name`, or a version of the production Worker is not
+proof of database, storage or credential isolation.
+
+#### Proposed resource layout
+
+| Surface                 | Hosted staging choice                                                                                                       | Required boundary                                                                                                                                                                                                                          |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Web app                 | Separate Worker, proposed name `panamia-staging`; proposed HTTPS host `staging.panamia.club`                                | Not a version/route of `panamia-next`. Verify cookie-domain isolation before choosing the hostname; use a separate preview origin if production domain-wide cookies would be exposed.                                                      |
+| Database                | Reuse an unused, isolated nonproduction Supabase/Postgres project if available; otherwise approve a dedicated project       | Never production's database, public schema, connection string or a copy of member chats. Verify project identity independently, including pooler project/user identity, before creating a staging ownership marker or applying migrations. |
+| Storage                 | Reuse the existing preview buckets only after confirming exclusive nonproduction use; otherwise create staging-only buckets | Same application binding names, different resources. Private chat storage has neither public development URLs nor public custom domains. Do not clear a shared preview bucket.                                                             |
+| Cache and live delivery | New staging KV namespace; the existing DO classes deployed under the separate staging Worker                                | Do not bind production cache IDs or production-script Durable Objects.                                                                                                                                                                     |
+| Authentication          | New Better Auth secret, host-only staging cookies and a distinct cookie prefix; controlled test accounts                    | Build-time `NEXT_PUBLIC_HOST_URL`, runtime `BETTER_AUTH_URL`, callbacks and native origin agree. Staging identity/federation domain is not production's domain.                                                                            |
+| Access                  | Restricted tester/reviewer access; prefer Cloudflare Access if available                                                    | Check email-link sign-in and WebSocket upgrades in browsers and native WebViews. Automation credentials belong only in protected CI, never in shipped JavaScript or phone builds.                                                          |
+
+#### Implementation phases
+
+| Phase                             | Work                                                                                                                                                                                                      | Completion evidence                                                                                                                                                                    |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Confirm reuse and approvals    | Inventory existing nonproduction Workers, bucket bindings, Supabase projects, cookie scope and deploy/DNS permissions. Decide whether a new database or Access plan is needed.                            | Recorded resource IDs and isolation boundaries, with any incremental spend approved before creation.                                                                                   |
+| 2. Build the hosted configuration | Add a dedicated staging config/build path and staging ownership checks. Replay the migration journal into the verified empty test database and seed separate manual/automated accounts.                   | Build metadata identifies the exact source and qualified WASM; all bindings and secrets target staging. Production files, data and flags are unchanged.                                |
+| 3. Add protected deployment       | Create or configure a protected GitHub staging environment with staging-specific secret names, then deploy an explicitly selected trusted commit.                                                         | Deploy checks refuse production Worker names, project IDs, bucket/cache IDs and missing staging secrets; HTTPS/auth/private-storage smoke checks pass.                                 |
+| 4. Qualify the hosted application | Adapt the existing full-app scenarios for the approved HTTPS origin and stage-only account reset/cleanup. Exercise text/photos, consent, concurrent sends, recovery, revocation and group joins/removals. | Real hosted account sessions, private object reads and metadata-only evidence; copied media URLs, wrong-profile access and plaintext downgrades are refused.                           |
+| 5. Produce phone test builds      | Separate Android/iOS test identities, staging sign-in URL schemes/associations, exact navigation/vault origin allowlists and the staging server URL.                                                      | Both test apps install without overwriting production and complete real sign-in against staging. iPhone age assurance uses an entitled organization build, not a Personal Team bypass. |
+| 6. Check operations and teardown  | Measure usage, connections, quotas and spending; verify expiry/private-object cleanup, retries, alerts and pause behavior. Document removal of pilot-owned resources and credentials.                     | Accepted operating limits, no secret/content logging, and rollback pauses encrypted sends rather than enabling plaintext. No production or shared preview resource is deleted.         |
+
+The existing `yarn e2ee:staging` origin/database guards deliberately accept only
+managed loopback resources. Do not weaken them with a remote override or use
+the production-oriented seeding/sign-in helpers. Hosted build/deploy, seed,
+login and reset commands need their own explicit approved-origin/resource
+checks; the local/CI pilot remains available as a separate safe test path.
+
+Use staging-specific CI secret names rather than falling back to repository
+production secrets when an environment secret is missing. The first deployment
+must work from the trusted feature commit without merging encryption into main.
+Account for GitHub's default-branch registration requirement when introducing a
+new manually dispatched workflow; an explicit guarded deployment can precede
+that automation. Do not dispatch the production deployment or migration workflow.
+
+Initially omit production email, OAuth, payment, SMS/CRM, relay/federation and
+webhook credentials/bindings. Add deployment-mode guards so tests cannot contact
+real recipients or silently use production defaults. Sign-in starts with
+controlled accounts and staging-only one-use links; any email sender added later
+must enforce the tester recipient list. Do not enable the production scheduler
+unchanged: qualify stage-only chat maintenance before enabling its triggers.
+Show an unmistakable test-data banner and disable search indexing.
+
+`CAPACITOR_SERVER_URL` already changes the shell's server and derives a trusted
+origin, but it is not the whole phone isolation change. Current auth helpers and
+URL schemes use `social.pana.app`, and navigation/trust helpers also recognize
+production hosts. Stage-specific app IDs, schemes, callback handling and
+allowlists must agree without changing the production app's permanent identity
+or accepting production links inside the staging vault.
+
+Plan approximately **3-5 focused engineering days** for hosted configuration,
+deployment, test-account tooling and initial qualification once access is
+available. This is an estimate, not a delivery commitment; Apple signing/access,
+external review and physical-phone qualification can extend the calendar.
+Existing account allowances may cover Worker/storage/cache usage. Verify spare
+database projects and billing before assuming any additional monthly cost.
+No new spending is approved by this plan.
+
+The owner inputs before provisioning are Supabase project access/selection,
+confirmation of deploy/DNS and protected-environment permissions, the tester
+access policy, and approval of any incremental charges. Organization signing
+and authorized phones are additionally required for the phone phase. No keys,
+database credentials, recovery secrets or tester email lists belong in this
+document or chat.
+
+Hosted staging does not satisfy the independent review gate or authorize a
+production beta. Production beta eligibility still needs a server-enforced
+participant/group allowlist, separate release approval and the remaining
+physical-device/security gates.
+
+#### Hosted staging operator entry point
+
+`yarn e2ee:hosted-staging` is separate from the loopback pilot. It never loads
+`.env.local`, falls back to production credentials, or creates a paid project.
+Supply a verified resource registry with `version`, `environment`, `worker`,
+`accountId`, `origin`, `databaseProjectRef`, `productionDatabaseProjectRef`,
+`kvNamespaceId`, `publicBucket` and `privateBucket`. The Worker name must be
+`panamia-staging`; the dedicated bucket names are `panamia-staging-media` and
+`panamia-staging-chat-private`. Registry validation rejects the production
+project, cache, buckets, Worker and origin.
+
+Configure `STAGING_POSTGRES_URL`, `STAGING_BETTER_AUTH_SECRET` and, for deployment,
+`STAGING_CLOUDFLARE_API_TOKEN` through secure environment settings. Do not paste
+them into chat. The database URL must identify the selected Supabase project
+using its direct hostname or its session-pooler username; transaction pooling
+and arbitrary hosts are refused. All hosted connections verify TLS certificates.
+
+```powershell
+yarn e2ee:hosted-staging validate --resources $registry
+yarn e2ee:hosted-staging init --resources $registry
+yarn e2ee:hosted-staging build --resources $registry --directory $hostedBuild
+yarn e2ee:hosted-staging deploy --resources $registry --directory $hostedBuild
+yarn e2ee:hosted-staging resume --resources $registry
+yarn e2ee:hosted-staging login --resources $registry --account demo-alice
+```
+
+`init` requires a clean committed source and either an empty public database or
+its exact staging ownership marker. It serializes operators, commits each
+migration together with its immutable journal hash, and atomically seeds
+synthetic accounts with their admission marker. Interrupted transactions roll
+back rather than leaving half-applied migrations or orphaned test users.
+Migrations require PostgreSQL 16 `psql` on PATH or `PG_BIN_DIR`.
+`build` creates a fresh absolute `hosted-staging-<id>` directory
+outside the repository. `deploy` rechecks generated bindings, source and WASM
+bytes, uploads runtime credentials as secrets rather than public vars, and
+verifies the approved HTTPS origin's source-specific health response.
+
+Initialization and redeployment leave test access paused. `resume` requires a
+clean checkout and healthy deployment for that exact source before updating the
+owned admission marker with a compare-and-swap. `pause --resources $registry`
+can stop newly admitted requests without a build; it does not clear encryption
+latches, keys, history, counters or outboxes. Admitted users can still sign out.
+It is not a remote wipe: offline history, already-open sockets and requests
+already admitted are not retroactively revoked. Missing access state in an older
+marker also fails closed until an operator initializes and resumes it.
+
+The staging Worker runs only bounded private encrypted-chat retention, hourly,
+including while test access is paused. Each invocation verifies its dedicated
+environment and source marker before initializing the private bucket, records
+metadata-only job outcomes, and propagates failed/deferred deletion work for
+retry. It never delegates production scheduled tasks such as SMS sync, mail,
+listing refreshes or external probes.
+
+The dedicated `worker/staging.ts` refuses missing or inconsistent credentials,
+database/source markers and wrong origins. Only admitted test accounts and
+current operator-issued one-use invitations reach application routes. Public
+signup, arbitrary OAuth, mail delivery, relay publishing, external integration
+mutations and production federation endpoints are unavailable. Staging sessions
+use a separate cookie prefix, host-only cookies and a shorter lifetime;
+authenticated pages show a synthetic-data banner and responses are not indexed
+or cached.
+
+The `Guarded Staging Deploy` workflow requires a protected `Staging` environment,
+explicit source SHA, and a successful encrypted qualification run for that same
+SHA. Qualification also compiles the actual staging gateway using isolated,
+synthetic credentials without any deployment. It downloads only that run's
+qualified static engine. Supply the registry
+as `STAGING_RESOURCES_JSON` and use only staging-specific secret names; missing
+values and absent reviewer protection fail before deployment. The workflow must
+be registered on the default branch before manual dispatch, or the guarded
+operator commands must be used for the first deployment. Neither path uses the
+production deployment workflow.
+The reviewed `resume_test_access` workflow input is false by default; otherwise
+an operator must explicitly run `resume` after the verified deployment.
+
+Phone builds must be prepared inside the staging source/build snapshot, never
+by syncing a staging identity over the production native worktree. The staging
+build marker and `CAPACITOR_SERVER_URL` select the separate
+`social.pana.app.staging` identity and staging-only URL/vault allowlists. Android
+Debug additionally uses `-PhostedStaging`; iOS Debug needs the staging bundle ID,
+`PANA_AUTH_URL_SCHEME` override and organization-entitled
+`App/Staging.entitlements`. Production and personal sideload defaults remain
+unchanged. The age-assurance controller is not bypassed; signed phone
+qualification remains a separate gate.
+
+The hosting blocker is not Cloudflare subscription setup: no Supabase management
+connection or isolated staging project credentials are available in this session.
+The owner must connect Supabase or configure the selected nonproduction project
+securely, confirm resource isolation and approve any incremental charges before
+the guarded deployment is run. The existing local/CI pilot remains available.
+
+### Milestones, effort and release gate
+
+**Original first milestone: time-box P1 to 5-10 working days.** Deliver an evidence-based
+go/no-go on the MLS engine and target platforms, a pinned adapter/wire-state
+contract, and an updated estimate. Use synthetic accounts, not real chats.
+iOS native qualification requires macOS build access and real-device access;
+desktop WebKit emulation is not a substitute.
+
+The disabled-by-default implementation now includes media, recovery and the
+existing Messages/group UI. Qualify its isolated application pilot before an
+opt-in beta. Migration or activation of real conversations is a separate release
+action.
+
+A preliminary planning allowance is **12-20 engineer-weeks** for the complete
+Pana-owned path, assuming an experienced engineer, native-device access and
+reuse of current UI/auth/transport infrastructure. This is not a quote or a
+deadline and must be revised after P1. The earlier Matrix-based 8-14 week range
+does not apply unchanged. No Matrix hosting bill is added, but Workers, DB,
+R2, maintenance, support and review still have costs; measure actual usage
+instead of promising the existing free-plan budget will suffice.
+
+Before production activation, demonstrate all of the following:
+
+- Database/object-store/relay captures contain no normal message plaintext,
+  usable private device keys or recovery secrets. Explicit reports are the
+  documented exception, not an always-on copy.
+- Identity substitution, wrong-profile access, stale manager access, replay,
+  malformed frames, duplicate sends and concurrent/offline membership changes
+  fail safely. Group joins/removals hold cryptographically, not merely in UI filters.
+- Physical Android/iOS, browser reloads, multiple tabs, app backgrounding,
+  upgrades, lost devices and backup restoration preserve the stated guarantees.
+- Private text, photos, GIFs and supported media cannot bypass the encrypted
+  path. Legacy history, expiration, content rendering, notifications and
+  existing public feeds behave as documented.
+- The pinned engine/bindings and integration receive the planned security
+  review; findings and release-affecting audit/version differences are resolved.
+- Rollout flags, diagnostics and rollback procedures preserve ciphertext and
+  keys. An emergency rollback may pause encrypted sending or require a client
+  update; it must never switch an encrypted conversation to plaintext.
 
 ---
 
@@ -84,6 +650,11 @@ out for group and event conversations.
 ---
 
 ## Current Messages workspace
+
+The E2EE effort retains an isolated [protocol feasibility lab](../prototypes/e2ee/README.md)
+and a real-client/API qualification harness. The disabled product integration is
+described above; no live encryption rollout has occurred. The lab documents the independent
+review and integration gates before that claim can change.
 
 The production `/messages` workspace shares transcript/composer primitives and
 `components/messages/workspace.module.css` with `/mock/dm-chat`, but no mock data or
@@ -227,13 +798,13 @@ for things that have nothing to do with the inbox UI.
 
 A DM today is a `socialStatuses` row with `visibility: 'direct'`. Retiring that row type breaks:
 
-| What breaks                | Where                                         | Why it matters                                                         |
-| -------------------------- | --------------------------------------------- | ---------------------------------------------------------------------- |
-| **Federation**             | ActivityPub direct addressing                 | A DM to a Mastodon account works today. Chat does not federate at all. |
-| **The DM consent gate**    | `lib/federation/wrappers/dm-gate.ts`          | `allow`/`hold`/`refuse`, the Requests folder, the no-notify property   |
-| **Block / mute semantics** | `isBlockedEitherWay`, `filterHiddenActorIds`  | Already audited against the status read path                           |
-| **Moderation**             | A DM is a status, so status tooling applies   | A chat transcript is not a status; nothing we built would apply        |
-| **Test coverage**          | `tests-db/social-dm-requests.test.ts`         | 12 assertions on hold/accept/delete/block/policy behaviour             |
+| What breaks                | Where                                        | Why it matters                                                         |
+| -------------------------- | -------------------------------------------- | ---------------------------------------------------------------------- |
+| **Federation**             | ActivityPub direct addressing                | A DM to a Mastodon account works today. Chat does not federate at all. |
+| **The DM consent gate**    | `lib/federation/wrappers/dm-gate.ts`         | `allow`/`hold`/`refuse`, the Requests folder, the no-notify property   |
+| **Block / mute semantics** | `isBlockedEitherWay`, `filterHiddenActorIds` | Already audited against the status read path                           |
+| **Moderation**             | A DM is a status, so status tooling applies  | A chat transcript is not a status; nothing we built would apply        |
+| **Test coverage**          | `tests-db/social-dm-requests.test.ts`        | 12 assertions on hold/accept/delete/block/policy behaviour             |
 
 The consent gate is the one to be most careful with. `docs/SOCIAL-GRAPH.md` §C1 calls ungated DMs
 _"the largest open safety gap"_, and `dm-gate.ts` is the thing that closed it. It is not a filter

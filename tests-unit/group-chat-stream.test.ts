@@ -2,17 +2,20 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { getDmStream, notifyGroupChatEvent } from '@/lib/dm-stream';
 
-function stateFor(sent: Record<string, unknown>[]) {
+function stateFor(
+  sent: Record<string, unknown>[],
+  users: Array<string | null> = [null]
+) {
   return {
     setWebSocketAutoResponse() {},
     acceptWebSocket() {},
-    getWebSockets: () => [
-      {
+    getWebSockets: () =>
+      users.map((userId) => ({
         send: (message: string) => {
           sent.push(JSON.parse(message));
         },
-      },
-    ],
+        deserializeAttachment: () => (userId ? { userId } : null),
+      })),
   };
 }
 // Workers use a separate runtime/type environment, intentionally excluded
@@ -116,6 +119,43 @@ describe('shared actor mailbox protocol', () => {
     });
     assert.deepEqual(box.sent, [
       { type: 'group', groupId: 'garden', kind: 'membership', at: 123 },
+    ]);
+  });
+  it('sends only encrypted metadata to currently authorized profile users, not a removed manager socket', async () => {
+    const sent: Record<string, unknown>[] = [];
+    const stream = new DmStream(
+      stateFor(sent, ['owner', 'removed-manager', 'editor', null]),
+      {}
+    );
+    const response = await stream.fetch(
+      new Request('https://dm-stream/notify', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'encrypted',
+          roomId: 'private-room',
+          kind: 'membership',
+          at: 123,
+          authorizedUserIds: ['owner', 'editor'],
+          content: 'Never forward private content',
+          keys: ['not-a-wire-field'],
+          attachments: ['not-a-wire-field'],
+        }),
+      })
+    );
+    assert.equal((await response.json()).delivered, 2);
+    assert.deepEqual(sent, [
+      {
+        type: 'encrypted',
+        roomId: 'private-room',
+        kind: 'membership',
+        at: 123,
+      },
+      {
+        type: 'encrypted',
+        roomId: 'private-room',
+        kind: 'membership',
+        at: 123,
+      },
     ]);
   });
   it('rejects malformed notification frames instead of broadcasting them', async () => {

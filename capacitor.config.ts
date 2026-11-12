@@ -24,8 +24,9 @@
  */
 
 import type { CapacitorConfig } from '@capacitor/cli';
-import { MOBILE_APP_ID } from './lib/mobile/app-identity';
+import { getMobileAppId } from './lib/mobile/app-identity';
 import { DEFAULT_ROOT_DOMAIN } from './lib/panaverse/root-domain';
+import { stagingOrigin } from './lib/staging-contract';
 
 /**
  * The deploy the app talks to.
@@ -43,6 +44,8 @@ import { DEFAULT_ROOT_DOMAIN } from './lib/panaverse/root-domain';
  */
 const SERVER_URL =
   process.env.CAPACITOR_SERVER_URL?.trim() || `https://${DEFAULT_ROOT_DOMAIN}`;
+const hostedStaging = process.env.NEXT_PUBLIC_HOSTED_STAGING === '1';
+if (hostedStaging) stagingOrigin(SERVER_URL);
 
 /** True for http:// dev servers, which Android blocks by default. Derived
  *  rather than configured so it cannot be left on in a production build. */
@@ -57,12 +60,13 @@ const config: CapacitorConfig = {
    * Shared with the two deep-link association routes under app/.well-known/,
    * which have to name the same app or the association silently matches
    * nothing. See lib/mobile/app-identity.ts. */
-  appId: MOBILE_APP_ID,
+  appId: getMobileAppId(),
 
   /* The home screen label. Pana Mia rather than Pana Social because this one
    * app carries both surfaces and Pana Mia is the front door — DEFAULT_SURFACE
    * in lib/panaverse/surfaces.ts. */
-  appName: 'Pana Mia',
+  appName: hostedStaging ? 'Pana Staging' : 'Pana Mia',
+  loggingBehavior: 'none',
 
   /* Capacitor requires a local web directory even when it is serving a remote
    * URL. Nothing here is the app: it holds the offline page named by
@@ -135,18 +139,29 @@ const config: CapacitorConfig = {
      *    has the same round-trip problem as OAuth: sent to the system browser,
      *    the member pays and the app never learns that they did.
      */
-    allowNavigation: [
-      DEFAULT_ROOT_DOMAIN,
-      `*.${DEFAULT_ROOT_DOMAIN}`,
-      'accounts.google.com',
-      'appleid.apple.com',
-      'meta.wikimedia.org',
-      'checkout.stripe.com',
-      'js.stripe.com',
-    ],
+    allowNavigation: hostedStaging
+      ? [new URL(SERVER_URL).hostname]
+      : [
+          DEFAULT_ROOT_DOMAIN,
+          `*.${DEFAULT_ROOT_DOMAIN}`,
+          'accounts.google.com',
+          'appleid.apple.com',
+          'meta.wikimedia.org',
+          'checkout.stripe.com',
+          'js.stripe.com',
+        ],
   },
 
   plugins: {
+    PanaProtectedStorage: {
+      trustedOrigins: hostedStaging
+        ? [new URL(SERVER_URL).origin]
+        : [
+            new URL(SERVER_URL).origin,
+            `https://${DEFAULT_ROOT_DOMAIN}`,
+            `https://social.${DEFAULT_ROOT_DOMAIN}`,
+          ],
+    },
     SocialLogin: {
       providers: {
         google: true,
