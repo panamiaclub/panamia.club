@@ -41,6 +41,7 @@ on:
       - 'tests-unit/e2ee-*.test.ts'
       - 'tests-unit/hosted-staging.test.ts'
       - 'tests-unit/hosted-staging-worker.test.mjs'
+      - 'tests-unit/hosted-staging-operator.test.mjs'
       - 'tests-unit/hosted-staging-effects.test.ts'
       - 'vite.e2ee.config.ts'
       - 'playwright.e2ee.config.ts'
@@ -93,6 +94,7 @@ on:
       - 'tests-unit/e2ee-*.test.ts'
       - 'tests-unit/hosted-staging.test.ts'
       - 'tests-unit/hosted-staging-worker.test.mjs'
+      - 'tests-unit/hosted-staging-operator.test.mjs'
       - 'tests-unit/hosted-staging-effects.test.ts'
       - 'vite.e2ee.config.ts'
       - 'playwright.e2ee.config.ts'
@@ -139,7 +141,7 @@ jobs:
       - run: yarn test:openmls
       - run: yarn test:e2ee
       - run: node --import tsx --test tests-unit/hosted-staging.test.ts tests-unit/hosted-staging-effects.test.ts
-      - run: node --experimental-test-module-mocks --import tsx --test tests-unit/hosted-staging-worker.test.mjs
+      - run: node --experimental-test-module-mocks --import tsx --test tests-unit/hosted-staging-worker.test.mjs tests-unit/hosted-staging-operator.test.mjs
       - name: Verify real account/profile, delivery, media, recovery and retention APIs
         run: >-
           node --experimental-test-module-mocks --import tsx --test --test-concurrency=1

@@ -4,7 +4,14 @@ import application from './index';
 import { db, runWithDb } from '../lib/db';
 import { resolveUserIdFromHeaders } from '../auth';
 import { users, verification } from '../lib/schema';
+import { getPrivateChatStorage } from '../lib/r2';
 import {
+  ENCRYPTED_CHAT_RETENTION_JOB,
+  purgeEncryptedChat,
+} from '../lib/jobs/purge-encrypted-chat';
+import { beginJobRun, completeJobRun } from '../lib/jobs/ledger';
+import {
+  HOSTED_STAGING_RETENTION_CRON,
   HOSTED_STAGING_WORKER,
   hostedStagingDescriptorSchema,
   isHostedStagingBuild,
@@ -17,6 +24,35 @@ import {
 export { SignalingRoom, DmStream } from './index';
 
 type Env = Parameters<typeof application.fetch>[1];
+
+function assertEnvironment(env: Env) {
+  if (
+    !isHostedStagingBuild() ||
+    !env.POSTGRES_URL ||
+    env.HYPERDRIVE ||
+    env.EMAIL ||
+    env.RELAY ||
+    env.CROSSPOST_AUTH_TOKEN
+  ) {
+    throw new Error(
+      'Staging requires its dedicated build and isolated bindings.'
+    );
+  }
+  const origin = stagingOrigin(process.env.NEXT_PUBLIC_HOST_URL ?? '');
+  const projectRef = z
+    .string()
+    .regex(/^[a-z0-9]{20}$/)
+    .parse(process.env.NEXT_PUBLIC_STAGING_PROJECT_REF);
+  const database = stagingDatabaseUrl(env.POSTGRES_URL, {
+    databaseProjectRef: projectRef,
+  });
+  if (database.searchParams.get('sslmode') !== 'verify-full') {
+    throw new Error(
+      'Hosted staging database connections must verify TLS certificates.'
+    );
+  }
+  return origin;
+}
 
 const responseHeaders = {
   'Cache-Control': 'private, no-store',
@@ -115,19 +151,7 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     try {
-      if (
-        !isHostedStagingBuild() ||
-        !env.POSTGRES_URL ||
-        env.HYPERDRIVE ||
-        env.EMAIL ||
-        env.RELAY ||
-        env.CROSSPOST_AUTH_TOKEN
-      ) {
-        throw new Error(
-          'Staging requires its dedicated build and isolated bindings.'
-        );
-      }
-      const origin = stagingOrigin(process.env.NEXT_PUBLIC_HOST_URL ?? '');
+      const origin = assertEnvironment(env);
       if (
         url.origin !== origin.origin ||
         request.headers.get('host') !== origin.host
@@ -138,18 +162,6 @@ export default {
           'This request is not on the staging origin.'
         );
       }
-      const projectRef = z
-        .string()
-        .regex(/^[a-z0-9]{20}$/)
-        .parse(process.env.NEXT_PUBLIC_STAGING_PROJECT_REF);
-      const database = stagingDatabaseUrl(env.POSTGRES_URL, {
-        databaseProjectRef: projectRef,
-      });
-      if (database.searchParams.get('sslmode') !== 'verify-full') {
-        throw new Error(
-          'Hosted staging database connections must verify TLS certificates.'
-        );
-      }
       return await runWithDb(env, async () => {
         const policy = await descriptor();
         if (url.pathname === '/__staging/health' && request.method === 'GET') {
@@ -157,8 +169,19 @@ export default {
             {
               environment: 'staging',
               sourceCommit: policy.sourceCommit,
+              access: policy.access === 'ready' ? 'ready' : 'paused',
             },
             { headers: responseHeaders }
+          );
+        }
+        if (
+          policy.access !== 'ready' &&
+          !(url.pathname === '/api/auth/sign-out' && request.method === 'POST')
+        ) {
+          return refusal(
+            503,
+            'STAGING_PAUSED',
+            'The staging operator has paused test access.'
           );
         }
         if (url.pathname === '/signin' && request.method === 'GET') {
@@ -246,6 +269,38 @@ export default {
         'STAGING_UNAVAILABLE',
         'The isolated staging deployment is unavailable or misconfigured.'
       );
+    }
+  },
+  async scheduled(event: { cron: string }, env: Env): Promise<void> {
+    try {
+      assertEnvironment(env);
+      if (event.cron !== HOSTED_STAGING_RETENTION_CRON)
+        throw new Error('Unexpected staging maintenance schedule.');
+      await runWithDb(env, async () => {
+        await descriptor();
+        if (!getPrivateChatStorage(env))
+          throw new Error('The staging private bucket is not available.');
+        const run = await beginJobRun(ENCRYPTED_CHAT_RETENTION_JOB, event.cron);
+        try {
+          const report = await purgeEncryptedChat(100);
+          console.log('[hosted-staging-retention]', JSON.stringify(report));
+          if (report.objectsDeferred)
+            throw new Error('Staging private object deletions need retry.');
+          await completeJobRun(run, { ok: true, report, errorCount: 0 });
+        } catch (error) {
+          await completeJobRun(run, {
+            ok: false,
+            report: { failed: true },
+            errorCount: 1,
+          });
+          throw error;
+        }
+      });
+    } catch (error) {
+      console.error('[hosted-staging] maintenance failed', {
+        type: error instanceof Error ? error.constructor.name : 'UnknownError',
+      });
+      throw error;
     }
   },
 };

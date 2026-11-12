@@ -4,6 +4,7 @@ import { STAGING_MOBILE_APP_ID } from './mobile/app-identity';
 export const HOSTED_STAGING_WORKER = 'panamia-staging';
 export const HOSTED_STAGING_APP_ID = STAGING_MOBILE_APP_ID;
 export const HOSTED_STAGING_COOKIE_PREFIX = 'pana-staging';
+export const HOSTED_STAGING_RETENTION_CRON = '0 * * * *';
 
 const projectRef = z.string().regex(/^[a-z0-9]{20}$/);
 const resourceId = z.string().regex(/^[a-f0-9]{32}$/);
@@ -107,6 +108,7 @@ export const hostedStagingDescriptorSchema = z
     databaseProjectRef: projectRef,
     sourceCommit: z.string().regex(/^[a-f0-9]{40}$/),
     allowedUserIds: z.array(z.string().uuid()).min(1).max(100),
+    access: z.enum(['paused', 'ready']).optional(),
   })
   .strict()
   .superRefine((value, context) => {

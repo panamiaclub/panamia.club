@@ -37,6 +37,8 @@ const usage = `Hosted staging (never reads .env.local or production secrets)
   init     --resources <resource-registry.json>
   build    --resources <resource-registry.json> --directory <absolute hosted-staging-id>
   deploy   --resources <resource-registry.json> --directory <built hosted-staging-id>
+  pause    --resources <resource-registry.json>
+  resume   --resources <resource-registry.json>
   login    --resources <resource-registry.json> --account demo-alice
 
 Required secure environment: STAGING_POSTGRES_URL, STAGING_BETTER_AUTH_SECRET.
@@ -331,6 +333,7 @@ async function initialize(resources: HostedStagingResources) {
         databaseProjectRef: resources.databaseProjectRef,
         sourceCommit,
         allowedUserIds,
+        access: 'paused',
       });
       await transaction.execute(
         query`UPDATE pana_staging.environment SET descriptor = ${JSON.stringify(descriptor)}::jsonb WHERE id = 1`
@@ -460,6 +463,16 @@ async function deploy(resources: HostedStagingResources, directory: string) {
     ...secretsFor(resources),
     cloudflareToken: requiredSecret('STAGING_CLOUDFLARE_API_TOKEN'),
   };
+  const sql = connection(resources);
+  try {
+    const marker = await control(sql, resources);
+    if (marker.sourceCommit !== sourceCommit || marker.access !== 'paused')
+      throw new Error(
+        'Pause the current source-owned staging marker before deploying.'
+      );
+  } finally {
+    await sql.end({ timeout: 5 });
+  }
   const config = hostedStagingConfig(
     await readFile(path.join(repository, 'wrangler.jsonc'), 'utf8'),
     resources,
@@ -529,6 +542,16 @@ async function deploy(resources: HostedStagingResources, directory: string) {
   } finally {
     await rm(secretFile, { force: true });
   }
+  const health = await deploymentHealth(resources, sourceCommit);
+  console.log(
+    `Hosted staging is deployed at ${resources.origin}; test access is ${health.access}. Production was not deployed.`
+  );
+}
+
+async function deploymentHealth(
+  resources: HostedStagingResources,
+  sourceCommit: string
+) {
   const response = await fetch(`${resources.origin}/__staging/health`, {
     redirect: 'error',
     signal: AbortSignal.timeout(20_000),
@@ -537,15 +560,48 @@ async function deploy(resources: HostedStagingResources, directory: string) {
     .object({
       environment: z.literal('staging'),
       sourceCommit: z.literal(sourceCommit),
+      access: z.enum(['paused', 'ready']),
     })
     .parse(await response.json());
   if (!response.ok || health.sourceCommit !== sourceCommit)
     throw new Error(
       'The hosted staging deployment is not healthy at its approved origin.'
     );
-  console.log(
-    `Hosted staging is available at ${resources.origin}; production was not deployed.`
-  );
+  return health;
+}
+
+async function setAccess(
+  resources: HostedStagingResources,
+  mode: 'paused' | 'ready'
+) {
+  const sourceCommit = mode === 'ready' ? await cleanCommit() : undefined;
+  const sql = connection(resources);
+  try {
+    const marker = await control(sql, resources);
+    if (mode === 'ready') {
+      if (marker.sourceCommit !== sourceCommit)
+        throw new Error(
+          'Only the current committed staging source can be resumed.'
+        );
+      await deploymentHealth(resources, marker.sourceCommit);
+    }
+    const updated = await sql<{ id: number }[]>`
+      UPDATE pana_staging.environment
+      SET descriptor = jsonb_set(descriptor, '{access}', to_jsonb(${mode}::text))
+      WHERE id = 1 AND resource = ${JSON.stringify(resources)}::jsonb
+        AND descriptor = ${JSON.stringify(marker)}::jsonb
+      RETURNING id
+    `;
+    if (updated.length !== 1)
+      throw new Error(
+        'The staging marker changed during the access update; retry with its current state.'
+      );
+    console.log(
+      `Staging test access is ${mode}. Cryptographic state and production were not changed.`
+    );
+  } finally {
+    await sql.end({ timeout: 5 });
+  }
 }
 
 async function login(resources: HostedStagingResources, account: string) {
@@ -556,6 +612,10 @@ async function login(resources: HostedStagingResources, account: string) {
   const sql = connection(resources);
   try {
     const marker = await control(sql, resources);
+    if (marker.access !== 'ready')
+      throw new Error(
+        'Resume the verified staging deployment before issuing invitations.'
+      );
     const [user] = await sql<{ id: string; email: string }[]>`
       SELECT id, email FROM users WHERE screenname = ${`stage-${account}`}
     `;
@@ -610,6 +670,8 @@ async function main() {
     await initialize(resources);
   } else if (mode === 'login') {
     await login(resources, values.account ?? 'demo-alice');
+  } else if (mode === 'pause' || mode === 'resume') {
+    await setAccess(resources, mode === 'pause' ? 'paused' : 'ready');
   } else if (mode === 'build' || mode === 'deploy') {
     if (!values.directory) throw new Error(usage);
     const directory = outputDirectory(values.directory);

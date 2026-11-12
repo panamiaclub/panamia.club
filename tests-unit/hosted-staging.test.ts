@@ -141,6 +141,11 @@ test('staging admission requires a bounded, explicit set of individual test-acco
       false
     );
   }
+  assert.equal(
+    hostedStagingDescriptorSchema.safeParse({ ...descriptor, access: 'public' })
+      .success,
+    false
+  );
 });
 
 test('hosted messaging permits its mutations but not payments, email migration, public publishing or following remote actors', () => {
@@ -188,6 +193,7 @@ test('hosted config binds only staging resources and subprocesses cannot inherit
     { ...config, vars: { ...config.vars, POSTGRES_URL: 'production-secret' } },
     { ...config, services: [{ binding: 'RELAY', service: 'production' }] },
     { ...config, routes: [{ pattern: 'panamia.club' }] },
+    { ...config, triggers: { crons: ['* * * * *'] } },
   ]) {
     assert.throws(() =>
       assertBuiltStagingConfig(changed, resources, 'a'.repeat(40))

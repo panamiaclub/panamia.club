@@ -503,6 +503,7 @@ yarn e2ee:hosted-staging validate --resources $registry
 yarn e2ee:hosted-staging init --resources $registry
 yarn e2ee:hosted-staging build --resources $registry --directory $hostedBuild
 yarn e2ee:hosted-staging deploy --resources $registry --directory $hostedBuild
+yarn e2ee:hosted-staging resume --resources $registry
 yarn e2ee:hosted-staging login --resources $registry --account demo-alice
 ```
 
@@ -516,6 +517,22 @@ Migrations require PostgreSQL 16 `psql` on PATH or `PG_BIN_DIR`.
 outside the repository. `deploy` rechecks generated bindings, source and WASM
 bytes, uploads runtime credentials as secrets rather than public vars, and
 verifies the approved HTTPS origin's source-specific health response.
+
+Initialization and redeployment leave test access paused. `resume` requires a
+clean checkout and healthy deployment for that exact source before updating the
+owned admission marker with a compare-and-swap. `pause --resources $registry`
+can stop newly admitted requests without a build; it does not clear encryption
+latches, keys, history, counters or outboxes. Admitted users can still sign out.
+It is not a remote wipe: offline history, already-open sockets and requests
+already admitted are not retroactively revoked. Missing access state in an older
+marker also fails closed until an operator initializes and resumes it.
+
+The staging Worker runs only bounded private encrypted-chat retention, hourly,
+including while test access is paused. Each invocation verifies its dedicated
+environment and source marker before initializing the private bucket, records
+metadata-only job outcomes, and propagates failed/deferred deletion work for
+retry. It never delegates production scheduled tasks such as SMS sync, mail,
+listing refreshes or external probes.
 
 The dedicated `worker/staging.ts` refuses missing or inconsistent credentials,
 database/source markers and wrong origins. Only admitted test accounts and
@@ -536,6 +553,8 @@ values and absent reviewer protection fail before deployment. The workflow must
 be registered on the default branch before manual dispatch, or the guarded
 operator commands must be used for the first deployment. Neither path uses the
 production deployment workflow.
+The reviewed `resume_test_access` workflow input is false by default; otherwise
+an operator must explicitly run `resume` after the verified deployment.
 
 Phone builds must be prepared inside the staging source/build snapshot, never
 by syncing a staging identity over the production native worktree. The staging

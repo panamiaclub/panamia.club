@@ -11,6 +11,11 @@ on:
         description: Successful encrypted qualification run for that exact commit
         required: true
         type: string
+      resume_test_access:
+        description: Resume admitted synthetic test accounts after the verified staging deployment
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -84,6 +89,9 @@ jobs:
           node --import tsx scripts/hosted-staging.ts deploy \
             --resources "$RUNNER_TEMP/staging-resources.json" \
             --directory "$RUNNER_TEMP/hosted-staging-$GITHUB_RUN_ID"
+      - name: Resume only the source-verified staging test environment
+        if: inputs.resume_test_access
+        run: node --import tsx scripts/hosted-staging.ts resume --resources "$RUNNER_TEMP/staging-resources.json"
       - name: Remove private deployment files
         if: always()
         shell: bash

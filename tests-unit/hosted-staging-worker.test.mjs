@@ -17,6 +17,11 @@ let marker;
 let tokenRow;
 let downstream;
 let databaseReads;
+let retentionRuns;
+let retentionReport;
+let retentionError;
+let ledgerOutcomes;
+let parentMaintenance;
 const messages = [];
 const originalError = console.error;
 console.error = (...args) => messages.push(JSON.stringify(args));
@@ -27,8 +32,40 @@ mock.module(import.meta.resolve('../worker/index.ts'), {
       downstream++;
       return Response.json({ delegated: true });
     },
+    scheduled: async () => {
+      parentMaintenance++;
+    },
   },
   namedExports: { SignalingRoom: class {}, DmStream: class {} },
+});
+mock.module(import.meta.resolve('../lib/r2.ts'), {
+  namedExports: {
+    getPrivateChatStorage: (env) => env.CHAT_E2EE_BUCKET ?? null,
+  },
+});
+mock.module(import.meta.resolve('../lib/jobs/purge-encrypted-chat.ts'), {
+  namedExports: {
+    ENCRYPTED_CHAT_RETENTION_JOB: 'encrypted-chat-retention',
+    purgeEncryptedChat: async (limit) => {
+      assert.equal(limit, 100);
+      retentionRuns++;
+      if (retentionError) throw retentionError;
+      return retentionReport;
+    },
+  },
+});
+mock.module(import.meta.resolve('../lib/jobs/ledger.ts'), {
+  namedExports: {
+    beginJobRun: async (job, trigger) => {
+      assert.equal(job, 'encrypted-chat-retention');
+      assert.equal(trigger, '0 * * * *');
+      return 'stage-retention-run';
+    },
+    completeJobRun: async (handle, outcome) => {
+      assert.equal(handle, 'stage-retention-run');
+      ledgerOutcomes.push(outcome);
+    },
+  },
 });
 mock.module(import.meta.resolve('../auth.ts'), {
   namedExports: {
@@ -54,6 +91,7 @@ const staging = (await import('../worker/staging.ts')).default;
 const env = {
   POSTGRES_URL: `postgres://postgres:test-only-password@db.${project}.supabase.co:5432/postgres?sslmode=verify-full`,
 };
+const maintenanceEnv = { ...env, CHAT_E2EE_BUCKET: { delete() {} } };
 const request = (path, options = {}) =>
   new Request(`${origin}${path}`, {
     ...options,
@@ -74,6 +112,7 @@ beforeEach(() => {
     databaseProjectRef: project,
     sourceCommit: source,
     allowedUserIds: [userId],
+    access: 'ready',
   };
   tokenRow = {
     value: JSON.stringify({
@@ -85,6 +124,11 @@ beforeEach(() => {
   downstream = 0;
   databaseReads = 0;
   messages.length = 0;
+  retentionRuns = 0;
+  retentionReport = { objectsDeleted: 1, objectsDeferred: 0 };
+  retentionError = undefined;
+  ledgerOutcomes = [];
+  parentMaintenance = 0;
 });
 
 after(() => {
@@ -143,11 +187,111 @@ test('health requires the exact owned marker and exposes no account or credentia
   assert.deepEqual(await response.json(), {
     environment: 'staging',
     sourceCommit: source,
+    access: 'ready',
   });
   marker.sourceCommit = 'b'.repeat(40);
   response = await staging.fetch(request('/__staging/health'), env);
   assert.equal(response.status, 503);
   assert.equal(downstream, 0);
+});
+
+test('paused or legacy markers refuse new test traffic and invitations but preserve admitted sign-out', async () => {
+  for (const access of ['paused', undefined]) {
+    marker.access = access;
+    const before = JSON.stringify(marker);
+    for (const path of [
+      '/messages',
+      '/ws/dm',
+      '/api/social/encryption/devices',
+      `/api/auth/magic-link/verify?token=${'a'.repeat(43)}`,
+    ]) {
+      const response = await staging.fetch(request(path), env);
+      assert.equal(response.status, 503);
+      assert.equal((await response.json()).code, 'STAGING_PAUSED');
+    }
+    const health = await staging.fetch(request('/__staging/health'), env);
+    assert.equal((await health.json()).access, 'paused');
+    assert.equal(JSON.stringify(marker), before);
+  }
+  assert.equal(downstream, 0);
+  let signout = await staging.fetch(
+    request('/api/auth/sign-out', { method: 'POST' }),
+    env
+  );
+  assert.equal(signout.status, 200);
+  member = randomUUID();
+  signout = await staging.fetch(
+    request('/api/auth/sign-out', { method: 'POST' }),
+    env
+  );
+  assert.equal(signout.status, 401);
+  assert.equal(downstream, 1);
+});
+
+test('only the source-verified staging private retention job runs, including while access is paused', async () => {
+  marker.access = 'paused';
+  await staging.scheduled({ cron: '0 * * * *' }, maintenanceEnv);
+  assert.equal(databaseReads, 1);
+  assert.equal(retentionRuns, 1);
+  assert.equal(parentMaintenance, 0);
+  assert.deepEqual(ledgerOutcomes, [
+    { ok: true, report: retentionReport, errorCount: 0 },
+  ]);
+});
+
+test('maintenance rejects wrong projects, integrations, schedules or source markers before deleting anything', async () => {
+  for (const invalid of [
+    {
+      ...maintenanceEnv,
+      POSTGRES_URL: env.POSTGRES_URL.replace(project, 'p'.repeat(20)),
+    },
+    { ...maintenanceEnv, EMAIL: { send() {} } },
+    { ...maintenanceEnv, RELAY: { fetch() {} } },
+  ]) {
+    await assert.rejects(staging.scheduled({ cron: '0 * * * *' }, invalid));
+  }
+  await assert.rejects(
+    staging.scheduled({ cron: '* * * * *' }, maintenanceEnv)
+  );
+  assert.equal(databaseReads, 0);
+  marker.sourceCommit = 'b'.repeat(40);
+  await assert.rejects(
+    staging.scheduled({ cron: '0 * * * *' }, maintenanceEnv)
+  );
+  assert.equal(retentionRuns, 0);
+  assert.equal(parentMaintenance, 0);
+  assert.equal(ledgerOutcomes.length, 0);
+});
+
+test('maintenance never falls back to public media when its private bucket is absent', async () => {
+  await assert.rejects(
+    staging.scheduled(
+      { cron: '0 * * * *' },
+      { ...env, R2_BUCKET: { delete() {} } }
+    )
+  );
+  assert.equal(retentionRuns, 0);
+  assert.equal(ledgerOutcomes.length, 0);
+});
+
+test('maintenance records failure and propagates deferred deletions or exceptions without logging private error contents', async () => {
+  retentionReport = { objectsDeleted: 0, objectsDeferred: 1 };
+  await assert.rejects(
+    staging.scheduled({ cron: '0 * * * *' }, maintenanceEnv)
+  );
+  retentionError = new Error('PRIVATE_TEST_CREDENTIAL');
+  await assert.rejects(
+    staging.scheduled({ cron: '0 * * * *' }, maintenanceEnv)
+  );
+  assert.deepEqual(
+    ledgerOutcomes.map((outcome) => outcome.ok),
+    [false, false]
+  );
+  assert.equal(
+    messages.some((message) => message.includes('PRIVATE_TEST_CREDENTIAL')),
+    false
+  );
+  assert.equal(parentMaintenance, 0);
 });
 
 test('unsigned or non-invited sessions cannot use messaging or name their own admitted identity', async () => {

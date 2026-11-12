@@ -1,6 +1,7 @@
 import ts from 'typescript';
 import { z } from 'zod';
 import {
+  HOSTED_STAGING_RETENTION_CRON,
   hostedStagingResourcesSchema,
   stagingOrigin,
   stagingResourceBoundary,
@@ -69,6 +70,7 @@ export function hostedStagingConfig(
       { tag: 'v1', new_sqlite_classes: ['SignalingRoom'] },
       { tag: 'v2', new_sqlite_classes: ['DmStream'] },
     ],
+    triggers: { crons: [HOSTED_STAGING_RETENTION_CRON] },
     vars: {
       CHAT_E2EE_ENABLED: '1',
       NEXT_PUBLIC_HOSTED_STAGING: '1',
@@ -180,6 +182,9 @@ export function assertBuiltStagingConfig(
       services: z.array(z.unknown()).optional(),
       send_email: z.array(z.unknown()).optional(),
       routes: z.array(z.object({ pattern: z.string() })).optional(),
+      triggers: z.object({
+        crons: z.tuple([z.literal(HOSTED_STAGING_RETENTION_CRON)]),
+      }),
     })
     .parse(value);
   if (
