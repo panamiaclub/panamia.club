@@ -1,4 +1,4 @@
-import { MOBILE_APP_ID } from './app-identity';
+import { getMobileAppId } from './app-identity';
 import { DEFAULT_ROOT_DOMAIN } from '../panaverse/root-domain';
 
 export const MOBILE_MAGIC_LINK_PATH = '/signin/mobile';
@@ -35,14 +35,15 @@ export function magicLinkVerificationUrl(mobileUrl: string): string {
 
 export function mobileMagicLinkAppUrl(mobileUrl: string): string {
   magicLinkUrl(mobileUrl, MOBILE_MAGIC_LINK_PATH);
-  const url = new URL(`${MOBILE_APP_ID}://auth/magic-link`);
+  const url = new URL(`${getMobileAppId()}://auth/magic-link`);
   url.searchParams.set('url', mobileUrl);
   return url.href;
 }
 
 export function mobileMagicLinkIntentUrl(mobileUrl: string): string {
   const appUrl = mobileMagicLinkAppUrl(mobileUrl);
-  return `${appUrl.replace(`${MOBILE_APP_ID}:`, 'intent:')}#Intent;scheme=${MOBILE_APP_ID};package=${MOBILE_APP_ID};end`;
+  const appId = getMobileAppId();
+  return `${appUrl.replace(`${appId}:`, 'intent:')}#Intent;scheme=${appId};package=${appId};end`;
 }
 
 export function isAppUrl(url: URL, appOrigin: string): boolean {
@@ -54,6 +55,7 @@ export function isAppUrl(url: URL, appOrigin: string): boolean {
     return false;
   }
   if (url.origin === appOrigin) return true;
+  if (process.env.NEXT_PUBLIC_HOSTED_STAGING === '1') return false;
   return (
     url.protocol === 'https:' &&
     !url.port &&
@@ -68,7 +70,7 @@ export function nativeDeepLinkUrl(
 ): URL | null {
   try {
     const url = new URL(value);
-    if (url.protocol === `${MOBILE_APP_ID}:`) {
+    if (url.protocol === `${getMobileAppId()}:`) {
       if (
         url.hostname !== 'auth' ||
         url.pathname !== '/magic-link' ||

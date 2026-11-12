@@ -38,6 +38,7 @@ import {
   DEFAULT_SOCIAL_PREVIEW_WIDTH,
 } from '@/lib/social-preview';
 import BugReportDialog from '@/components/BugReportDialog';
+import { isHostedStagingBuild } from '@/lib/staging-contract';
 
 /**
  * Title and description for any page that does not set its own.
@@ -104,8 +105,11 @@ export async function generateMetadata(): Promise<Metadata> {
    * browser is known to look rather than where the framework offers to put
    * it. */
   return {
-    title: chromeSurface.name,
+    title: isHostedStagingBuild() ? 'Pana Staging' : chromeSurface.name,
     description,
+    ...(isHostedStagingBuild()
+      ? { robots: { index: false, follow: false } }
+      : {}),
     openGraph: {
       title: chromeSurface.name,
       description,
@@ -340,6 +344,14 @@ export default async function RootLayout({
                   surfaceId={surface.id}
                   header={
                     <>
+                      {isHostedStagingBuild() && (
+                        <div
+                          className="bg-amber-100 px-4 py-2 text-center text-sm font-bold text-amber-950"
+                          role="status"
+                        >
+                          Staging - synthetic test data, not production.
+                        </div>
+                      )}
                       {wearsMainChrome && (
                         <MainHeader isProductionSite={isProductionSite} />
                       )}

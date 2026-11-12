@@ -1,17 +1,7 @@
 import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { once } from 'node:events';
-import {
-  copyFile,
-  lstat,
-  mkdir,
-  readFile,
-  readdir,
-  rm,
-  symlink,
-  unlink,
-  writeFile,
-} from 'node:fs/promises';
+import { mkdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -27,6 +17,7 @@ import {
   readStagingState,
   type StagingState,
 } from './e2ee-staging-config';
+import { createStagingSnapshot } from './staging-snapshot';
 import {
   connectStaging,
   seedStaging,
@@ -282,80 +273,11 @@ async function stopDatabase(
 }
 
 async function snapshotSource(state: StagingState) {
-  const target = path.join(state.directory, 'app');
-  await mkdir(target);
-  const protectedVendor = path.join('external', 'activities.next');
-  await mkdir(path.join(target, 'external'), { recursive: true });
-  await symlink(
-    path.join(repository, protectedVendor),
-    path.join(target, protectedVendor),
-    process.platform === 'win32' ? 'junction' : 'dir'
-  );
-  const { stdout } = await exec(
-    'git',
-    ['ls-files', '-z', '--cached', '--others', '--exclude-standard'],
-    { cwd: repository, maxBuffer: 16 * 1024 * 1024, windowsHide: true }
-  );
-  const fingerprints: Record<string, string> = {};
-  for (const gitPath of new Set(stdout.split('\0').filter(Boolean))) {
-    const relative = gitPath.split('/').join(path.sep);
-    if (
-      relative === protectedVendor ||
-      relative.startsWith(`${protectedVendor}${path.sep}`)
-    )
-      continue;
-    const leaf = path.basename(relative);
-    if (leaf.startsWith('.env') || leaf.startsWith('.dev.vars')) continue;
-    const source = path.join(repository, relative);
-    const destination = path.join(target, relative);
-    const stat = await lstat(source);
-    if (stat.isSymbolicLink()) {
-      throw new Error(
-        `Refusing to copy an unreviewed source symlink: ${gitPath}`
-      );
-    }
-    await mkdir(path.dirname(destination), { recursive: true });
-    if (stat.isDirectory()) {
-      // Gitlinks stay opaque; do not edit or copy the protected vendor checkout.
-      await symlink(
-        source,
-        destination,
-        process.platform === 'win32' ? 'junction' : 'dir'
-      );
-    } else {
-      await copyFile(source, destination);
-      fingerprints[gitPath] = createHash('sha256')
-        .update(await readFile(source))
-        .digest('hex');
-    }
-  }
-  await symlink(
-    path.join(repository, 'node_modules'),
-    path.join(target, 'node_modules'),
-    process.platform === 'win32' ? 'junction' : 'dir'
-  );
-  const artifacts = path.join('crypto', 'openmls', 'pkg');
-  await mkdir(path.join(target, artifacts), { recursive: true });
-  for (const entry of await readdir(path.join(repository, artifacts))) {
-    await copyFile(
-      path.join(repository, artifacts, entry),
-      path.join(target, artifacts, entry)
-    );
-  }
   const config = isolatedWorkerConfig(
     await readFile(path.join(repository, 'wrangler.jsonc'), 'utf8'),
     state
   );
-  await writeFile(
-    path.join(target, 'wrangler.jsonc'),
-    JSON.stringify(config, null, 2),
-    { mode: 0o600 }
-  );
-  await writeFile(
-    path.join(state.directory, 'source-hashes.json'),
-    JSON.stringify(fingerprints, null, 2)
-  );
-  return target;
+  return createStagingSnapshot(repository, state.directory, config);
 }
 
 async function setup(directory: string, postgresBin: string) {

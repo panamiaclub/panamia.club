@@ -34,6 +34,7 @@
 ## Table of Contents
 
 - [Pana-owned E2EE implementation plan](#pana-owned-e2ee-implementation-plan)
+- [Hosted staging environment plan](#hosted-staging-environment-plan)
 - [Overview](#overview)
 - [Current Messages workspace](#current-messages-workspace)
 - [Current group chats](#current-group-chats)
@@ -392,6 +393,165 @@ production-oriented seed/sign-in scripts or a remote-database override to make
 this pilot work. Source changes require a fresh `setup` directory so the tested
 snapshot and schema remain explicit. A local sample is not a production
 throughput/billing estimate, physical-device proof or independent review.
+
+### Hosted staging environment plan
+
+**Status: deployment wiring implemented; hosted provisioning is blocked on
+verified isolated Supabase access. Nothing is deployed.** Build one temporary,
+restricted HTTPS environment using the existing Cloudflare/Supabase accounts.
+This is not a second production stack or approval to activate real chats.
+Keep production `CHAT_E2EE_ENABLED` at `"0"` and the implementation PR unmerged.
+
+Read-only inventory confirmed `panamia-media`, `panamia-media-preview`,
+`panamia-chat-private` and `panamia-chat-private-preview` already exist. Public
+`r2.dev` access is disabled on the private preview bucket. The visible KV
+namespace is the existing `VINEXT_KV_CACHE`; do not reuse it for staging.
+GitHub already has `Preview`, `Production` and `ios-release` environments, but
+`Preview` currently has no environment secrets or protection rules. A preview
+label, a `preview_bucket_name`, or a version of the production Worker is not
+proof of database, storage or credential isolation.
+
+#### Proposed resource layout
+
+| Surface                 | Hosted staging choice                                                                                                       | Required boundary                                                                                                                                                                                                                          |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Web app                 | Separate Worker, proposed name `panamia-staging`; proposed HTTPS host `staging.panamia.club`                                | Not a version/route of `panamia-next`. Verify cookie-domain isolation before choosing the hostname; use a separate preview origin if production domain-wide cookies would be exposed.                                                      |
+| Database                | Reuse an unused, isolated nonproduction Supabase/Postgres project if available; otherwise approve a dedicated project       | Never production's database, public schema, connection string or a copy of member chats. Verify project identity independently, including pooler project/user identity, before creating a staging ownership marker or applying migrations. |
+| Storage                 | Reuse the existing preview buckets only after confirming exclusive nonproduction use; otherwise create staging-only buckets | Same application binding names, different resources. Private chat storage has neither public development URLs nor public custom domains. Do not clear a shared preview bucket.                                                             |
+| Cache and live delivery | New staging KV namespace; the existing DO classes deployed under the separate staging Worker                                | Do not bind production cache IDs or production-script Durable Objects.                                                                                                                                                                     |
+| Authentication          | New Better Auth secret, host-only staging cookies and a distinct cookie prefix; controlled test accounts                    | Build-time `NEXT_PUBLIC_HOST_URL`, runtime `BETTER_AUTH_URL`, callbacks and native origin agree. Staging identity/federation domain is not production's domain.                                                                            |
+| Access                  | Restricted tester/reviewer access; prefer Cloudflare Access if available                                                    | Check email-link sign-in and WebSocket upgrades in browsers and native WebViews. Automation credentials belong only in protected CI, never in shipped JavaScript or phone builds.                                                          |
+
+#### Implementation phases
+
+| Phase                             | Work                                                                                                                                                                                                      | Completion evidence                                                                                                                                                                    |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Confirm reuse and approvals    | Inventory existing nonproduction Workers, bucket bindings, Supabase projects, cookie scope and deploy/DNS permissions. Decide whether a new database or Access plan is needed.                            | Recorded resource IDs and isolation boundaries, with any incremental spend approved before creation.                                                                                   |
+| 2. Build the hosted configuration | Add a dedicated staging config/build path and staging ownership checks. Replay the migration journal into the verified empty test database and seed separate manual/automated accounts.                   | Build metadata identifies the exact source and qualified WASM; all bindings and secrets target staging. Production files, data and flags are unchanged.                                |
+| 3. Add protected deployment       | Create or configure a protected GitHub staging environment with staging-specific secret names, then deploy an explicitly selected trusted commit.                                                         | Deploy checks refuse production Worker names, project IDs, bucket/cache IDs and missing staging secrets; HTTPS/auth/private-storage smoke checks pass.                                 |
+| 4. Qualify the hosted application | Adapt the existing full-app scenarios for the approved HTTPS origin and stage-only account reset/cleanup. Exercise text/photos, consent, concurrent sends, recovery, revocation and group joins/removals. | Real hosted account sessions, private object reads and metadata-only evidence; copied media URLs, wrong-profile access and plaintext downgrades are refused.                           |
+| 5. Produce phone test builds      | Separate Android/iOS test identities, staging sign-in URL schemes/associations, exact navigation/vault origin allowlists and the staging server URL.                                                      | Both test apps install without overwriting production and complete real sign-in against staging. iPhone age assurance uses an entitled organization build, not a Personal Team bypass. |
+| 6. Check operations and teardown  | Measure usage, connections, quotas and spending; verify expiry/private-object cleanup, retries, alerts and pause behavior. Document removal of pilot-owned resources and credentials.                     | Accepted operating limits, no secret/content logging, and rollback pauses encrypted sends rather than enabling plaintext. No production or shared preview resource is deleted.         |
+
+The existing `yarn e2ee:staging` origin/database guards deliberately accept only
+managed loopback resources. Do not weaken them with a remote override or use
+the production-oriented seeding/sign-in helpers. Hosted build/deploy, seed,
+login and reset commands need their own explicit approved-origin/resource
+checks; the local/CI pilot remains available as a separate safe test path.
+
+Use staging-specific CI secret names rather than falling back to repository
+production secrets when an environment secret is missing. The first deployment
+must work from the trusted feature commit without merging encryption into main.
+Account for GitHub's default-branch registration requirement when introducing a
+new manually dispatched workflow; an explicit guarded deployment can precede
+that automation. Do not dispatch the production deployment or migration workflow.
+
+Initially omit production email, OAuth, payment, SMS/CRM, relay/federation and
+webhook credentials/bindings. Add deployment-mode guards so tests cannot contact
+real recipients or silently use production defaults. Sign-in starts with
+controlled accounts and staging-only one-use links; any email sender added later
+must enforce the tester recipient list. Do not enable the production scheduler
+unchanged: qualify stage-only chat maintenance before enabling its triggers.
+Show an unmistakable test-data banner and disable search indexing.
+
+`CAPACITOR_SERVER_URL` already changes the shell's server and derives a trusted
+origin, but it is not the whole phone isolation change. Current auth helpers and
+URL schemes use `social.pana.app`, and navigation/trust helpers also recognize
+production hosts. Stage-specific app IDs, schemes, callback handling and
+allowlists must agree without changing the production app's permanent identity
+or accepting production links inside the staging vault.
+
+Plan approximately **3-5 focused engineering days** for hosted configuration,
+deployment, test-account tooling and initial qualification once access is
+available. This is an estimate, not a delivery commitment; Apple signing/access,
+external review and physical-phone qualification can extend the calendar.
+Existing account allowances may cover Worker/storage/cache usage. Verify spare
+database projects and billing before assuming any additional monthly cost.
+No new spending is approved by this plan.
+
+The owner inputs before provisioning are Supabase project access/selection,
+confirmation of deploy/DNS and protected-environment permissions, the tester
+access policy, and approval of any incremental charges. Organization signing
+and authorized phones are additionally required for the phone phase. No keys,
+database credentials, recovery secrets or tester email lists belong in this
+document or chat.
+
+Hosted staging does not satisfy the independent review gate or authorize a
+production beta. Production beta eligibility still needs a server-enforced
+participant/group allowlist, separate release approval and the remaining
+physical-device/security gates.
+
+#### Hosted staging operator entry point
+
+`yarn e2ee:hosted-staging` is separate from the loopback pilot. It never loads
+`.env.local`, falls back to production credentials, or creates a paid project.
+Supply a verified resource registry with `version`, `environment`, `worker`,
+`accountId`, `origin`, `databaseProjectRef`, `productionDatabaseProjectRef`,
+`kvNamespaceId`, `publicBucket` and `privateBucket`. The Worker name must be
+`panamia-staging`; the dedicated bucket names are `panamia-staging-media` and
+`panamia-staging-chat-private`. Registry validation rejects the production
+project, cache, buckets, Worker and origin.
+
+Configure `STAGING_POSTGRES_URL`, `STAGING_BETTER_AUTH_SECRET` and, for deployment,
+`STAGING_CLOUDFLARE_API_TOKEN` through secure environment settings. Do not paste
+them into chat. The database URL must identify the selected Supabase project
+using its direct hostname or its session-pooler username; transaction pooling
+and arbitrary hosts are refused. All hosted connections verify TLS certificates.
+
+```powershell
+yarn e2ee:hosted-staging validate --resources $registry
+yarn e2ee:hosted-staging init --resources $registry
+yarn e2ee:hosted-staging build --resources $registry --directory $hostedBuild
+yarn e2ee:hosted-staging deploy --resources $registry --directory $hostedBuild
+yarn e2ee:hosted-staging login --resources $registry --account demo-alice
+```
+
+`init` requires a clean committed source and either an empty public database or
+its exact staging ownership marker. It serializes operators, commits each
+migration together with its immutable journal hash, and atomically seeds
+synthetic accounts with their admission marker. Interrupted transactions roll
+back rather than leaving half-applied migrations or orphaned test users.
+Migrations require PostgreSQL 16 `psql` on PATH or `PG_BIN_DIR`.
+`build` creates a fresh absolute `hosted-staging-<id>` directory
+outside the repository. `deploy` rechecks generated bindings, source and WASM
+bytes, uploads runtime credentials as secrets rather than public vars, and
+verifies the approved HTTPS origin's source-specific health response.
+
+The dedicated `worker/staging.ts` refuses missing or inconsistent credentials,
+database/source markers and wrong origins. Only admitted test accounts and
+current operator-issued one-use invitations reach application routes. Public
+signup, arbitrary OAuth, mail delivery, relay publishing, external integration
+mutations and production federation endpoints are unavailable. Staging sessions
+use a separate cookie prefix, host-only cookies and a shorter lifetime;
+authenticated pages show a synthetic-data banner and responses are not indexed
+or cached.
+
+The `Guarded Staging Deploy` workflow requires a protected `Staging` environment,
+explicit source SHA, and a successful encrypted qualification run for that same
+SHA. Qualification also compiles the actual staging gateway using isolated,
+synthetic credentials without any deployment. It downloads only that run's
+qualified static engine. Supply the registry
+as `STAGING_RESOURCES_JSON` and use only staging-specific secret names; missing
+values and absent reviewer protection fail before deployment. The workflow must
+be registered on the default branch before manual dispatch, or the guarded
+operator commands must be used for the first deployment. Neither path uses the
+production deployment workflow.
+
+Phone builds must be prepared inside the staging source/build snapshot, never
+by syncing a staging identity over the production native worktree. The staging
+build marker and `CAPACITOR_SERVER_URL` select the separate
+`social.pana.app.staging` identity and staging-only URL/vault allowlists. Android
+Debug additionally uses `-PhostedStaging`; iOS Debug needs the staging bundle ID,
+`PANA_AUTH_URL_SCHEME` override and organization-entitled
+`App/Staging.entitlements`. Production and personal sideload defaults remain
+unchanged. The age-assurance controller is not bypassed; signed phone
+qualification remains a separate gate.
+
+The hosting blocker is not Cloudflare subscription setup: no Supabase management
+connection or isolated staging project credentials are available in this session.
+The owner must connect Supabase or configure the selected nonproduction project
+securely, confirm resource isolation and approve any incremental charges before
+the guarded deployment is run. The existing local/CI pilot remains available.
 
 ### Milestones, effort and release gate
 

@@ -19,7 +19,7 @@
 			<string>social.pana.app.auth</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>social.pana.app</string>
+				<string>$(PANA_AUTH_URL_SCHEME)</string>
 			</array>
 		</dict>
 	</array>

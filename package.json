@@ -20,6 +20,7 @@
     "e2ee:lab": "vite --config vite.e2ee.config.ts",
     "e2ee:api-lab": "node --experimental-test-module-mocks --import tsx prototypes/e2ee/api-server.ts",
     "e2ee:staging": "node --import tsx scripts/e2ee-staging.ts",
+    "e2ee:hosted-staging": "node --import tsx scripts/hosted-staging.ts",
     "openmls:build": "node --import tsx scripts/openmls.ts build",
     "openmls:check": "node --import tsx scripts/openmls.ts check",
     "openmls:audit": "node --import tsx scripts/openmls.ts audit",

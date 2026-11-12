@@ -31,6 +31,10 @@ import { envConfig } from '@/lib/env.config';
 import { signInPath } from '@/lib/signin-redirect';
 import { mobileMagicLinkUrl } from '@/lib/mobile/auth-links';
 import { listingSetupPath } from '@/lib/listing-url';
+import {
+  HOSTED_STAGING_COOKIE_PREFIX,
+  isHostedStagingBuild,
+} from '@/lib/staging-contract';
 
 const MAGIC_LINK_EXPIRY_MINUTES = 30;
 const PASSWORD_MANAGEMENT_PATHS = new Set([
@@ -952,7 +956,10 @@ function getBetterAuth(): BetterAuthInstance {
   //
   // This cannot reach the fediverse identity domain — a different registrable
   // domain needs a real OAuth handoff, not a shared cookie.
-  const configuredCookieDomain = process.env.PANAVERSE_COOKIE_DOMAIN?.trim();
+  const staging = isHostedStagingBuild();
+  const configuredCookieDomain = staging
+    ? undefined
+    : process.env.PANAVERSE_COOKIE_DOMAIN?.trim();
 
   const authBaseURL =
     process.env.NEXT_PUBLIC_HOST_URL ||
@@ -1015,6 +1022,7 @@ function getBetterAuth(): BetterAuthInstance {
       usePlural: false,
     }),
     advanced: {
+      ...(staging ? { cookiePrefix: HOSTED_STAGING_COOKIE_PREFIX } : {}),
       // vinext #2158: vinext 0.1.1+ may hand the [...all] catch-all handler a path
       // with a trailing slash; better-auth rejects it under default trailing-slash
       // validation, 404ing every auth endpoint. Skipping that validation is the
@@ -1051,10 +1059,10 @@ function getBetterAuth(): BetterAuthInstance {
       // this cookie is already the durable credential, and the alternative
       // mails people sign-in links constantly, which is both the expensive
       // option and the one that trains the reflex phishing depends on.
-      expiresIn: 60 * 60 * 24 * 90,
+      expiresIn: staging ? 60 * 60 * 24 : 60 * 60 * 24 * 90,
       // Sliding refresh, at most once a day. Matches better-auth's default;
       // pinned so the window above cannot be silently halved by a default change.
-      updateAge: 60 * 60 * 24,
+      updateAge: staging ? 60 * 60 : 60 * 60 * 24,
       cookieCache: {
         // Serve the session from a signed cookie instead of reading the
         // sessions table on every request. This removes the session⋈user query
@@ -1068,7 +1076,7 @@ function getBetterAuth(): BetterAuthInstance {
         // session itself was served from cache. Anything needing instant
         // revocation should read the database directly rather than shortening
         // this.
-        enabled: true,
+        enabled: !staging,
         maxAge: 5 * 60,
       },
     },
@@ -1109,6 +1117,14 @@ function getBetterAuth(): BetterAuthInstance {
       before: createAuthMiddleware(async (context) => {
         const path = context.path.replace(/\/+$/, '');
         if (
+          staging &&
+          !['/magic-link/verify', '/get-session', '/sign-out'].includes(path)
+        ) {
+          throw new APIError('FORBIDDEN', {
+            message: 'Hosted staging requires an operator-issued invitation.',
+          });
+        }
+        if (
           path === '/sign-in/email' &&
           !isPlayReviewerEmail(context.body?.email)
         ) {
@@ -1128,45 +1144,49 @@ function getBetterAuth(): BetterAuthInstance {
     // BETTER_AUTH_URL is CF-RUNTIME only and gets baked in as undefined by Vite.
     // NEXT_PUBLIC_HOST_URL is in CF-BUILD and is correctly baked in at build time.
     baseURL: authBaseURL,
-    trustedOrigins: [
-      process.env.NEXT_PUBLIC_HOST_URL,
-      process.env.BETTER_AUTH_URL,
-      // The apex and www custom domains serve the same Worker. Surface
-      // derivation only yields the apex because the main surface has no
-      // subdomain, so accept the live alias explicitly. Without this, both
-      // Google and magic-link initiation fail with "Invalid origin" for
-      // anyone who entered through www.
-      `https://www.${getRootDomain()}`,
-      // Every surface signs in against this one auth instance, so each surface
-      // origin has to be trusted or its sign-in requests get rejected.
-      ...SURFACES.map((surface) => originFor(surface)),
-      // Those name the configured root domain, so away from production they all
-      // point at pana.social and no local surface is trusted. Deriving them from
-      // the host actually being served covers dev, where a callback to
-      // http://social.localhost:3003 is otherwise rejected with a bare 403.
-      // In production this resolves to the same origins as above.
-      ...SURFACES.map((surface) => originForFrom(surface, authBaseHost)),
-      'http://localhost:3000',
-      'http://localhost:3001',
-    ].filter(Boolean) as string[],
-    socialProviders: {
-      google: {
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        // Sign-in only. `calendar.events` used to be requested here for a
-        // mentoring-calendar sync that was never built, and nothing reads the
-        // stored token except the revoke-on-delete path in lib/oauth-revoke.ts.
-        // It is one of Google's restricted scopes, so asking for it put the app
-        // through a verification review — and made a member granting calendar
-        // access the price of signing in. Re-add it alongside the feature that
-        // needs it, not before.
-        scope: ['openid', 'email', 'profile'],
-      },
-      apple: {
-        clientId: process.env.APPLE_CLIENT_ID!,
-        clientSecret: process.env.APPLE_CLIENT_SECRET!,
-      },
-    },
+    trustedOrigins: staging
+      ? [authBaseURL]
+      : ([
+          process.env.NEXT_PUBLIC_HOST_URL,
+          process.env.BETTER_AUTH_URL,
+          // The apex and www custom domains serve the same Worker. Surface
+          // derivation only yields the apex because the main surface has no
+          // subdomain, so accept the live alias explicitly. Without this, both
+          // Google and magic-link initiation fail with "Invalid origin" for
+          // anyone who entered through www.
+          `https://www.${getRootDomain()}`,
+          // Every surface signs in against this one auth instance, so each surface
+          // origin has to be trusted or its sign-in requests get rejected.
+          ...SURFACES.map((surface) => originFor(surface)),
+          // Those name the configured root domain, so away from production they all
+          // point at pana.social and no local surface is trusted. Deriving them from
+          // the host actually being served covers dev, where a callback to
+          // http://social.localhost:3003 is otherwise rejected with a bare 403.
+          // In production this resolves to the same origins as above.
+          ...SURFACES.map((surface) => originForFrom(surface, authBaseHost)),
+          'http://localhost:3000',
+          'http://localhost:3001',
+        ].filter(Boolean) as string[]),
+    socialProviders: staging
+      ? {}
+      : {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            // Sign-in only. `calendar.events` used to be requested here for a
+            // mentoring-calendar sync that was never built, and nothing reads the
+            // stored token except the revoke-on-delete path in lib/oauth-revoke.ts.
+            // It is one of Google's restricted scopes, so asking for it put the app
+            // through a verification review — and made a member granting calendar
+            // access the price of signing in. Re-add it alongside the feature that
+            // needs it, not before.
+            scope: ['openid', 'email', 'profile'],
+          },
+          apple: {
+            clientId: process.env.APPLE_CLIENT_ID!,
+            clientSecret: process.env.APPLE_CLIENT_SECRET!,
+          },
+        },
     plugins: [
       magicLink({
         expiresIn: MAGIC_LINK_EXPIRY_MINUTES * 60,

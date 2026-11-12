@@ -106,6 +106,30 @@ export const envConfig: Record<string, EnvVarConfig> = {
     defaultValue: '0',
     example: '0',
   },
+  NEXT_PUBLIC_HOSTED_STAGING: {
+    description:
+      'Build-only marker for the dedicated, access-controlled hosted staging Worker. ' +
+      'Injected by its guarded build, never enabled on production.',
+    location: 'VAR',
+    cfTarget: 'build',
+    required: false,
+    defaultValue: '0',
+    example: '0',
+  },
+  NEXT_PUBLIC_STAGING_PROJECT_REF: {
+    description:
+      'Verified nonproduction Supabase project identity baked into the dedicated staging Worker.',
+    location: 'VAR',
+    cfTarget: 'build',
+    required: false,
+  },
+  NEXT_PUBLIC_STAGING_SOURCE_SHA: {
+    description:
+      'Exact source commit baked into the dedicated staging Worker and checked against its database marker.',
+    location: 'VAR',
+    cfTarget: 'build',
+    required: false,
+  },
 
   FEDERATION_DOMAIN: {
     description:

@@ -28,6 +28,13 @@ import { DEFAULT_ROOT_DOMAIN } from '../panaverse/root-domain';
  * both stores expect.
  */
 export const MOBILE_APP_ID = 'social.pana.app';
+export const STAGING_MOBILE_APP_ID = 'social.pana.app.staging';
+
+export function getMobileAppId() {
+  return process.env.NEXT_PUBLIC_HOSTED_STAGING === '1'
+    ? STAGING_MOBILE_APP_ID
+    : MOBILE_APP_ID;
+}
 
 // Both surfaces use paths on the root host while the social subdomain is disabled.
 export const IOS_UNIVERSAL_LINK_HOSTS = [DEFAULT_ROOT_DOMAIN] as const;

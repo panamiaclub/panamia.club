@@ -13,6 +13,8 @@
  * external/nosflare/src/article-crosspost.ts for the trust model.
  */
 
+import { isHostedStagingBuild } from '@/lib/staging-contract';
+
 interface RelayBinding {
   fetch: (input: Request | string, init?: RequestInit) => Promise<Response>;
 }
@@ -63,6 +65,9 @@ async function relayFetch(
   httpUrl: string,
   init: { method: string; headers: Record<string, string>; body: string }
 ): Promise<Response> {
+  if (isHostedStagingBuild()) {
+    throw new Error('Relay publishing is disabled in hosted staging.');
+  }
   const signal = AbortSignal.timeout(RELAY_TIMEOUT_MS);
   try {
     return cachedRelay
@@ -91,6 +96,12 @@ function relayBase(): string {
 }
 
 export function getRelay(env?: RelayEnv): void {
+  if (isHostedStagingBuild()) {
+    cachedRelay = null;
+    cachedToken = null;
+    cachedHttpUrl = null;
+    return;
+  }
   if (env?.RELAY) cachedRelay = env.RELAY;
   if (env?.CROSSPOST_AUTH_TOKEN) cachedToken = env.CROSSPOST_AUTH_TOKEN;
   if (env?.RELAY_INTERNAL_URL) cachedHttpUrl = env.RELAY_INTERNAL_URL;

@@ -59,7 +59,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="social.pana.app"
+                    android:scheme="${panaAuthScheme}"
                     android:host="auth"
                     android:path="/magic-link" />
             </intent-filter>

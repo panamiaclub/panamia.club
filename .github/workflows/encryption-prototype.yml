@@ -28,6 +28,10 @@ on:
       - 'scripts/vite-encryption.ts'
       - 'scripts/qualify-native-e2ee.ts'
       - 'scripts/e2ee-staging*.ts'
+      - 'scripts/hosted-staging*.ts'
+      - 'scripts/staging-snapshot.ts'
+      - 'lib/staging-contract.ts'
+      - 'worker/staging.ts'
       - 'crypto/openmls/**'
       - 'scripts/openmls.ts'
       - 'tests-openmls/**'
@@ -35,6 +39,9 @@ on:
       - 'tests-e2ee/**'
       - 'tests-staging/**'
       - 'tests-unit/e2ee-*.test.ts'
+      - 'tests-unit/hosted-staging.test.ts'
+      - 'tests-unit/hosted-staging-worker.test.mjs'
+      - 'tests-unit/hosted-staging-effects.test.ts'
       - 'vite.e2ee.config.ts'
       - 'playwright.e2ee.config.ts'
       - 'playwright.encrypted-staging.config.ts'
@@ -45,6 +52,7 @@ on:
       - 'package.json'
       - 'yarn.lock'
       - '.github/workflows/encryption-prototype.yml'
+      - '.github/workflows/staging-deploy.yml'
   push:
     branches: [main]
     paths:
@@ -72,6 +80,10 @@ on:
       - 'scripts/vite-encryption.ts'
       - 'scripts/qualify-native-e2ee.ts'
       - 'scripts/e2ee-staging*.ts'
+      - 'scripts/hosted-staging*.ts'
+      - 'scripts/staging-snapshot.ts'
+      - 'lib/staging-contract.ts'
+      - 'worker/staging.ts'
       - 'crypto/openmls/**'
       - 'scripts/openmls.ts'
       - 'tests-openmls/**'
@@ -79,6 +91,9 @@ on:
       - 'tests-e2ee/**'
       - 'tests-staging/**'
       - 'tests-unit/e2ee-*.test.ts'
+      - 'tests-unit/hosted-staging.test.ts'
+      - 'tests-unit/hosted-staging-worker.test.mjs'
+      - 'tests-unit/hosted-staging-effects.test.ts'
       - 'vite.e2ee.config.ts'
       - 'playwright.e2ee.config.ts'
       - 'playwright.encrypted-staging.config.ts'
@@ -89,6 +104,7 @@ on:
       - 'package.json'
       - 'yarn.lock'
       - '.github/workflows/encryption-prototype.yml'
+      - '.github/workflows/staging-deploy.yml'
 
 permissions:
   contents: read
@@ -122,6 +138,8 @@ jobs:
       - run: yarn test:openmls:rust
       - run: yarn test:openmls
       - run: yarn test:e2ee
+      - run: node --import tsx --test tests-unit/hosted-staging.test.ts tests-unit/hosted-staging-effects.test.ts
+      - run: node --experimental-test-module-mocks --import tsx --test tests-unit/hosted-staging-worker.test.mjs
       - name: Verify real account/profile, delivery, media, recovery and retention APIs
         run: >-
           node --experimental-test-module-mocks --import tsx --test --test-concurrency=1
@@ -133,6 +151,50 @@ jobs:
       - run: yarn test:e2ee:browser
       - name: Verify the encryption-capable application build
         run: yarn build:encrypted
+      - name: Build the hosted gateway with synthetic credentials and no deployment
+        run: |
+          node --import tsx --input-type=module <<'JS'
+          import { execFile } from 'node:child_process';
+          import { mkdir, readFile } from 'node:fs/promises';
+          import path from 'node:path';
+          import { promisify } from 'node:util';
+          import ts from 'typescript';
+          import { hostedStagingResourcesSchema } from './lib/staging-contract.ts';
+          import { assertBuiltStagingConfig, hostedStagingConfig, hostedStagingProcessEnv } from './scripts/hosted-staging-config.ts';
+          import { createStagingSnapshot } from './scripts/staging-snapshot.ts';
+          const exec = promisify(execFile);
+          const source = await readFile('wrangler.jsonc', 'utf8');
+          const resources = hostedStagingResourcesSchema.parse({
+            version: 1, environment: 'staging', worker: 'panamia-staging',
+            accountId: ts.parseConfigFileTextToJson('wrangler.jsonc', source).config.account_id,
+            origin: 'https://staging.panamia.club', databaseProjectRef: 's'.repeat(20),
+            productionDatabaseProjectRef: 'p'.repeat(20), kvNamespaceId: 'b'.repeat(32),
+            publicBucket: 'panamia-staging-media', privateBucket: 'panamia-staging-chat-private',
+          });
+          const { stdout } = await exec('git', ['rev-parse', 'HEAD']);
+          const commit = stdout.trim();
+          const directory = path.join(process.env.RUNNER_TEMP, `hosted-staging-build-${process.env.GITHUB_RUN_ID}`);
+          await mkdir(directory);
+          const home = path.join(directory, 'home');
+          await mkdir(home);
+          const config = hostedStagingConfig(source, resources, commit);
+          const snapshot = await createStagingSnapshot(process.cwd(), directory, config);
+          const pkg = JSON.parse(await readFile(path.join(snapshot, 'node_modules', 'vinext', 'package.json'), 'utf8'));
+          const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin.vinext;
+          await exec(process.execPath, [path.join(snapshot, 'node_modules', 'vinext', bin), 'build'], {
+            cwd: snapshot,
+            env: hostedStagingProcessEnv(config, {
+              databaseUrl: 'postgres://synthetic:synthetic@127.0.0.1:55489/postgres',
+              authSecret: 'synthetic-only-'.repeat(4),
+            }, home),
+            maxBuffer: 16 * 1024 * 1024,
+          });
+          assertBuiltStagingConfig(
+            JSON.parse(await readFile(path.join(snapshot, 'dist', 'server', 'wrangler.json'), 'utf8')),
+            resources, commit
+          );
+          console.log('Hosted gateway compiled with staging-only bindings; no deployment occurred.');
+          JS
       - name: Share only the qualified static engine with the isolated pilot
         uses: actions/upload-artifact@v7
         with:

@@ -1,6 +1,6 @@
 import { generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres, { type Sql } from 'postgres';
 import * as schema from '../lib/schema';
 import {
@@ -47,7 +47,7 @@ function actorRecord(
     id,
     profileId,
     username: handle,
-    domain: '127.0.0.1',
+    domain: new URL(origin).hostname,
     type: profileId ? 'Person' : 'Group',
     name,
     uri,
@@ -61,11 +61,14 @@ function actorRecord(
 }
 
 export async function seedStaging(
-  sql: Sql,
-  state: StagingState,
+  connection: Sql | Pick<PostgresJsDatabase<typeof schema>, 'insert'>,
+  state: Pick<StagingState, 'origin' | 'accounts' | 'groups'>,
   scopes: readonly ('demo' | 'check')[] = ['demo', 'check']
 ) {
-  const db = drizzle(sql, { schema });
+  const db =
+    typeof connection === 'function'
+      ? drizzle(connection, { schema })
+      : connection;
   for (const scope of scopes) {
     for (const person of scope === 'demo'
       ? ['alice', 'bob']

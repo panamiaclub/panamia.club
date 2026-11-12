@@ -13,6 +13,7 @@
  */
 
 import { renderTemplate, type TemplateId } from '@/lib/email-templates';
+import { isHostedStagingBuild } from '@/lib/staging-contract';
 
 export interface SendEmail {
   send(message: {
@@ -68,6 +69,11 @@ export async function sendEmail(
   text?: string,
   options?: SendOptions
 ): Promise<void> {
+  if (isHostedStagingBuild()) {
+    throw new Error(
+      'Email delivery is disabled in hosted staging. Use an operator-issued test invitation.'
+    );
+  }
   if (isDevMode()) {
     if (options?.requireDelivery) {
       throw new Error(
