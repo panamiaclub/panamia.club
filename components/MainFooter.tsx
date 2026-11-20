@@ -107,6 +107,11 @@ export default function GlobalFooter() {
                 <Link href="/impact">{t('footer.impactReport')}</Link>
               </li>
               <li>
+                <Link href="/about-us#transparency">
+                  {t('footer.financialTransparency')}
+                </Link>
+              </li>
+              <li>
                 <Link href="/legal">{t('footer.legalPolicies')}</Link>
               </li>
               <li>

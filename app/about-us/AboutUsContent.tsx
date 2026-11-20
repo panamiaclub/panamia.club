@@ -61,6 +61,7 @@ function scrollToSection(section: string) {
 export default function AboutUsContent({ section }: { section?: string }) {
   const { t } = useTranslation('about');
   const { t: tHome } = useTranslation('home');
+  const { t: tCommon } = useTranslation('common');
   const whyLocal = useLocalMovementBeat();
   const pillars = usePillars();
 
@@ -140,6 +141,7 @@ export default function AboutUsContent({ section }: { section?: string }) {
           >
             {t('team.title')}
           </Link>
+          <Link href="/about-us#transparency">{t('transparency.title')}</Link>
         </div>
       </nav>
 
@@ -344,6 +346,36 @@ export default function AboutUsContent({ section }: { section?: string }) {
                 </Link>
               </article>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="transparency" className={styles.whyLocal}>
+        <div className={styles.sectionInner}>
+          <div className={styles.sectionHeading}>
+            <div>
+              <p className={styles.eyebrow}>{t('transparency.eyebrow')}</p>
+              <h2>{t('transparency.title')}</h2>
+            </div>
+          </div>
+          <div className={styles.missionCopy}>
+            <p>{tCommon('footer.nonprofitDisclosure')}</p>
+            <p>{t('transparency.filing')}</p>
+            <p>{t('transparency.limits')}</p>
+            <p className={styles.nonprofitNote}>{t('transparency.reviewed')}</p>
+            <div className="mt-6 flex flex-wrap gap-6">
+              <a
+                href="https://projects.propublica.org/nonprofits/organizations/923838133"
+                className="link-arrow"
+              >
+                {t('transparency.source')}
+                <ArrowRight aria-hidden="true" />
+              </a>
+              <Link href="/form/contact-us" className="link-arrow">
+                {t('transparency.contact')}
+                <ArrowRight aria-hidden="true" />
+              </Link>
+            </div>
           </div>
         </div>
       </section>

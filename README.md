@@ -115,6 +115,11 @@ purchases from donations. The Worker redirects HTTP requests for the configured
 production root domain and its subdomains to HTTPS, preserving paths and query
 parameters; local HTTP previews are unchanged.
 
+The [financial transparency section](https://panamia.club/about-us#transparency)
+links Pana's public IRS-derived filing history and labels the limitations of
+Form 990-N. Its dated disclosure is a filing category, not an audited statement
+of exact income or expenses. Review it when the next filing becomes public.
+
 Before submitting an activation request:
 
 - Deploy these changes and recheck the public homepage, About, Programs,
