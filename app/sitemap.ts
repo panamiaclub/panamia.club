@@ -37,6 +37,10 @@ const STATIC_ROUTES: SitemapEntry[] = [
   { url: SITE_URL, priority: 1.0, changeFrequency: 'weekly' },
   { url: getInfoCanonicalUrl(), changeFrequency: 'monthly' },
   { url: `${SITE_URL}/about-us`, changeFrequency: 'monthly' },
+  { url: `${SITE_URL}/programs`, changeFrequency: 'monthly' },
+  { url: `${SITE_URL}/our-impact`, changeFrequency: 'yearly' },
+  { url: `${SITE_URL}/impact`, changeFrequency: 'yearly' },
+  { url: `${SITE_URL}/ecosystem`, changeFrequency: 'monthly' },
   { url: `${SITE_URL}/a`, changeFrequency: 'daily' },
   // `/directorio` was here, and it is a `redirect('/d')` — a sitemap entry
   // that resolves to a different URL than the one submitted. `/directory` is

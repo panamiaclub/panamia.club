@@ -143,14 +143,13 @@ const COUNTY_MAP_SRC = '/img/impact/county-map.webp';
 
 /** Which programmes are reachable today, and where they point. Kept out of
     the translation files so a live link cannot be translated into a dead one.
-    `panaSocial` points at the feed mock rather than the real surface, which
-    lives on the `social.` subdomain. */
+    Work in progress points to its public program overview, not a design mock. */
 const PROGRAM_LINKS: Record<
   string,
   { href?: string; status: 'live' | 'building' }
 > = {
   directory: { href: '/directory/search', status: 'live' },
-  panaSocial: { href: '/mock/feed', status: 'building' },
+  panaSocial: { href: '/social', status: 'building' },
   connectors: { status: 'building' },
   events: { href: 'https://shotgun.live/venues/pana-mia-club', status: 'live' },
   press: { status: 'building' },

@@ -30,6 +30,7 @@ import { getDmStream } from '../lib/dm-stream';
 import { resolveUserIdFromHeaders } from '../auth';
 import { getActiveProfileWithActor } from '../lib/server/active-profile';
 import { PATHNAME_HEADER, SEARCH_HEADER } from '../lib/panaverse/chrome';
+import { getHttpsRedirect } from '../lib/server/https-redirect';
 import { retryPendingSmsSubscriptions } from '../lib/sms-subscriptions';
 import {
   isLocalMockDependencyRequest,
@@ -95,6 +96,10 @@ export default {
     assertPanaverseConfigured(request.headers.get('host'));
 
     const requestUrl = new URL(request.url);
+    const secureUrl = getHttpsRedirect(requestUrl);
+    if (secureUrl) {
+      return Response.redirect(secureUrl, 308);
+    }
     const hasDatabaseBinding = Boolean(env.POSTGRES_URL || env.HYPERDRIVE);
     if (requestUrl.hostname === 'shop.panamia.club') {
       const destination =

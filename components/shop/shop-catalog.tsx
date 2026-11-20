@@ -47,6 +47,12 @@ export function ShopCatalog({
                 ? 'Shop Pana MIA goods. Payments are securely handled by Stripe.'
                 : 'Shop Pana MIA goods or become a recurring member. Payments are securely handled by Stripe.'}
             </p>
+            <p className="mt-4 max-w-2xl text-base text-white/80">
+              Shop proceeds support Pana MIA&apos;s nonprofit community
+              programs: local culture, community technology, and gatherings that
+              connect South Florida. Purchases are not the same as charitable
+              donations.
+            </p>
           </div>
           <div className="bg-pana-flame text-pana-ink border-pana-ink relative self-center rounded-[28px] border-4 p-8 shadow-[12px_12px_0_#110d0d] md:rotate-[2deg]">
             <span className="bg-pana-butter border-pana-ink absolute -top-6 right-6 grid h-[72px] w-[72px] rotate-[10deg] place-items-center rounded-full border-[3px] text-center text-sm leading-tight font-black uppercase">

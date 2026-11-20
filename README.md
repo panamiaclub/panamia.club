@@ -98,6 +98,64 @@ See [FEATURES.md](./docs/FEATURES.md) for a complete feature overview.
 
 ---
 
+## Google Ad Grants readiness
+
+Apply with the organization's live website, **https://panamia.club**, not a
+design mock, social feed, or donation-provider URL. A `.club` domain is
+allowed; Google requires administrative control of the domain, not `.org`.
+Google makes the eligibility and website approval decisions.
+
+The website provides original mission and program content, a public EIN
+disclosure, an HTML impact report, contact and volunteer information, and a
+secure donation entry point. Production homepage stories load from the
+published-articles API; sample stories belong only in design previews.
+Program links must not point into `/mock`. Mock pages carry `noindex`.
+The shop explains that proceeds support nonprofit programs and distinguishes
+purchases from donations. The Worker redirects HTTP requests for the configured
+production root domain and its subdomains to HTTPS, preserving paths and query
+parameters; local HTTP previews are unchanged.
+
+Before submitting an activation request:
+
+- Deploy these changes and recheck the public homepage, About, Programs,
+  Impact, Contact, volunteer and donation pages on desktop and mobile.
+- Confirm current IRS 501(c)(3) status, the published EIN and legal entity,
+  domain administrative control, and Google for Nonprofits approval through
+  Goodstack. Repository copy is not proof of current eligibility.
+- Confirm the published impact figures and shop-proceeds disclosure with
+  the organization. Publish only approved, accurate reports and contact details.
+  Publish current financial information explaining how commercial proceeds
+  support the mission; event attendance figures are not a financial report.
+- Verify HTTP redirects to HTTPS, no mixed content or broken links, and mobile
+  loading speed using [PageSpeed Insights](https://pagespeed.web.dev/).
+- Complete a controlled donation checkout and receipt check with the payment
+  owner. A working landing page alone does not verify payment completion.
+- In Google for Nonprofits, select Ad Grants, enter the owned website, watch
+  the welcome video, and submit activation. **Do not create a separate Google
+  Ads account during activation**; Google provides the account.
+
+Before running grant campaigns, configure and verify meaningful conversion
+tracking for completed donations or successfully accepted volunteer/contact
+forms. Do not count a donate-button click, a failed submission, a homepage
+visit, or an unverified thank-you URL as a completed donation. Google tracking
+is not installed by these website changes; choose its scope and update privacy
+disclosures and consent handling before enabling it. Keep authenticated social
+and mentoring activity outside advertising measurement.
+
+Use South Florida geo-targeting for local services, at least two unique
+sitelink assets, and the required conversion-based bidding. Maintain the
+required monthly conversion activity and 5% account-level CTR (except
+Smart-only accounts), and respond to required program surveys.
+
+Official references:
+[website policy](https://support.google.com/nonprofits/answer/1657899),
+[eligibility](https://support.google.com/nonprofits/answer/3215869),
+[activation](https://support.google.com/nonprofits/topic/16219045),
+[account management](https://support.google.com/nonprofits/answer/117827),
+and [conversion tracking](https://support.google.com/nonprofits/answer/9841491).
+
+---
+
 ## Documentation
 
 | Document                                       | Description                             |

@@ -7,10 +7,7 @@ import {
   HomePillars,
 } from '@/components/home/sections';
 import { GetInvolvedQuiz } from '@/components/home/get-involved-quiz';
-import {
-  HomeArticleRail,
-  MOCK_HOME_ARTICLES,
-} from '@/components/home/article-rail';
+import { HomeArticleRail } from '@/components/home/article-rail';
 import { WelcomeFooter } from '@/components/home/welcome-footer';
 
 /**
@@ -50,7 +47,7 @@ export function HomePage({
         <HomeFirstScreen />
         <HomeBasics />
         <HomePillars />
-        <HomeArticleRail initialArticles={MOCK_HOME_ARTICLES} />
+        <HomeArticleRail />
         <GetInvolvedQuiz />
       </div>
       <WelcomeFooter preview={welcomeFooterPreview} />
