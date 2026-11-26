@@ -7,7 +7,12 @@ import {
 } from '@playwright/test';
 import type { SocialActorDisplay, SocialStatusDisplay } from '@/lib/interfaces';
 import type { DraftAttachment } from '@/lib/query/social';
-import type { GroupChatMessage, GroupChatRoom } from '@/lib/chat';
+import {
+  CHAT_REACTIONS,
+  type ChatMessage,
+  type GroupChatMessage,
+  type GroupChatRoom,
+} from '@/lib/chat';
 import { DIRECT_THREAD_REFUSED } from '@/lib/dm-refusal';
 import { calls as nativeCalls, nativeBridge } from './fixtures/native-bridge';
 import {
@@ -45,6 +50,7 @@ interface FixtureOptions {
   failSends?: number;
   failAccepts?: number;
   failDeletes?: number;
+  failReactions?: number;
   gifsEnabled?: boolean;
   send?: (
     route: Route,
@@ -90,13 +96,15 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
     stella: actor('stella', 'Stella Perez'),
     sofia: actor('sofia', 'Sofia Morales'),
   };
-  const messages: Record<string, SocialStatusDisplay[]> = {};
+  type FixtureMessage = SocialStatusDisplay &
+    Pick<ChatMessage, 'canReact' | 'reactions'>;
+  const messages: Record<string, FixtureMessage[]> = {};
   const makeMessage = (
     id: string,
     author: SocialActorDisplay,
     content: string,
     minutesAgo = 0
-  ): SocialStatusDisplay => ({
+  ): FixtureMessage => ({
     id,
     uri: `https://localhost/statuses/${id}`,
     content,
@@ -106,6 +114,8 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
     likesCount: 0,
     liked: false,
     actor: author,
+    canReact: true,
+    reactions: [],
   });
   messages.jdowns = Array.from({ length: 28 }, (_, index) =>
     makeMessage(
@@ -185,6 +195,8 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
       published: new Date(now - 600_000).toISOString(),
       expiresAt: new Date(now + 29 * 86_400_000).toISOString(),
       canDelete: false,
+      canReact: true,
+      reactions: [],
     },
   ];
   const posts: DirectMessagePost[] = [];
@@ -197,6 +209,7 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
     failSends: options.failSends ?? 0,
     failAccepts: options.failAccepts ?? 0,
     failDeletes: options.failDeletes ?? 0,
+    failReactions: options.failReactions ?? 0,
     failRequests: false,
     failSearch: false,
     failGroups: false,
@@ -375,6 +388,50 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
         },
       });
     }
+    if (path.endsWith('/reaction') && request.method() === 'PUT') {
+      if (state.failReactions-- > 0)
+        return json(
+          route,
+          { success: false, error: 'Could not save your reaction. Try again.' },
+          503
+        );
+      const isGroup = path.startsWith('/api/social/groups/');
+      const messageId = path.split('/').at(-2);
+      const message = (
+        isGroup ? groupMessages : Object.values(messages).flat()
+      ).find((entry) => entry.id === messageId);
+      if (!message)
+        return json(route, { success: false, error: 'Not found' }, 404);
+      const { emoji } = request.postDataJSON();
+      const remaining = (message.reactions ?? [])
+        .map((entry) => ({
+          ...entry,
+          count: entry.count - (entry.reacted ? 1 : 0),
+          reacted: false,
+        }))
+        .filter((entry) => entry.count > 0);
+      if (emoji !== null) {
+        const supported = CHAT_REACTIONS.find((entry) => entry.emoji === emoji);
+        if (!supported)
+          throw new Error('Unsupported reaction in test request.');
+        const existing = remaining.find(
+          (entry) => entry.emoji === supported.emoji
+        );
+        if (existing) {
+          existing.count++;
+          existing.reacted = true;
+        } else {
+          remaining.push({ emoji: supported.emoji, count: 1, reacted: true });
+        }
+      }
+      message.reactions = remaining;
+      if (isGroup) notifyGroup();
+      else {
+        const actorId = path.split('/')[5];
+        notify(actorId);
+      }
+      return json(route, { success: true, data: { id: message.id } });
+    }
     if (path === '/api/social/messages/conversations') {
       const conversations =
         state.activeProfile === 'business'
@@ -420,9 +477,15 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
           messages:
             state.activeProfile === 'business'
               ? []
-              : messages[actorId].filter(
-                  (message) => !state.hiddenStatusIds.has(message.id)
-                ),
+              : messages[actorId]
+                  .filter((message) => !state.hiddenStatusIds.has(message.id))
+                  .map((message) => ({
+                    ...message,
+                    canReact:
+                      !state.refusedActors.has(actorId) &&
+                      !requestIds.has(actorId) &&
+                      counterparty.domain === 'localhost',
+                  })),
         },
       });
     }
@@ -605,6 +668,161 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
     notifyGroup,
   };
 }
+
+test('adds, replaces and removes quick message reactions in DMs and groups @native', async ({
+  page,
+}) => {
+  const fixture = await openMessages(page, { native: 'ios' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await row(page, 'J. Downs').click();
+  const message = page.locator('#message-last-existing').locator('..');
+  await message
+    .getByRole('button', { name: 'React to message', exact: true })
+    .click();
+  const picker = page.getByRole('menu', { name: 'React to message' });
+  await expect(picker.getByRole('menuitem')).toHaveCount(6);
+  const bounds = await picker.boundingBox();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
+  await page
+    .getByRole('menuitem', { name: 'React with Heart', exact: true })
+    .click();
+  await expect(
+    message.getByRole('button', {
+      name: 'Heart: 1, including you',
+      exact: true,
+    })
+  ).toHaveAttribute('aria-pressed', 'true');
+  await message
+    .getByRole('button', { name: 'React to message', exact: true })
+    .click();
+  await page
+    .getByRole('menuitem', { name: 'React with Laugh', exact: true })
+    .click();
+  await expect(
+    message.getByRole('button', {
+      name: 'Laugh: 1, including you',
+      exact: true,
+    })
+  ).toBeVisible();
+  await expect(message.getByRole('button', { name: /^Heart:/ })).toHaveCount(0);
+  await message
+    .getByRole('button', { name: 'Laugh: 1, including you', exact: true })
+    .click();
+  await expect(
+    message.getByRole('group', { name: 'Message reactions' })
+  ).toHaveCount(0);
+
+  await page
+    .getByRole('button', { name: 'Back to conversations', exact: true })
+    .click();
+  await page
+    .getByRole('list', { name: 'Conversations', exact: true })
+    .getByRole('button', { name: /Garden Crew/ })
+    .click();
+  const groupMessage = page.locator('#message-garden-first').locator('..');
+  await groupMessage
+    .getByRole('button', { name: 'React to message', exact: true })
+    .click();
+  await page
+    .getByRole('menuitem', { name: 'React with Thank you', exact: true })
+    .click();
+  await expect(
+    groupMessage.getByRole('button', {
+      name: 'Thank you: 1, including you',
+      exact: true,
+    })
+  ).toBeVisible();
+  fixture.groupMessages[0].reactions = [
+    { emoji: '🙏', count: 2, reacted: true },
+  ];
+  fixture.notifyGroup();
+  await expect(
+    groupMessage.getByRole('button', {
+      name: 'Thank you: 2, including you',
+      exact: true,
+    })
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth)
+  ).toBeLessThanOrEqual(390);
+  expect(fixture.pageErrors).toEqual([]);
+});
+
+test('recovers failed reactions, restores picker focus and receives reactions live @native', async ({
+  page,
+}) => {
+  const fixture = await openMessages(page, { failReactions: 1 });
+  const message = page.locator('#message-last-existing').locator('..');
+  const trigger = message.getByRole('button', {
+    name: 'React to message',
+    exact: true,
+  });
+  await trigger.click();
+  await page.keyboard.press('Escape');
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await page
+    .getByRole('menuitem', { name: 'React with Thumbs up', exact: true })
+    .click();
+  await expect(message.getByRole('alert')).toContainText(
+    'Could not save your reaction.'
+  );
+  await expect(
+    message.getByRole('button', { name: /^Thumbs up:/ })
+  ).toHaveCount(0);
+  await trigger.click();
+  await page
+    .getByRole('menuitem', { name: 'React with Thumbs up', exact: true })
+    .click();
+  await expect(
+    message.getByRole('button', {
+      name: 'Thumbs up: 1, including you',
+      exact: true,
+    })
+  ).toBeVisible();
+  fixture.messages.jdowns.at(-1)!.reactions = [
+    { emoji: '❤️', count: 1, reacted: false },
+  ];
+  fixture.notify('jdowns');
+  await expect(
+    message.getByRole('button', { name: 'Heart: 1', exact: true })
+  ).toHaveAttribute('aria-pressed', 'false');
+  await message.getByRole('button', { name: 'Heart: 1', exact: true }).click();
+  await expect(
+    message.getByRole('button', {
+      name: 'Heart: 2, including you',
+      exact: true,
+    })
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole('button', { name: 'Heart: 2, including you', exact: true })
+  ).toBeVisible();
+  expect(fixture.pageErrors).toEqual([]);
+});
+
+test('does not offer reactions for held requests, refused or external-server conversations', async ({
+  page,
+}) => {
+  await openMessages(page);
+  await row(page, 'R. Nieves').click();
+  await expect(
+    history(page).getByRole('button', { name: 'React to message', exact: true })
+  ).toHaveCount(0);
+  await row(page, 'Mart Ruiz').click();
+  await expect(
+    history(page).getByRole('button', { name: 'React to message', exact: true })
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: /Requests \(2\)/ }).click();
+  await page.getByRole('button', { name: /Anette Mago/ }).click();
+  await expect(
+    history(page).getByText('Could I help at the next table?')
+  ).toBeVisible();
+  await expect(
+    history(page).getByRole('button', { name: 'React to message', exact: true })
+  ).toHaveCount(0);
+});
 
 test('uses the real masthead with a bounded desktop workspace and no mock controls', async ({
   page,

@@ -26,6 +26,11 @@ import { bucketKeysFor } from '@/lib/blob/api';
 import { notifyGroupChat } from '@/lib/group-chat-notify';
 import { isAudioAttachment } from '@/lib/media/attachments';
 import {
+  parseChatReaction,
+  readChatReactions,
+  writeChatReaction,
+} from '@/lib/server/chat-reactions';
+import {
   GROUP_CHAT_EXPIRY_DAYS,
   GROUP_CHAT_MAX_ATTACHMENTS,
   GROUP_CHAT_MAX_CONTENT,
@@ -182,6 +187,7 @@ async function displayMessage(
       id: `${row.id}-${index}`,
     })),
     canDelete: row.actorId === viewer || moderates(role),
+    canReact: true,
   };
 }
 
@@ -416,11 +422,21 @@ export async function readGroupChat(
     const messages = await Promise.all(
       page.reverse().map((row) => displayMessage(row, actorId, group.role))
     );
+    const reactions = await readChatReactions(
+      'group',
+      messages.map((message) => message.id),
+      actorId,
+      hidden,
+      tx
+    );
     return {
       success: true as const,
       data: {
         group,
-        messages,
+        messages: messages.map((message) => ({
+          ...message,
+          reactions: reactions.get(message.id) ?? [],
+        })),
         nextCursor,
         viewerActorId: actorId,
         localDomain: getFederationDomain(),
@@ -505,6 +521,44 @@ export async function sendGroupChatMessage(
       kind: 'message',
       messageId: result.data.id,
     });
+  return { success: true, data: result.data };
+}
+
+export async function reactToGroupChatMessage(
+  handle: string,
+  actorId: string,
+  messageId: string,
+  value: unknown
+): Promise<Result<{ id: string }>> {
+  const input = parseChatReaction(value);
+  if (!input) return fail('Choose one of the six message reactions.', 400);
+  const hidden = await getHiddenActorIds(actorId);
+  const result = await db.transaction(async (tx) => {
+    if (!(await lockWriter(actorId, tx))) return fail();
+    const group = await roomFor(handle, actorId, tx);
+    if (!group) return fail();
+    const [message] = await tx
+      .select({ id: socialGroupChatMessages.id })
+      .from(socialGroupChatMessages)
+      .where(
+        and(
+          eq(socialGroupChatMessages.groupId, group.id),
+          eq(socialGroupChatMessages.id, messageId),
+          visibleMessages(actorId, hidden, new Date())
+        )
+      )
+      .limit(1)
+      .for('update');
+    if (!message) return fail('That message is no longer available.');
+    await writeChatReaction(tx, 'group', messageId, actorId, input.emoji);
+    return {
+      success: true as const,
+      data: { id: messageId },
+      groupId: group.id,
+    };
+  });
+  if (!result.success) return result;
+  await notifyGroupChat(result.groupId, { kind: 'message', messageId });
   return { success: true, data: result.data };
 }
 

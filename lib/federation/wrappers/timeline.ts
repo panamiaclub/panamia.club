@@ -1129,9 +1129,10 @@ export async function getDirectConversations(
 export async function getDirectConversation(
   actorId: string,
   counterpartyActorId: string,
-  limit: number = 200
+  limit: number = 200,
+  reader: Pick<typeof db, 'query'> = db
 ): Promise<StatusWithActorAndLike[]> {
-  const participants = await db.query.socialActors.findMany({
+  const participants = await reader.query.socialActors.findMany({
     where: inArray(socialActors.id, [actorId, counterpartyActorId]),
     columns: { id: true, uri: true },
   });
@@ -1143,7 +1144,7 @@ export async function getDirectConversation(
 
   if (!viewerUri || !counterpartyUri) return [];
 
-  const rows = await db.query.socialStatuses.findMany({
+  const rows = await reader.query.socialStatuses.findMany({
     where: and(
       sql`${socialStatuses.published} IS NOT NULL`,
       oneToOneDirect(),

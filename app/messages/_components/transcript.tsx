@@ -20,10 +20,21 @@ import {
   ShieldCheck,
   Trash2,
   Users,
+  SmilePlus,
 } from 'lucide-react';
+import axios from 'axios';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { SafeHtml } from '@/components/safe-html';
 import { AttachmentGrid } from '@/components/social/AttachmentGrid';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { CHAT_REACTIONS, type ChatReactionEmoji } from '@/lib/chat';
+import { socialQueryKey } from '@/lib/query/social';
 import styles from '@/components/messages/workspace.module.css';
 import { DIRECT_THREAD_REFUSED } from '@/lib/dm-refusal';
 import { openSafetyReport } from '@/lib/safety-report';
@@ -47,6 +58,7 @@ import {
   remoteHost,
   timeLabel,
 } from '../_lib/format';
+import { messageError } from '../_lib/workspace';
 
 export function Transcript<T extends PendingChatMessage>({
   counterparty,
@@ -116,6 +128,9 @@ export function Transcript<T extends PendingChatMessage>({
   const host = group ? null : remoteHost(counterparty, localDomain);
   const name = group?.name || counterparty.name || counterparty.username;
   const isInboundRequest = !!request;
+  const reactionBase = group
+    ? `/api/social/groups/${encodeURIComponent(group.handle)}/chat`
+    : `/api/social/messages/conversations/${encodeURIComponent(counterparty.id)}`;
 
   const rememberPosition = useCallback(() => {
     const history = historyRef.current;
@@ -460,6 +475,11 @@ export function Transcript<T extends PendingChatMessage>({
                           mine={mine}
                           audioPlayback={!group}
                           onRemove={onRemoveMessage}
+                          reactionUrl={
+                            isInboundRequest
+                              ? undefined
+                              : `${reactionBase}/${encodeURIComponent(message.id)}/reaction`
+                          }
                         />
                       ))}
                     </div>
@@ -536,57 +556,171 @@ function Bubble({
   mine,
   onRemove,
   audioPlayback,
+  reactionUrl,
 }: {
   message: ChatMessage;
   mine: boolean;
   onRemove?: (message: ChatMessage) => void;
   audioPlayback: boolean;
+  reactionUrl?: string;
 }) {
   const expiresIn = expiresInLabel(message.expiresAt);
+  const queryClient = useQueryClient();
+  const reaction = useMutation({
+    mutationFn: async (emoji: ChatReactionEmoji | null) => {
+      if (!reactionUrl) throw new Error('This message is unavailable.');
+      const { data } = await axios.put<{
+        success: boolean;
+        data?: { id: string };
+        error?: string;
+      }>(reactionUrl, { emoji }, { timeout: 20_000 });
+      if (!data.success || data.data?.id !== message.id)
+        throw new Error(data.error || 'Could not save your reaction.');
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: [socialQueryKey, 'messages'],
+      });
+    },
+  });
+  const canReact =
+    message.canReact === true &&
+    !!reactionUrl &&
+    (!message.expiresAt || new Date(message.expiresAt).getTime() > Date.now());
+  const react = (emoji: ChatReactionEmoji) => {
+    if (!canReact || reaction.isPending) return;
+    reaction.mutate(
+      message.reactions?.some((entry) => entry.emoji === emoji && entry.reacted)
+        ? null
+        : emoji
+    );
+  };
   return (
-    <MessageFrame
-      id={message.id}
-      mine={mine}
-      content={
-        message.content?.trim() ? (
-          <SafeHtml html={message.content} className="chat-bubble-body" />
-        ) : null
-      }
-      attachments={message.attachments}
-      audioPlayback={audioPlayback}
-      published={message.published}
-      expiresIn={expiresIn}
-      actions={
-        <>
-          {!mine && (
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-label="Report message"
-              onClick={() =>
-                openSafetyReport({
-                  type: 'content',
-                  url: `${window.location.href.split('#')[0]}#message-${encodeURIComponent(message.id)}`,
-                })
-              }
-            >
-              <Flag className="h-4 w-4" aria-hidden="true" />
-            </button>
+    <div className={`max-w-full ${mine ? 'self-end' : 'self-start'}`}>
+      <MessageFrame
+        id={message.id}
+        mine={mine}
+        content={
+          message.content?.trim() ? (
+            <SafeHtml html={message.content} className="chat-bubble-body" />
+          ) : null
+        }
+        attachments={message.attachments}
+        audioPlayback={audioPlayback}
+        published={message.published}
+        expiresIn={expiresIn}
+        actions={
+          <>
+            {canReact && (
+              <DropdownMenu
+                onOpenChange={(open) => {
+                  if (open) reaction.reset();
+                }}
+              >
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className={styles.iconButton}
+                    aria-label="React to message"
+                    disabled={reaction.isPending}
+                  >
+                    <SmilePlus className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align={mine ? 'end' : 'start'}
+                  side="top"
+                  className="grid grid-cols-6 gap-0 rounded-full bg-white p-1"
+                >
+                  {CHAT_REACTIONS.map(({ emoji, label }) => {
+                    const selected = message.reactions?.some(
+                      (entry) => entry.emoji === emoji && entry.reacted
+                    );
+                    return (
+                      <DropdownMenuItem
+                        key={emoji}
+                        aria-label={`${selected ? 'Remove' : 'React with'} ${label}`}
+                        onSelect={() => react(emoji)}
+                        className={`min-h-11 min-w-11 justify-center rounded-full p-2 text-xl ${selected ? 'bg-pana-butter' : ''}`}
+                      >
+                        <span aria-hidden="true">{emoji}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {!mine && (
+              <button
+                type="button"
+                className={styles.iconButton}
+                aria-label="Report message"
+                onClick={() =>
+                  openSafetyReport({
+                    type: 'content',
+                    url: `${window.location.href.split('#')[0]}#message-${encodeURIComponent(message.id)}`,
+                  })
+                }
+              >
+                <Flag className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
+            {message.canDelete && onRemove && (
+              <button
+                type="button"
+                className={styles.iconButton}
+                aria-label="Delete message"
+                title="Delete for everyone"
+                onClick={() => onRemove(message)}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
+          </>
+        }
+      />
+      {!!message.reactions?.length && (
+        <div
+          className={`flex flex-wrap gap-1 pt-1 ${mine ? 'justify-end' : ''}`}
+          role="group"
+          aria-label="Message reactions"
+        >
+          {CHAT_REACTIONS.map(({ emoji, label }) => {
+            const entry = message.reactions?.find(
+              (item) => item.emoji === emoji
+            );
+            if (!entry?.count) return null;
+            return (
+              <button
+                key={emoji}
+                type="button"
+                aria-label={`${label}: ${entry.count}${entry.reacted ? ', including you' : ''}`}
+                aria-pressed={entry.reacted}
+                disabled={!canReact || reaction.isPending}
+                onClick={() => react(emoji)}
+                className={`border-pana-ink/15 text-pana-ink inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full border px-2 text-xs disabled:cursor-default ${entry.reacted ? 'bg-pana-butter' : 'bg-white'}`}
+              >
+                <span aria-hidden="true">{emoji}</span>
+                <span aria-hidden="true">{entry.count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {reaction.isPending && (
+        <p className="text-pana-ink/60 px-1 text-xs" role="status">
+          Saving reaction...
+        </p>
+      )}
+      {reaction.isError && (
+        <p className="text-pana-red-deep max-w-72 px-1 text-xs" role="alert">
+          {messageError(
+            reaction.error,
+            'Could not save your reaction. Try again.'
           )}
-          {message.canDelete && onRemove && (
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-label="Delete message"
-              title="Delete for everyone"
-              onClick={() => onRemove(message)}
-            >
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-            </button>
-          )}
-        </>
-      }
-    />
+        </p>
+      )}
+    </div>
   );
 }
 
