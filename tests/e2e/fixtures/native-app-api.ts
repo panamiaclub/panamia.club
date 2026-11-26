@@ -416,7 +416,11 @@ export function createNativeApiFixtures(
     if (path === '/api/social/messages/conversations')
       return envelope({ conversations: [], unreadCount: 0 });
     if (path === '/api/user/me')
-      return envelope({ name: 'Native Viewer', screenname: 'native-viewer' });
+      return envelope({
+        name: 'Native Viewer',
+        screenname: 'native-viewer',
+        zipCode: '33138',
+      });
     state.unhandled.push(`${method} ${path}`);
     return {
       status: 404,

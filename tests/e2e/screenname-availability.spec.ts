@@ -19,6 +19,7 @@ async function openForm(
   await installNativeApiFixtures(page);
   const user = {
     _id: freshSession?.user.id ?? 'native-test-user',
+    zipCode: '33138',
     email: freshSession?.user.email ?? 'native@example.invalid',
     name: surface === 'welcome' ? null : 'Native Viewer',
     screenname: surface === 'settings' ? 'native-viewer' : null,

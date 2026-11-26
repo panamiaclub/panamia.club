@@ -134,6 +134,16 @@
     "regions": "Miami-Dade · Broward · Palm Beach"
   },
   "onboarding": {
+    "zipTitle": "Agrega tu código postal",
+    "zipBody": "Se requiere un código postal de EE. UU. para completar la configuración de la cuenta. Esto se aplica a miembros nuevos y existentes.",
+    "zipLabel": "Código postal",
+    "zipHint": "Escribe cinco dígitos o ZIP+4 (por ejemplo, 33138 o 33138-1234). Solo guardamos los primeros cinco dígitos. El código postal de tu cuenta es privado y no cambia ninguna dirección comercial pública.",
+    "zipInvalid": "Escribe un código postal de EE. UU. de cinco dígitos o ZIP+4.",
+    "zipSaveFailed": "No se pudo guardar tu código postal. Inténtalo de nuevo.",
+    "zipPrivacy": "Política de privacidad",
+    "zipAccount": "Administrar o eliminar la cuenta",
+    "zipSignOut": "Cerrar sesión",
+    "zipSignOutFailed": "No se pudo cerrar la sesión. Inténtalo de nuevo.",
     "screennameTitle": "Elige tu nombre de usuario",
     "screennameDescription": "Escribe tu nombre y elige un nombre de usuario. Así aparecerás en Pana MIA: en tu perfil, en lo que publiques y dondequiera que te encuentren. Puedes omitirlo por ahora, pero necesitarás ambos antes de publicar o seguir a alguien.",
     "welcomeEyebrow": "Ya estás dentro",
