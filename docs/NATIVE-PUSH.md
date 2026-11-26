@@ -13,11 +13,19 @@ including bulk group notifications and post likes/replies. There is no historica
 backfill and no hook into live DM sockets: messages held in Requests still do not
 create a bell notification and therefore do not enqueue push.
 
-Apply `0081_push_message_previews.sql` before deploying message previews. Existing
-and old-client registrations remain generic until the member enables the new
-disclosed preview control. New Enable-push actions default message previews on,
-unless this installation previously chose off. Omitted preferences preserve an
-existing registration's choice rather than resetting it during token renewal.
+Apply `0081_push_message_previews.sql` and `0082_existing_push_message_previews.sql`
+before deploying the current preview defaults. New registrations default previews
+on, including clients that omit the preference. Explicit off choices survive
+renewal, rotation and account changes.
+
+The existing-device upgrade enables default-off registrations last renewed before
+the first preview release merged (`2026-11-26T21:06:46Z`, commit `e714f12d6`).
+It does not refresh registration timestamps or re-enable native push permission.
+Newer saved off values are preserved: the first release stored automatic legacy
+off values and explicit opt-outs identically, so their intent cannot be recovered.
+Those devices still need a one-time preview toggle. Already saved local off values
+also remain off; a renewal must not override them. Omitted preferences preserve
+the existing server choice, which the client hydrates when no local choice exists.
 
 Add these **server-only Cloudflare secrets**, never `NEXT_PUBLIC_*` variables:
 

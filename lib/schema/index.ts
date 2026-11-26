@@ -816,7 +816,7 @@ export const pushDevices = pgTable(
       .references(() => sessions.id, { onDelete: 'cascade' }),
     platform: text('platform', { enum: ['ios', 'android'] }).notNull(),
     token: text('token').notNull().unique(),
-    messagePreviews: boolean('message_previews').notNull().default(false),
+    messagePreviews: boolean('message_previews').notNull().default(true),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

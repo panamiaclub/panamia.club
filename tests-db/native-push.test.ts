@@ -85,8 +85,8 @@ before(async () => {
   await pg.exec(`
     INSERT INTO users (id) VALUES ('legacy');
     INSERT INTO sessions (id, user_id) VALUES ('legacy', 'legacy');
-    INSERT INTO push_devices (id, user_id, session_id, platform, token)
-      VALUES ('legacy', 'legacy', 'legacy', 'ios', 'legacy-token');
+    INSERT INTO push_devices (id, user_id, session_id, platform, token, updated_at)
+      VALUES ('legacy', 'legacy', 'legacy', 'ios', 'legacy-token', '2026-11-26T21:00:00Z');
   `);
   await pg.exec(
     readFileSync(
@@ -96,6 +96,19 @@ before(async () => {
   );
   const [legacy] = await db.select().from(schema.pushDevices);
   assert.equal(legacy.messagePreviews, false);
+  await pg.exec(
+    readFileSync(
+      new URL(
+        '../drizzle/0082_existing_push_message_previews.sql',
+        import.meta.url
+      ),
+      'utf8'
+    )
+  );
+  assert.equal(
+    (await db.select().from(schema.pushDevices))[0].messagePreviews,
+    true
+  );
   ({ createNotification, createNotificationsForTargets } =
     await import('@/lib/notifications'));
   ({ registerPushDevice } = await import('@/lib/push/devices'));
@@ -259,7 +272,7 @@ test('registration renewal preserves pending jobs; deleting the user removes dev
 test('preview choices survive omitted renewals, token rotation and account reassignment', async () => {
   assert.equal(
     (await db.select().from(schema.pushDevices))[0].messagePreviews,
-    false
+    true
   );
   await registerPushDevice(activeSession!, {
     id: deviceId,
@@ -298,6 +311,86 @@ test('preview choices survive omitted renewals, token rotation and account reass
   assert.equal(
     (await db.select().from(schema.pushDevices))[0].messagePreviews,
     false
+  );
+});
+
+test('legacy preview upgrade preserves newer off values, renewal dates and queued notifications', async () => {
+  const cutoff = new Date('2026-11-26T21:06:46Z');
+  const beforeRelease = new Date(cutoff.getTime() - 1);
+  const afterRelease = new Date(cutoff.getTime() + 1);
+  await db
+    .update(schema.pushDevices)
+    .set({ messagePreviews: false, updatedAt: beforeRelease })
+    .where(eq(schema.pushDevices.id, deviceId));
+  await db.insert(schema.pushDevices).values([
+    {
+      id: 'saved-off',
+      userId: 'recipient',
+      sessionId: 'login-recipient',
+      platform: 'ios',
+      token: 'saved-off-token',
+      messagePreviews: false,
+      updatedAt: cutoff,
+    },
+    {
+      id: 'ambiguous-legacy-off',
+      userId: 'recipient',
+      sessionId: 'login-recipient',
+      platform: 'android',
+      token: 'ambiguous-off-token',
+      messagePreviews: false,
+      updatedAt: afterRelease,
+    },
+    {
+      id: 'already-on',
+      userId: 'recipient',
+      sessionId: 'login-recipient',
+      platform: 'android',
+      token: 'already-on-token',
+      messagePreviews: true,
+      updatedAt: beforeRelease,
+    },
+  ]);
+  await notify();
+  const queuedBefore = await db.select().from(schema.pushDeliveries);
+  await pg.exec(
+    readFileSync(
+      new URL(
+        '../drizzle/0082_existing_push_message_previews.sql',
+        import.meta.url
+      ),
+      'utf8'
+    )
+  );
+  const devices = new Map(
+    (await db.select().from(schema.pushDevices)).map((device) => [
+      device.id,
+      device,
+    ])
+  );
+  assert.equal(devices.get(deviceId)!.messagePreviews, true);
+  assert.equal(devices.get('saved-off')!.messagePreviews, false);
+  assert.equal(devices.get('ambiguous-legacy-off')!.messagePreviews, false);
+  assert.equal(devices.get('already-on')!.messagePreviews, true);
+  assert.deepEqual(devices.get(deviceId)!.updatedAt, beforeRelease);
+  assert.deepEqual(devices.get('saved-off')!.updatedAt, cutoff);
+  assert.deepEqual(
+    devices.get('ambiguous-legacy-off')!.updatedAt,
+    afterRelease
+  );
+  assert.deepEqual(await db.select().from(schema.pushDeliveries), queuedBefore);
+  await pg.exec(`
+    INSERT INTO push_devices (id, user_id, session_id, platform, token)
+    VALUES ('database-default', 'recipient', 'login-recipient', 'ios', 'default-token');
+  `);
+  const [defaultDevice] = await db
+    .select()
+    .from(schema.pushDevices)
+    .where(eq(schema.pushDevices.id, 'database-default'));
+  assert.equal(defaultDevice.messagePreviews, true);
+  assert.equal(
+    (await db.select().from(schema.pushDeliveries)).length,
+    queuedBefore.length
   );
 });
 
