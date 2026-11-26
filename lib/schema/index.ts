@@ -20,6 +20,7 @@ import {
   uniqueIndex,
   index,
   check,
+  primaryKey,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
@@ -802,6 +803,55 @@ export const notifications = pgTable(
     ).on(table.target, table.context, table.createdAt),
     expiresAtIdx: index('notifications_expires_at_idx').on(table.expiresAt),
   })
+);
+
+// =============================================================================
+// Native push
+// =============================================================================
+
+export const pushDevices = pgTable(
+  'push_devices',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    platform: text('platform', { enum: ['ios', 'android'] }).notNull(),
+    token: text('token').notNull().unique(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('push_devices_user_idx').on(table.userId),
+    index('push_devices_session_idx').on(table.sessionId),
+  ]
+);
+
+export const pushDeliveries = pgTable(
+  'push_deliveries',
+  {
+    deviceId: text('device_id')
+      .notNull()
+      .references(() => pushDevices.id, { onDelete: 'cascade' }),
+    notificationId: text('notification_id')
+      .notNull()
+      .references(() => notifications.id, { onDelete: 'cascade' }),
+    attempts: integer('attempts').notNull().default(0),
+    availableAt: timestamp('available_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.deviceId, table.notificationId] }),
+    index('push_deliveries_due_idx').on(table.availableAt),
+  ]
 );
 
 // =============================================================================

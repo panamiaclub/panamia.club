@@ -48,6 +48,7 @@ import {
   type NativeConversation,
 } from './native-app-context';
 import { NativeEventSave, NativeNotice } from './NativeResultCard';
+import { NativePushNotifications } from './NativePushNotifications';
 import styles from './native-app.module.css';
 
 const NativeDirectory = dynamic(() => import('./NativeDirectory'), {
@@ -259,6 +260,11 @@ function AppFrame({
               )}
             </div>
           </header>
+          <NativePushNotifications
+            userId={userId}
+            signedIn={signedIn}
+            showControls={pathname === profileHref || pathname === '/account'}
+          />
           <ActingAsBar />
 
           <div className={styles.body}>

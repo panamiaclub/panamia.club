@@ -26,7 +26,7 @@
   // This was nightly, which capped the sweep at a single batch of stories per
   // day and let a backlog accumulate that could never drain.
   "triggers": {
-    "crons": ["10 * * * *"],
+    "crons": ["10 * * * *", "* * * * *"],
   },
 
   // Workers Cache: regional tiered cache in front of the Worker.

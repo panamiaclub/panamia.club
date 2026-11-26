@@ -107,6 +107,7 @@ mobile/android/keystore.properties
 *.mobileprovision
 *.p12
 *.p8
+mobile/android/app/google-services.json
 *.xcarchive/
 
 # Local artifacts of scripts/migrate-supabase-region.ts. The manifest is a

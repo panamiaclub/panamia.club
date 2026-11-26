@@ -647,12 +647,12 @@ the process; a closed laptop does the same. Signal, WhatsApp, Slack and Discord 
 same way — a **second transport**, not a different first one. So "make it work on all platforms"
 means adding push, not rearchitecting this.
 
-The hook point already exists: `handleNotify` returns `{ delivered: N }`, and `delivered === 0`
-means nobody was listening and a push should be sent instead. That is
-[MOBILE-ROADMAP.md](./MOBILE-ROADMAP.md) Next Steps step 4, which needs
-`@capacitor/push-notifications`, APNs and FCM credentials, and a device-token table tied to the
-account — none of which can be created or tested from here, which is why this is recorded rather
-than half-built.
+Native push now uses an atomic outbox on persisted bell notifications, rather
+than the mailbox's `delivered` count. This covers DMs as well as likes, replies,
+and group activity without duplicating chat-only delivery logic. Requests remain
+silent because they do not create a bell notification. See
+[NATIVE-PUSH.md](./NATIVE-PUSH.md) for APNs/FCM credentials, device registration,
+deployment, and the real-device checks still required before shipping.
 
 ### Prerequisite — the DM chat view had to exist first
 

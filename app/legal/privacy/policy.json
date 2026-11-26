@@ -2,9 +2,9 @@
   "@context": "https://schema.org",
   "@type": "PrivacyPolicy",
   "name": "Pana MIA Club Privacy Policy",
-  "version": "1.1",
+  "version": "1.2",
   "status": "effective",
-  "effectiveDate": "2026-11-11",
+  "effectiveDate": "2026-11-25",
   "url": "https://panamia.club/legal/privacy",
   "gpcSupported": true,
   "nativeAgeAssurance": {
@@ -199,7 +199,11 @@
         {
           "name": "notifications",
           "label": "Notification Preferences",
-          "data": ["notification_settings"],
+          "data": [
+            "notification_settings",
+            "native_push_device_token",
+            "notification_delivery_metadata"
+          ],
           "source": "user_provided",
           "purpose": "communication_preferences",
           "retention": "active_account_lifetime",
@@ -208,9 +212,9 @@
             "source": "You provide",
             "purpose": "Communication preferences",
             "retention": "Account lifetime",
-            "sharedWith": "None",
-            "prose": "Notification preferences",
-            "blurb": "Your choices about which alerts and emails we send you."
+            "sharedWith": "Apple APNs / Google FCM when enabled",
+            "prose": "Notification preferences and optional native push delivery",
+            "blurb": "Your alert choices and, if enabled, a device token tied to your login session. Apple APNs or Google FCM receives the token, generic alert text, and an opaque notification ID, not private message bodies, names, or destination URLs. Tokens are removed at logout or after 30 days without renewal; queued deliveries are kept for at most one day."
           }
         },
         {
@@ -466,17 +470,30 @@
         },
         {
           "name": "Google",
-          "purpose": "oauth_authentication",
-          "data": ["email", "name", "profile_image"],
-          "deletionMechanism": "revoke_grant_delete_tokens",
-          "providerRetention": "google_auth_logs_per_google_policy"
+          "purpose": "oauth_authentication_and_native_push",
+          "data": [
+            "email",
+            "name",
+            "profile_image",
+            "push_device_token",
+            "generic_alert",
+            "opaque_notification_id"
+          ],
+          "deletionMechanism": "revoke_grant_delete_tokens_and_push_registration",
+          "providerRetention": "google_auth_and_push_logs_per_google_policy"
         },
         {
           "name": "Apple",
-          "purpose": "oauth_authentication",
-          "data": ["email", "name"],
-          "deletionMechanism": "revoke_grant_delete_tokens",
-          "providerRetention": "apple_auth_logs_per_apple_policy"
+          "purpose": "oauth_authentication_and_native_push",
+          "data": [
+            "email",
+            "name",
+            "push_device_token",
+            "generic_alert",
+            "opaque_notification_id"
+          ],
+          "deletionMechanism": "revoke_grant_delete_tokens_and_push_registration",
+          "providerRetention": "apple_auth_and_push_logs_per_apple_policy"
         }
       ],
       "categories": [

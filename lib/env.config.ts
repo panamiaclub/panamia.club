@@ -47,6 +47,18 @@ export interface EnvVarConfig {
 }
 
 export const envConfig: Record<string, EnvVarConfig> = {
+  PUSH_APNS_CONFIG: {
+    description:
+      'Native iOS APNs JSON: teamId, keyId, privateKey (PKCS8 .p8), environment (sandbox or production). See docs/NATIVE-PUSH.md.',
+    location: 'SECRET',
+    required: false,
+  },
+  PUSH_FCM_SERVICE_ACCOUNT: {
+    description:
+      'Native Android FCM HTTP v1 service-account JSON (project_id, client_email, private_key). See docs/NATIVE-PUSH.md.',
+    location: 'SECRET',
+    required: false,
+  },
   // =============================================================================
   // DATABASE
   // =============================================================================

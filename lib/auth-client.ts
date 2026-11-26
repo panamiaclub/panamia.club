@@ -255,6 +255,13 @@ export async function signOut(options?: {
   callbackUrl?: string;
 }): Promise<void> {
   const callbackURL = options?.callbackUrl ?? '/';
+  try {
+    const { clearPushOnSignOut } = await import('@/lib/mobile/push');
+    await clearPushOnSignOut();
+  } catch {
+    // Logout must still revoke the session, whose FK cascades registrations.
+    console.error('[push] Could not clear device before sign-out');
+  }
   const { error } = await authClient.signOut();
   if (error) {
     throw new Error(error.message ?? 'Sign-out failed');
