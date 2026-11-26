@@ -1,4 +1,5 @@
 -- Purpose: Session-bound native registrations and an atomic notification outbox.
+-- Ticket: N/A - native iOS and Android push rollout.
 -- Reversible: DROP TRIGGER notifications_native_push ON notifications;
 -- DROP FUNCTION enqueue_native_push(); DROP TABLE push_deliveries, push_devices;
 CREATE TABLE push_devices (
