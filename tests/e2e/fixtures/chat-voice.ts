@@ -41,7 +41,7 @@ export async function installChatVoiceFixtures(
         webkit ||
         !navigator.mediaDevices ||
         typeof MediaRecorder === 'undefined';
-      if (!navigator.mediaDevices)
+      if (simulated)
         Object.defineProperty(navigator, 'mediaDevices', {
           value: {},
           configurable: true,
