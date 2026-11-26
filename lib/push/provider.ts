@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { pushAlert } from './payload';
 
 export interface PushEnv {
@@ -7,16 +8,45 @@ export interface PushEnv {
 
 export class PushProviderError extends Error {}
 
-interface ApnsConfig {
-  teamId: string;
-  keyId: string;
-  privateKey: string;
-  environment: 'sandbox' | 'production';
+const apnsConfigSchema = z.object({
+  teamId: z.string().min(1),
+  keyId: z.string().min(1),
+  privateKey: z.string().min(1),
+  environment: z.enum(['sandbox', 'production']),
+});
+const fcmConfigSchema = z.object({
+  project_id: z.string().min(1),
+  client_email: z.string().min(1),
+  private_key: z.string().min(1),
+});
+
+function parsePushConfig<T>(
+  value: string | undefined,
+  schema: z.ZodType<T>,
+  provider: 'APNs' | 'FCM'
+): T {
+  if (!value) throw new PushProviderError(`${provider} is not configured`);
+  let input: unknown;
+  try {
+    input = JSON.parse(value);
+  } catch {
+    throw new PushProviderError(`Invalid ${provider} configuration`);
+  }
+  const parsed = schema.safeParse(input);
+  if (!parsed.success)
+    throw new PushProviderError(`Invalid ${provider} configuration`);
+  return parsed.data;
 }
-interface FcmConfig {
-  project_id: string;
-  client_email: string;
-  private_key: string;
+
+export function validatePushConfiguration(
+  env: PushEnv,
+  platform: 'ios' | 'android'
+): void {
+  if (platform === 'ios') {
+    parsePushConfig(env.PUSH_APNS_CONFIG, apnsConfigSchema, 'APNs');
+  } else {
+    parsePushConfig(env.PUSH_FCM_SERVICE_ACCOUNT, fcmConfigSchema, 'FCM');
+  }
 }
 
 function base64url(bytes: Uint8Array): string {
@@ -71,17 +101,11 @@ export function createPushSender(env: PushEnv, request: typeof fetch = fetch) {
     const alert = pushAlert(notificationId);
     const now = Math.floor(Date.now() / 1000);
     if (device.platform === 'ios') {
-      if (!env.PUSH_APNS_CONFIG)
-        throw new PushProviderError('APNs is not configured');
-      const config: ApnsConfig = JSON.parse(env.PUSH_APNS_CONFIG);
-      if (
-        !['sandbox', 'production'].includes(config.environment) ||
-        !config.teamId ||
-        !config.keyId ||
-        !config.privateKey
-      ) {
-        throw new PushProviderError('Invalid APNs configuration');
-      }
+      const config = parsePushConfig(
+        env.PUSH_APNS_CONFIG,
+        apnsConfigSchema,
+        'APNs'
+      );
       apnsJwt ??= signPushJwt(
         { alg: 'ES256', kid: config.keyId },
         { iss: config.teamId, iat: now },
@@ -121,12 +145,11 @@ export function createPushSender(env: PushEnv, request: typeof fetch = fetch) {
       throw new PushProviderError(`APNs delivery failed (${response.status})`);
     }
 
-    if (!env.PUSH_FCM_SERVICE_ACCOUNT)
-      throw new PushProviderError('FCM is not configured');
-    const config: FcmConfig = JSON.parse(env.PUSH_FCM_SERVICE_ACCOUNT);
-    if (!config.project_id || !config.client_email || !config.private_key) {
-      throw new PushProviderError('Invalid FCM configuration');
-    }
+    const config = parsePushConfig(
+      env.PUSH_FCM_SERVICE_ACCOUNT,
+      fcmConfigSchema,
+      'FCM'
+    );
     googleToken ??= (async () => {
       const assertion = await signPushJwt(
         { alg: 'RS256', typ: 'JWT' },

@@ -6,6 +6,10 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { getTableConfig } from 'drizzle-orm/pg-core';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/lib/schema';
+import {
+  PushProviderError,
+  validatePushConfiguration,
+} from '@/lib/push/provider';
 
 const pg = new PGlite();
 const db = drizzle(pg, { schema });
@@ -31,7 +35,8 @@ mock.module(import.meta.resolve('../auth.ts'), {
 });
 mock.module(import.meta.resolve('../lib/push/provider.ts'), {
   namedExports: {
-    PushProviderError: class PushProviderError extends Error {},
+    PushProviderError,
+    validatePushConfiguration,
     createPushSender:
       () => async (_device: unknown, notificationId: string) => {
         if (sendResult === 'fail') throw new Error('fixture transient error');
@@ -272,7 +277,23 @@ test('registration derives its owner from the session and reports missing provid
   try {
     delete process.env.PUSH_APNS_CONFIG;
     assert.equal((await devicesRoute.PUT(request())).status, 503);
-    process.env.PUSH_APNS_CONFIG = 'fixture-config-presence';
+    process.env.PUSH_APNS_CONFIG = JSON.stringify({
+      teamId: 'team',
+      keyId: 'key',
+      environment: 'production',
+      privateKey: { type: 'Buffer', data: [1, 2, 3] },
+    });
+    const invalid = await devicesRoute.PUT(request());
+    assert.equal(invalid.status, 503);
+    assert.deepEqual(await invalid.json(), {
+      error: 'Invalid APNs configuration',
+    });
+    process.env.PUSH_APNS_CONFIG = JSON.stringify({
+      teamId: 'team',
+      keyId: 'key',
+      environment: 'production',
+      privateKey: 'fixture-pem-text',
+    });
     activeSession = { id: 'login-other', userId: 'other' };
     assert.equal((await devicesRoute.PUT(request())).status, 200);
     const [device] = await db.select().from(schema.pushDevices);

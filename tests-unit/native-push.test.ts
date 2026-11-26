@@ -1,7 +1,11 @@
 import { before, mock, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createPushSender, signPushJwt } from '../lib/push/provider';
+import {
+  createPushSender,
+  PushProviderError,
+  signPushJwt,
+} from '../lib/push/provider';
 import { pushAlert, pushDestination } from '../lib/push/payload';
 
 let ec: CryptoKeyPair;
@@ -80,6 +84,42 @@ test('APNs and Google assertions have verifiable signatures', async () => {
     );
   }
 });
+
+for (const platform of ['ios', 'android'] as const) {
+  test(`${platform} rejects malformed configuration and object-valued signing keys before delivery`, async () => {
+    const provider = platform === 'ios' ? 'APNs' : 'FCM';
+    const key =
+      platform === 'ios' ? 'PUSH_APNS_CONFIG' : 'PUSH_FCM_SERVICE_ACCOUNT';
+    const config =
+      platform === 'ios'
+        ? {
+            teamId: 'team',
+            keyId: 'key',
+            environment: 'production',
+            privateKey: { type: 'Buffer', data: [1, 2, 3] },
+          }
+        : {
+            project_id: 'project',
+            client_email: 'service@example.invalid',
+            private_key: { type: 'Buffer', data: [1, 2, 3] },
+          };
+    let requests = 0;
+    const request: typeof fetch = async () => {
+      requests++;
+      return new Response(null, { status: 200 });
+    };
+    for (const value of ['invalid-json', 'null', JSON.stringify(config)]) {
+      const send = createPushSender({ [key]: value }, request);
+      await assert.rejects(
+        send({ platform, token: 'fixture-token' }, 'notice'),
+        (error: unknown) =>
+          error instanceof PushProviderError &&
+          error.message === `Invalid ${provider} configuration`
+      );
+    }
+    assert.equal(requests, 0);
+  });
+}
 
 test('APNs sends generic text and opaque ID with correct environment and headers', async () => {
   const request: typeof fetch = async (input, init) => {

@@ -27,7 +27,10 @@ Use `yarn exec wrangler secret put PUSH_APNS_CONFIG` and
 `yarn exec wrangler secret put PUSH_FCM_SERVICE_ACCOUNT` with securely prepared
 JSON. Do not paste credentials into source, issue comments, or build logs.
 An unconfigured platform returns a visible registration error rather than
-pretending it can deliver. Credentials/configuration must match the installed
+pretending it can deliver. Malformed configuration also fails registration
+explicitly. Signing keys must be PEM **strings**, never serialized Buffer
+objects; read `.p8` files as UTF-8 text before JSON-encoding `privateKey`.
+Credentials/configuration must match the installed
 app and its APNs environment; use a separate preview Worker for sandbox testing.
 
 Deploy `wrangler.jsonc` with its additional **every-minute** Cron Trigger.
