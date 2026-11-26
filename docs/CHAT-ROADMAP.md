@@ -101,6 +101,10 @@ photo/initial avatars, clearer timestamps, and 44px primary touch controls. The 
 mobile workspace avoid a redundant outer scrollbar; only their content panes scroll.
 The GIF picker stays inside the visible conversation, including when a multiline draft and
 an existing attachment leave too little room above the composer.
+Federation banners, badges and domain-qualified handles use local profile ownership
+before comparing identity domains, so locally owned accounts retain local presentation
+after a domain change. Accounts without a local profile still use the identity-domain
+comparison.
 
 - The compact composer starts as one row and grows to 128px before scrolling.
   Return inserts a newline on phones; desktop Enter sends, Shift+Enter inserts

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { actorHandle, remoteHost } from '@/app/messages/_lib/format';
 import {
   EMPTY_MESSAGE_DRAFT,
   composerEnterSends,
@@ -28,6 +29,34 @@ const gif = {
   mediaType: 'image/gif',
   url: 'https://media.example.invalid/a.gif',
 };
+
+describe('chat account locality', () => {
+  it('keeps locally owned accounts local after an identity-domain change', () => {
+    const actor = {
+      username: 'pana',
+      domain: 'panamia.club',
+      profileId: 'local-profile',
+    };
+    assert.equal(remoteHost(actor, 'pana.social'), null);
+    assert.equal(actorHandle(actor, 'pana.social'), 'pana');
+  });
+
+  it('keeps genuinely remote accounts distinct even on a legacy local domain', () => {
+    for (const profileId of [null, undefined]) {
+      const actor = { username: 'pana', domain: 'panamia.club', profileId };
+      assert.equal(remoteHost(actor, 'pana.social'), 'panamia.club');
+      assert.equal(actorHandle(actor, 'pana.social'), 'pana@panamia.club');
+    }
+  });
+
+  it('preserves the domain fallback and unknown-local-domain behavior', () => {
+    const actor = { username: 'service', domain: 'pana.social' };
+    assert.equal(remoteHost(actor, 'pana.social'), null);
+    assert.equal(actorHandle(actor, 'pana.social'), 'service');
+    assert.equal(remoteHost(actor, null), null);
+    assert.equal(actorHandle(actor, null), 'service');
+  });
+});
 
 describe('compact chat drafts', () => {
   const voice = { type: 'audio', mediaType: 'audio/mp4', url: '/voice.m4a' };
