@@ -2,9 +2,9 @@
   "@context": "https://schema.org",
   "@type": "PrivacyPolicy",
   "name": "Pana MIA Club Privacy Policy",
-  "version": "1.2",
+  "version": "1.3",
   "status": "effective",
-  "effectiveDate": "2026-11-25",
+  "effectiveDate": "2026-11-26",
   "url": "https://panamia.club/legal/privacy",
   "gpcSupported": true,
   "nativeAgeAssurance": {
@@ -201,6 +201,7 @@
           "label": "Notification Preferences",
           "data": [
             "notification_settings",
+            "message_preview_setting",
             "native_push_device_token",
             "notification_delivery_metadata"
           ],
@@ -214,7 +215,7 @@
             "retention": "Account lifetime",
             "sharedWith": "Apple APNs / Google FCM when enabled",
             "prose": "Notification preferences and optional native push delivery",
-            "blurb": "Your alert choices and, if enabled, a device token tied to your login session. Apple APNs or Google FCM receives the token, generic alert text, and an opaque notification ID, not private message bodies, names, or destination URLs. Tokens are removed at logout or after 30 days without renewal; queued deliveries are kept for at most one day."
+            "blurb": "Your alert choices and, if enabled, a device token tied to your login session. Apple APNs or Google FCM receives the token, alert text, and an opaque notification ID. Message previews default on when newly enabling push, unless this device chose off; existing generic-only registrations stay generic until you enable previews. Enabled previews share sender names and short ordinary DM excerpts with Apple/Google, not attachment URLs or encrypted message contents. Your phone's privacy settings control lock-screen display; Always can reveal previews while locked. Turning previews off does not recall delivered alerts. Tokens are removed at logout or after 30 days without renewal; queued deliveries are kept for at most one day."
           }
         },
         {
@@ -477,6 +478,8 @@
             "profile_image",
             "push_device_token",
             "generic_alert",
+            "optional_message_preview_sender",
+            "optional_message_preview_excerpt",
             "opaque_notification_id"
           ],
           "deletionMechanism": "revoke_grant_delete_tokens_and_push_registration",
@@ -490,6 +493,8 @@
             "name",
             "push_device_token",
             "generic_alert",
+            "optional_message_preview_sender",
+            "optional_message_preview_excerpt",
             "opaque_notification_id"
           ],
           "deletionMechanism": "revoke_grant_delete_tokens_and_push_registration",

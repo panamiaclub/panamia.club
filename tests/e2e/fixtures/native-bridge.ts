@@ -8,10 +8,13 @@ export async function nativeBridge(
     cancelGoogle?: boolean;
     launchUrl?: string;
     mediaLibrary?: boolean;
+    pushNotifications?: boolean;
+    pushGranted?: boolean;
   } = {}
 ) {
   await page.addInitScript((config) => {
     const callbacks: Record<string, (data: unknown) => void> = {};
+    let pushGranted = config.pushGranted ?? false;
     const record = (plugin: string, method: string, args: unknown) => {
       const recorded = JSON.parse(
         sessionStorage.getItem('native-auth-test.calls') ?? '[]'
@@ -36,6 +39,23 @@ export async function nativeBridge(
         name: 'SplashScreen',
         methods: [{ name: 'hide', rtype: 'promise' }],
       },
+      ...(config.pushNotifications
+        ? [
+            {
+              name: 'PushNotifications',
+              methods: [
+                { name: 'checkPermissions', rtype: 'promise' },
+                { name: 'requestPermissions', rtype: 'promise' },
+                { name: 'register', rtype: 'promise' },
+                { name: 'unregister', rtype: 'promise' },
+                { name: 'removeAllDeliveredNotifications', rtype: 'promise' },
+                { name: 'createChannel', rtype: 'promise' },
+                { name: 'addListener', rtype: 'callback' },
+                { name: 'removeListener', rtype: 'callback' },
+              ],
+            },
+          ]
+        : []),
       ...(config.mediaLibrary
         ? [
             {
@@ -70,6 +90,19 @@ export async function nativeBridge(
           args: unknown
         ) => {
           record(plugin, method, args);
+          if (plugin === 'PushNotifications') {
+            if (method === 'requestPermissions') pushGranted = true;
+            if (
+              method === 'checkPermissions' ||
+              method === 'requestPermissions'
+            )
+              return { receive: pushGranted ? 'granted' : 'prompt' };
+            if (method === 'register')
+              queueMicrotask(() =>
+                callbacks.registration?.({ value: 'a'.repeat(64) })
+              );
+            return {};
+          }
           if (plugin === 'FilePicker' && method === 'pickMedia') {
             const error = Reflect.get(window, 'nativeMediaLibraryError');
             if (typeof error === 'string') throw new Error(error);
@@ -119,6 +152,9 @@ export async function nativeBridge(
       if (event instanceof CustomEvent) {
         callbacks.backButton?.({ canGoBack: event.detail });
       }
+    });
+    window.addEventListener('native-auth-test.resume', () => {
+      callbacks.appStateChange?.({ isActive: true });
     });
   }, options);
   await page.route('**/api/auth/get-session', (route) =>

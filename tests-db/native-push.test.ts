@@ -6,6 +6,11 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { getTableConfig } from 'drizzle-orm/pg-core';
 import { eq } from 'drizzle-orm';
 import * as schema from '@/lib/schema';
+import {
+  PushProviderError,
+  validatePushConfiguration,
+} from '@/lib/push/provider';
+import type { PushMessagePreview } from '@/lib/push/payload';
 
 const pg = new PGlite();
 const db = drizzle(pg, { schema });
@@ -14,12 +19,14 @@ const token = 'a'.repeat(64);
 let activeSession: { id: string; userId: string } | null;
 let sendResult: 'sent' | 'invalid' | 'fail' = 'sent';
 const sent: string[] = [];
+const previews: Array<PushMessagePreview | undefined> = [];
 let createNotification: typeof import('@/lib/notifications').createNotification;
 let createNotificationsForTargets: typeof import('@/lib/notifications').createNotificationsForTargets;
 let registerPushDevice: typeof import('@/lib/push/devices').registerPushDevice;
 let deliverPendingPush: typeof import('@/lib/push/deliver').deliverPendingPush;
 let devicesRoute: typeof import('@/app/api/push/devices/route');
 let openRoute: typeof import('@/app/api/push/open/route');
+let formatMessagePreview: typeof import('@/lib/push/message-preview').formatMessagePreview;
 
 mock.module(import.meta.resolve('../lib/db.ts'), { namedExports: { db } });
 mock.module(import.meta.resolve('../auth.ts'), {
@@ -31,11 +38,18 @@ mock.module(import.meta.resolve('../auth.ts'), {
 });
 mock.module(import.meta.resolve('../lib/push/provider.ts'), {
   namedExports: {
-    PushProviderError: class PushProviderError extends Error {},
+    PushProviderError,
+    validatePushConfiguration,
     createPushSender:
-      () => async (_device: unknown, notificationId: string) => {
+      () =>
+      async (
+        _device: unknown,
+        notificationId: string,
+        preview?: PushMessagePreview
+      ) => {
         if (sendResult === 'fail') throw new Error('fixture transient error');
         sent.push(notificationId);
+        previews.push(preview);
         return sendResult;
       },
   },
@@ -49,6 +63,8 @@ before(async () => {
     schema.socialActors,
     schema.socialBlocks,
     schema.notifications,
+    schema.socialStatuses,
+    schema.socialDmRequests,
   ]) {
     const { name, columns } = getTableConfig(table);
     await pg.exec(
@@ -66,19 +82,35 @@ before(async () => {
       'utf8'
     )
   );
+  await pg.exec(`
+    INSERT INTO users (id) VALUES ('legacy');
+    INSERT INTO sessions (id, user_id) VALUES ('legacy', 'legacy');
+    INSERT INTO push_devices (id, user_id, session_id, platform, token)
+      VALUES ('legacy', 'legacy', 'legacy', 'ios', 'legacy-token');
+  `);
+  await pg.exec(
+    readFileSync(
+      new URL('../drizzle/0081_push_message_previews.sql', import.meta.url),
+      'utf8'
+    )
+  );
+  const [legacy] = await db.select().from(schema.pushDevices);
+  assert.equal(legacy.messagePreviews, false);
   ({ createNotification, createNotificationsForTargets } =
     await import('@/lib/notifications'));
   ({ registerPushDevice } = await import('@/lib/push/devices'));
   ({ deliverPendingPush } = await import('@/lib/push/deliver'));
+  ({ formatMessagePreview } = await import('@/lib/push/message-preview'));
   devicesRoute = await import('@/app/api/push/devices/route');
   openRoute = await import('@/app/api/push/open/route');
 });
 
 beforeEach(async () => {
   await pg.exec(
-    'TRUNCATE users, sessions, profiles, social_actors, social_blocks, notifications, push_devices, push_deliveries CASCADE'
+    'TRUNCATE users, sessions, profiles, social_actors, social_blocks, notifications, social_statuses, social_dm_requests, push_devices, push_deliveries CASCADE'
   );
   sent.length = 0;
+  previews.length = 0;
   sendResult = 'sent';
   activeSession = { id: 'login-recipient', userId: 'recipient' };
   for (const id of ['sender', 'recipient', 'other']) {
@@ -224,6 +256,215 @@ test('registration renewal preserves pending jobs; deleting the user removes dev
   assert.equal((await db.select().from(schema.pushDeliveries)).length, 0);
 });
 
+test('preview choices survive omitted renewals, token rotation and account reassignment', async () => {
+  assert.equal(
+    (await db.select().from(schema.pushDevices))[0].messagePreviews,
+    false
+  );
+  await registerPushDevice(activeSession!, {
+    id: deviceId,
+    platform: 'ios',
+    token,
+    messagePreviews: true,
+  });
+  await registerPushDevice(activeSession!, {
+    id: deviceId,
+    platform: 'ios',
+    token,
+  });
+  assert.equal(
+    (await db.select().from(schema.pushDevices))[0].messagePreviews,
+    true
+  );
+  await registerPushDevice(activeSession!, {
+    id: deviceId,
+    platform: 'ios',
+    token,
+    messagePreviews: false,
+  });
+  await registerPushDevice(activeSession!, {
+    id: deviceId,
+    platform: 'ios',
+    token: 'b'.repeat(64),
+  });
+  await registerPushDevice(
+    { id: 'login-other', userId: 'other' },
+    {
+      id: deviceId,
+      platform: 'ios',
+      token: 'b'.repeat(64),
+    }
+  );
+  assert.equal(
+    (await db.select().from(schema.pushDevices))[0].messagePreviews,
+    false
+  );
+});
+
+async function messageFixture(
+  changes: Partial<typeof schema.socialStatuses.$inferInsert> = {}
+) {
+  for (const id of ['sender', 'recipient', 'other']) {
+    await db.insert(schema.profiles).values({
+      id: `${id}-profile`,
+      userId: id,
+      name: id,
+      email: `${id}@example.invalid`,
+    });
+    await db.insert(schema.socialActors).values({
+      id: `${id}-actor`,
+      username: id,
+      name: id === 'sender' ? 'Sender' : id,
+      domain: 'example.invalid',
+      profileId: `${id}-profile`,
+      uri: `https://example.invalid/${id}`,
+      inboxUrl: 'https://example.invalid/inbox',
+      outboxUrl: 'https://example.invalid/outbox',
+      followersUrl: `https://example.invalid/${id}/followers`,
+      followingUrl: 'https://example.invalid/following',
+      publicKey: 'fixture',
+      privateKey: 'fixture',
+    });
+  }
+  await db.insert(schema.socialStatuses).values({
+    id: 'message',
+    uri: 'https://example.invalid/message',
+    actorId: 'sender-actor',
+    type: 'Note',
+    content: '<p>Hello <b>there</b> &amp; welcome</p>',
+    recipientTo: ['https://example.invalid/recipient'],
+    recipientCc: [],
+    isDraft: false,
+    ...changes,
+  });
+  await createNotification({
+    actorId: 'sender',
+    targetId: 'recipient',
+    type: 'Create',
+    context: 'message',
+    objectId: 'message',
+    objectUrl: '/updates',
+  });
+}
+
+test('only enabled devices receive a safe ordinary DM excerpt', async () => {
+  await messageFixture();
+  await db.update(schema.pushDevices).set({ messagePreviews: true });
+  assert.deepEqual(await deliverPendingPush({}), { sent: 1, failed: 0 });
+  assert.deepEqual(previews, [
+    { sender: 'Sender', excerpt: 'Hello there & welcome' },
+  ]);
+  await db.update(schema.pushDevices).set({ messagePreviews: false });
+  await createNotification({
+    actorId: 'sender',
+    targetId: 'recipient',
+    type: 'Create',
+    context: 'message',
+    objectId: 'message',
+  });
+
+  test('preview text decodes HTML without hidden content, URLs, control characters or broken Unicode', () => {
+    const preview = formatMessagePreview(
+      '<b>Sender</b>&#x202e;',
+      '<script>hidden</script><p>Hello &amp; welcome</p><a href="https://example.invalid/private">Photo</a><img src="https://example.invalid/secret" /><p>https://example.invalid/link</p>'
+    );
+    assert.deepEqual(preview, {
+      sender: 'Sender',
+      excerpt: 'Hello & welcome Photo [link]',
+    });
+    const long = formatMessagePreview('N'.repeat(60), '🙂'.repeat(150))!;
+    assert.equal(Array.from(long.sender).length, 48);
+    assert.equal(Array.from(long.excerpt).length, 120);
+    assert.ok(long.excerpt.endsWith('...'));
+    assert.equal(long.excerpt.includes('\uFFFD'), false);
+  });
+  await deliverPendingPush({});
+  assert.equal(previews[1], undefined);
+});
+
+for (const [name, changes] of [
+  ['another recipient', { recipientTo: ['https://example.invalid/other'] }],
+  ['another author', { actorId: 'other-actor' }],
+  [
+    'public audience',
+    { recipientCc: ['https://www.w3.org/ns/activitystreams#Public'] },
+  ],
+  ['expired message', { expiresAt: new Date(0) }],
+  ['draft message', { isDraft: true }],
+  ['private group content', { groupId: 'private-group' }],
+] as const) {
+  test(`message delivery cannot disclose ${name}`, async () => {
+    await messageFixture(changes);
+    await db.update(schema.pushDevices).set({ messagePreviews: true });
+    assert.deepEqual(await deliverPendingPush({}), { sent: 0, failed: 0 });
+    assert.equal(previews.length, 0);
+  });
+}
+
+test('Requests added after enqueue suppress both generic and rich message delivery', async () => {
+  await messageFixture();
+  await db.insert(schema.socialDmRequests).values({
+    id: 'request',
+    senderActorId: 'sender-actor',
+    recipientActorId: 'recipient-actor',
+    state: 'pending',
+  });
+
+  test('message deletion, reading and blocks after enqueue do not send previews', async () => {
+    await messageFixture();
+    await db.update(schema.pushDevices).set({ messagePreviews: true });
+    await db.update(schema.notifications).set({ read: true });
+    await deliverPendingPush({});
+    assert.equal(previews.length, 0);
+    await db.update(schema.notifications).set({ read: false });
+    await createNotification({
+      actorId: 'sender',
+      targetId: 'recipient',
+      type: 'Create',
+      context: 'message',
+      objectId: 'message',
+    });
+    await db.insert(schema.socialBlocks).values({
+      actorId: 'sender-actor',
+      targetActorId: 'recipient-actor',
+      kind: 'block',
+    });
+    await deliverPendingPush({});
+    assert.equal(previews.length, 0);
+    await db.delete(schema.socialBlocks);
+    await createNotification({
+      actorId: 'sender',
+      targetId: 'recipient',
+      type: 'Create',
+      context: 'message',
+      objectId: 'message',
+    });
+    await db.delete(schema.socialStatuses);
+    await deliverPendingPush({});
+    assert.equal(previews.length, 0);
+  });
+  assert.deepEqual(await deliverPendingPush({}), { sent: 0, failed: 0 });
+  assert.equal(sent.length, 0);
+});
+
+for (const [name, changes] of [
+  [
+    'encrypted envelope',
+    { type: 'EncryptedNote', content: 'ciphertext-not-a-preview' },
+  ],
+  ['content warning', { contentWarning: 'Sensitive content' }],
+  [
+    'attachment-only message',
+    { content: '<p><img src="https://example.invalid/private-photo" /></p>' },
+  ],
+] as const) {
+  test(`${name} remains generic even with previews enabled`, async () => {
+    await messageFixture(changes);
+    await db.update(schema.pushDevices).set({ messagePreviews: true });
+    assert.deepEqual(await deliverPendingPush({}), { sent: 1, failed: 0 });
+    assert.deepEqual(previews, [undefined]);
+  });
+}
 test('device endpoint requires same-origin authentication and removes only its session devices', async () => {
   const request = (origin: string, method = 'DELETE') =>
     new Request('https://panamia.club/api/push/devices', {
@@ -255,7 +496,7 @@ test('device endpoint requires same-origin authentication and removes only its s
 
 test('registration derives its owner from the session and reports missing provider setup', async () => {
   const previous = process.env.PUSH_APNS_CONFIG;
-  const request = () =>
+  const request = (messagePreviews?: unknown) =>
     new Request('https://panamia.club/api/push/devices', {
       method: 'PUT',
       headers: {
@@ -267,17 +508,46 @@ test('registration derives its owner from the session and reports missing provid
         token,
         platform: 'ios',
         userId: 'sender',
+        messagePreviews,
       }),
     });
   try {
     delete process.env.PUSH_APNS_CONFIG;
     assert.equal((await devicesRoute.PUT(request())).status, 503);
-    process.env.PUSH_APNS_CONFIG = 'fixture-config-presence';
+    process.env.PUSH_APNS_CONFIG = JSON.stringify({
+      teamId: 'team',
+      keyId: 'key',
+      environment: 'production',
+      privateKey: { type: 'Buffer', data: [1, 2, 3] },
+    });
+    const invalid = await devicesRoute.PUT(request());
+    assert.equal(invalid.status, 503);
+    assert.deepEqual(await invalid.json(), {
+      error: 'Invalid APNs configuration',
+    });
+    process.env.PUSH_APNS_CONFIG = JSON.stringify({
+      teamId: 'team',
+      keyId: 'key',
+      environment: 'production',
+      privateKey: 'fixture-pem-text',
+    });
     activeSession = { id: 'login-other', userId: 'other' };
-    assert.equal((await devicesRoute.PUT(request())).status, 200);
+    assert.equal((await devicesRoute.PUT(request('false'))).status, 400);
+    const enabled = await devicesRoute.PUT(request(true));
+    assert.equal(enabled.status, 200);
+    assert.deepEqual(await enabled.json(), {
+      success: true,
+      messagePreviews: true,
+    });
+    assert.equal((await devicesRoute.PUT(request(false))).status, 200);
+    assert.deepEqual(await (await devicesRoute.PUT(request())).json(), {
+      success: true,
+      messagePreviews: false,
+    });
     const [device] = await db.select().from(schema.pushDevices);
     assert.equal(device.userId, 'other');
     assert.equal(device.sessionId, 'login-other');
+    assert.equal(device.messagePreviews, false);
   } finally {
     if (previous === undefined) delete process.env.PUSH_APNS_CONFIG;
     else process.env.PUSH_APNS_CONFIG = previous;

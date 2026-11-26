@@ -4,10 +4,15 @@ import { resolvePushSession } from '@/auth';
 import { db } from '@/lib/db';
 import { pushDevices } from '@/lib/schema';
 import { registerPushDevice } from '@/lib/push/devices';
+import {
+  PushProviderError,
+  validatePushConfiguration,
+} from '@/lib/push/provider';
 
 const deviceSchema = z.object({
   id: z.uuid(),
   platform: z.enum(['ios', 'android']),
+  messagePreviews: z.boolean().optional(),
   token: z
     .string()
     .min(20)
@@ -60,7 +65,21 @@ async function mutate(request: Request, remove: boolean) {
           { error: 'Push delivery is not configured for this platform yet.' },
           503
         );
-      await registerPushDevice(session, parsed.data);
+      try {
+        validatePushConfiguration(
+          {
+            PUSH_APNS_CONFIG: process.env.PUSH_APNS_CONFIG,
+            PUSH_FCM_SERVICE_ACCOUNT: process.env.PUSH_FCM_SERVICE_ACCOUNT,
+          },
+          parsed.data.platform
+        );
+      } catch (error) {
+        if (error instanceof PushProviderError)
+          return reply({ error: error.message }, 503);
+        throw error;
+      }
+      const messagePreviews = await registerPushDevice(session, parsed.data);
+      return reply({ success: true, messagePreviews });
     }
     return reply({ success: true });
   } catch {
