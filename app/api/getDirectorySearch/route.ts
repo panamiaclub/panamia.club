@@ -1,33 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import { forceInt, forceString } from '@/lib/standardized';
 import { getSearch, isDirectorySort } from '@/lib/server/directory';
 import { parseDirectoryRadius } from '@/lib/directory-radius';
 
-/**
- * The Workers edge cache, when there is one.
- *
- * This route has always carried `s-maxage`, but a header alone caches
- * nothing: Cloudflare does not run responses returned from a Worker's fetch
- * handler through its cache, so the only thing honouring it was the visitor's
- * own browser. Every first search from every visitor went to Postgres, which
- * is exactly the traffic the TTL was written to absorb.
- *
- * Typed structurally rather than pulled from @cloudflare/workers-types, which
- * this project does not install: the DOM lib's CacheStorage has no `default`,
- * so the global needs narrowing either way. Returns null off-Workers — the
- * plain Node dev server has no such global — so the caller degrades to
- * querying every time rather than throwing.
- */
-interface EdgeCache {
-  match(request: Request): Promise<Response | undefined>;
-  put(request: Request, response: Response): Promise<void>;
-}
-
-function edgeCache(): EdgeCache | null {
-  const store = (globalThis as { caches?: { default?: unknown } }).caches;
-  const candidate = store?.default as EdgeCache | undefined;
-  return candidate && typeof candidate.match === 'function' ? candidate : null;
-}
+// Cache query variants in the shared data cache, not caches.default or the
+// browser: visibility changes must be able to invalidate every variant.
+const cachedSearch = unstable_cache(getSearch, ['directory-search'], {
+  revalidate: 300,
+  tags: ['directory'],
+});
 
 /**
  * Coarsen a coordinate before it is used.
@@ -78,20 +60,6 @@ export async function GET(request: NextRequest) {
   const languages = forceString(searchParams.get('lang') || undefined, '');
   const freeOnly = searchParams.get('free') === 'true';
 
-  // Public, anonymous directory data — cacheable at the edge. Keyed by full
-  // URL, so each distinct search caches separately.
-  //
-  // Empty searches are ordinary paginated directory results now, so browse
-  // responses are as cacheable as term searches.
-  const cache = edgeCache();
-  const cacheKey = cache ? new Request(request.url, { method: 'GET' }) : null;
-  if (cache && cacheKey) {
-    // Never let a cache fault take the endpoint down with it — a miss is a
-    // slow answer, an exception here is no answer.
-    const hit = await cache.match(cacheKey).catch(() => undefined);
-    if (hit) return hit;
-  }
-
   const params = {
     pageNum,
     pageLimit,
@@ -110,29 +78,7 @@ export async function GET(request: NextRequest) {
     freeOnly,
   };
 
-  // Read by the browser and by the edge cache above.
-  const cacheHeaders = {
-    'Cache-Control':
-      'public, max-age=300, s-maxage=300, stale-while-revalidate=600',
-  };
-
-  const apiResponse = await getSearch(params);
-  const response = NextResponse.json(
-    apiResponse ?? {
-      success: true,
-      data: [],
-      pagination: { page: pageNum, limit: pageLimit, total: 0, totalPages: 0 },
-    },
-    { headers: cacheHeaders }
-  );
-
-  if (cache && cacheKey) {
-    // clone() because put() consumes the body it is handed, and the original
-    // still has to be returned to the caller. Awaited rather than fired and
-    // forgotten: a route handler has no executionCtx.waitUntil, so an
-    // unawaited put races the response and is cancelled more often than not.
-    await cache.put(cacheKey, response.clone()).catch(() => {});
-  }
-
-  return response;
+  return NextResponse.json(await cachedSearch(params), {
+    headers: { 'Cache-Control': 'no-store' },
+  });
 }

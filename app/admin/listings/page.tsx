@@ -5,7 +5,8 @@ import axios from 'axios';
 import Link from 'next/link';
 
 import { useAdminGate } from '@/components/Admin/gate';
-import { AdminPageHeader, Panel, StatBand } from '@/components/Admin/parts';
+import { Panel, StatBand } from '@/components/Admin/parts';
+import { AdminDirectoryDashboard } from '@/components/Admin/directory-live';
 import PageMeta from '@/components/PageMeta';
 import { ADMIN_CHROME } from '@/lib/admin/theme';
 import { listingPreviewPath, listingPublicPath } from '@/lib/listing-url';
@@ -83,7 +84,8 @@ const FLAG_FILTERS: { value: FlagFilter; label: string }[] = [
 ];
 
 export default function AdminListingsPage() {
-  const { gate } = useAdminGate();
+  const { gate, allowed } = useAdminGate();
+  const [directoryRevision, setDirectoryRevision] = useState(0);
 
   const [pending, setPending] = useState<QueueListing[]>([]);
   const [decided, setDecided] = useState<DecidedListing[]>([]);
@@ -117,8 +119,8 @@ export default function AdminListingsPage() {
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (allowed) load();
+  }, [load, allowed]);
 
   const decide = useCallback(
     async (
@@ -137,6 +139,7 @@ export default function AdminListingsPage() {
           reason,
         });
         setPending((rows) => rows.filter((row) => row.id !== listing.id));
+        setDirectoryRevision((revision) => revision + 1);
         setDecided((rows) => [
           {
             id: listing.id,
@@ -200,42 +203,19 @@ export default function AdminListingsPage() {
     <>
       <PageMeta title="Directory listings | Pana Admin" desc="" />
 
-      <AdminPageHeader
-        eyebrow="Directory"
-        title="Directory listings"
-        description={
-          <p>
-            Applications to the directory that have not been answered yet.
-            Oldest first, because the oldest one is the one somebody has been
-            waiting on.
-          </p>
-        }
-      />
+      <AdminDirectoryDashboard refreshKey={directoryRevision} />
+      <section id="application-review" className="scroll-mt-24 pb-6">
+        <h2 className="text-2xl font-black tracking-tight">
+          Application review
+        </h2>
+        <p className="text-pana-ink/70 mt-2 text-sm">
+          New applications, oldest first. Approve a business here before it
+          appears in the directory dashboard.
+        </p>
+      </section>
 
       <div className="flex flex-col gap-6">
         <StatBand stats={listingStats(pending)} />
-
-        {/* The honest note about why this page exists. Sits under the band
-         * rather than above it so the numbers land first — the numbers are
-         * the argument and this is the explanation of it. */}
-        <section
-          className={`rounded-xl border-2 border-dashed ${ADMIN_CHROME.BORDER} bg-pana-cream p-5`}
-        >
-          <h2 className="text-sm font-extrabold tracking-wide uppercase">
-            Why some of these are a month old
-          </h2>
-          <p className="text-pana-ink/70 mt-2 max-w-3xl text-sm leading-relaxed">
-            Until this screen, an application could only be answered by clicking
-            a link in the email it generated. That link still works and still
-            posts to{' '}
-            <code className="text-pana-ink/60">/api/admin/profile/action</code>{' '}
-            — staff answer applications from phones that are not signed in, and
-            taking that away would cost more than it saved. What did not exist
-            was any way to see what was waiting, so an application whose email
-            got buried had nothing left pointing at it. Everything below was
-            found by reading the table, not the inbox.
-          </p>
-        </section>
 
         {loadError && (
           <p className="border-pana-red/50 text-pana-ink rounded-xl border-2 bg-white p-4 text-sm font-bold">
