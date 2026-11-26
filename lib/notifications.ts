@@ -505,6 +505,12 @@ export function getNotificationMessage(notif: {
       }
       break;
 
+    case 'like':
+      return `${actor} liked your post`;
+
+    case 'reply':
+      return `${actor} replied to your post`;
+
     case 'system':
       return notif.message || 'System notification';
 

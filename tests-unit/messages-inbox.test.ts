@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { AppRouterContext } from 'vinext/shims/internal/app-router-context';
-import { appRouterInstance } from 'vinext/shims/navigation';
+import { appRouterInstance } from '../tests/app-router';
 import { SendMessageButton } from '@/components/social/SendMessageButton';
 import type { GroupChatConversation } from '@/lib/chat';
 import {

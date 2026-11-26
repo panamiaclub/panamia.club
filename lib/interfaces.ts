@@ -260,7 +260,9 @@ export type NotificationContext =
   | 'system'
   | 'event'
   | 'group'
-  | 'group_membership';
+  | 'group_membership'
+  | 'like'
+  | 'reply';
 
 export interface NotificationInterface {
   _id: string;
