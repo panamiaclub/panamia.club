@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { createElement, type ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AppRouterContext } from 'vinext/shims/internal/app-router-context';
-import { appRouterInstance } from 'vinext/shims/navigation';
+import { appRouterInstance } from '../tests/app-router';
 
 import { HOUSES, parseHouseFocus } from '../lib/connectors/model';
 import { ConnectorHousePills } from '../components/connectors/dashboard-parts';

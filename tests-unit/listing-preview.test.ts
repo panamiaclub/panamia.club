@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { AppRouterContext } from 'vinext/shims/internal/app-router-context';
-import { appRouterInstance } from 'vinext/shims/navigation';
+import { appRouterInstance } from '../tests/app-router';
 
 import { ProfileHero } from '@/app/p/[user]/_components/profile-hero';
 import { ProfileViewer } from '@/app/p/[user]/_components/profile-viewer';
