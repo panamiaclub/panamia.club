@@ -611,7 +611,7 @@ function MessageFrame({
         {content && <div className={styles.compactBody}>{content}</div>}
         {!!attachments?.length && (
           <div className={styles.compactMedia}>
-            <AttachmentGrid attachments={attachments} />
+            <AttachmentGrid attachments={attachments} imageViewer />
           </div>
         )}
         <div className={styles.messageMeta}>

@@ -1403,6 +1403,17 @@ test(
     await expect(
       history(page).locator(`img[src="${photos.uploads[0].url}"]`)
     ).toBeVisible();
+    await history(page)
+      .getByRole('button', { name: 'View image: camera.jpg', exact: true })
+      .click();
+    const viewer = page.getByRole('dialog', { name: 'Image viewer' });
+    await expect(viewer.getByRole('img', { name: 'camera.jpg' })).toBeVisible();
+    await expect(viewer.getByRole('img')).toHaveAttribute(
+      'src',
+      photos.uploads[0].url
+    );
+    await viewer.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(viewer).toHaveCount(0);
     await expect(
       page.getByRole('button', { name: 'Remove photo', exact: true })
     ).toHaveCount(0);
@@ -1411,6 +1422,78 @@ test(
     ).toBeEnabled();
   }
 );
+
+for (const viewport of [
+  { width: 1440, height: 960 },
+  { width: 390, height: 844 },
+]) {
+  test(
+    `opens message images in a full-screen viewer at ${viewport.width}px without leaving the conversation`,
+    { tag: '@native' },
+    async ({ page, context }) => {
+      const fixture = await openMessages(page);
+      fixture.messages.jdowns.push({
+        ...fixture.makeMessage('picture-message', fixture.people.jdowns, ''),
+        attachments: [{ ...fixture.attachment, id: 'picture-attachment' }],
+      });
+      fixture.notify('jdowns');
+      await page.setViewportSize(viewport);
+      await row(page, 'J. Downs').click();
+      const trigger = history(page).getByRole('button', {
+        name: `View image: ${fixture.attachment.name}`,
+        exact: true,
+      });
+      await expect(trigger).toBeVisible();
+      await trigger.scrollIntoViewIfNeeded();
+      await trigger.focus();
+      const url = page.url();
+      const pageCount = context.pages().length;
+      const scrollTop = await history(page).evaluate(
+        (element) => element.scrollTop
+      );
+      await trigger.click();
+      const viewer = page.getByRole('dialog', { name: 'Image viewer' });
+      await expect(viewer).toBeVisible();
+      const image = viewer.getByRole('img');
+      await expect(image).toHaveAttribute('src', fixture.attachment.url);
+      await expect(image).toHaveCSS('object-fit', 'contain');
+      await expect
+        .poll(() =>
+          image.evaluate(
+            (element) => (element as HTMLImageElement).naturalWidth
+          )
+        )
+        .toBeGreaterThan(0);
+      await expect
+        .poll(async () => {
+          const bounds = await viewer.boundingBox();
+          return (
+            bounds && {
+              x: Math.round(bounds.x),
+              y: Math.round(bounds.y),
+              width: Math.round(bounds.width),
+              height: Math.round(bounds.height),
+            }
+          );
+        })
+        .toEqual({ x: 0, y: 0, ...viewport });
+      expect(page.url()).toBe(url);
+      expect(context.pages()).toHaveLength(pageCount);
+      await viewer.getByRole('button', { name: 'Close', exact: true }).click();
+      await expect(viewer).toHaveCount(0);
+      await expect(trigger).toBeFocused();
+      expect(await history(page).evaluate((element) => element.scrollTop)).toBe(
+        scrollTop
+      );
+      await page.keyboard.press('Enter');
+      await expect(viewer).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(viewer).toHaveCount(0);
+      await expect(trigger).toBeFocused();
+      expect(fixture.pageErrors).toEqual([]);
+    }
+  );
+}
 
 test('keeps failed photo uploads and captions with their originating person and retries without a text-only send', async ({
   page,
