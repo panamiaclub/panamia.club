@@ -11,6 +11,12 @@ export interface MessageDraft {
   photoFile: File | null;
   isUploadingPhoto: boolean;
   photoError: string | null;
+  voice: DraftAttachment | null;
+  voiceFile: File | null;
+  voiceDuration: number | null;
+  isRecordingVoice: boolean;
+  isUploadingVoice: boolean;
+  voiceError: string | null;
 }
 
 export const EMPTY_MESSAGE_DRAFT: MessageDraft = {
@@ -22,28 +28,46 @@ export const EMPTY_MESSAGE_DRAFT: MessageDraft = {
   photoFile: null,
   isUploadingPhoto: false,
   photoError: null,
+  voice: null,
+  voiceFile: null,
+  voiceDuration: null,
+  isRecordingVoice: false,
+  isUploadingVoice: false,
+  voiceError: null,
 };
 
 export function messageDraftAttachments(
   draft: MessageDraft
 ): DraftAttachment[] {
-  return [draft.photo, draft.gif].filter(
+  return [draft.photo, draft.gif, draft.voice].filter(
     (attachment): attachment is DraftAttachment => attachment !== null
   );
 }
 
 export function messageDraftCanSend(draft: MessageDraft): boolean {
   return (
-    !!(draft.text.trim() || draft.gif || draft.photo) &&
+    !!(draft.text.trim() || draft.gif || draft.photo || draft.voice) &&
     !draft.isMirroring &&
     !draft.isUploadingPhoto &&
-    !draft.photoFile
+    !draft.photoFile &&
+    !draft.isRecordingVoice &&
+    !draft.isUploadingVoice &&
+    !draft.voiceFile
   );
 }
 
 export function messageDraftPreview(draft: MessageDraft): string | null {
   return (
     (draft.text.trim() ? draft.text : '') ||
+    (draft.isRecordingVoice
+      ? 'Recording voice note...'
+      : draft.isUploadingVoice
+        ? 'Uploading voice note...'
+        : draft.voiceFile
+          ? 'Voice note not uploaded'
+          : draft.voice
+            ? 'Voice note'
+            : null) ||
     (draft.isUploadingPhoto
       ? 'Uploading photo...'
       : draft.photoFile || draft.photoError

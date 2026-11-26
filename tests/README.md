@@ -73,6 +73,11 @@ Tests run automatically on:
 
 See `.github/workflows/playwright.yml` for CI configuration.
 
+Static component suites in `tests-unit/` and `tests-db/` use the typed router
+fixture in `tests/app-router.ts` with `AppRouterContext.Provider`. Navigation
+during rendering fails explicitly; the fixture does not depend on a private
+router singleton being exported by vinext's navigation shim.
+
 ## Test Coverage
 
 ### Public Navigation

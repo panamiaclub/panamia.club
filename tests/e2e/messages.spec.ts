@@ -15,6 +15,11 @@ import {
   chooseChatPhoto,
   installChatPhotoFixtures,
 } from './fixtures/chat-photo';
+import {
+  expectMicrophoneReleased,
+  installChatVoiceFixtures,
+  voiceSample,
+} from './fixtures/chat-voice';
 
 const conversation = (page: Page) =>
   page.getByRole('region', { name: 'Open conversation' });
@@ -257,6 +262,9 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
   );
   await page.route('**/fixture/mirrored.gif', (route) =>
     route.fulfill({ contentType: 'image/gif', body: gifPixel })
+  );
+  await page.route('**/fixture/voice.wav', (route) =>
+    route.fulfill({ contentType: 'audio/wav', body: voiceSample() })
   );
   await page.route('**/api/**', async (route) => {
     const request = route.request();
@@ -1105,7 +1113,7 @@ test('requires request acceptance, exposes triage failures, and handles aged-out
   ).toBeVisible();
 });
 
-test('hides legacy audio while keeping federation, message text, and refusal states intact', async ({
+test('plays existing voice notes while keeping federation, message text, and refusal states intact', async ({
   page,
 }) => {
   const fixture = await openMessages(page);
@@ -1114,23 +1122,20 @@ test('hides legacy audio while keeping federation, message text, and refusal sta
     conversation(page).getByText('On indieweb.social.')
   ).toBeVisible();
   await row(page, 'Bee Maria').click();
-  await expect(conversation(page).locator('audio')).toHaveCount(0);
+  const voice = conversation(page).locator('audio');
+  await expect(voice).toBeVisible();
+  await expect(voice).toHaveAttribute('controls', '');
   await expect(
     conversation(page).getByText('I recorded a few thoughts.')
   ).toBeVisible();
   await expect(
-    conversation(page).getByText('Attachment unavailable.', { exact: true })
-  ).toBeVisible();
-  await expect(
     conversation(page).locator('[src="/fixture/voice.wav"]')
-  ).toHaveCount(0);
+  ).toHaveCount(1);
   await page.setViewportSize({ width: 390, height: 844 });
-  const notice = await conversation(page)
-    .getByText('Attachment unavailable.', { exact: true })
-    .boundingBox();
+  const notice = await voice.boundingBox();
   expect(notice!.x + notice!.width).toBeLessThanOrEqual(390);
   await page.screenshot({
-    path: test.info().outputPath('messages-mobile-retired-audio.png'),
+    path: test.info().outputPath('messages-mobile-voice-note.png'),
   });
   await page.setViewportSize({ width: 1440, height: 960 });
   await row(page, 'R. Nieves').click();
@@ -1153,6 +1158,225 @@ test('hides legacy audio while keeping federation, message text, and refusal sta
     history(page).getByText('Keep this even if the policy changed.', {
       exact: true,
     })
+  ).toBeVisible();
+});
+
+test('records, previews, sends, and plays a voice note without a caption @native', async ({
+  page,
+  browserName,
+}) => {
+  const fixture = await openMessages(page);
+  const voice = await installChatVoiceFixtures(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await row(page, 'J. Downs').click();
+  await page
+    .getByRole('button', { name: 'Record a voice note', exact: true })
+    .click();
+  const stop = page.getByRole('button', {
+    name: 'Stop voice recording',
+    exact: true,
+  });
+  await expect(stop).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Send message', exact: true })
+  ).toBeDisabled();
+  await expect(page.getByRole('timer')).toContainText('0:01');
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth)
+  ).toBeLessThanOrEqual(390);
+  await stop.click();
+  const preview = page.getByRole('group', { name: 'Attached voice note' });
+  await expect(preview.locator('audio')).toBeVisible();
+  await page.screenshot({
+    path: test.info().outputPath('messages-voice-note-preview.png'),
+  });
+  await expectMicrophoneReleased(page);
+  await expect.poll(() => voice.uploads.length).toBe(1);
+  expect(voice.uploads[0].duration).toBeGreaterThan(0);
+  expect(voice.uploads[0].duration).toBeLessThanOrEqual(300);
+  expect(voice.uploads[0].type).toMatch(/^audio\/(mp4|webm)$/);
+  expect(fixture.posts).toHaveLength(0);
+  const send = page.getByRole('button', {
+    name: 'Send message',
+    exact: true,
+  });
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect.poll(() => fixture.posts.length).toBe(1);
+  expect(fixture.posts[0]).toMatchObject({
+    content: '',
+    visibility: 'direct',
+    recipientActorIds: ['jdowns'],
+    attachments: [
+      { type: 'audio', url: 'https://uploads.chat.invalid/voice-1' },
+    ],
+  });
+  const audio = history(page).locator('audio');
+  await expect(audio).toBeVisible();
+  await expect(audio).toHaveAttribute('controls', '');
+  if (browserName === 'webkit') {
+    // This Windows WebKit build has no media backend; test its error recovery.
+    await audio.dispatchEvent('error');
+    await expect(history(page).getByRole('alert')).toContainText(
+      'Could not load this voice note'
+    );
+    await history(page)
+      .getByRole('button', { name: 'Retry playback', exact: true })
+      .click();
+  } else {
+    await expect
+      .poll(() =>
+        audio.evaluate(
+          (element) => element instanceof HTMLAudioElement && element.readyState
+        )
+      )
+      .toBeGreaterThan(0);
+    await audio.evaluate((element) => {
+      if (!(element instanceof HTMLAudioElement))
+        throw new Error('Expected an audio player');
+      return element.play();
+    });
+    await expect
+      .poll(() =>
+        audio.evaluate(
+          (element) => element instanceof HTMLAudioElement && element.ended
+        )
+      )
+      .toBe(true);
+  }
+  expect(fixture.pageErrors).toEqual([]);
+});
+
+test('cancels recording, releases the microphone on a thread switch, and explains denied permission @native', async ({
+  page,
+}) => {
+  const fixture = await openMessages(page);
+  const voice = await installChatVoiceFixtures(page);
+  const record = page.getByRole('button', {
+    name: 'Record a voice note',
+    exact: true,
+  });
+  await record.click();
+  await expect(
+    page.getByRole('button', { name: 'Stop voice recording', exact: true })
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Cancel voice recording', exact: true })
+    .click();
+  await expectMicrophoneReleased(page);
+  await expect(
+    page.getByRole('group', { name: 'Attached voice note' })
+  ).toHaveCount(0);
+  await record.click();
+  await expect(
+    page.getByRole('button', { name: 'Stop voice recording', exact: true })
+  ).toBeVisible();
+  await row(page, 'Mart Ruiz').click();
+  await expectMicrophoneReleased(page);
+  await expect(record).toBeEnabled();
+  await page.evaluate(() => {
+    window.chatVoiceFixture.denied = true;
+  });
+  await record.click();
+  await expect(page.getByRole('alert')).toContainText(
+    'Microphone access was denied'
+  );
+  await input(page, 'Mart Ruiz').fill('Text still works');
+  await expect(
+    page.getByRole('button', { name: 'Send message', exact: true })
+  ).toBeEnabled();
+  expect(voice.uploads).toHaveLength(0);
+  expect(fixture.posts).toHaveLength(0);
+  await page
+    .getByRole('list', { name: 'Conversations', exact: true })
+    .getByRole('button', { name: /Garden Crew/ })
+    .click();
+  await expect(record).toHaveCount(0);
+});
+
+test('retains failed voice uploads in their original draft and retries failed sends @native', async ({
+  page,
+}) => {
+  const fixture = await openMessages(page, { failSends: 1 });
+  let releaseUpload: () => void = () => {};
+  const heldUpload = new Promise<void>((resolve) => {
+    releaseUpload = resolve;
+  });
+  let holdUpload = false;
+  const voice = await installChatVoiceFixtures(page, {
+    failUploads: 1,
+    hold: () => (holdUpload ? heldUpload : Promise.resolve()),
+  });
+  await input(page).fill('Keep my voice caption');
+  await page
+    .getByRole('button', { name: 'Record a voice note', exact: true })
+    .click();
+  await expect(page.getByRole('timer')).toContainText('0:01');
+  await page
+    .getByRole('button', { name: 'Stop voice recording', exact: true })
+    .click();
+  await expect(
+    page.getByRole('button', { name: 'Retry voice note upload', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Send message', exact: true })
+  ).toBeDisabled();
+  await row(page, 'Mart Ruiz').click();
+  await expect(
+    page.getByRole('group', { name: 'Attached voice note' })
+  ).toHaveCount(0);
+  await row(page, 'J. Downs').click();
+  await expect(input(page)).toHaveValue('Keep my voice caption');
+  holdUpload = true;
+  await page
+    .getByRole('button', { name: 'Retry voice note upload', exact: true })
+    .click();
+  await expect.poll(() => voice.uploads.length).toBe(2);
+  await row(page, 'Mart Ruiz').click();
+  await expect(
+    page.getByRole('group', { name: 'Attached voice note' })
+  ).toHaveCount(0);
+  releaseUpload();
+  await row(page, 'J. Downs').click();
+  const send = page.getByRole('button', {
+    name: 'Send message',
+    exact: true,
+  });
+  await expect(send).toBeEnabled();
+  expect(voice.uploads).toHaveLength(2);
+  await send.click();
+  const retry = page.getByRole('button', { name: 'Retry', exact: true });
+  await expect(retry).toBeVisible();
+  await retry.click();
+  await expect.poll(() => fixture.posts.length).toBe(2);
+  expect(fixture.posts[1]).toEqual(fixture.posts[0]);
+  expect(voice.uploads).toHaveLength(2);
+});
+
+test('stops recording automatically at the five-minute limit @native', async ({
+  page,
+}) => {
+  await openMessages(page);
+  const voice = await installChatVoiceFixtures(page);
+  await page.clock.install();
+  await page
+    .getByRole('button', { name: 'Record a voice note', exact: true })
+    .click();
+  const stop = page.getByRole('button', {
+    name: 'Stop voice recording',
+    exact: true,
+  });
+  await expect(stop).toBeVisible();
+  await expect(page.getByRole('timer')).toContainText('0:01');
+  await page.clock.fastForward(298_000);
+  await expect(stop).toBeVisible();
+  await page.clock.fastForward(2_000);
+  await expect(stop).toHaveCount(0);
+  await expectMicrophoneReleased(page);
+  await expect.poll(() => voice.uploads.length).toBe(1);
+  expect(voice.uploads[0].duration).toBe(300);
+  await expect(
+    page.getByRole('group', { name: 'Attached voice note' })
   ).toBeVisible();
 });
 

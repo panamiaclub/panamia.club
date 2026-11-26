@@ -8,6 +8,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { isAudioAttachment, isVisualAttachment } from '@/lib/media/attachments';
+import { VoiceNotePlayer } from './VoiceNotePlayer';
 
 export interface AttachmentDisplay {
   id: string;
@@ -23,6 +24,7 @@ export interface AttachmentDisplay {
 interface AttachmentGridProps {
   attachments: AttachmentDisplay[];
   imageViewer?: boolean;
+  audioPlayback?: boolean;
 }
 
 function VideoPlayer({ attachment }: { attachment: AttachmentDisplay }) {
@@ -112,14 +114,16 @@ function ImageItem({
 export function AttachmentGrid({
   attachments,
   imageViewer = false,
+  audioPlayback = false,
 }: AttachmentGridProps) {
   if (!attachments.length) return null;
 
   const visible = attachments.filter(isVisualAttachment);
   const images = visible.filter((a) => a.type === 'image');
   const videos = visible.filter((a) => a.type === 'video');
+  const audio = audioPlayback ? attachments.filter(isAudioAttachment) : [];
 
-  if (!visible.length) {
+  if (!visible.length && !audio.length) {
     return attachments.some(isAudioAttachment) ? (
       <p className="text-muted-foreground mt-3 text-sm">
         Attachment unavailable.
@@ -151,6 +155,9 @@ export function AttachmentGrid({
       {/* Video players */}
       {videos.map((a) => (
         <VideoPlayer key={a.id} attachment={a} />
+      ))}
+      {audio.map((attachment) => (
+        <VoiceNotePlayer key={attachment.id} url={attachment.url} />
       ))}
     </div>
   );

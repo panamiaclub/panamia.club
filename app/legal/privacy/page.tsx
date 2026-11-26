@@ -180,10 +180,10 @@ export default function PrivacyPolicyPage() {
           <p>
             Photos, video, and other files are processed when you choose to
             upload or send them. Camera and microphone permissions support
-            features you request, such as capturing media or joining a call.
-            Declining a permission prevents the associated feature. A
-            location-based feature uses the location or address you supply for
-            nearby results or a listing.
+            features you request, such as capturing media, recording a voice
+            note, or joining a call. Declining a permission prevents the
+            associated feature. A location-based feature uses the location or
+            address you supply for nearby results or a listing.
           </p>
           <p>
             Stripe processes payments. We use associated contact details,

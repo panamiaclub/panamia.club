@@ -43,12 +43,15 @@ import {
 import { listMutualFollowIds } from './follow';
 import { notifyDirectMessage } from '@/lib/dm-stream';
 import { notifyGroupPosted } from './group-notify';
+import { createNotification } from '@/lib/notifications';
 import {
   STATUS_TYPE_PANAS,
+  getVisibilityFromRecipients,
   type PostVisibility,
 } from '@/lib/utils/getVisibility';
 import type { JsonValue } from '@/lib/types';
 import { isAudioAttachment } from '@/lib/media/attachments';
+import { VOICE_NOTE_TYPES, voiceNoteMediaType } from '@/lib/media/voice-notes';
 
 // Markdown rendering, including the hooks that stop raw HTML and
 // `javascript:` links being written into new posts, lives in
@@ -80,6 +83,54 @@ export type StatusWithActor = SocialStatus & {
  */
 export function generateStatusUri(username: string, statusId: string): string {
   return `https://${socialConfig.domain}/p/${username}/statuses/${statusId}`;
+}
+
+async function notifyStatusInteraction(
+  actorUserId: string | null | undefined,
+  targetStatus: SocialStatus,
+  reply?: SocialStatus
+): Promise<void> {
+  if (!actorUserId) return;
+  const object = reply ?? targetStatus;
+  // DMs already have their own alerts and Requests gate.
+  if (
+    [targetStatus, object].some(
+      (status) =>
+        !status.groupId &&
+        getVisibilityFromRecipients(
+          status.recipientTo,
+          status.recipientCc,
+          status.type
+        ) === 'direct'
+    )
+  )
+    return;
+
+  try {
+    const target = await db.query.socialActors.findFirst({
+      where: eq(socialActors.id, targetStatus.actorId),
+      with: { profile: { columns: { userId: true } } },
+    });
+    const targetUserId = target?.profile?.userId;
+    if (!targetUserId || targetUserId === actorUserId) return;
+    // A reply can have a narrower audience than its parent.
+    if (!(await getStatus(object.id, target.id))) return;
+
+    await createNotification({
+      type: reply ? 'Create' : 'Like',
+      context: reply ? 'reply' : 'like',
+      actorId: actorUserId,
+      targetId: targetUserId,
+      objectId: object.id,
+      objectUrl: `/status/${object.id}`,
+    });
+  } catch (error) {
+    console.error('[status-notify] failed to notify', {
+      statusId: object.id,
+      context: reply ? 'reply' : 'like',
+      error,
+    });
+  }
 }
 
 /**
@@ -293,10 +344,29 @@ export async function createStatus(
     return { success: false, error: 'Content exceeds maximum length' };
   }
 
-  if (attachments?.some(isAudioAttachment)) {
+  const voiceNotes = attachments?.filter(isAudioAttachment) ?? [];
+  if (voiceNotes.length && (visibility !== 'direct' || groupId)) {
     return {
       success: false,
       error: 'Audio attachments are no longer supported.',
+    };
+  }
+  if (
+    voiceNotes.length > 1 ||
+    voiceNotes.some(
+      (attachment) =>
+        attachment.type !== 'audio' ||
+        typeof attachment.mediaType !== 'string' ||
+        typeof attachment.url !== 'string' ||
+        !attachment.url ||
+        !VOICE_NOTE_TYPES.some(
+          (type) => type === voiceNoteMediaType(attachment.mediaType)
+        )
+    )
+  ) {
+    return {
+      success: false,
+      error: 'Attach one supported voice note per direct message.',
     };
   }
 
@@ -631,6 +701,14 @@ export async function createStatus(
     await notifyGroupPosted(groupId, actorId, actor.profile.userId);
   }
 
+  if (parentStatus) {
+    await notifyStatusInteraction(
+      actor.profile?.userId,
+      parentStatus,
+      updatedStatus
+    );
+  }
+
   return { success: true, status: updatedStatus, heldRecipientActorIds };
 }
 
@@ -847,6 +925,7 @@ export async function likeStatus(
 
   const actor = await db.query.socialActors.findFirst({
     where: eq(socialActors.id, actorId),
+    with: { profile: { columns: { userId: true } } },
   });
 
   if (!actor) {
@@ -860,17 +939,31 @@ export async function likeStatus(
 
   const likeUri = `https://${socialConfig.domain}/p/${actor.username}/likes/${statusId}`;
 
-  await db.insert(socialLikes).values({
-    actorId,
-    statusId,
-    uri: likeUri,
-  });
+  const inserted = await db
+    .insert(socialLikes)
+    .values({ actorId, statusId, uri: likeUri })
+    .onConflictDoNothing()
+    .returning({ id: socialLikes.id });
+
+  if (inserted.length === 0) {
+    const current = await db.query.socialStatuses.findFirst({
+      where: eq(socialStatuses.id, statusId),
+      columns: { likesCount: true },
+    });
+    return {
+      success: true,
+      liked: true,
+      likesCount: current?.likesCount ?? status.likesCount,
+    };
+  }
 
   const [updatedStatus] = await db
     .update(socialStatuses)
     .set({ likesCount: sql`${socialStatuses.likesCount} + 1` })
     .where(eq(socialStatuses.id, statusId))
     .returning();
+
+  await notifyStatusInteraction(actor.profile?.userId, status);
 
   return {
     success: true,
