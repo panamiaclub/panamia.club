@@ -135,9 +135,9 @@
   },
   "onboarding": {
     "zipTitle": "Add your ZIP code",
-    "zipBody": "A US ZIP code is required to finish account setup. This applies to new and existing members.",
+    "zipBody": "A US ZIP code is required to finish account setup for new and existing members. It helps us understand which communities we serve and plan local outreach.",
     "zipLabel": "ZIP code",
-    "zipHint": "Enter five digits or ZIP+4 (for example, 33138 or 33138-1234). We save only the first five digits. Your account ZIP stays private and does not change any public business address.",
+    "zipHint": "Enter five digits or ZIP+4 (for example, 33138 or 33138-1234). We're privacy-first: we save only the first five digits and keep your account ZIP private. It does not change any public business address.",
     "zipInvalid": "Enter a five-digit US ZIP code or ZIP+4.",
     "zipSaveFailed": "Could not save your ZIP code. Try again.",
     "zipPrivacy": "Privacy policy",
