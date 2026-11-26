@@ -43,10 +43,10 @@
           "display": {
             "icon": "user",
             "source": "You provide",
-            "purpose": "Authentication and identity",
+            "purpose": "Authentication, identity, and local outreach planning",
             "retention": "Account lifetime",
             "sharedWith": "OAuth providers (login only; ZIP is not shared)",
-            "prose": "Account credentials, authentication tokens, and a private five-digit US ZIP code required for account setup. ZIP+4 inputs are reduced to five digits. The account ZIP is not published or copied to business listings.",
+            "prose": "Account credentials, authentication tokens, and a private five-digit US ZIP code required for account setup. We collect the ZIP to understand which communities we serve and plan local outreach. ZIP+4 inputs are reduced to five digits. The account ZIP is not published or copied to business listings.",
             "blurb": "Your login details and private account ZIP code. The ZIP is required for new and existing members and is not shared publicly or with OAuth providers."
           }
         },

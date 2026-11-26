@@ -54,6 +54,9 @@ There is no skip; sign-out, legal pages, and account settings/deletion remain
 accessible. Account creation still happens during passwordless/OAuth
 authentication; the ZIP is required to finish setup immediately afterward.
 
+The form explains that we collect ZIP codes to understand which communities we
+serve and plan local outreach, with a privacy-first note about keeping only five
+digits and keeping account ZIPs private.
 The ZIP is returned only by the authenticated current-user API, not public
 profiles. It is not currently used to position directory searches.
 
