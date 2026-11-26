@@ -12,6 +12,7 @@ import {
 const deviceSchema = z.object({
   id: z.uuid(),
   platform: z.enum(['ios', 'android']),
+  messagePreviews: z.boolean().optional(),
   token: z
     .string()
     .min(20)
@@ -77,7 +78,8 @@ async function mutate(request: Request, remove: boolean) {
           return reply({ error: error.message }, 503);
         throw error;
       }
-      await registerPushDevice(session, parsed.data);
+      const messagePreviews = await registerPushDevice(session, parsed.data);
+      return reply({ success: true, messagePreviews });
     }
     return reply({ success: true });
   } catch {

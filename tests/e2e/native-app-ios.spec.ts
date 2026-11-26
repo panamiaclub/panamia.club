@@ -13,6 +13,123 @@ async function ios(page: Page) {
   return installNativeApiFixtures(page);
 }
 
+async function showNativePushControls(page: Page) {
+  await page.goto('/d');
+  await expect(
+    page
+      .getByRole('navigation', { name: 'App navigation' })
+      .getByRole('link', { name: 'Profile', exact: true })
+  ).toHaveAttribute('href', '/p/native-viewer');
+  // Exercise the own-profile controls without requesting server profile data
+  // for this browser-only mocked identity.
+  await page.evaluate(() =>
+    window.history.pushState(null, '', '/p/native-viewer')
+  );
+}
+
+for (const platform of ['ios', 'android'] as const) {
+  test(`${platform} native push previews disclose sharing and remember an off choice @native`, async ({
+    page,
+  }) => {
+    await nativeBridge(page, {
+      platform,
+      googlePlugin: false,
+      pushNotifications: true,
+    });
+    await installNativeApiFixtures(page);
+    const registrations: Array<{ messagePreviews?: boolean }> = [];
+    await page.route('**/api/push/devices', async (route) => {
+      const request = route.request();
+      if (request.method() === 'PUT') {
+        const device = request.postDataJSON() as { messagePreviews?: boolean };
+        registrations.push(device);
+        await route.fulfill({
+          json: {
+            success: true,
+            messagePreviews: device.messagePreviews ?? false,
+          },
+        });
+      } else await route.fulfill({ json: { success: true } });
+    });
+    await showNativePushControls(page);
+    const previews = page.getByRole('switch', { name: /Message previews/ });
+    await expect(previews).toHaveAttribute('aria-checked', 'true');
+    await expect(
+      page.getByText(/Message previews share sender names/)
+    ).toBeVisible();
+    await expect(previews).toBeEnabled();
+    expect(
+      (await calls(page)).some((call) => call.method === 'requestPermissions')
+    ).toBe(false);
+    await page
+      .getByRole('button', { name: 'Enable push notifications', exact: true })
+      .click();
+    await expect(
+      page.getByRole('button', {
+        name: 'Turn off push notifications',
+        exact: true,
+      })
+    ).toBeEnabled();
+    expect(registrations.at(-1)?.messagePreviews).toBe(true);
+    await previews.click();
+    await expect(previews).toHaveAttribute('aria-checked', 'false');
+    await expect(previews).toBeEnabled();
+    await page.evaluate(() =>
+      window.dispatchEvent(new Event('native-auth-test.resume'))
+    );
+    await expect.poll(() => registrations.at(-1)?.messagePreviews).toBe(false);
+    await page
+      .getByRole('button', { name: 'Turn off push notifications', exact: true })
+      .click();
+    await expect(
+      page.getByRole('button', {
+        name: 'Enable push notifications',
+        exact: true,
+      })
+    ).toBeEnabled();
+    await page
+      .getByRole('button', { name: 'Enable push notifications', exact: true })
+      .click();
+    await expect(
+      page.getByRole('button', {
+        name: 'Turn off push notifications',
+        exact: true,
+      })
+    ).toBeEnabled();
+    expect(registrations.at(-1)?.messagePreviews).toBe(false);
+  });
+}
+
+test('legacy native push previews stay generic during unattended renewal @native', async ({
+  page,
+}) => {
+  await nativeBridge(page, {
+    platform: 'ios',
+    googlePlugin: false,
+    pushNotifications: true,
+    pushGranted: true,
+  });
+  await page.addInitScript(() =>
+    localStorage.setItem('pana-push-enabled', 'true')
+  );
+  await installNativeApiFixtures(page);
+  const registrations: Record<string, unknown>[] = [];
+  await page.route('**/api/push/devices', async (route) => {
+    if (route.request().method() === 'PUT')
+      registrations.push(route.request().postDataJSON());
+    await route.fulfill({ json: { success: true, messagePreviews: false } });
+  });
+  await showNativePushControls(page);
+  await expect(
+    page.getByRole('switch', { name: /Message previews/ })
+  ).toHaveAttribute('aria-checked', 'false');
+  expect(registrations.length).toBeGreaterThan(0);
+  expect('messagePreviews' in registrations[0]).toBe(false);
+  expect(
+    (await calls(page)).some((call) => call.method === 'requestPermissions')
+  ).toBe(false);
+});
+
 async function floatingContent(page: Page, scrollport: Locator, last: Locator) {
   const app = (await page.locator('[data-native-app]').boundingBox())!;
   const port = (await scrollport.boundingBox())!;

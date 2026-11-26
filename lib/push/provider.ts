@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { pushAlert } from './payload';
+import { pushAlert, type PushMessagePreview } from './payload';
 
 export interface PushEnv {
   PUSH_APNS_CONFIG?: string;
@@ -95,10 +95,18 @@ export function createPushSender(env: PushEnv, request: typeof fetch = fetch) {
   const send = (url: string, init: RequestInit) =>
     request(url, { ...init, signal: AbortSignal.timeout(8000) });
   return async (
-    device: { platform: string; token: string },
-    notificationId: string
+    device: {
+      platform: string;
+      token: string;
+      messagePreviews?: boolean;
+    },
+    notificationId: string,
+    preview?: PushMessagePreview
   ): Promise<'sent' | 'invalid'> => {
-    const alert = pushAlert(notificationId);
+    const alert = pushAlert(
+      notificationId,
+      device.messagePreviews ? preview : undefined
+    );
     const now = Math.floor(Date.now() / 1000);
     if (device.platform === 'ios') {
       const config = parsePushConfig(
@@ -198,6 +206,7 @@ export function createPushSender(env: PushEnv, request: typeof fetch = fetch) {
               notification: {
                 channel_id: 'pana-notifications',
                 tag: notificationId,
+                visibility: 'PRIVATE',
               },
             },
           },

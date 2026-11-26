@@ -13,6 +13,12 @@ including bulk group notifications and post likes/replies. There is no historica
 backfill and no hook into live DM sockets: messages held in Requests still do not
 create a bell notification and therefore do not enqueue push.
 
+Apply `0081_push_message_previews.sql` before deploying message previews. Existing
+and old-client registrations remain generic until the member enables the new
+disclosed preview control. New Enable-push actions default message previews on,
+unless this installation previously chose off. Omitted preferences preserve an
+existing registration's choice rather than resetting it during token renewal.
+
 Add these **server-only Cloudflare secrets**, never `NEXT_PUBLIC_*` variables:
 
 - `PUSH_APNS_CONFIG`: JSON with `teamId`, `keyId`, `privateKey` (the complete
@@ -93,24 +99,46 @@ only for Android push.
 
 Signed-in members can choose **Enable push notifications** from their native
 Profile/account screen. Permission is requested on that action, never at launch.
+Before enabling, the screen explains that previews share sender names and short
+excerpts with Apple/Google. **Message previews: on/off** is independent of push
+permission; an explicit off choice survives disable/re-enable, logout, token
+renewal and account switches on the installation.
 The same control disables this device's registration. Foreground resume renews
 tokens/permission state without requesting permission again. Signing in to a
 different account rebinds the installation and removes the previous account's
 pending jobs. Push stays account-scoped, not scoped to the currently selected
 business identity.
 
-Lock screens/providers receive only “Pana Mia”, “You have a new notification.”,
-and an opaque notification ID. A tap resolves the saved notification through
+The notification title stays “Pana Mia”. With previews enabled, eligible ordinary
+Messages DMs include the sender (at most 48 characters) and a plain-text excerpt
+(at most 120 characters) in the body. HTML, attachment URLs and unsafe control
+characters are excluded. Content-warning, attachment-only and encrypted messages
+remain generic. Other notification types still say “You have a new notification.”
+Apple APNs/Google FCM receive preview text when enabled; this is not provider-private
+or end-to-end-encrypted push. Recipient/author ownership, addressing, Requests,
+blocks, read state, drafts and expiry are checked before message delivery.
+
+On iPhone choose **Settings > Notifications > Pana Mia > Show Previews >
+When Unlocked**. The app cannot force this: **Always** can reveal messages while
+locked and **Never** hides previews even when unlocked. Android uses PRIVATE
+channel/notification visibility, keeping sender text out of the basic title;
+the user's device/channel settings still decide locked-screen visibility.
+Foreground-in-app presentation is unchanged. No new native build or notification
+extension is needed for these standard OS-controlled previews.
+
+A tap resolves the saved notification through
 an authenticated, no-store endpoint, verifies ownership/blocks/expiry, marks it
 read, and navigates to its same-origin destination (for example `/status/<id>`).
 A tap while signed out waits until sign-in; a tap from another account opens
 the current account's updates, never the other account's destination. Destination
 screens retain their normal authorization checks. Already accepted OS alerts
 cannot be recalled reliably after remote logout/block, so their text stays
-generic. Local logout clears visible delivered alerts.
+generic unless previews were enabled when sent. Turning previews off does not
+recall already delivered preview text. Local logout clears visible delivered alerts.
 
 Review the privacy policy and App Store privacy / Play Data safety disclosures
-for Apple/Google delivery of tokens and metadata before shipping.
+for Apple/Google delivery of tokens, metadata and optional sender/message excerpts
+before shipping.
 
 ## Verification checklist
 
@@ -128,5 +156,8 @@ foreground/background/terminated delivery, cold/warm taps, like/reply/follow/DM,
 bulk group events, Requests silence, blocks, read-before-delivery suppression,
 two accounts on one installation, local/remote logout, expired session, token
 rotation, and account deletion. Verify iOS sandbox and TestFlight separately.
+Check preview on/off persistence, legacy registration migration, read/Requests
+changes before delivery, and iOS When Unlocked/Always/Never plus Android
+lock-screen privacy settings. Never treat the OS setting as an app-enforced guarantee.
 Inspect provider errors and scheduled-job logs without recording tokens/content.
 Compilation and mocked tests do not establish real-device/provider delivery.

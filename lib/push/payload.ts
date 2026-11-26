@@ -1,8 +1,17 @@
-// Push providers and lock screens never receive names, message bodies, or URLs.
-export function pushAlert(notificationId: string) {
+export interface PushMessagePreview {
+  sender: string;
+  excerpt: string;
+}
+
+export function pushAlert(
+  notificationId: string,
+  preview?: PushMessagePreview
+) {
   return {
     title: 'Pana Mia',
-    body: 'You have a new notification.',
+    body: preview
+      ? `${preview.sender}: ${preview.excerpt}`
+      : 'You have a new notification.',
     notificationId,
   };
 }

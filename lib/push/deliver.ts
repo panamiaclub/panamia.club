@@ -8,6 +8,7 @@ import {
 } from '@/lib/schema';
 import { isBlockedBetweenUsers } from '@/lib/notifications';
 import { createPushSender, PushProviderError, type PushEnv } from './provider';
+import { resolveMessagePush } from './message-preview';
 
 export async function deliverPendingPush(env: PushEnv) {
   const send = createPushSender(env);
@@ -68,7 +69,15 @@ export async function deliverPendingPush(env: PushEnv) {
         await db.delete(pushDeliveries).where(key);
         continue;
       }
-      const outcome = await send(device, notification.id);
+      const message =
+        notification.context === 'message'
+          ? await resolveMessagePush(notification, device.messagePreviews)
+          : undefined;
+      if (message === null) {
+        await db.delete(pushDeliveries).where(key);
+        continue;
+      }
+      const outcome = await send(device, notification.id, message?.preview);
       if (outcome === 'invalid') {
         // Match the exact token so a concurrent rotation cannot be revoked.
         await db

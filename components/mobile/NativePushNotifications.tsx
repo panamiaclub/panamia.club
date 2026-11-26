@@ -8,6 +8,9 @@ import { nativePlatform } from '@/lib/mobile/native';
 import {
   PUSH_ENABLED_KEY,
   PUSH_PENDING_KEY,
+  PUSH_PREVIEWS_KEY,
+  initializePushMessagePreviews,
+  pushMessagePreviewsEnabled,
   updatePushDevice,
 } from '@/lib/mobile/push';
 import { pushDestination } from '@/lib/push/payload';
@@ -25,9 +28,11 @@ export function NativePushNotifications({
   const queries = useQueryClient();
   const [message, setMessage] = useState('');
   const [enabled, setEnabled] = useState(false);
+  const [messagePreviews, setMessagePreviews] = useState(true);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const controls = useRef<((enable: boolean) => Promise<void>) | null>(null);
+  const previewControl = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
     if (!window.Capacitor?.isPluginAvailable?.('PushNotifications')) {
@@ -35,6 +40,7 @@ export function NativePushNotifications({
       return;
     }
     let disposed = false;
+    setMessagePreviews(pushMessagePreviewsEnabled());
     const handles: PluginListenerHandle[] = [];
     const keep = async (pending: Promise<PluginListenerHandle>) => {
       const handle = await pending;
@@ -99,6 +105,7 @@ export function NativePushNotifications({
                 localStorage.getItem(PUSH_ENABLED_KEY) === 'true'
               ) {
                 setEnabled(true);
+                setMessagePreviews(pushMessagePreviewsEnabled());
                 setMessage('Push notifications are enabled on this device.');
               }
             })
@@ -160,6 +167,8 @@ export function NativePushNotifications({
               setBusy(false);
               return;
             }
+            initializePushMessagePreviews();
+            setMessagePreviews(pushMessagePreviewsEnabled());
             localStorage.setItem(PUSH_ENABLED_KEY, 'true');
             await push.register();
           } else {
@@ -178,6 +187,28 @@ export function NativePushNotifications({
           report(error);
         }
       };
+      previewControl.current = async () => {
+        try {
+          const next = !pushMessagePreviewsEnabled();
+          localStorage.setItem(PUSH_PREVIEWS_KEY, String(next));
+          setMessagePreviews(next);
+          if (localStorage.getItem(PUSH_ENABLED_KEY) !== 'true') return;
+          setBusy(true);
+          setMessage('');
+          const permission = await push.checkPermissions();
+          if (permission.receive !== 'granted') {
+            setBusy(false);
+            setMessage(
+              'Preview choice saved. Allow notifications in your device Settings to receive them.'
+            );
+            return;
+          }
+          await push.register();
+        } catch (error) {
+          setBusy(false);
+          report(error);
+        }
+      };
       const { App } = await import('@capacitor/app');
       await keep(
         App.addListener('appStateChange', ({ isActive }) => {
@@ -190,6 +221,7 @@ export function NativePushNotifications({
     return () => {
       disposed = true;
       controls.current = null;
+      previewControl.current = null;
       setReady(false);
       for (const handle of handles) void handle.remove();
     };
@@ -198,6 +230,12 @@ export function NativePushNotifications({
   if (!signedIn || !showControls) return null;
   return (
     <div className="border-b px-4 py-2 text-sm">
+      <p>
+        Message previews share sender names and short excerpts with Apple or
+        Google. Your phone controls lock-screen visibility; choose Show Previews
+        When Unlocked on iPhone. Always can show messages while locked.
+        Encrypted messages stay generic.
+      </p>
       <button
         type="button"
         className="min-h-11 underline"
@@ -209,6 +247,16 @@ export function NativePushNotifications({
           : enabled
             ? 'Turn off push notifications'
             : 'Enable push notifications'}
+      </button>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={messagePreviews}
+        className="ml-3 min-h-11 underline"
+        disabled={!ready || busy}
+        onClick={() => void previewControl.current?.()}
+      >
+        Message previews: {messagePreviews ? 'on' : 'off'}
       </button>
       {message && <p role="status">{message}</p>}
     </div>

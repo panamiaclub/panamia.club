@@ -194,7 +194,11 @@ test('FCM uses OAuth and a visible Android notification with private tap data', 
         android: {
           priority: 'high',
           ttl: '3600s',
-          notification: { channel_id: 'pana-notifications', tag: 'notice' },
+          notification: {
+            channel_id: 'pana-notifications',
+            tag: 'notice',
+            visibility: 'PRIVATE',
+          },
         },
       },
     });
@@ -265,7 +269,7 @@ test('only explicit token revocation invalidates a device; config/transient erro
   }
 });
 
-test('tap destinations reject external navigation and payload never contains content', () => {
+test('tap destinations reject external navigation and generic payload has only alert fields', () => {
   for (const value of [
     'https://evil.invalid',
     '//evil.invalid',
@@ -281,6 +285,128 @@ test('tap destinations reject external navigation and payload never contains con
     'notificationId',
     'title',
   ]);
+});
+
+test('APNs and FCM preview bodies require an enabled device and keep sender out of the title', async () => {
+  for (const platform of ['ios', 'android'] as const) {
+    const bodies: Array<{ title: string; body: string }> = [];
+    const request: typeof fetch = async (input, init) => {
+      if (String(input).includes('oauth2'))
+        return Response.json({ access_token: 'fixture-access' });
+      const body = JSON.parse(String(init?.body));
+      bodies.push(
+        platform === 'ios' ? body.aps.alert : body.message.notification
+      );
+      if (platform === 'android')
+        assert.equal(body.message.android.notification.visibility, 'PRIVATE');
+      return platform === 'ios'
+        ? new Response(null)
+        : Response.json({ name: 'accepted' });
+    };
+    const send = createPushSender(
+      {
+        PUSH_APNS_CONFIG: JSON.stringify({
+          teamId: 'team',
+          keyId: 'key',
+          privateKey: ecPem,
+          environment: 'production',
+        }),
+        PUSH_FCM_SERVICE_ACCOUNT: JSON.stringify({
+          project_id: 'project',
+          client_email: 'service@example.invalid',
+          private_key: rsaPem,
+        }),
+      },
+      request
+    );
+    const preview = { sender: 'Sender', excerpt: 'Hello there' };
+    await send(
+      { platform, token: 'fixture', messagePreviews: false },
+      'notice',
+      preview
+    );
+    await send(
+      { platform, token: 'fixture', messagePreviews: true },
+      'notice',
+      preview
+    );
+    assert.deepEqual(bodies, [
+      { title: 'Pana Mia', body: 'You have a new notification.' },
+      { title: 'Pana Mia', body: 'Sender: Hello there' },
+    ]);
+  }
+});
+
+test('new push opt-in defaults previews on without replacing an explicit off choice', async () => {
+  const {
+    initializePushMessagePreviews,
+    pushMessagePreviewsEnabled,
+    PUSH_PREVIEWS_KEY,
+  } = await import('../lib/mobile/push');
+  const values = new Map<string, string>();
+  const storage = globalThis.localStorage;
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    },
+  });
+  try {
+    assert.equal(pushMessagePreviewsEnabled(), true);
+    initializePushMessagePreviews();
+    assert.equal(values.get(PUSH_PREVIEWS_KEY), 'true');
+    values.set(PUSH_PREVIEWS_KEY, 'false');
+    initializePushMessagePreviews();
+    assert.equal(pushMessagePreviewsEnabled(), false);
+  } finally {
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: storage,
+    });
+  }
+});
+
+test('registration preserves local off choices and hydrates legacy preferences without racing user changes', async () => {
+  const { updatePushDevice, PUSH_PREVIEWS_KEY } =
+    await import('../lib/mobile/push');
+  const values = new Map<string, string>([
+    ['pana-push-installation', 'c7093586-d43a-43ad-b322-98ec58b2e081'],
+  ]);
+  const storage = globalThis.localStorage;
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    },
+  });
+  let changeDuringRequest = false;
+  const bodies: Record<string, unknown>[] = [];
+  const request: typeof fetch = async (_input, init) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    if (changeDuringRequest) values.set(PUSH_PREVIEWS_KEY, 'true');
+    return Response.json({ success: true, messagePreviews: false });
+  };
+  const fetchMock = mock.method(globalThis, 'fetch', request);
+  try {
+    await updatePushDevice({ platform: 'ios', token: 'fixture' });
+    assert.equal('messagePreviews' in bodies[0], false);
+    assert.equal(values.get(PUSH_PREVIEWS_KEY), 'false');
+    await updatePushDevice();
+    await updatePushDevice({ platform: 'ios', token: 'rotated' });
+    assert.equal(bodies[2].messagePreviews, false);
+    values.delete(PUSH_PREVIEWS_KEY);
+    changeDuringRequest = true;
+    await updatePushDevice({ platform: 'ios', token: 'fixture' });
+    assert.equal(values.get(PUSH_PREVIEWS_KEY), 'true');
+  } finally {
+    fetchMock.mock.restore();
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: storage,
+    });
+  }
 });
 
 test('disable waits for in-flight registration and observes its own API error', async () => {
