@@ -129,6 +129,8 @@ export const inventory: Record<TableExport, Classification> = {
 
   // --- Notifications / preferences ---
   notifications: ['notifications'],
+  pushDevices: ['account', 'notifications'],
+  pushDeliveries: ['notifications'],
   listingRefreshCycles: ['profile', 'notifications', 'account'],
   // No email address or delivery URL is copied: only recipient/proof hashes.
   listingRefreshDeliveries: ['notifications', 'verification_tokens'],

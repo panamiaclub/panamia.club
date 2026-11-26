@@ -86,6 +86,7 @@ const config: CapacitorConfig = {
       '@capacitor/app',
       '@capacitor/browser',
       '@capacitor/network',
+      '@capacitor/push-notifications',
       '@capacitor/splash-screen',
       '@capacitor/status-bar',
     ],

@@ -371,22 +371,22 @@ export function Composer({
           One photo, up to 10 MB. Photos use shareable Pana media links, not
           end-to-end encryption. See Conversation details for more information.
         </span>
-        {allowVoiceNotes && (
-          <VoiceNoteRecorder
-            disabled={
-              savingGif ||
-              savingPhoto ||
-              draft.isUploadingVoice ||
-              !!draft.voice ||
-              !!draft.voiceFile ||
-              isSending
-            }
-            onBusy={(isRecordingVoice) => onChange({ isRecordingVoice })}
-            onCapture={(file, duration) => void attachVoice(file, duration)}
-            onError={(voiceError) => onChange({ voiceError })}
-          />
-        )}
         <div className={styles.composeField}>
+          {allowVoiceNotes && (
+            <VoiceNoteRecorder
+              disabled={
+                savingGif ||
+                savingPhoto ||
+                draft.isUploadingVoice ||
+                !!draft.voice ||
+                !!draft.voiceFile ||
+                isSending
+              }
+              onBusy={(isRecordingVoice) => onChange({ isRecordingVoice })}
+              onCapture={(file, duration) => void attachVoice(file, duration)}
+              onError={(voiceError) => onChange({ voiceError })}
+            />
+          )}
           <textarea
             ref={inputRef}
             value={draft.text}

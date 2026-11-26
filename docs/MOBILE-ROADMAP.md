@@ -613,10 +613,10 @@ Apple references:
    implemented and verified.
 5. **Finish the `panamia.club` domain migration** before validating donation
    return URLs, deep links, and store-review disclosures on devices.
-6. **Push notifications** — the strongest answer to guideline 4.2 and the
-   clearest native win over the website. Needs `@capacitor/push-notifications`,
-   APNs and FCM credentials, and device-token storage tied to the account.
-   DMs now have a caller waiting for it: `handleNotify` in `worker/dm-stream.ts`
-   returns a `delivered` count, and `delivered === 0` means the recipient holds
-   no live socket — which is exactly the moment to push instead. See
-   [CHAT-ROADMAP.md](./CHAT-ROADMAP.md#background-delivery-needs-push-and-that-is-true-everywhere).
+6. **Push notifications: provision and verify.** Native APNs/FCM registration,
+   session-bound device storage, durable notification outbox, private lock-screen
+   alerts, and authenticated tap navigation are implemented. The outbox follows
+   saved bell notifications (including likes/replies), not socket delivery counts.
+   Production still needs provider credentials, Firebase app configuration,
+   Apple provisioning, rebuilt shells, and real-device delivery checks.
+   See [NATIVE-PUSH.md](./NATIVE-PUSH.md).

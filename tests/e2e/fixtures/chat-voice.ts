@@ -31,76 +31,82 @@ export async function installChatVoiceFixtures(
   page: Page,
   options: { failUploads?: number; hold?: () => Promise<void> } = {}
 ) {
-  await page.evaluate((wave) => {
-    window.chatVoiceFixture = { denied: false, streams: [], contexts: [] };
-    // Windows WebKit omits capture APIs. Exercise its UI with a recorder double;
-    // Chromium uses a genuine MediaRecorder with a synthesized microphone.
-    const simulated =
-      !navigator.mediaDevices || typeof MediaRecorder === 'undefined';
-    if (!navigator.mediaDevices)
-      Object.defineProperty(navigator, 'mediaDevices', {
-        value: {},
-        configurable: true,
-      });
-    if (simulated) {
-      Object.defineProperty(window, 'MediaRecorder', {
-        configurable: true,
-        value: class {
-          static isTypeSupported(type: string) {
-            return type.startsWith('audio/mp4');
-          }
-          state = 'inactive';
-          mimeType = 'audio/mp4';
-          ondataavailable: ((event: { data: Blob }) => void) | null = null;
-          onstop: (() => void) | null = null;
-          start() {
-            this.state = 'recording';
-          }
-          stop() {
-            this.state = 'inactive';
-            queueMicrotask(() => {
-              this.ondataavailable?.({
-                data: new Blob([Uint8Array.from(wave)], {
-                  type: this.mimeType,
-                }),
+  const webkit = page.context().browser()?.browserType().name() === 'webkit';
+  await page.evaluate(
+    ({ wave, webkit }) => {
+      window.chatVoiceFixture = { denied: false, streams: [], contexts: [] };
+      // Headless WebKit may expose capture APIs without a usable media backend.
+      // Keep its UI/lifecycle deterministic; Chromium exercises a real recorder.
+      const simulated =
+        webkit ||
+        !navigator.mediaDevices ||
+        typeof MediaRecorder === 'undefined';
+      if (simulated)
+        Object.defineProperty(navigator, 'mediaDevices', {
+          value: {},
+          configurable: true,
+        });
+      if (simulated) {
+        Object.defineProperty(window, 'MediaRecorder', {
+          configurable: true,
+          value: class {
+            static isTypeSupported(type: string) {
+              return type.startsWith('audio/mp4');
+            }
+            state = 'inactive';
+            mimeType = 'audio/mp4';
+            ondataavailable: ((event: { data: Blob }) => void) | null = null;
+            onstop: (() => void) | null = null;
+            start() {
+              this.state = 'recording';
+            }
+            stop() {
+              this.state = 'inactive';
+              queueMicrotask(() => {
+                this.ondataavailable?.({
+                  data: new Blob([Uint8Array.from(wave)], {
+                    type: this.mimeType,
+                  }),
+                });
+                this.onstop?.();
               });
-              this.onstop?.();
-            });
+            }
+          },
+        });
+      }
+      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+        configurable: true,
+        value: async (constraints: MediaStreamConstraints) => {
+          if (!constraints.audio || constraints.video)
+            throw new Error('Voice notes must request only a microphone.');
+          if (window.chatVoiceFixture.denied)
+            throw new DOMException('Denied by fixture', 'NotAllowedError');
+          if (simulated) {
+            const track = {
+              readyState: 'live',
+              stop() {
+                this.readyState = 'ended';
+              },
+              addEventListener() {},
+            };
+            const stream = { getTracks: () => [track] };
+            window.chatVoiceFixture.streams.push(stream);
+            return stream;
           }
+          const context = new AudioContext();
+          const oscillator = context.createOscillator();
+          const destination = context.createMediaStreamDestination();
+          oscillator.connect(destination);
+          oscillator.start();
+          await context.resume();
+          window.chatVoiceFixture.contexts.push(context);
+          window.chatVoiceFixture.streams.push(destination.stream);
+          return destination.stream;
         },
       });
-    }
-    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
-      configurable: true,
-      value: async (constraints: MediaStreamConstraints) => {
-        if (!constraints.audio || constraints.video)
-          throw new Error('Voice notes must request only a microphone.');
-        if (window.chatVoiceFixture.denied)
-          throw new DOMException('Denied by fixture', 'NotAllowedError');
-        if (simulated) {
-          const track = {
-            readyState: 'live',
-            stop() {
-              this.readyState = 'ended';
-            },
-            addEventListener() {},
-          };
-          const stream = { getTracks: () => [track] };
-          window.chatVoiceFixture.streams.push(stream);
-          return stream;
-        }
-        const context = new AudioContext();
-        const oscillator = context.createOscillator();
-        const destination = context.createMediaStreamDestination();
-        oscillator.connect(destination);
-        oscillator.start();
-        await context.resume();
-        window.chatVoiceFixture.contexts.push(context);
-        window.chatVoiceFixture.streams.push(destination.stream);
-        return destination.stream;
-      },
-    });
-  }, Array.from(voiceSample()));
+    },
+    { wave: Array.from(voiceSample()), webkit }
+  );
   const uploads: { type: string; duration: number; bytes: number }[] = [];
   let failures = options.failUploads ?? 0;
   await page.route('https://uploads.chat.invalid/voice-*', (route) =>

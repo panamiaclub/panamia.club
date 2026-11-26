@@ -1377,6 +1377,19 @@ function getBetterAuth(): BetterAuthInstance {
 // auth() compat shim — returns AppSession shape for server components
 // =============================================================================
 
+/** Native registrations bind to the actual login session, not a supplied user id. */
+export async function resolvePushSession(requestHeaders: Headers) {
+  const result = await getBetterAuth().api.getSession({
+    headers: requestHeaders,
+  });
+  return result
+    ? {
+        id: result.session.id,
+        userId: result.user.id,
+      }
+    : null;
+}
+
 export async function auth(): Promise<AppSession | null> {
   try {
     const session = await getBetterAuth().api.getSession({

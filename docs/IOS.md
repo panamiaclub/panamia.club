@@ -1,5 +1,8 @@
 # iOS Device Testing and Publishing
 
+Native APNs push setup, permissions, credentials, and device checks:
+[Native push notifications](./NATIVE-PUSH.md).
+
 The first App Store release targets iPhone and uses the same Directory, Social, Community, Profile,
 story camera, and detail screens as Android. There is no separate iOS website.
 The permanent bundle identifier is **`social.pana.app`**.

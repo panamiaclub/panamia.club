@@ -60,7 +60,7 @@ export interface CreateNotificationParams {
  * the social layer) there is no block to find, and ordinary directory
  * notifications must keep working.
  */
-async function isBlockedBetweenUsers(
+export async function isBlockedBetweenUsers(
   actorUserId: string,
   targetUserId: string
 ): Promise<boolean> {

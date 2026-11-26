@@ -1,5 +1,8 @@
 # Android Device Testing and Publishing
 
+Native FCM push setup, permissions, Firebase configuration, and device checks:
+[Native push notifications](./NATIVE-PUSH.md).
+
 The Android app is a Capacitor shell for `https://panamia.club`. Its permanent
 Google Play package name is `social.pana.app`.
 
@@ -171,7 +174,8 @@ In the **same Google Cloud project** as the existing Web OAuth client:
 4. If the OAuth consent screen is in testing mode, add the Google accounts
    used for testing. Use a device or emulator with Google Play services.
 
-No Firebase setup or `google-services.json` is needed for this sign-in flow.
+No Firebase setup or `google-services.json` is needed for this sign-in flow
+itself; native push now requires that configuration separately.
 Google returns an ID token with a nonce. The WebView exchanges it with Better
 Auth, which verifies it and creates the app's HttpOnly session cookie.
 An existing Google account and email sign-in use the same verified-email account.

@@ -32,6 +32,8 @@ import { getActiveProfileWithActor } from '../lib/server/active-profile';
 import { PATHNAME_HEADER, SEARCH_HEADER } from '../lib/panaverse/chrome';
 import { getHttpsRedirect } from '../lib/server/https-redirect';
 import { retryPendingSmsSubscriptions } from '../lib/sms-subscriptions';
+import { deliverPendingPush } from '../lib/push/deliver';
+import type { PushEnv } from '../lib/push/provider';
 import {
   isLocalMockDependencyRequest,
   isLocalMockRequest,
@@ -41,7 +43,7 @@ import {
 export { SignalingRoom } from './signaling-room';
 export { DmStream } from './dm-stream';
 
-interface Env {
+interface Env extends PushEnv {
   ASSETS: Fetcher;
   HYPERDRIVE: { connectionString: string };
   POSTGRES_URL?: string; // local dev only: wrangler secret binding from .env.local
@@ -306,6 +308,15 @@ export default {
    * opened them, so the job has to run inside it.
    */
   async scheduled(event: { cron: string }, env: Env): Promise<void> {
+    if (event.cron === '* * * * *') {
+      await runWithDb(env, async () => {
+        const result = await deliverPendingPush(env);
+        if (result.sent || result.failed) console.log('[push]', result);
+        if (result.failed)
+          throw new Error('Native push deliveries failed; see retry queue');
+      });
+      return;
+    }
     getStorage(env);
     getEmail(env);
 
