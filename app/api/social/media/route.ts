@@ -7,6 +7,7 @@
  * Supported types:
  *   - Images: image/jpeg, image/png, image/webp, image/gif
  *   - Video:  video/mp4 (H.264/AAC, transcoded client-side)
+ *   - DM voice notes: audio/mp4 or audio/webm, with purpose and duration
  *
  * Max file size: 10 MB
  */
@@ -15,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getActiveProfileWithActor } from '@/lib/server/active-profile';
 import { uploadFile } from '@/lib/blob/api';
+import { voiceNoteError, voiceNoteMediaType } from '@/lib/media/voice-notes';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -89,8 +91,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const isVoiceNote = formData.get('purpose') === 'voice-note';
+  if (isVoiceNote) {
+    const duration = Number(formData.get('duration'));
+    const error = voiceNoteError(file, duration);
+    if (error) {
+      return NextResponse.json({ success: false, error }, { status: 400 });
+    }
+  }
+
   // Validate MIME type
-  if (!ACCEPTED_TYPES.includes(file.type)) {
+  if (!isVoiceNote && !ACCEPTED_TYPES.includes(file.type)) {
     return NextResponse.json(
       {
         success: false,
@@ -111,7 +122,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const category = getMediaCategory(file.type);
+  const category = isVoiceNote ? 'audio' : getMediaCategory(file.type);
   if (!category) {
     return NextResponse.json(
       { success: false, error: 'Could not determine media category' },
@@ -122,7 +133,12 @@ export async function POST(request: NextRequest) {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const ext = getExtension(file.type);
+    const mediaType = isVoiceNote ? voiceNoteMediaType(file.type) : file.type;
+    const ext = isVoiceNote
+      ? mediaType === 'audio/mp4'
+        ? 'm4a'
+        : 'weba'
+      : getExtension(file.type);
     const uuid = crypto.randomUUID();
     const fileName = `social/${profile.socialActor.id}/${uuid}.${ext}`;
 
@@ -138,7 +154,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         type: category,
-        mediaType: file.type,
+        mediaType,
         url,
         name: file.name,
       },

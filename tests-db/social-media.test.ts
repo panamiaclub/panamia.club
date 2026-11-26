@@ -55,9 +55,13 @@ const audioTypes = [
   'audio/mpeg',
 ];
 
-function multipart(contentType: string) {
+function multipart(contentType: string, voiceDuration?: string) {
   const body = new FormData();
   body.set('file', new File(['fixture'], 'fixture', { type: contentType }));
+  if (voiceDuration !== undefined) {
+    body.set('purpose', 'voice-note');
+    body.set('duration', voiceDuration);
+  }
   return new NextRequest('https://social.invalid/api/social/media', {
     method: 'POST',
     body,
@@ -94,6 +98,25 @@ it('does not issue upload URLs for any standalone audio format', async () => {
     assert.match((await response.json()).error, /Unsupported type/);
   }
   assert.equal(signatures, 0);
+});
+
+it('uploads authenticated voice notes with normalized audio metadata', async () => {
+  for (const type of ['audio/mp4;codecs=mp4a.40.2', 'audio/webm;codecs=opus']) {
+    const response = await upload(multipart(type, '300'));
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.data.type, 'audio');
+    assert.equal(body.data.mediaType, type.split(';')[0]);
+  }
+  assert.equal(uploads, 2);
+});
+
+it('rejects invalid voice note durations and formats before touching storage', async () => {
+  for (const duration of ['0', '-1', 'NaN', 'Infinity', '300.001']) {
+    assert.equal((await upload(multipart('audio/mp4', duration))).status, 400);
+  }
+  assert.equal((await upload(multipart('video/mp4', '10'))).status, 400);
+  assert.equal(uploads, 0);
 });
 
 it('continues uploading photos, GIFs, MP4, and legacy WebM video', async () => {

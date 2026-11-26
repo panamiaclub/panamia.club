@@ -143,10 +143,9 @@ export function plainTextSnippet(html: string): string {
 export function attachmentLabel(
   attachments: SocialStatusDisplay['attachments']
 ): string {
-  const first = attachments?.find(
-    (attachment) => !isAudioAttachment(attachment)
-  );
-  if (!first) return attachments?.length ? 'Attachment unavailable' : 'Message';
+  const first = attachments?.[0];
+  if (!first) return 'Message';
+  if (isAudioAttachment(first)) return 'Voice note';
 
   const mediaType = (first.mediaType ?? '').toLowerCase();
   const type = (first.type ?? '').toLowerCase();

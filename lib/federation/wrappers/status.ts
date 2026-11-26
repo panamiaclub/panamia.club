@@ -49,6 +49,7 @@ import {
 } from '@/lib/utils/getVisibility';
 import type { JsonValue } from '@/lib/types';
 import { isAudioAttachment } from '@/lib/media/attachments';
+import { VOICE_NOTE_TYPES, voiceNoteMediaType } from '@/lib/media/voice-notes';
 
 // Markdown rendering, including the hooks that stop raw HTML and
 // `javascript:` links being written into new posts, lives in
@@ -293,10 +294,29 @@ export async function createStatus(
     return { success: false, error: 'Content exceeds maximum length' };
   }
 
-  if (attachments?.some(isAudioAttachment)) {
+  const voiceNotes = attachments?.filter(isAudioAttachment) ?? [];
+  if (voiceNotes.length && (visibility !== 'direct' || groupId)) {
     return {
       success: false,
       error: 'Audio attachments are no longer supported.',
+    };
+  }
+  if (
+    voiceNotes.length > 1 ||
+    voiceNotes.some(
+      (attachment) =>
+        attachment.type !== 'audio' ||
+        typeof attachment.mediaType !== 'string' ||
+        typeof attachment.url !== 'string' ||
+        !attachment.url ||
+        !VOICE_NOTE_TYPES.some(
+          (type) => type === voiceNoteMediaType(attachment.mediaType)
+        )
+    )
+  ) {
+    return {
+      success: false,
+      error: 'Attach one supported voice note per direct message.',
     };
   }
 

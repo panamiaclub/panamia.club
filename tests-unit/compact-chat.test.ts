@@ -11,6 +11,11 @@ import {
   CHAT_PHOTO_MAX_BYTES,
   chatPhotoError,
 } from '@/app/messages/_lib/photos';
+import {
+  VOICE_NOTE_MAX_BYTES,
+  voiceNoteError,
+  voiceNoteRecordingType,
+} from '@/lib/media/voice-notes';
 
 const photo = {
   type: 'image',
@@ -25,12 +30,86 @@ const gif = {
 };
 
 describe('compact chat drafts', () => {
+  const voice = { type: 'audio', mediaType: 'audio/mp4', url: '/voice.m4a' };
+
+  it('sends an uploaded voice note without text and keeps recording/upload failures out of sends', () => {
+    const voiceFile = new File(['recorded'], 'voice.m4a', {
+      type: 'audio/mp4',
+    });
+    const draft = { ...EMPTY_MESSAGE_DRAFT, voice };
+    assert.equal(messageDraftCanSend(draft), true);
+    assert.deepEqual(messageDraftAttachments(draft), [voice]);
+    assert.equal(messageDraftPreview(draft), 'Voice note');
+    for (const patch of [
+      { isRecordingVoice: true },
+      { isUploadingVoice: true },
+      { voice: null, voiceFile, voiceError: 'Upload failed' },
+    ]) {
+      assert.equal(
+        messageDraftCanSend({ ...draft, text: 'caption', ...patch }),
+        false
+      );
+    }
+    assert.equal(
+      messageDraftPreview({ ...draft, isRecordingVoice: true }),
+      'Recording voice note...'
+    );
+    assert.equal(
+      messageDraftPreview({ ...draft, isUploadingVoice: true }),
+      'Uploading voice note...'
+    );
+    assert.equal(
+      messageDraftPreview({ ...draft, voice: null, voiceFile }),
+      'Voice note not uploaded'
+    );
+  });
   it('can send a photo without a caption and keeps GIF/photo metadata separate', () => {
     const draft = { ...EMPTY_MESSAGE_DRAFT, photo, gif };
     assert.equal(messageDraftCanSend(draft), true);
     assert.deepEqual(messageDraftAttachments(draft), [photo, gif]);
     assert.equal(messageDraftPreview({ ...draft, gif: null }), 'Photo');
     assert.equal(messageDraftCanSend(EMPTY_MESSAGE_DRAFT), false);
+  });
+
+  describe('voice note validation', () => {
+    it('accepts a five-minute note, but rejects anything past the duration or size limit', () => {
+      const file = {
+        type: 'audio/mp4;codecs=mp4a.40.2',
+        size: VOICE_NOTE_MAX_BYTES,
+      };
+      assert.equal(voiceNoteError(file, 300), null);
+      assert.match(voiceNoteError(file, 300.001)!, /5 minutes/);
+      assert.match(
+        voiceNoteError({ ...file, size: VOICE_NOTE_MAX_BYTES + 1 }, 300)!,
+        /10 MB/
+      );
+      for (const duration of [0, -1, NaN, Infinity])
+        assert.match(voiceNoteError(file, duration)!, /duration/);
+      assert.match(voiceNoteError({ ...file, size: 0 }, 1)!, /empty/);
+      assert.match(
+        voiceNoteError({ type: 'video/webm', size: 100 }, 1)!,
+        /format/
+      );
+      assert.equal(
+        voiceNoteError({ type: 'audio/webm;codecs=opus', size: 100 }, 1),
+        null
+      );
+    });
+
+    it('prefers AAC playback compatibility and uses Opus only when MP4 recording is unavailable', () => {
+      assert.equal(
+        voiceNoteRecordingType(() => true),
+        'audio/mp4;codecs=mp4a.40.2'
+      );
+      assert.equal(
+        voiceNoteRecordingType((type) => type.startsWith('audio/webm')),
+        'audio/webm;codecs=opus'
+      );
+      assert.equal(
+        voiceNoteRecordingType(() => false),
+        undefined
+      );
+    });
   });
 
   it('never sends a pending or failed chosen photo as a text-only success', () => {

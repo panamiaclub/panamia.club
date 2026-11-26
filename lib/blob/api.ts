@@ -25,6 +25,8 @@ function inferContentType(fileName: string): string {
     webp: 'image/webp',
     gif: 'image/gif',
     ogg: 'audio/ogg',
+    m4a: 'audio/mp4',
+    weba: 'audio/webm',
     mp4: 'video/mp4',
     webm: 'video/webm',
   };

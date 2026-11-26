@@ -597,6 +597,7 @@ function MessagesWorkspace({
               ) : (
                 <Composer
                   key={`composer-${activeActorId}`}
+                  allowVoiceNotes
                   canSend={thread.data.canSend}
                   counterpartyName={
                     thread.data.counterparty.name ||
