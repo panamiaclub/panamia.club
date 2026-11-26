@@ -28,6 +28,18 @@ for (const lng of ['en', 'es'] as const) {
     assert.ok(input);
     assert.match(input, /required=""/);
     assert.match(input, /autoComplete="postal-code"/);
+    assert.match(
+      input,
+      /aria-describedby="account-zip-hint account-zip-privacy account-zip-error"/
+    );
+    assert.ok(html.includes('id="account-zip-privacy"'));
+    assert.ok(
+      html.includes(
+        renderToStaticMarkup(
+          i18n.t('onboarding.zipPrivacyNote', { ns: 'common' })
+        )
+      )
+    );
     const pattern = input.match(/pattern="([^"]+)"/)?.[1];
     assert.ok(pattern);
     const accepted = new RegExp(`^(?:${pattern})$`);
