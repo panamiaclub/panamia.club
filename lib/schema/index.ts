@@ -25,7 +25,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
-import type { ChatAttachment } from '@/lib/chat';
+import type { ChatAttachment, ChatReactionEmoji } from '@/lib/chat';
 import type { ListingRefreshState } from '@/lib/listing-refresh';
 
 // =============================================================================
@@ -2400,6 +2400,45 @@ export const socialGroupChatMessages = pgTable(
       sql`char_length(btrim(${table.body})) > 0 OR jsonb_array_length(${table.attachments}) > 0`
     ),
   })
+).enableRLS();
+
+export const socialChatReactions = pgTable(
+  'social_chat_reactions',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    statusId: text('status_id').references(() => socialStatuses.id, {
+      onDelete: 'cascade',
+    }),
+    groupMessageId: text('group_message_id').references(
+      () => socialGroupChatMessages.id,
+      { onDelete: 'cascade' }
+    ),
+    actorId: text('actor_id')
+      .notNull()
+      .references(() => socialActors.id, { onDelete: 'cascade' }),
+    emoji: text('emoji').$type<ChatReactionEmoji>().notNull(),
+  },
+  (table) => [
+    uniqueIndex('social_chat_reactions_status_actor_idx').on(
+      table.statusId,
+      table.actorId
+    ),
+    uniqueIndex('social_chat_reactions_group_actor_idx').on(
+      table.groupMessageId,
+      table.actorId
+    ),
+    index('social_chat_reactions_actor_idx').on(table.actorId),
+    check(
+      'social_chat_reactions_one_message',
+      sql`num_nonnulls(${table.statusId}, ${table.groupMessageId}) = 1`
+    ),
+    check(
+      'social_chat_reactions_emoji',
+      sql`${table.emoji} IN ('👍', '❤️', '😂', '😮', '😢', '🙏')`
+    ),
+  ]
 ).enableRLS();
 
 export const socialAttachments = pgTable(

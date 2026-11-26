@@ -98,20 +98,22 @@ export function lastActiveLabel(published: string | Date | null): string {
  *
  * A bare username is ambiguous across servers and the ambiguity is not
  * cosmetic: two different people can hold the same username on two hosts, and
- * which one you are talking to is decided by the domain.
+ * remote identities must keep their domain.
  */
 export function actorHandle(
-  actor: Pick<SocialActorDisplay, 'username' | 'domain'>,
+  actor: Pick<SocialActorDisplay, 'username' | 'domain' | 'profileId'>,
   localDomain: string | null
 ): string {
-  if (!localDomain || actor.domain === localDomain) return actor.username;
-  return `${actor.username}@${actor.domain}`;
+  const host = remoteHost(actor, localDomain);
+  return host ? `${actor.username}@${host}` : actor.username;
 }
 
 export function remoteHost(
-  actor: Pick<SocialActorDisplay, 'domain'>,
+  actor: Pick<SocialActorDisplay, 'domain' | 'profileId'>,
   localDomain: string | null
 ): string | null {
+  // Local profile ownership survives an identity-domain change.
+  if (actor.profileId != null) return null;
   if (!localDomain || !actor.domain) return null;
   return actor.domain === localDomain ? null : actor.domain;
 }

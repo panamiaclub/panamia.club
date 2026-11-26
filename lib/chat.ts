@@ -7,6 +7,21 @@ export const GROUP_CHAT_MAX_CONTENT = 5_000;
 export const GROUP_CHAT_MAX_ATTACHMENTS = 4;
 export const GROUP_CHAT_UNAVAILABLE = 'This group chat is not available.';
 
+export const CHAT_REACTIONS = [
+  { emoji: '👍', label: 'Thumbs up' },
+  { emoji: '❤️', label: 'Heart' },
+  { emoji: '😂', label: 'Laugh' },
+  { emoji: '😮', label: 'Surprised' },
+  { emoji: '😢', label: 'Sad' },
+  { emoji: '🙏', label: 'Thank you' },
+] as const;
+export type ChatReactionEmoji = (typeof CHAT_REACTIONS)[number]['emoji'];
+export interface ChatReaction {
+  emoji: ChatReactionEmoji;
+  count: number;
+  reacted: boolean;
+}
+
 export interface ChatAttachment {
   type: string;
   mediaType: string;
@@ -22,6 +37,8 @@ export type ChatMessage = Pick<
 > & {
   clientId?: string | null;
   canDelete?: boolean;
+  canReact?: boolean;
+  reactions?: ChatReaction[];
 };
 
 export interface PendingChatMessage {

@@ -447,6 +447,7 @@ export interface SocialActorDisplay {
   id: string;
   username: string;
   domain: string;
+  profileId?: string | null;
   uri?: string;
   name?: string | null;
   summary?: string | null;

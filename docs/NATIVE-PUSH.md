@@ -6,7 +6,7 @@ The website's desktop alerts are unchanged.
 
 ## Server deployment
 
-Apply `0079_native_push.sql` through `yarn db:migrate` before deploying the Worker.
+Apply `0080_native_push.sql` through `yarn db:migrate` before deploying the Worker.
 The migration journal follows `0078_social_interaction_notifications.sql`.
 Notification inserts atomically enqueue delivery to currently registered devices,
 including bulk group notifications and post likes/replies. There is no historical

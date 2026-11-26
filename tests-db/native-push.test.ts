@@ -62,7 +62,7 @@ before(async () => {
   }
   await pg.exec(
     readFileSync(
-      new URL('../drizzle/0079_native_push.sql', import.meta.url),
+      new URL('../drizzle/0080_native_push.sql', import.meta.url),
       'utf8'
     )
   );

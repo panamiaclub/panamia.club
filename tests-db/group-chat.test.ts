@@ -40,6 +40,12 @@ const { GET: listRoute } =
 const roomRoute = await import('../app/api/social/groups/[handle]/chat/route');
 const deletionRoute =
   await import('../app/api/social/groups/[handle]/chat/[messageId]/route');
+const groupReactionRoute =
+  await import('../app/api/social/groups/[handle]/chat/[messageId]/reaction/route');
+const directReactionRoute =
+  await import('../app/api/social/messages/conversations/[actorId]/[messageId]/reaction/route');
+const directThreadRoute =
+  await import('../app/api/social/messages/conversations/[actorId]/route');
 const { NextRequest } = await import('next/server');
 const groupMembership = await import('@/lib/federation/wrappers/group');
 const groupModeration =
@@ -99,6 +105,7 @@ before(async () => {
     schema.socialBlocks,
     schema.socialStatuses,
     schema.socialFollows,
+    schema.socialDmRequests,
     schema.socialLikes,
     schema.socialAttachments,
     schema.socialTags,
@@ -125,6 +132,12 @@ before(async () => {
   await pg.exec(
     await readFile(
       new URL('../drizzle/0074_social_group_chat.sql', import.meta.url),
+      'utf8'
+    )
+  );
+  await pg.exec(
+    await readFile(
+      new URL('../drizzle/0079_chat_reactions.sql', import.meta.url),
       'utf8'
     )
   );
@@ -229,6 +242,8 @@ beforeEach(async () => {
   signedIn = true;
   notices.length = 0;
   await db.delete(schema.socialGroupChatMessages);
+  await db.delete(schema.socialStatuses);
+  await db.delete(schema.socialDmRequests);
   await db.delete(schema.socialBlocks);
   await db
     .insert(schema.socialGroupMembers)
@@ -613,6 +628,315 @@ describe('native group chat input and moderation', () => {
       assert.equal(result.success, false);
       if (!result.success) assert.equal(result.status, 400);
     }
+  });
+});
+
+describe('private chat reactions', () => {
+  const react = (
+    messageId: string,
+    emoji: unknown,
+    actor = 'alice',
+    handle = 'garden'
+  ) => chat.reactToGroupChatMessage(handle, actor, messageId, { emoji });
+  const reactions = async (messageId: string, actor = 'alice') => {
+    const page = await chat.readGroupChat('garden', actor);
+    if (!page.success) assert.fail(page.error);
+    return page.data.messages.find((message) => message.id === messageId)
+      ?.reactions;
+  };
+  const dm = async (
+    id = 'direct-reaction',
+    patch: Partial<typeof schema.socialStatuses.$inferInsert> = {}
+  ) => {
+    await db.insert(schema.socialStatuses).values({
+      id,
+      actorId: 'alice',
+      uri: `https://chat.invalid/status/${id}`,
+      content: 'Private message',
+      type: 'Note',
+      recipientTo: ['https://chat.invalid/p/bob'],
+      recipientCc: [],
+      published: new Date(),
+      expiresAt: new Date(Date.now() + 86_400_000),
+      ...patch,
+    });
+    return id;
+  };
+  const direct = (messageId: string, emoji: unknown, actorId = 'bob') =>
+    directReactionRoute.PUT(request('PUT', { emoji }), {
+      params: Promise.resolve({ actorId, messageId }),
+    });
+
+  it('persists one group reaction per person, replaces it, and removes it idempotently', async () => {
+    const message = await send();
+    assert.equal((await react(message.id, '❤️')).success, true);
+    assert.equal((await react(message.id, '❤️')).success, true);
+    assert.equal((await react(message.id, '❤️', 'bob')).success, true);
+    assert.deepEqual(await reactions(message.id), [
+      { emoji: '❤️', count: 2, reacted: true },
+    ]);
+    assert.equal((await react(message.id, '😂')).success, true);
+    const changed = await reactions(message.id);
+    assert.ok(
+      changed?.some(
+        (entry) => entry.emoji === '😂' && entry.reacted && entry.count === 1
+      )
+    );
+    assert.ok(
+      changed?.some(
+        (entry) => entry.emoji === '❤️' && !entry.reacted && entry.count === 1
+      )
+    );
+    assert.equal((await react(message.id, null)).success, true);
+    assert.equal((await react(message.id, null)).success, true);
+    assert.deepEqual(await reactions(message.id), [
+      { emoji: '❤️', count: 1, reacted: false },
+    ]);
+    assert.equal((await db.select().from(schema.socialLikes)).length, 0);
+  });
+
+  it('rejects unauthorized, wrong-room, deleted, expired, and blocked group messages', async () => {
+    const message = await send();
+    for (const actor of ['stranger', 'pending', 'banned']) {
+      assert.equal((await react(message.id, '👍', actor)).success, false);
+    }
+    assert.equal(
+      (await react(message.id, '👍', 'alice', 'open-room')).success,
+      false
+    );
+    await db.insert(schema.socialBlocks).values({
+      actorId: 'bob',
+      targetActorId: 'alice',
+      kind: 'block',
+    });
+    assert.equal((await react(message.id, '👍', 'bob')).success, false);
+    await db.delete(schema.socialBlocks);
+    await db
+      .update(schema.socialGroupMembers)
+      .set({ status: 'pending' })
+      .where(eq(schema.socialGroupMembers.actorId, 'bob'));
+    assert.equal((await react(message.id, '👍', 'bob')).success, false);
+    await chat.deleteGroupChatMessage('garden', 'alice', message.id);
+    assert.equal((await react(message.id, '👍')).success, false);
+    const expired = await send('Expires soon');
+    await db
+      .update(schema.socialGroupChatMessages)
+      .set({ expiresAt: new Date(Date.now() - 1) })
+      .where(eq(schema.socialGroupChatMessages.id, expired.id));
+    assert.equal((await react(expired.id, '👍')).success, false);
+  });
+
+  it('filters hidden reactors and broadcasts metadata only to active group members', async () => {
+    const message = await send();
+    notices.length = 0;
+    await react(message.id, '🙏', 'bob');
+    assert.ok(
+      notices.some(
+        (notice) =>
+          notice.actorId === 'alice' && notice.payload.messageId === message.id
+      )
+    );
+    assert.ok(
+      !notices.some((notice) =>
+        ['pending', 'banned', 'stranger'].includes(notice.actorId)
+      )
+    );
+    assert.ok(
+      notices.every(
+        (notice) =>
+          !('emoji' in notice.payload) && !('content' in notice.payload)
+      )
+    );
+    await db.insert(schema.socialBlocks).values({
+      actorId: 'alice',
+      targetActorId: 'bob',
+      kind: 'mute',
+    });
+    assert.deepEqual(await reactions(message.id), []);
+  });
+
+  it('authenticates reaction routes and rejects unsupported emoji and spoofed actor fields', async () => {
+    const message = await send();
+    const context = {
+      params: Promise.resolve({ handle: 'garden', messageId: message.id }),
+    };
+    signedIn = false;
+    assert.equal(
+      (await groupReactionRoute.PUT(request('PUT', { emoji: '👍' }), context))
+        .status,
+      401
+    );
+    assert.equal((await direct('missing', '👍')).status, 401);
+    signedIn = true;
+    viewer = null;
+    assert.equal(
+      (await groupReactionRoute.PUT(request('PUT', { emoji: '👍' }), context))
+        .status,
+      403
+    );
+    viewer = 'alice';
+    for (const body of [
+      { emoji: '🎉' },
+      {},
+      { emoji: '👍', actorId: 'bob' },
+      { emoji: ['👍'] },
+    ]) {
+      assert.equal(
+        (await groupReactionRoute.PUT(request('PUT', body), context)).status,
+        400
+      );
+    }
+    assert.equal(
+      (await db.select().from(schema.socialChatReactions)).length,
+      0
+    );
+  });
+
+  it('adds, replaces, reads and removes direct reactions without touching public likes', async () => {
+    const id = await dm();
+    assert.equal((await direct(id, '👍')).status, 200);
+    assert.equal((await direct(id, '👍')).status, 200);
+    let response = await directThreadRoute.GET(request('GET'), {
+      params: Promise.resolve({ actorId: 'bob' }),
+    });
+    let body = await response.json();
+    assert.equal(body.data.messages[0].canReact, true);
+    assert.deepEqual(body.data.messages[0].reactions, [
+      { emoji: '👍', count: 1, reacted: true },
+    ]);
+    viewer = 'bob';
+    assert.equal((await direct(id, '👍', 'alice')).status, 200);
+    response = await directThreadRoute.GET(request('GET'), {
+      params: Promise.resolve({ actorId: 'alice' }),
+    });
+    body = await response.json();
+    assert.deepEqual(body.data.messages[0].reactions, [
+      { emoji: '👍', count: 2, reacted: true },
+    ]);
+    assert.equal((await direct(id, '😮', 'alice')).status, 200);
+    assert.equal((await direct(id, null, 'alice')).status, 200);
+    assert.equal((await direct(id, null, 'alice')).status, 200);
+    assert.equal(
+      (await db.select().from(schema.socialChatReactions)).length,
+      1
+    );
+    assert.equal((await db.select().from(schema.socialLikes)).length, 0);
+    assert.ok(
+      notices.some(
+        (notice) => notice.actorId === 'alice' && notice.payload.statusId === id
+      )
+    );
+  });
+
+  it('refuses direct reactions outside the exact private, unexpired conversation', async () => {
+    const id = await dm();
+    viewer = 'stranger';
+    assert.equal((await direct(id, '👍', 'alice')).status, 404);
+    viewer = 'alice';
+    for (const [id, patch] of [
+      ['expired', { expiresAt: new Date(Date.now() - 1) }],
+      [
+        'public',
+        { recipientTo: ['https://www.w3.org/ns/activitystreams#Public'] },
+      ],
+      [
+        'followers',
+        { recipientTo: ['https://chat.invalid/p/alice/followers'] },
+      ],
+      [
+        'multi',
+        {
+          recipientTo: [
+            'https://chat.invalid/p/bob',
+            'https://chat.invalid/p/moderator',
+          ],
+        },
+      ],
+      ['story', { type: 'Story' }],
+    ] as const) {
+      const target = await dm(id, {
+        ...patch,
+        recipientTo:
+          'recipientTo' in patch
+            ? [...patch.recipientTo]
+            : ['https://chat.invalid/p/bob'],
+      });
+      assert.equal((await direct(target, '👍')).status, 404, id);
+    }
+    await db.insert(schema.socialBlocks).values({
+      actorId: 'bob',
+      targetActorId: 'alice',
+      kind: 'block',
+    });
+    assert.equal((await direct(id, '👍')).status, 404);
+    assert.equal(
+      (await db.select().from(schema.socialChatReactions)).length,
+      0
+    );
+  });
+
+  it('keeps legacy-domain local DMs reactable without enabling external-server reactions', async () => {
+    const id = await dm();
+    try {
+      await db
+        .update(schema.socialActors)
+        .set({ domain: 'legacy.invalid', profileId: 'local-profile' })
+        .where(eq(schema.socialActors.id, 'bob'));
+      assert.equal((await direct(id, '😢')).status, 200);
+      await db
+        .update(schema.socialActors)
+        .set({ profileId: null })
+        .where(eq(schema.socialActors.id, 'bob'));
+      assert.equal((await direct(id, '👍')).status, 404);
+    } finally {
+      await db
+        .update(schema.socialActors)
+        .set({ domain: 'chat.invalid', profileId: null })
+        .where(eq(schema.socialActors.id, 'bob'));
+    }
+  });
+
+  it('cascades reactions with hard-deleted messages and denies direct database clients', async () => {
+    const message = await send();
+    await react(message.id, '❤️');
+    const protection = await pg.query<{ relrowsecurity: boolean }>(
+      "SELECT relrowsecurity FROM pg_class WHERE relname = 'social_chat_reactions'"
+    );
+    assert.equal(protection.rows[0].relrowsecurity, true);
+    await pg.exec(
+      'CREATE ROLE chat_reaction_client; GRANT SELECT ON social_chat_reactions TO chat_reaction_client; SET ROLE chat_reaction_client;'
+    );
+    try {
+      const result = await pg.query('SELECT * FROM social_chat_reactions');
+      assert.equal(result.rows.length, 0);
+    } finally {
+      await pg.exec('RESET ROLE');
+    }
+    await db
+      .delete(schema.socialGroupChatMessages)
+      .where(eq(schema.socialGroupChatMessages.id, message.id));
+    assert.equal(
+      (await db.select().from(schema.socialChatReactions)).length,
+      0
+    );
+  });
+
+  it('does not turn a held request into a reaction notification or receipt', async () => {
+    const id = await dm();
+    await db.insert(schema.socialDmRequests).values({
+      recipientActorId: 'bob',
+      senderActorId: 'alice',
+      state: 'pending',
+    });
+    assert.equal((await direct(id, '❤️')).status, 200);
+    assert.ok(!notices.some((notice) => notice.actorId === 'bob'));
+    viewer = 'bob';
+    assert.equal((await direct(id, '❤️', 'alice')).status, 403);
+    const response = await directThreadRoute.GET(request('GET'), {
+      params: Promise.resolve({ actorId: 'alice' }),
+    });
+    const body = await response.json();
+    assert.equal(body.data.messages[0].canReact, false);
   });
 });
 

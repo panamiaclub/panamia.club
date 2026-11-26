@@ -73,7 +73,7 @@ out for group and event conversations.
 
 ### Non-Goals
 
-- Threads, reactions, read receipts, or typing indicators in the first release
+- Threads, read receipts, or typing indicators in the first release
 - Federation **for group and event rooms**. Those are explicitly the "stay on the site" surface, and
   ActivityPub has no good real-time chat story. DM rooms are the exception and keep federating,
   because they ride the existing direct-status substrate — see
@@ -101,6 +101,10 @@ photo/initial avatars, clearer timestamps, and 44px primary touch controls. The 
 mobile workspace avoid a redundant outer scrollbar; only their content panes scroll.
 The GIF picker stays inside the visible conversation, including when a multiline draft and
 an existing attachment leave too little room above the composer.
+Federation banners, badges and domain-qualified handles use local profile ownership
+before comparing identity domains, so locally owned accounts retain local presentation
+after a domain change. Accounts without a local profile still use the identity-domain
+comparison.
 
 - The compact composer starts as one row and grows to 128px before scrolling.
   Return inserts a newline on phones; desktop Enter sends, Shift+Enter inserts
@@ -131,6 +135,17 @@ an existing attachment leave too little room above the composer.
   live inside tighter Pana-coloured bubbles. Direct messages omit redundant
   sender avatars; groups retain sender identity. Report and authorized delete
   controls stay accessible. There are still no calls, presence or read receipts.
+- Individual PanaMia DMs and native group chats support six quick reactions:
+  thumbs up, heart, laugh, surprised, sad and thank you. Use the reaction button
+  beside a delivered message or tap an existing reaction. Each person has one
+  reaction per message; choosing another replaces it and choosing it again removes it.
+  Counts highlight your own reaction and update through the existing mailbox and
+  polling fallback. Reactions are private chat data, separate from public likes;
+  they are not federated, so external-server DM threads do not offer them.
+  Group membership, blocks, message expiry/deletion and DM consent still apply.
+  Held requests must be accepted before the recipient can react; sender reactions
+  never notify a recipient whose request is still held. Pending/failed messages
+  do not accept reactions. Apply migration `0079_chat_reactions` before deploying.
 - Desktop conversation and transcript panes scroll independently; the composer stays in view.
   Mobile uses a list/detail flow with Back navigation, including during loading and errors.
 - Individual and group conversations share one inbox ordered by recent activity;
