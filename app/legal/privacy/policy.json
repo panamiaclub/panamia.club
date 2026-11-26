@@ -2,7 +2,7 @@
   "@context": "https://schema.org",
   "@type": "PrivacyPolicy",
   "name": "Pana MIA Club Privacy Policy",
-  "version": "1.3",
+  "version": "1.4",
   "status": "effective",
   "effectiveDate": "2026-11-26",
   "url": "https://panamia.club/legal/privacy",
@@ -215,7 +215,7 @@
             "retention": "Account lifetime",
             "sharedWith": "Apple APNs / Google FCM when enabled",
             "prose": "Notification preferences and optional native push delivery",
-            "blurb": "Your alert choices and, if enabled, a device token tied to your login session. Apple APNs or Google FCM receives the token, alert text, and an opaque notification ID. Message previews default on when newly enabling push, unless this device chose off; existing generic-only registrations stay generic until you enable previews. Enabled previews share sender names and short ordinary DM excerpts with Apple/Google, not attachment URLs or encrypted message contents. Your phone's privacy settings control lock-screen display; Always can reveal previews while locked. Turning previews off does not recall delivered alerts. Tokens are removed at logout or after 30 days without renewal; queued deliveries are kept for at most one day."
+            "blurb": "Your alert choices and, if enabled, a device token tied to your login session. Apple APNs or Google FCM receives the token, alert text, and an opaque notification ID. Message previews default on for new registrations and existing registrations untouched since previews launched. Later saved off settings are preserved, including automatically saved off defaults that cannot be distinguished from opt-outs. You can turn previews off in the app. Enabled previews share sender names and short ordinary DM excerpts with Apple/Google, not attachment URLs or encrypted message contents. Your phone's privacy settings control lock-screen display; Always can reveal previews while locked. Turning previews off does not recall delivered alerts. Tokens are removed at logout or after 30 days without renewal; queued deliveries are kept for at most one day."
           }
         },
         {

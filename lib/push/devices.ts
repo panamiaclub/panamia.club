@@ -40,7 +40,7 @@ export async function registerPushDevice(
       .values({
         ...device,
         messagePreviews:
-          device.messagePreviews ?? previous?.messagePreviews ?? false,
+          device.messagePreviews ?? previous?.messagePreviews ?? true,
         sessionId: session.id,
         userId: session.userId,
       })
