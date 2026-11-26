@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createElement, type ComponentProps } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { appRouterInstance } from 'vinext/shims/navigation';
+import { appRouterInstance } from '../tests/app-router';
 import { AppRouterContext } from 'vinext/shims/internal/app-router-context';
 
 import { ConnectorJoinForm } from '../components/connectors/join-form';

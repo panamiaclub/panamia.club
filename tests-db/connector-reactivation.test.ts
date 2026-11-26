@@ -12,7 +12,7 @@ import {
 } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AppRouterContext } from 'vinext/shims/internal/app-router-context';
-import { appRouterInstance } from 'vinext/shims/navigation';
+import { appRouterInstance } from '../tests/app-router';
 import * as schema from '@/lib/schema';
 
 const pg = new PGlite();
