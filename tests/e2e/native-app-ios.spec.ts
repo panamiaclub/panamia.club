@@ -1075,6 +1075,40 @@ for (const resize of ['visual-only', 'whole-WebView'] as const) {
   });
 }
 
+for (const [width, height] of [
+  [160, 80],
+  [80, 160],
+]) {
+  test(`story bubble photos crop without stretching at ${width}x${height}`, async ({
+    page,
+  }) => {
+    await ios(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.route('**/logos/pana_logo_long_orange.png', (route) =>
+      route.fulfill({
+        contentType: 'image/svg+xml',
+        body: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="orange"/><circle cx="${width / 2}" cy="${height / 2}" r="20" fill="white"/></svg>`,
+      })
+    );
+    await page.goto('/s');
+    const photo = page.locator(
+      '.stories-rail [data-owner="true"] .stories-rail-avatar img'
+    );
+    await expect(photo).toBeVisible();
+    await expect
+      .poll(() =>
+        photo.evaluate((image: HTMLImageElement) => ({
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        }))
+      )
+      .toEqual({ width, height });
+    await expect(photo).toHaveCSS('object-fit', 'cover');
+    await expect(photo).toHaveCSS('width', '64px');
+    await expect(photo).toHaveCSS('height', '64px');
+  });
+}
+
 test('story captions stay inside the visible iOS viewport above the keyboard', async ({
   page,
 }) => {
