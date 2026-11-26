@@ -116,10 +116,21 @@ an existing attachment leave too little room above the composer.
   source metadata such as GPS is not uploaded. The original-file limit is 10 MB.
   JPEG, PNG and WebP are supported; HEIC files can be converted when the browser
   can decode them, with an explicit JPEG/PNG/WebP recovery message otherwise.
+- Direct messages also support one voice note per message, with optional text,
+  photos or GIFs. Tap the microphone, stop or cancel recording, preview, then send.
+  Recording stops automatically at five minutes; recordings and uploads are
+  limited to 10 MB. Microphone access is requested only after tapping Record and
+  released on stop, cancel, interruption, or a conversation/profile switch.
+  Failed uploads stay in their originating draft and can be retried or removed;
+  failed sends use the existing message retry flow. Group recording and public
+  audio posts remain unavailable.
+  Voice notes use MP4/AAC where supported, otherwise WebM/Opus, and the same
+  authenticated media upload and shareable-link model as photos, not end-to-end
+  encryption. Existing DM audio attachments can be played inline as well.
 - Message timestamps, compact per-message expiry and actual server acceptance
   live inside tighter Pana-coloured bubbles. Direct messages omit redundant
   sender avatars; groups retain sender identity. Report and authorized delete
-  controls stay accessible. There are still no calls, voice, presence or read receipts.
+  controls stay accessible. There are still no calls, presence or read receipts.
 - Desktop conversation and transcript panes scroll independently; the composer stays in view.
   Mobile uses a list/detail flow with Back navigation, including during loading and errors.
 - Individual and group conversations share one inbox ordered by recent activity;
@@ -135,7 +146,7 @@ an existing attachment leave too little room above the composer.
   views. Profile filtering happens before pagination and also excludes direct replies when
   requested. Public, followers-only, Panas, and readable group posts retain their audiences;
   Messages and authorized DM permalinks remain unchanged.
-- Text, photo and mirrored-GIF drafts are held per conversation in component memory. Reloading, unmounting
+- Text, photo, voice-note and mirrored-GIF drafts are held per conversation in component memory. Reloading, unmounting
   the workspace, signing out, or switching the active profile clears them; browser storage is not used.
 - Each submitted message retains its recipient, text, and attachments while sending or failed.
   **Retry** reuses that local bubble. A server acknowledgement is matched to its refetched row by
@@ -496,8 +507,8 @@ own list:
 Every one of those is caused by `chat_messages` being a new table, not by the socket. Adding a
 socket in front of `socialStatuses` pays none of them: federation still works because the message is
 still a status, block filtering still applies because it is the same read path, moderation still
-applies because it is the same row. Audio notes and voice memos have since been retired without
-changing this direct-message substrate.
+applies because it is the same row. Direct-message voice notes also use this substrate;
+public audio posts and group-chat recordings remain unavailable.
 
 **Conclusion: buy column one, decline column two.** That deletes the only cost recorded against the
 mail substrate while costing nothing the mock warned about — which is why the substrate survives the

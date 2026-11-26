@@ -1427,7 +1427,7 @@ describe('new mutual-only posts preserve their circle without becoming messages'
     assert.equal(await status.getStatus(created.id, 'circle_follower'), null);
   });
 
-  it('rejects audio metadata in public posts, direct messages, and group posts without writing rows', async () => {
+  it('rejects public/group audio and unsupported direct audio without writing rows', async () => {
     const { createStory } = await import('@/lib/federation/wrappers/stories');
     const beforeRows = await db.select().from(schema.socialStatuses);
     const beforeAttachments = await db.select().from(schema.socialAttachments);
@@ -1451,12 +1451,15 @@ describe('new mutual-only posts preserve their circle without becoming messages'
         assert.equal(response.status, 400);
         assert.equal(
           (await response.json()).error,
-          'Audio attachments are no longer supported.'
+          visibility === 'direct'
+            ? 'Attach one supported voice note per direct message.'
+            : 'Audio attachments are no longer supported.'
         );
         const story = await createStory(owner, {
           ...attachment,
           url: 'https://visibility.invalid/existing.ogg',
         });
+
         assert.equal(story.success, false);
         assert.equal(story.error, 'Stories support photos and videos only');
       }
@@ -1482,6 +1485,35 @@ describe('new mutual-only posts preserve their circle without becoming messages'
       await db.select().from(schema.socialAttachments),
       beforeAttachments
     );
+  });
+
+  it('stores supported voice notes as direct attachments without granting public access', async () => {
+    const result = await status.createStatus(
+      owner,
+      '',
+      undefined,
+      undefined,
+      'direct',
+      [
+        {
+          type: 'audio',
+          mediaType: 'audio/mp4',
+          url: 'https://visibility.invalid/voice.m4a',
+          name: 'Voice note',
+        },
+      ],
+      [pana]
+    );
+    assert.equal(result.success, true);
+    const created = result.status;
+    assert.equal(created.content, '');
+    assert.equal(await status.getStatus(created.id), null);
+    assert.ok(await status.getStatus(created.id, pana));
+    const attachments = await db.query.socialAttachments.findMany({
+      where: eq(schema.socialAttachments.statusId, created.id),
+    });
+    assert.equal(attachments[0].type, 'audio');
+    assert.equal(attachments[0].mediaType, 'audio/mp4');
   });
 
   it('rejects empty posts, invalid bodies, and invalid Panas audience combinations', async () => {

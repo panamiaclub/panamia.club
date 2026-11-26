@@ -22,13 +22,12 @@ followed — and nothing on screen says so.
    the site is passwordless — the account is created the first time a magic link
    is used. Asking a visitor to classify themselves as new or returning before
    anything has explained the difference is a question with no answer.
-2. **Gate the action, not the door.** Arrival is never blocked. What a member
-   cannot do yet is explained at the point they try to do it.
+2. **Gate the action, not the door.** Personal social-profile setup remains
+   skippable. The private account ZIP requirement below is the exception.
 3. **Nobody is left silently inert.** If something is unavailable because a step
    was skipped, say which step, and offer it in place.
-4. **Ask for a thing where it pays off.** A postcode belongs to the moment
-   someone searches nearby, not to a form they fill out before they have seen
-   anything.
+4. **Keep location data separate.** A required private account ZIP is not a
+   public business address, billing verification, or browser geolocation.
 5. **Arrival is not intent.** Someone who clicked a magic link from a
    half-finished business listing was going somewhere. An interstitial may
    interrupt that journey, but it must not end it.
@@ -36,6 +35,30 @@ followed — and nothing on screen says so.
 ---
 
 ## Current State
+
+### Required private account ZIP
+
+After authentication, new and existing members without a validly formatted
+account ZIP must complete `/welcome/zip` before continuing, including business
+owners and members who previously dismissed screenname setup. The root layout
+checks server-rendered pages; `ScreennameGate` also checks after client-side
+authentication. Both preserve the interrupted path and query in `next`.
+
+The form accepts a five-digit US ZIP or ZIP+4. The authenticated
+`POST /api/user/zip` endpoint validates the format server-side and saves only
+the first five digits in the existing `users.zip_code` column, preserving leading
+zeroes. This is format validation, not address or residency verification.
+It does not create or change a personal profile, a business listing, or a
+billing-verified ZIP. Existing valid account ZIPs satisfy the requirement.
+There is no skip; sign-out, legal pages, and account settings/deletion remain
+accessible. Account creation still happens during passwordless/OAuth
+authentication; the ZIP is required to finish setup immediately afterward.
+
+The form explains that we collect ZIP codes to understand which communities we
+serve and plan local outreach, with a privacy-first note about keeping only five
+digits and keeping account ZIPs private.
+The ZIP is returned only by the authenticated current-user API, not public
+profiles. It is not currently used to position directory searches.
 
 ### One door
 
@@ -436,9 +459,9 @@ magic link / OAuth
 
 ### 1. An interstitial, not a wizard
 
-One page, two required inputs: name and screenname. Multi-step onboarding is how
-you convert a first-time visitor into a bounce. Everything that is not
-load-bearing is asked for later, in context.
+After the required private ZIP step, personal social-profile setup remains one
+page with two required inputs: name and screenname. It can still be skipped
+without forcing business owners to create a social identity.
 
 ### 2. Intent is preserved with `?next=`
 
@@ -564,7 +587,11 @@ The card links out to the pages that already exist rather than inlining a
 second editor: `/account/user/edit` for the name, `/account/profile/images` for
 the photo. Only the missing half is offered.
 
-#### Dropped: the `zipCode` ask
+#### Historical decision: the search-time `zipCode` ask
+
+The private account setup requirement described in Current State supersedes
+the decision not to collect an account ZIP. The search behavior described below
+is unchanged: collecting a ZIP does not silently use it for directory locality.
 
 An earlier draft of this phase proposed asking for `users.zipCode` at the first
 locality-scoped directory search. It was cut, and the account-settings input

@@ -134,6 +134,16 @@
     "regions": "Miami-Dade · Broward · Palm Beach"
   },
   "onboarding": {
+    "zipTitle": "Add your ZIP code",
+    "zipBody": "A US ZIP code is required to finish account setup for new and existing members. It helps us understand which communities we serve and plan local outreach.",
+    "zipLabel": "ZIP code",
+    "zipHint": "Enter five digits or ZIP+4 (for example, 33138 or 33138-1234). We're privacy-first: we save only the first five digits and keep your account ZIP private. It does not change any public business address.",
+    "zipInvalid": "Enter a five-digit US ZIP code or ZIP+4.",
+    "zipSaveFailed": "Could not save your ZIP code. Try again.",
+    "zipPrivacy": "Privacy policy",
+    "zipAccount": "Manage or delete account",
+    "zipSignOut": "Sign out",
+    "zipSignOutFailed": "Could not sign out. Try again.",
     "screennameTitle": "Pick your screenname",
     "screennameDescription": "Enter your name and choose a screenname. This is how you'll show up across Pana MIA — on your profile, on anything you post, and anywhere people find you. You can skip for now, but you'll need both before you can post or follow.",
     "welcomeEyebrow": "You're in",

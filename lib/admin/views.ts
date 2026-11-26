@@ -23,7 +23,6 @@
 
 import {
   Activity,
-  Download,
   Flag,
   HeartHandshake,
   type LucideIcon,
@@ -149,24 +148,18 @@ export const ADMIN_VIEWS: readonly AdminView[] = [
     name: 'Directory listings',
     href: '/admin/listings',
     group: 'directory',
-    blurb: 'Applications waiting to be let into the directory.',
+    blurb:
+      'Directory health, business profiles, and applications waiting for review.',
     does: [
       'See everything waiting, oldest first',
       'Read the application without leaving the queue',
       'Approve or decline',
+      'Track total profiles and businesses added in the last 30 days',
+      'Deactivate or reactivate published business profiles',
+      'Download all directory businesses as CSV',
     ],
     status: 'live',
     icon: Store,
-  },
-  {
-    id: 'download-profiles',
-    name: 'Export profiles',
-    href: '/admin/download-profiles',
-    group: 'directory',
-    blurb: 'Pull the directory down as a spreadsheet.',
-    does: ['Download every profile as CSV'],
-    status: 'live',
-    icon: Download,
   },
   {
     id: 'referrals',

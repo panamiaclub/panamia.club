@@ -9,10 +9,14 @@ import {
   ONBOARDING_DISMISS_KEY,
   isNewAccount,
   isOnboardingRoute,
+  isAccountZipExemptRoute,
 } from '@/lib/onboarding';
+import { normalizeUsZip } from '@/lib/online-zip';
 
 /**
  * Prompts a signed-in user who has no screenname to claim one.
+ * The private account ZIP requirement takes priority, regardless of account
+ * age, managed listings, onboarding route, or a previous screenname dismissal.
  *
  * A screenname is what creates the user's profile (see
  * app/api/user/screenname/set/route.ts), and the profile is what social
@@ -47,31 +51,25 @@ export default function ScreennameGate() {
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  // Which user id we've already looked up, so a sign-out/sign-in in the same
-  // tab re-checks rather than reusing the previous user's answer.
+  // Re-check after signing out, even if the same account signs back in.
   const checkedFor = useRef<string | null>(null);
 
   const userId = session?.user?.id;
 
   useEffect(() => {
     if (status !== 'authenticated' || !userId) {
+      checkedFor.current = null;
+      setOpen(false);
       return;
     }
-    /* Onboarding routes ask this question themselves. Running the check here
-       too would either double up or, on /welcome, bounce the member straight
-       back into the page they are already standing on. */
-    if (isOnboardingRoute(pathname)) {
+    // Account management and legal information stay reachable before setup.
+    const zipExempt = !!pathname && isAccountZipExemptRoute(pathname);
+    if (zipExempt && pathname !== '/account/user/edit') {
       return;
     }
     if (checkedFor.current === userId) {
       return;
     }
-    checkedFor.current = userId;
-
-    if (sessionStorage.getItem(ONBOARDING_DISMISS_KEY) === userId) {
-      return;
-    }
-
     const controller = new AbortController();
 
     (async () => {
@@ -80,12 +78,28 @@ export default function ScreennameGate() {
           signal: controller.signal,
         });
         if (!response.ok) {
-          return;
+          throw new Error(`Account setup check failed: ${response.status}`);
         }
         const payload = await response.json();
+        if (!payload?.success) {
+          throw new Error('Account setup check returned no user');
+        }
+        if (!normalizeUsZip(payload.data?.zipCode)) {
+          if (!zipExempt) {
+            const next = `${pathname ?? '/'}${window.location.search}`;
+            router.replace(`/welcome/zip?next=${encodeURIComponent(next)}`);
+          }
+          return;
+        }
+        checkedFor.current = userId;
+        if (
+          isOnboardingRoute(pathname) ||
+          sessionStorage.getItem(ONBOARDING_DISMISS_KEY) === userId
+        ) {
+          return;
+        }
         // Managing a business does not require a personal social profile.
         if (
-          !payload?.success ||
           payload.data?.screenname?.trim() ||
           payload.data?.hasManagedListings === true
         ) {
@@ -101,10 +115,10 @@ export default function ScreennameGate() {
         }
 
         setOpen(true);
-      } catch {
-        // Offline, aborted, or the session lapsed mid-flight. Staying silent is
-        // correct — this is a nudge, not a gate, and there is nothing the user
-        // could do about a failure here anyway.
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error('Could not check account setup:', error);
+        }
       }
     })();
 
@@ -125,7 +139,13 @@ export default function ScreennameGate() {
     setOpen(false);
   }, []);
 
-  if (status !== 'authenticated' || isOnboardingRoute(pathname)) {
+  if (
+    status !== 'authenticated' ||
+    isOnboardingRoute(pathname) ||
+    (pathname !== '/account/user/edit' &&
+      !!pathname &&
+      isAccountZipExemptRoute(pathname))
+  ) {
     return null;
   }
 

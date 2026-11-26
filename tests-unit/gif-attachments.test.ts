@@ -17,8 +17,7 @@
  *    dimensions as *strings* ("480", not 480), which a reasonable-looking
  *    `typeof === 'number'` guard would silently discard in full.
  *
- * 3. `attachmentLabel` must describe the visible attachment, not a retired
- *    recording hidden earlier in the attachment array.
+ * 3. `attachmentLabel` must describe the first visible message attachment.
  */
 
 import { describe, it } from 'node:test';
@@ -294,23 +293,20 @@ describe('attachmentLabel', () => {
     assert.equal(attachmentLabel(att('image', 'image/gif')), 'GIF');
   });
 
-  it('does not advertise retired recordings in conversation previews', () => {
+  it('identifies voice notes in conversation previews', () => {
     for (const [type, mediaType] of [
       ['audio', 'audio/webm'],
       ['Audio', 'audio/ogg'],
       ['video', 'AUDIO/MP4'],
     ]) {
-      assert.equal(
-        attachmentLabel(att(type, mediaType)),
-        'Attachment unavailable'
-      );
+      assert.equal(attachmentLabel(att(type, mediaType)), 'Voice note');
     }
     assert.equal(
       attachmentLabel([
         ...att('audio', 'audio/ogg'),
         ...att('image', 'image/gif'),
       ]),
-      'GIF'
+      'Voice note'
     );
   });
 

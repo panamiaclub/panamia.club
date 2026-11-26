@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import { db } from '@/lib/db';
 import { profiles, users } from '@/lib/schema';
 import { and, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
@@ -32,6 +33,61 @@ import { DIRECTORY_ACCOUNT_TYPES } from '@/lib/accounts';
 const DEFAULT_LIMIT = 3;
 const MAX_LIMIT = 12;
 
+const cachedFeatured = unstable_cache(
+  async (limit: number) => {
+    // `descriptions` is jsonb, so the display text comes out via ->>.
+    const fiveWords = sql<
+      string | null
+    >`${profiles.descriptions}->>'fiveWords'`;
+
+    // /p/[handle] resolves the profile's own screenname first and falls back to
+    // its owner's, the same order lib/server/directory.ts uses. A business
+    // listing carries its handle here because it has no user row to carry one.
+    const screenname = sql<
+      string | null
+    >`COALESCE(${profiles.screenname}, ${users.screenname})`;
+
+    return (
+      db
+        .select({
+          id: profiles.id,
+          name: profiles.name,
+          screenname,
+          primaryImageCdn: profiles.primaryImageCdn,
+          addressLocality: profiles.addressLocality,
+          fiveWords,
+        })
+        .from(profiles)
+        // Left, not inner: a business listing has no user row at all, so an
+        // inner join drops it before any filter below gets to run.
+        .leftJoin(users, eq(profiles.userId, users.id))
+        .where(
+          and(
+            // Also the gate on two classes of row the widened userId check below
+            // now admits: intake writes active: false, so an unapproved public
+            // submission cannot reach the homepage, and delete-account clears it
+            // on a tombstoned profile. Not merely "is this listing live".
+            eq(profiles.active, true),
+            // A card is mostly photograph, so a profile without one would render
+            // as an empty box beside two real ones.
+            isNotNull(profiles.primaryImageCdn),
+            // Personal accounts search the directory; they don't appear in it.
+            // A listing with no user has no account type to test, and is a
+            // listing by definition — the same reasoning getSearch() applies.
+            or(
+              isNull(profiles.userId),
+              inArray(users.accountType, DIRECTORY_ACCOUNT_TYPES)
+            )
+          )
+        )
+        .orderBy(sql`RANDOM()`)
+        .limit(limit)
+    );
+  },
+  ['directory-featured'],
+  { revalidate: 300, tags: ['directory'] }
+);
+
 export async function GET(request: NextRequest) {
   const searchParams = (request.nextUrl ?? new URL(request.url)).searchParams;
   const requested = Number.parseInt(searchParams.get('limit') || '', 10);
@@ -39,64 +95,10 @@ export async function GET(request: NextRequest) {
     Number.isFinite(requested) && requested > 0
       ? Math.min(requested, MAX_LIMIT)
       : DEFAULT_LIMIT;
-
-  // Public, anonymous data. The cache window doubles as the rotation period:
-  // every request inside it sees the same sample, and the sample changes when
-  // the entry expires. Without it, ORDER BY RANDOM() would reshuffle the cards
-  // on every navigation and make the section feel unstable.
-  const cacheHeaders = {
-    'Cache-Control': 'public, max-age=300, s-maxage=300',
-  };
-
-  // `descriptions` is jsonb, so the display text comes out via ->>.
-  const fiveWords = sql<string | null>`${profiles.descriptions}->>'fiveWords'`;
-
-  // /p/[handle] resolves the profile's own screenname first and falls back to
-  // its owner's, the same order lib/server/directory.ts uses. A business
-  // listing carries its handle here because it has no user row to carry one.
-  const screenname = sql<
-    string | null
-  >`COALESCE(${profiles.screenname}, ${users.screenname})`;
-
   try {
-    const rows = await db
-      .select({
-        id: profiles.id,
-        name: profiles.name,
-        screenname,
-        primaryImageCdn: profiles.primaryImageCdn,
-        addressLocality: profiles.addressLocality,
-        fiveWords,
-      })
-      .from(profiles)
-      // Left, not inner: a business listing has no user row at all, so an
-      // inner join drops it before any filter below gets to run.
-      .leftJoin(users, eq(profiles.userId, users.id))
-      .where(
-        and(
-          // Also the gate on two classes of row the widened userId check below
-          // now admits: intake writes active: false, so an unapproved public
-          // submission cannot reach the homepage, and delete-account clears it
-          // on a tombstoned profile. Not merely "is this listing live".
-          eq(profiles.active, true),
-          // A card is mostly photograph, so a profile without one would render
-          // as an empty box beside two real ones.
-          isNotNull(profiles.primaryImageCdn),
-          // Personal accounts search the directory; they don't appear in it.
-          // A listing with no user has no account type to test, and is a
-          // listing by definition — the same reasoning getSearch() applies.
-          or(
-            isNull(profiles.userId),
-            inArray(users.accountType, DIRECTORY_ACCOUNT_TYPES)
-          )
-        )
-      )
-      .orderBy(sql`RANDOM()`)
-      .limit(limit);
-
     return NextResponse.json(
-      { success: true, data: rows },
-      { headers: cacheHeaders }
+      { success: true, data: await cachedFeatured(limit) },
+      { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (error) {
     console.error('Directory featured error:', error);

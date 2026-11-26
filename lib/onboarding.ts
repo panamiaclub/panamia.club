@@ -44,6 +44,19 @@ export const IDENTITY_DISMISS_KEY = 'pana:identity-prompt-dismissed';
  */
 export const NEW_ACCOUNT_WINDOW_MS = 10 * 60 * 1000;
 
+/** Keep sign-in, legal information and account deletion accessible during setup. */
+export function isAccountZipExemptRoute(pathname: string): boolean {
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  return (
+    path === '/welcome/zip' ||
+    path === '/signin' ||
+    path.startsWith('/signin/') ||
+    path === '/legal' ||
+    path.startsWith('/legal/') ||
+    path === '/account/user/edit'
+  );
+}
+
 export function isNewAccount(
   createdAt: string | Date | null | undefined,
   now: number = Date.now()

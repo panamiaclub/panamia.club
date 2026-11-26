@@ -25,6 +25,9 @@ import {
   uploadChatPhoto,
 } from '../_lib/photos';
 import { useIsNativeApp } from '@/lib/mobile/use-native-app';
+import { VoiceNoteRecorder } from './voice-note-recorder';
+import { VoiceNotePlayer } from '@/components/social/VoiceNotePlayer';
+import { uploadVoiceNote } from '../_lib/voice-notes';
 
 export function Composer({
   canSend,
@@ -34,6 +37,7 @@ export function Composer({
   onSend,
   isSending,
   inputRef,
+  allowVoiceNotes = false,
 }: {
   canSend: 'allow' | 'refuse';
   counterpartyName: string;
@@ -42,13 +46,16 @@ export function Composer({
   onSend: () => void;
   isSending: boolean;
   inputRef: RefObject<HTMLTextAreaElement | null>;
+  allowVoiceNotes?: boolean;
 }) {
   const native = useIsNativeApp();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [localPhoto, setLocalPhoto] = useState<string | null>(null);
+  const [localVoice, setLocalVoice] = useState<string | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const photoBusy = useRef(false);
+  const voiceBusy = useRef(false);
   const hintId = useId();
   const photoHintId = useId();
   const mirror = useMirrorGif();
@@ -56,6 +63,7 @@ export function Composer({
   const gifsEnabled = gifAvailability.data?.enabled ?? false;
   const savingGif = draft.isMirroring || mirror.isPending;
   const savingPhoto = draft.isUploadingPhoto;
+  const voiceBusyOrRecording = draft.isRecordingVoice || draft.isUploadingVoice;
   const canSubmit = messageDraftCanSend(draft) && !isSending && !savingGif;
 
   useLayoutEffect(() => {
@@ -76,6 +84,16 @@ export function Composer({
     return () => URL.revokeObjectURL(url);
   }, [draft.photoFile, draft.photo?.url]);
 
+  useEffect(() => {
+    if (!draft.voiceFile) {
+      setLocalVoice(null);
+      return;
+    }
+    const url = URL.createObjectURL(draft.voiceFile);
+    setLocalVoice(url);
+    return () => URL.revokeObjectURL(url);
+  }, [draft.voiceFile]);
+
   if (canSend === 'refuse') return <RefusedComposer />;
 
   const closePicker = () => {
@@ -88,7 +106,7 @@ export function Composer({
     onSend();
   };
   const pick = async (chosen: GifResult) => {
-    if (savingGif || savingPhoto) return;
+    if (savingGif || savingPhoto || voiceBusyOrRecording) return;
     const input = inputRef.current;
     onChange({ isMirroring: true, gifError: null });
     try {
@@ -104,7 +122,7 @@ export function Composer({
     }
   };
   const attachPhoto = async (file: File) => {
-    if (photoBusy.current || savingGif) return;
+    if (photoBusy.current || savingGif || voiceBusyOrRecording) return;
     photoBusy.current = true;
     const input = inputRef.current;
     onChange({ photoFile: file, isUploadingPhoto: true, photoError: null });
@@ -129,7 +147,34 @@ export function Composer({
       photoBusy.current = false;
     }
   };
+  const attachVoice = async (file: File, duration: number) => {
+    if (voiceBusy.current) return;
+    voiceBusy.current = true;
+    onChange({
+      voice: null,
+      voiceFile: file,
+      voiceDuration: duration,
+      isRecordingVoice: false,
+      isUploadingVoice: true,
+      voiceError: null,
+    });
+    try {
+      const voice = await uploadVoiceNote(file, duration);
+      onChange({ voice, voiceFile: null, isUploadingVoice: false });
+    } catch (error) {
+      onChange({
+        isUploadingVoice: false,
+        voiceError: messageError(
+          error,
+          'Could not upload this voice note. Try again.'
+        ),
+      });
+    } finally {
+      voiceBusy.current = false;
+    }
+  };
   const photoPreview = draft.photoFile ? localPhoto : draft.photo?.url;
+  const voicePreview = draft.voiceFile ? localVoice : draft.voice?.url;
 
   return (
     <footer className={`${styles.composer} ${styles.compactComposer}`}>
@@ -179,6 +224,59 @@ export function Composer({
             />
           )}
         </div>
+      )}
+      {allowVoiceNotes && (draft.voice || draft.voiceFile) && (
+        <div
+          className="mb-2 flex w-full max-w-sm items-center gap-2"
+          role="group"
+          aria-label="Attached voice note"
+        >
+          {voicePreview && (
+            <VoiceNotePlayer
+              key={voicePreview}
+              url={voicePreview}
+              label="Voice note preview"
+            />
+          )}
+          <button
+            type="button"
+            className={styles.attachButton}
+            aria-label="Remove voice note"
+            disabled={draft.isUploadingVoice}
+            onClick={() =>
+              onChange({
+                voice: null,
+                voiceFile: null,
+                voiceDuration: null,
+                voiceError: null,
+              })
+            }
+          >
+            <X size={20} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+      {draft.isUploadingVoice && (
+        <p className="text-pana-ink/65 mb-2 text-xs" role="status">
+          Uploading voice note...
+        </p>
+      )}
+      {draft.voiceError && (
+        <p className="text-pana-red-deep mb-2 text-xs" role="alert">
+          {draft.voiceError}{' '}
+          {draft.voiceFile && draft.voiceDuration !== null && (
+            <button
+              type="button"
+              className="min-h-11 font-bold underline"
+              onClick={() => {
+                if (draft.voiceFile && draft.voiceDuration !== null)
+                  void attachVoice(draft.voiceFile, draft.voiceDuration);
+              }}
+            >
+              Retry voice note upload
+            </button>
+          )}
+        </p>
       )}
       {gifAvailability.isError && (
         <p className="text-pana-ink/65 mb-2 text-xs" role="status">
@@ -256,7 +354,11 @@ export function Composer({
           aria-describedby={photoHintId}
           title="Attach a photo (up to 10 MB)"
           disabled={
-            savingGif || savingPhoto || !!draft.photo || !!draft.photoFile
+            savingGif ||
+            savingPhoto ||
+            voiceBusyOrRecording ||
+            !!draft.photo ||
+            !!draft.photoFile
           }
           onClick={() => {
             setPickerOpen(false);
@@ -269,6 +371,21 @@ export function Composer({
           One photo, up to 10 MB. Photos use shareable Pana media links, not
           end-to-end encryption. See Conversation details for more information.
         </span>
+        {allowVoiceNotes && (
+          <VoiceNoteRecorder
+            disabled={
+              savingGif ||
+              savingPhoto ||
+              draft.isUploadingVoice ||
+              !!draft.voice ||
+              !!draft.voiceFile ||
+              isSending
+            }
+            onBusy={(isRecordingVoice) => onChange({ isRecordingVoice })}
+            onCapture={(file, duration) => void attachVoice(file, duration)}
+            onError={(voiceError) => onChange({ voiceError })}
+          />
+        )}
         <div className={styles.composeField}>
           <textarea
             ref={inputRef}
@@ -306,7 +423,7 @@ export function Composer({
               onClick={() => setPickerOpen((open) => !open)}
               aria-label="Add a GIF"
               aria-expanded={pickerOpen}
-              disabled={savingPhoto}
+              disabled={savingPhoto || voiceBusyOrRecording}
             >
               GIF
             </button>
@@ -318,7 +435,7 @@ export function Composer({
           disabled={!canSubmit}
           aria-label="Send message"
         >
-          {isSending || savingGif || savingPhoto ? (
+          {isSending || savingGif || savingPhoto || draft.isUploadingVoice ? (
             <LoaderCircle
               className="h-5 w-5 motion-safe:animate-spin"
               aria-hidden="true"

@@ -303,6 +303,13 @@ export function Transcript<T extends PendingChatMessage>({
             media links, not end-to-end encryption. Someone with a copied image
             link can view it outside this conversation.
           </p>
+          {!group && (
+            <p className="text-pana-ink/65">
+              Voice notes can be up to 5 minutes and 10 MB. They also use
+              shareable media links, not end-to-end encryption. Someone with a
+              copied voice note link can listen outside this conversation.
+            </p>
+          )}
           {group && (
             <p className="text-pana-ink/65">
               Only active group members can read and post here. Admins and
@@ -451,6 +458,7 @@ export function Transcript<T extends PendingChatMessage>({
                           key={message.id}
                           message={message}
                           mine={mine}
+                          audioPlayback={!group}
                           onRemove={onRemoveMessage}
                         />
                       ))}
@@ -474,6 +482,7 @@ export function Transcript<T extends PendingChatMessage>({
                     )}
                     published={message.published}
                     delivery={message.delivery}
+                    audioPlayback={!group}
                   />
                   <span className="mt-0.5 flex flex-wrap items-center gap-2 px-1">
                     {message.delivery === 'failed' &&
@@ -526,10 +535,12 @@ function Bubble({
   message,
   mine,
   onRemove,
+  audioPlayback,
 }: {
   message: ChatMessage;
   mine: boolean;
   onRemove?: (message: ChatMessage) => void;
+  audioPlayback: boolean;
 }) {
   const expiresIn = expiresInLabel(message.expiresAt);
   return (
@@ -542,6 +553,7 @@ function Bubble({
         ) : null
       }
       attachments={message.attachments}
+      audioPlayback={audioPlayback}
       published={message.published}
       expiresIn={expiresIn}
       actions={
@@ -587,6 +599,7 @@ function MessageFrame({
   expiresIn,
   delivery = 'sent',
   actions,
+  audioPlayback,
 }: {
   id: string;
   mine: boolean;
@@ -596,6 +609,7 @@ function MessageFrame({
   expiresIn?: string | null;
   delivery?: 'sent' | 'sending' | 'failed';
   actions?: ReactNode;
+  audioPlayback: boolean;
 }) {
   return (
     <div
@@ -611,7 +625,11 @@ function MessageFrame({
         {content && <div className={styles.compactBody}>{content}</div>}
         {!!attachments?.length && (
           <div className={styles.compactMedia}>
-            <AttachmentGrid attachments={attachments} />
+            <AttachmentGrid
+              attachments={attachments}
+              imageViewer
+              audioPlayback={audioPlayback}
+            />
           </div>
         )}
         <div className={styles.messageMeta}>

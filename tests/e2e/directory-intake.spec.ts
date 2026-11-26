@@ -73,6 +73,7 @@ async function fixtures(
         json: {
           success: true,
           data: {
+            zipCode: '33138',
             screenname: options.newAccount ? null : 'anaperson',
             createdAt: options.newAccount
               ? new Date().toISOString()

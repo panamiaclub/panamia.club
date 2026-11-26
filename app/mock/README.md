@@ -24,6 +24,7 @@ layout only works with invented spacing or colours that are not in
 | `/mock/directory`         | Directory search results, pre-map                                                 |
 | `/mock/directory-unified` | One directory theme across businesses, panas, groups and events                   |
 | `/mock/directory-online`  | Online base-ZIP map bubbles, grouped results, and public-location choices         |
+| `/mock/admin-directory`   | Directory dashboard: profile counts, deactivate/reactivate, business CSV export  |
 | `/mock/explore`           | Scope moved into the search bar; directory narrowed to businesses                 |
 | `/mock/groups`            | Groups landing and discover, as two steps of one flow                             |
 | `/mock/dms`               | Direct messages, as two competing models behind one switch                        |
@@ -130,8 +131,25 @@ Existing donor receipt and subscription-management processes are unchanged;
 this change does not add donation webhooks, account entitlements, or a new
 Customer Portal.
 
-## Online businesses on the map
+## Directory admin dashboard
 
+`/mock/admin-directory` previews directory management without changing the live
+directory. It shares the dashboard presentation and CSV formatter with the live
+`/admin/listings` implementation; only data loading, mutations, export requests,
+and preview labels differ. Twelve fictional businesses power total, active, inactive, and
+last-30-days counts, anchored to the labeled November 25, 2026 sample snapshot
+(October 27 through November 25, inclusive). Search and status filters narrow
+the table, while dashboard counts always describe the entire sample directory.
+
+Deactivate/reactivate opens a confirmation explaining the proposed visibility
+change; deactivation retains profile data and does not suspend the owner account.
+Actions update local sample state only and reset on reload or **Reset mock**.
+**Download businesses CSV** exports all twelve sample businesses regardless of
+table filters, including current mock statuses, category, location, owner,
+email, phone, and date added. The filename explicitly says MOCK. No directory,
+account, mail, or export API is called.
+
+## Online businesses on the map
 `/mock/directory-online` is an interactive, fixture-only location proposal.
 Hollow globe bubbles group online businesses by their required base ZIP,
 not storefront coordinates or delivery zones. Tap **33138 (2)** or **33301 (1)**

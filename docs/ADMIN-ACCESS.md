@@ -26,6 +26,38 @@ Server-side gates live in `lib/server/admin-auth.ts`:
 
 ## Directory listing profiles
 
+`/admin/listings` opens the live directory dashboard: total, active, inactive,
+and new-in-the-last-30-days business counts, a searchable/paginated roster,
+and **Download businesses CSV**. Counts cover the whole roster, independent
+of table filters. The new-profile window uses creation timestamps and the
+server's response time, not the browser clock.
+
+The roster follows the public directory's account-type policy (unlinked
+listings and directory/hybrid accounts). It includes active and previously
+published inactive businesses; personal/other accounts and never-approved
+applications are excluded. Application review remains below the dashboard,
+with its existing oldest-first ordering and approval emails.
+
+Visibility changes require confirmation and `checkAdminAuth()` through
+`POST /api/admin/directory/<id>/status`. They persist `profiles.active`, preserve
+the profile and owners, record staff ID/time under `status.directoryVisibility`,
+and invalidate the public listing plus the shared `directory` data-cache tag.
+Directory search variants and featured cards retain their five-minute server
+cache but use no-store HTTP responses so old browser/edge JSON cannot hide
+an admin's visibility change. They do not lock an
+account or send notification emails. Profile locks and an expected-status check
+reject stale updates; pending/declined applications cannot use this endpoint to
+skip approval. Outstanding listing-renewal cycles are canceled so an old renewal
+cannot undo a manual visibility decision.
+
+`GET /api/admin/directory` supplies the roster.
+`GET /api/admin/directory/export` downloads all roster businesses, including
+inactive profiles, regardless of UI filters or pagination. Both require admin
+access and return private, no-store responses. The CSV contains business name,
+category, location, owner name(s), business contact email/phone, creation date,
+and current status. Cells are escaped and spreadsheet-formula guarded.
+`/admin/download-profiles` redirects to the dashboard for existing bookmarks.
+
 Listing names in `/admin/listings` are links. Approved listings open their
 public profile through `/listings/<profileId>`, which redirects to `/p/<handle>`
 when the listing has a handle. Pending and declined listings open
