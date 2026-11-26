@@ -7652,15 +7652,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"i18next@npm:26.7.2":
-  version: 26.7.2
-  resolution: "i18next@npm:26.7.2"
+"i18next@npm:27.2.4":
+  version: 27.2.4
+  resolution: "i18next@npm:27.2.4"
   peerDependencies:
     typescript: ^5 || ^6 || ^7
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: 10c0/671576c1a225e10994cff250dfc44585fcccc4486cda4162caadbefe5287052e56998fe80aa15e36e1c441215b601770702a820fd1dc5511255bc4ad514aa2cf
+  checksum: 10c0/12189e0dbba2bab964ef6a2a475c85bbcf977139fa9cf1b6e2fb2dcc560b103d07e38da9920a25952972ce08c2645d3adb4ded1e82a23b523c279a078784641b
   languageName: node
   linkType: hard
 
@@ -9405,7 +9405,7 @@ __metadata:
     fabric: "npm:^7.4.0"
     feed: "npm:^6.0.0"
     husky: "npm:^9.1.7"
-    i18next: "npm:26.7.2"
+    i18next: "npm:27.2.4"
     i18next-browser-languagedetector: "npm:^8.3.1"
     lint-staged: "npm:17.6.1"
     lucide-react: "npm:1.77.0"
