@@ -61,6 +61,9 @@ jobs:
         run: yarn db:check-pending
 
       - name: Deploy Worker
+        env:
+          # Avoid compressed API responses being parsed as raw JSON by Wrangler.
+          CLOUDFLARE_API_HEADERS: '{"Accept-Encoding":"identity"}'
         run: yarn vinext-cloudflare deploy
 
       - name: Verify live storefront
