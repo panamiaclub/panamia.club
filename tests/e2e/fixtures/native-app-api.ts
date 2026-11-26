@@ -411,6 +411,11 @@ export function createNativeApiFixtures(
       );
     if (path === '/api/notifications/unread-count')
       return envelope({ count: 0 });
+    if (path === '/api/articles/recent')
+      return envelope({
+        articles: [],
+        pagination: { total: 0, limit: 8, offset: 0, hasMore: false },
+      });
     if (path === '/api/notifications')
       return envelope({ notifications: [], total: 0 });
     if (path === '/api/social/messages/conversations')

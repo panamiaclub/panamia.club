@@ -40,7 +40,7 @@ test.describe('Public Navigation', () => {
 
       const tagline = page.locator('.home-hero-field .hero-subheadline');
       await expect(tagline).toHaveText(
-        'Your Portal for Everything South Florida'
+        'A South Florida 501(c)(3) nonprofit connecting local creatives, small businesses, and communities.'
       );
       await expect(tagline.locator('strong')).toHaveCSS('font-weight', '700');
 
