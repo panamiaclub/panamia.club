@@ -82,6 +82,8 @@ export const notificationContext = pgEnum('notification_context', [
   // group" for the inviter, where this one needs "your request was approved"
   // for the person who asked.
   'group_membership',
+  'like',
+  'reply',
 ]);
 
 export const notificationObjectType = pgEnum('notification_object_type', [

@@ -24,6 +24,7 @@ import {
   UserMinus,
   Ban,
   Shield,
+  MessageCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type {
@@ -64,6 +65,10 @@ export function getNotificationIcon(
   // Context-specific icons
   if (context === 'mentoring') {
     return <Video className="h-4 w-4" />;
+  }
+
+  if (context === 'reply') {
+    return <MessageCircle className="h-4 w-4" />;
   }
 
   // A role change is the one Update that is about you rather than about a

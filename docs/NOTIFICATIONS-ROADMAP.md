@@ -319,7 +319,7 @@ overstate what ships. Both lists are in the next section.
 | --------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Writing**     | —                           | **Retired.** Co-author invite and response, review request and verdict, and publishing-notifies-contributors all used to fire; every one of those calls has been removed. `coauthor` and `review` survive as enum values and `case` blocks only so rows already in the table stay readable      |
 | **Mentoring**   | —                           | **Retired.** Request, accept, decline and cancel all used to fire; those calls have been removed. `mentoring` survives for the same reason                                                                                                                                                      |
-| **Pana Social** | `follow`                    | New accepted local member follows notify the followed account and link to the follower's profile. Existing follows and unfollows are silent. `mention` still has no caller or `case`; reply and boost-of-your-post are unwritten. The `message` rows that fire belong to Messages below |
+| **Pana Social** | `follow`, `like`, `reply`    | New accepted local member follows notify the followed account. A new like notifies the post's author; a reply notifies its immediate parent's author and links to the reply. Self-interactions, blocks in either direction, and actors without linked local accounts are silent. `mention` still has no caller or `case`; boosts are unwritten. The `message` rows that fire belong to Messages below |
 | **Events**      | `event` (Create, Delete)    | Two paths fire. A group's event going live announces itself to the group's members — on **publish**, not creation, because events are born as drafts and a draft is visible only to the group's managers. The other is an admin suspending a venue, which cancels its future events and tells going/maybe attendees. The organizer lifecycle is written but unwired — there is no co-organizer endpoint. RSVP and reminders missing; `venue` is an objectType with no context |
 | **Groups**      | `group`, `group_membership` | The widest coverage of any domain — invitations, join requests, role changes, removal, bans, and two announcements that reach the whole membership: a top-level post in the group feed, and a group event going live. The one thing missing is a way to turn the last two off; see "Announcing to a whole group" below |
 | **Messages**    | `message`                   | Direct messages, suppressed when the sender is held in the recipient's Requests folder; needs per-conversation collapsing                                                                                                                                                                       |
@@ -337,6 +337,19 @@ not rewrite it or change the earlier one-way alert. Notification
 failures are logged without failing an already-saved follow. Pending outbound
 follows and inbound federated follows remain outside this local member flow;
 email and background push delivery are unchanged.
+
+Like and reply alerts run in the status wrappers, not just HTTP routes, and use
+the standard unread, block-filtered, 30-day notification path. Like retries,
+including concurrent requests, do not duplicate either the like count or its
+alert. Unliking is silent; liking again after unliking is a new interaction.
+Replies notify only the immediate parent author, including in groups, never
+the whole thread or membership. The recipient must be able to read the linked
+post or reply. Notification text contains no post content.
+
+Direct-message interactions are excluded: messages already have their own
+notification and Requests gate, which a like or reply must not bypass.
+Notification failures are logged without failing an already-saved interaction.
+Apply `0078_social_interaction_notifications.sql` before deploying these paths.
 
 ### Contexts that were switched off
 

@@ -94,6 +94,17 @@ administrative start controls.
 
 ### Isolated status visibility regression (no secrets)
 
+Like and reply notification coverage also runs without an external database:
+
+```
+yarn node --experimental-test-module-mocks --import tsx --test tests-db/social-interaction-notifications.test.ts
+```
+
+It applies the real notification-context migration in PGlite and exercises the
+status wrappers, concurrent like retries, author-only reply delivery, private
+group and reply visibility, blocks, self-interactions, accountless actors,
+DM exclusion, and non-fatal notification-storage failures.
+
 ```
 yarn test:db:visibility
 ```
