@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
+import { requireAccountZip } from '@/lib/server/account-zip';
 import './globals.css';
 import '../styles/flower-power.css';
 import { Providers } from './providers';
@@ -221,6 +222,8 @@ export default async function RootLayout({
 
   const standalone = wearsOwnChrome(pathname, chromeSurface);
   const wearsMainChrome = chromeSurface.id === 'www' && !standalone;
+
+  await requireAccountZip(pathname, requestHeaders.get(SEARCH_HEADER) ?? '');
 
   /* Pages this surface is borrowing from another one get a slim bar and a slim
    * footer instead. See lib/panaverse/chrome.ts — the short version is that

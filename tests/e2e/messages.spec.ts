@@ -287,7 +287,11 @@ async function openMessages(page: Page, options: FixtureOptions = {}) {
     if (path === '/api/user/me') {
       return json(route, {
         success: true,
-        data: { screenname: 'viewer', createdAt: '2020-01-01T00:00:00.000Z' },
+        data: {
+          screenname: 'viewer',
+          zipCode: '33138',
+          createdAt: '2020-01-01T00:00:00.000Z',
+        },
       });
     }
     if (path === '/api/config/turnstile')
