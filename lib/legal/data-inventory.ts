@@ -176,6 +176,7 @@ export const inventory: Record<TableExport, Classification> = {
   // Native, member-only correspondence and media metadata. Never federated.
   // Author/group deletion cascades; expiry is a 30-day visibility window.
   socialGroupChatMessages: ['social_posts', 'social_graph', 'uploads'],
+  socialChatReactions: ['social_posts', 'social_graph'],
   socialAttachments: ['uploads', 'social_posts'],
   // Who watched whose story. An interaction record between two actors, same
   // shape as a like, and surfaced to the story's author as a viewer list --

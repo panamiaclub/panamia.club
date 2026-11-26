@@ -19,6 +19,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getActiveProfileWithActor } from '@/lib/server/active-profile';
+import { and, eq } from 'drizzle-orm';
+import { db } from '@/lib/db';
+import { socialDmRequests } from '@/lib/schema';
+import { isLocalActor } from '@/lib/federation/local-actor';
+import { getHiddenActorIds } from '@/lib/federation/wrappers/block-filter';
+import { readChatReactions } from '@/lib/server/chat-reactions';
 import {
   getDirectConversation,
   evaluateDirectThreads,
@@ -121,12 +127,37 @@ export async function GET(
     viewerActorId,
     counterpartyActorId
   );
+  const [pendingRequest] = await db
+    .select({ id: socialDmRequests.id })
+    .from(socialDmRequests)
+    .where(
+      and(
+        eq(socialDmRequests.senderActorId, counterpartyActorId),
+        eq(socialDmRequests.recipientActorId, viewerActorId),
+        eq(socialDmRequests.state, 'pending')
+      )
+    )
+    .limit(1);
+  const reactions = await readChatReactions(
+    'direct',
+    messages.map((message) => message.id),
+    viewerActorId,
+    await getHiddenActorIds(viewerActorId)
+  );
+  const canReact =
+    canSend === 'allow' &&
+    !pendingRequest &&
+    isLocalActor(counterparty, socialConfig.domain);
 
   return NextResponse.json({
     success: true,
     data: {
       counterparty,
-      messages,
+      messages: messages.map((message) => ({
+        ...message,
+        canReact,
+        reactions: reactions.get(message.id) ?? [],
+      })),
       viewerActorId,
       localDomain: socialConfig.domain,
       canSend,

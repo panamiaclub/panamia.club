@@ -561,6 +561,13 @@
       "when": 1795663800000,
       "tag": "0078_social_interaction_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1795670400000,
+      "tag": "0079_chat_reactions",
+      "breakpoints": true
     }
   ]
 }
