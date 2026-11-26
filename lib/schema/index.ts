@@ -559,13 +559,8 @@ export const users = pgTable('users', {
     .notNull()
     .default(sql`ARRAY[]::text[]`),
   notificationPreferences: jsonb('notification_preferences'),
-  // Unused. Present since 0000_initial_schema.sql and never read by anything:
-  // directory locality comes from a click-granted or cached browser location,
-  // with all South Florida as the no-location fallback. A member zip is a
-  // coarser proxy that would need a lookup table to become coordinates, so the
-  // account settings input that used to write this was removed rather than
-  // wired up. Kept because existing rows hold real data and dropping it is a
-  // migration.
+  // Private account setup requirement, normalized to five US ZIP digits.
+  // Separate from public profile addresses and billing-verified ZIPs.
   zipCode: text('zip_code'),
   affiliate: jsonb('affiliate'),
   createdAt: timestamp('created_at', { withTimezone: true })

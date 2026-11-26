@@ -99,7 +99,10 @@ async function openSearch(
       });
     }
     if (path === '/api/user/me') {
-      return json({ success: true, data: { screenname: 'search-fixture' } });
+      return json({
+        success: true,
+        data: { screenname: 'search-fixture', zipCode: '33138' },
+      });
     }
     if (path === '/api/consent/check') return json({ consented: true });
     if (path === '/api/social/statuses' || path === '/api/social/timeline') {

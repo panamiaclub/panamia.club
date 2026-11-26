@@ -27,6 +27,7 @@ export async function GET() {
         columns: {
           id: true,
           screenname: true,
+          zipCode: true,
           accountType: true,
           notificationPreferences: true,
           createdAt: true,
@@ -49,22 +50,26 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        _id: currentUser.id,
-        screenname: currentUser.screenname,
-        name: currentUser.profile?.name,
-        accountType: currentUser.accountType,
-        notificationPreferences: currentUser.notificationPreferences,
-        hasManagedListings,
-        // Lets the client tell a first-run account from one that has existed
-        // for years without ever claiming a handle. The two want different
-        // treatment: a welcome page for the former, a quiet nudge for the
-        // latter. See components/ScreennameGate.tsx.
-        createdAt: currentUser.createdAt,
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          _id: currentUser.id,
+          screenname: currentUser.screenname,
+          zipCode: currentUser.zipCode,
+          name: currentUser.profile?.name,
+          accountType: currentUser.accountType,
+          notificationPreferences: currentUser.notificationPreferences,
+          hasManagedListings,
+          // Lets the client tell a first-run account from one that has existed
+          // for years without ever claiming a handle. The two want different
+          // treatment: a welcome page for the former, a quiet nudge for the
+          // latter. See components/ScreennameGate.tsx.
+          createdAt: currentUser.createdAt,
+        },
       },
-    });
+      { headers: { 'Cache-Control': 'private, no-store' } }
+    );
   } catch (error) {
     console.error('Error fetching current user:', error);
     return NextResponse.json(
